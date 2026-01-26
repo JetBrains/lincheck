@@ -136,8 +136,23 @@ private class ThreadData(
     }
 }
 
+/**
+ * Represents the layout of stored trace data:
+ * - [FLAT]: a flat structure where trace events are stored sequentially as a flat list;
+ * - [TREE]: a hierarchical structure where trace events are organized in a tree.
+ */
+enum class TraceDataLayout { FLAT, TREE }
+
+fun TraceDataLayout.isFlat(): Boolean =
+    (this == TraceDataLayout.FLAT)
+
+fun TraceDataLayout.isTree(): Boolean =
+    (this == TraceDataLayout.TREE)
+
+
 class TraceCollectingEventTracker(
     internal val mode: TraceRecordingMode,
+    internal val layout: TraceDataLayout,
     internal val context: TraceContext,
     internal val traceStreamingFilePath: String? = null, // should be non-null for BINARY_STREAM mode
 ) : EventTracker {
@@ -189,46 +204,21 @@ class TraceCollectingEventTracker(
         // https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ConcurrentMap.html#computeIfAbsent-K-java.util.function.Function-
         val assignedThreadId = nextThreadId.getAndIncrement()
         val threadData = threads.computeIfAbsent(thread) {
-            val threadData = ThreadData(assignedThreadId)
-            ThreadDescriptor.getThreadDescriptor(thread).eventTrackerData = threadData
-            threadData
+            ThreadData(assignedThreadId).also {
+                ThreadDescriptor.getThreadDescriptor(thread).eventTrackerData = it
+            }
         }
-        val thread = Thread.currentThread()
+
         // We need to enable analysis first, before calling `runInsideInjectedCode`, because
         // that method internally checks that the analysis is enabled before calling the provided lambda
         descriptor.enableAnalysis()
-
-        fun appendMethodCall(obj: TRObject?, className: String, methodName: String, methodType: Types.MethodType, codeLocationId: Int, params: List<TRObject> = emptyList()) {
-            val parentTracePoint = threadData.currentMethodCallTracePoint()
-            val methodCall = TRMethodCallTracePoint(
-                context = context,
-                threadId = threadData.threadId,
-                codeLocationId = codeLocationId,
-                methodId = context.getOrCreateMethodId(className, methodName, methodType),
-                obj = obj,
-                parameters = params,
-                flags = INCOMPLETE_METHOD_FLAG.toShort(),
-                parentTracePoint = parentTracePoint
-            )
-            strategy.tracePointCreated(parentTracePoint, methodCall)
-            if (threadData.getStack().isEmpty()) {
-                threadData.setRootCall(methodCall)
-            }
-            threadData.pushStackFrame(methodCall, thread, isInline = false)
-        }
 
         // This method does not wrap this whole method, because the analysis in this thread must
         // be enabled first in order for this method to even invoke its lambda
         descriptor.runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
-            for (frame in thread.stackTrace.reversed()) {
-                if (frame.className == "sun.nio.ch.lincheck.Injections") break
-                if (frame.isLincheckInternals ||
-                    frame.isNativeMethod ||
-                    analysisProfile.shouldBeHidden(frame.className, frame.methodName)
-                ) continue
-
-                appendMethodCall(null, frame.className, frame.methodName,  UNKNOWN_METHOD_TYPE, UNKNOWN_CODE_LOCATION_ID)
+            if (layout.isTree()) {
+                pushInvokedMethodCalls(thread, threadData)
             }
         }
     }
@@ -253,19 +243,23 @@ class TraceCollectingEventTracker(
         // so that `runInsideInjectedCode` does not exit on short-path without
         // even invoking its lambda
         threadDescriptor.enableAnalysis()
+
         threadDescriptor.runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
-            val tracePoint = TRMethodCallTracePoint(
-                context = context,
-                threadId = threadData.threadId,
-                codeLocationId = -1,
-                methodId = context.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
-                obj = TRObject(context, thread),
-                parameters = emptyList()
-            )
-            strategy.tracePointCreated(null, tracePoint)
-            threadData.setRootCall(tracePoint)
-            threadData.pushStackFrame(tracePoint, thread, isInline = false)
+
+            if (layout.isTree()) {
+                val tracePoint = TRMethodCallTracePoint(
+                    context = context,
+                    threadId = threadData.threadId,
+                    codeLocationId = -1,
+                    methodId = context.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
+                    obj = TRObject(context, thread),
+                    parameters = emptyList()
+                )
+                strategy.tracePointCreated(null, tracePoint)
+                threadData.setRootCall(tracePoint)
+                threadData.pushStackFrame(tracePoint, thread, isInline = false)
+            }
         }
     }
 
@@ -871,18 +865,69 @@ class TraceCollectingEventTracker(
         threads[thread] = threadData
         strategy.registerCurrentThread(threadData.threadId)
 
-        val tracePoint = TRMethodCallTracePoint(
+        if (layout.isTree()) {
+            val tracePoint = TRMethodCallTracePoint(
+                context = context,
+                threadId = threadData.threadId,
+                codeLocationId = codeLocationId,
+                methodId = context.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
+                obj = null,
+                parameters = emptyList()
+            )
+            strategy.tracePointCreated(null, tracePoint)
+
+            threadData.setRootCall(tracePoint)
+            threadData.pushStackFrame(tracePoint, null, isInline = false)
+        }
+    }
+
+    private fun pushMethodCall(
+        thread: Thread,
+        threadData: ThreadData,
+        obj: TRObject?,
+        className: String,
+        methodName: String,
+        methodType: Types.MethodType,
+        codeLocationId: Int,
+        params: List<TRObject> = emptyList()
+    ) {
+        val parentTracePoint = threadData.currentMethodCallTracePoint()
+        val methodCall = TRMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocationId,
-            methodId = context.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
-            obj = null,
-            parameters = emptyList()
+            methodId = context.getOrCreateMethodId(className, methodName, methodType),
+            obj = obj,
+            parameters = params,
+            flags = INCOMPLETE_METHOD_FLAG.toShort(),
+            parentTracePoint = parentTracePoint
         )
-        strategy.tracePointCreated(null, tracePoint)
+        strategy.tracePointCreated(parentTracePoint, methodCall)
+        if (threadData.getStack().isEmpty()) {
+            threadData.setRootCall(methodCall)
+        }
+        threadData.pushStackFrame(methodCall, thread, isInline = false)
+    }
 
-        threadData.setRootCall(tracePoint)
-        threadData.pushStackFrame(tracePoint, null, isInline = false)
+    private fun pushInvokedMethodCalls(
+        thread: Thread,
+        threadData: ThreadData,
+    ) {
+        for (frame in thread.stackTrace.reversed()) {
+            if (frame.className == "sun.nio.ch.lincheck.Injections") break
+            if (frame.isLincheckInternals ||
+                frame.isNativeMethod ||
+                analysisProfile.shouldBeHidden(frame.className, frame.methodName)
+            ) continue
+
+            pushMethodCall(thread, threadData,
+                obj = null,
+                className = frame.className,
+                methodName = frame.methodName,
+                methodType = UNKNOWN_METHOD_TYPE,
+                codeLocationId = UNKNOWN_CODE_LOCATION_ID,
+            )
+        }
     }
 
     /**

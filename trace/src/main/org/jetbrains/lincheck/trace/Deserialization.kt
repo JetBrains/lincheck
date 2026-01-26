@@ -16,10 +16,12 @@ import java.io.*
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.locks.ReentrantLock
 import java.util.zip.ZipException
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import kotlin.concurrent.thread
+import kotlin.concurrent.withLock
 import kotlin.io.path.Path
 
 internal const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -276,6 +278,7 @@ class LazyTraceReader private constructor(
     private val data: SeekableDataInput
     private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
     private val callTracepointChildren = RangeIndex.create()
+    private val lock = ReentrantLock()
 
     init {
         val channel = Files.newByteChannel(Path(input.dataFileName), StandardOpenOption.READ)
@@ -296,8 +299,7 @@ class LazyTraceReader private constructor(
         input.close()
     }
 
-    @Synchronized
-    fun readRoots(): List<TRTracePoint> {
+    fun readTopLevelTracePoints(): List<List<TRTracePoint>> = lock.withLock {
         var start = System.currentTimeMillis()
 
         if (!contextLoaded) {
@@ -307,7 +309,7 @@ class LazyTraceReader private constructor(
             contextLoaded = true
         }
 
-        val roots = mutableMapOf<Int, TRTracePoint>()
+        val threadTracepoints = mutableMapOf<Int, List<TRTracePoint>>()
 
         dataBlocks.forEach {
             val (threadId, blocks) = it
@@ -326,22 +328,29 @@ class LazyTraceReader private constructor(
                     if (tracePoint != null) tracepoints.add(tracePoint)
                 }
             )
-            if (tracepoints.isEmpty()) {
-                Logger.warn { "Thread $threadId doesn't write any tracepoints" }
-            } else {
-                if (tracepoints.size > 1) {
-                    Logger.error { "Thread $threadId wrote too many root tracepoints: ${tracepoints.size}" }
-                }
-                roots[threadId] = tracepoints.first()
-            }
-        }
-        Logger.debug { "Roots loaded in ${System.currentTimeMillis() - start} ms" }
 
-        return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
+            threadTracepoints[threadId] = tracepoints
+        }
+        Logger.debug { "Loaded top-level trace points in ${System.currentTimeMillis() - start} ms" }
+
+        return threadTracepoints.entries
+            .sortedBy { it.key }
+            .map { (_, tracepoints) -> tracepoints }
     }
 
-    @Synchronized
-    fun loadAllChildren(parent: TRContainerTracePoint) {
+    fun readRoots(): List<TRTracePoint> = lock.withLock {
+        val threadTracepoints = readTopLevelTracePoints()
+        return threadTracepoints.mapIndexedNotNull { threadId, tracepoints ->
+            if (tracepoints.isEmpty()) {
+                Logger.warn { "Thread $threadId does not contain any tracepoints" }
+            } else if (tracepoints.size > 1) {
+                Logger.warn { "Thread $threadId has more than one root tracepoints: ${tracepoints.size}" }
+            }
+            tracepoints.firstOrNull()
+        }
+    }
+
+    fun loadAllChildren(parent: TRContainerTracePoint) = lock.withLock {
         val (start, end) = callTracepointChildren[parent.eventId]
             ?: error("TRContainerTracePoint ${parent.eventId} is not found in index")
 
@@ -362,10 +371,11 @@ class LazyTraceReader private constructor(
         }
     }
 
-    fun loadChild(parent: TRContainerTracePoint, childIdx: Int): Unit = loadChildrenRange(parent, childIdx, 1)
+    fun loadChild(parent: TRContainerTracePoint, childIdx: Int): Unit = lock.withLock {
+        loadChildrenRange(parent, childIdx, 1)
+    }
 
-    @Synchronized
-    fun loadChildrenRange(parent: TRContainerTracePoint, from: Int, count: Int) {
+    fun loadChildrenRange(parent: TRContainerTracePoint, from: Int, count: Int) = lock.withLock {
         require(from in 0 ..< parent.events.size) { "From index $from must be in range 0 ..< ${parent.events.size}" }
         require(count in 1 ..parent.events.size - from) { "Count $count must be in range 1 .. ${parent.events.size - from}" }
 
@@ -380,8 +390,7 @@ class LazyTraceReader private constructor(
         )
     }
 
-    @Synchronized
-    fun getChildAndRestorePosition(parent: TRContainerTracePoint, childIdx: Int): TRTracePoint? {
+    fun getChildAndRestorePosition(parent: TRContainerTracePoint, childIdx: Int): TRTracePoint? = lock.withLock {
         val oldPosition = data.position()
         loadChild(parent, childIdx)
         data.seek(oldPosition)

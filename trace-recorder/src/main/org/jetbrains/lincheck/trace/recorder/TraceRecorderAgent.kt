@@ -61,7 +61,7 @@ internal object TraceRecorderAgent {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
         validateTraceRecorderMode()
-        if (!isInLiveDebuggerMode) { 
+        if (!isInLiveDebuggerMode) {
             TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
         }
 
@@ -84,7 +84,7 @@ internal object TraceRecorderAgent {
 
         val mode =  if (TraceAgentParameters.getLineBreakpoints().isEmpty()) TRACE_RECORDER_MODE_PROPERTY
                     else LIVE_DEBUGGER_MODE_PROPERTY
-        
+
         System.setProperty(mode, "true")
         validateTraceRecorderMode()
 
