@@ -12,5 +12,6 @@ package org.jetbrains.lincheck.trace.jmx
 
 interface TracingJmxController {
     fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean)
+    fun startTcpTracing(host: String, port: Int)
     fun stopTracing()
 }

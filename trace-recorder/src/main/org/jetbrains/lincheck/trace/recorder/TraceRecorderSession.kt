@@ -177,6 +177,10 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
+                is TraceRecordingMode.BinaryTcpStream -> {
+                    // TCP streaming - trace already sent over network, nothing to dump to file
+                    Logger.info { "TCP trace streaming completed to ${mode.host}:${mode.port}" }
+                }
                 is TraceRecordingMode.Text -> {
                     printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)
                 }
