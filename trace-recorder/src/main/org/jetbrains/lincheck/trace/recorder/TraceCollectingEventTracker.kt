@@ -202,6 +202,9 @@ class TraceCollectingEventTracker(
         // be enabled first in order for this method to even invoke its lambda
         descriptor.runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
+
+            if (isInLiveDebuggerMode) return // TODO: refactor this check!
+
             pushInvokedMethodCalls(thread, threadData)
         }
     }
@@ -229,6 +232,9 @@ class TraceCollectingEventTracker(
 
         threadDescriptor.runInsideInjectedCode {
             strategy.registerCurrentThread(threadData.threadId)
+
+            if (isInLiveDebuggerMode) return // TODO: refactor this check!
+
             val tracePoint = TRMethodCallTracePoint(
                 context = context,
                 threadId = threadData.threadId,
@@ -842,6 +848,8 @@ class TraceCollectingEventTracker(
         ThreadDescriptor.getCurrentThreadDescriptor().eventTrackerData = threadData
         threads[thread] = threadData
         strategy.registerCurrentThread(threadData.threadId)
+
+        if (isInLiveDebuggerMode) return // TODO: refactor this check!
 
         val tracePoint = TRMethodCallTracePoint(
             context = context,
