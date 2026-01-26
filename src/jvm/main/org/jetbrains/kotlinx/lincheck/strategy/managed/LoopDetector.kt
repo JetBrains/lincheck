@@ -10,8 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import sun.nio.ch.lincheck.ThreadDescriptor
-import java.util.IdentityHashMap
+import org.jetbrains.kotlinx.lincheck.util.mutableThreadMapOf
 
 interface LoopDetector {
     enum class Decision {
@@ -21,15 +20,15 @@ interface LoopDetector {
     }
 
     fun resetAll()              // between iterations
-    fun resetThread(threadDescriptor: ThreadDescriptor) // when a thread finishes
+    fun resetThread(threadId: Int) // when a thread finishes
 
-    fun beforeLoopEnter(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int)
-    fun onLoopIteration(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, methodId: Int): Decision
-    fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, methodId: Int)
+    fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int)
+    fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int): Decision
+    fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int)
 
     // TODO: at the moment params are only passed, but not used
     fun onMethodEnter(
-        threadDescriptor: ThreadDescriptor,
+        threadId: Int,
         codeLocation: Int,
         methodId: Int,
         receiver: Any?,
@@ -37,7 +36,7 @@ interface LoopDetector {
     ) : Decision
 
     fun onMethodExit(
-        threadDescriptor: ThreadDescriptor,
+        threadId: Int,
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>,
@@ -79,24 +78,24 @@ class BoundedLoopDetector(
     // Questions: what methods we need to add to the interface to connect it with scheduling?
     // shouldSwitch(): Boolean ???
 
-    private val threadStates = IdentityHashMap<ThreadDescriptor, LoopDetectorThreadState>()
+    private val threadStates = mutableThreadMapOf<LoopDetectorThreadState>()
 
     override fun resetAll() {
         threadStates.clear()
     }
 
-    override fun resetThread(threadDescriptor: ThreadDescriptor) {
-        threadStates.remove(threadDescriptor)
+    override fun resetThread(threadId: Int) {
+        threadStates.remove(threadId)
     }
 
-    private fun state(threadDescriptor: ThreadDescriptor): LoopDetectorThreadState =
-        threadStates.getOrPut(threadDescriptor) {
-            LoopDetectorThreadState(threadDescriptor.thread.id.toInt())
+    private fun state(threadId: Int): LoopDetectorThreadState =
+        threadStates.getOrPut(threadId) {
+            LoopDetectorThreadState(threadId)
         }
 
     // --- LOOP LEVEL ---
-    override fun beforeLoopEnter(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int) {
-        val st = state(threadDescriptor)
+    override fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int) {
+        val st = state(threadId)
         val stack = st.callStack
 
         val frame = stack.lastOrNull()?: ActiveMethodCallInfo(methodId = -1).also {
@@ -106,8 +105,8 @@ class BoundedLoopDetector(
         frame.loops.addLast(ActiveLoopInfo(loopId))
     }
 
-    override fun onLoopIteration(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, methodId: Int): LoopDetector.Decision {
-        val st = state(threadDescriptor)
+    override fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int): LoopDetector.Decision {
+        val st = state(threadId)
         val stack = st.callStack
         val frame = stack.lastOrNull()?: return LoopDetector.Decision.IDLE
 
@@ -134,8 +133,8 @@ class BoundedLoopDetector(
 
     }
 
-    override fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, methodId: Int) {
-        val st = state(threadDescriptor)
+    override fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int) {
+        val st = state(threadId)
         val stack = st.callStack
         val frame = stack.lastOrNull()?: return
 
@@ -152,13 +151,13 @@ class BoundedLoopDetector(
 
     // --- METHOD LEVEL ---
     override fun onMethodEnter(
-        threadDescriptor: ThreadDescriptor,
+        threadId: Int,
         codeLocation: Int,
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>
     ) : LoopDetector.Decision {
-        val st = state(threadDescriptor)
+        val st = state(threadId)
         val stack = st.callStack
         val top = stack.lastOrNull()
 
@@ -177,13 +176,13 @@ class BoundedLoopDetector(
     }
 
     override fun onMethodExit(
-        threadDescriptor: ThreadDescriptor,
+        threadId: Int,
         methodId: Int,
         receiver: Any?,
         params: Array<Any?>,
         result: Any?
     ) {
-        val st = state(threadDescriptor)
+        val st = state(threadId)
         val stack = st.callStack
         val top = stack.lastOrNull() ?: return
 
