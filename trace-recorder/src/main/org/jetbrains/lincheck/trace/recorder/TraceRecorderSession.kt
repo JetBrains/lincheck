@@ -162,13 +162,13 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
         try {
             val roots = eventTracker.getThreadRoots()
             when (mode) {
-                is TraceRecordingMode.BinaryDump -> {
+                is TraceRecordingMode.BinaryFileDump -> {
                     saveRecorderTrace(traceDumpFilePath, context, roots)
                     if (packTrace) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                is TraceRecordingMode.BinaryStream -> {
+                is TraceRecordingMode.BinaryFileStream -> {
                     check(traceDumpFilePath == eventTracker.traceStreamingFilePath) {
                         // TODO: it should be easy to support dumping to a different file later: just copy file
                         "Trace dump filename in binary stream mode should match the filename of streaming file"

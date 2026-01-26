@@ -76,7 +76,7 @@ object TraceRecorder {
             layout = if (isInLiveDebuggerMode) TraceDataLayout.FLAT else TraceDataLayout.TREE,
             context = createTraceContext(),
             traceStreamingFilePath =
-                if (recordingMode is TraceRecordingMode.BinaryStream) recordingMode.streamingFilePath else null
+                if (recordingMode is TraceRecordingMode.BinaryFileStream) recordingMode.streamingFilePath else null
         )
         val session = TraceRecorderSession(eventTracker)
             .also { this.session = it }

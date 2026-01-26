@@ -21,12 +21,12 @@ sealed class TraceRecordingMode {
      *
      * @param streamingFilePath if specified, writes the trace to the specified file in binary format.
      */
-    class BinaryStream(val streamingFilePath: String? = null) : TraceRecordingMode()
+    class BinaryFileStream(val streamingFilePath: String? = null) : TraceRecordingMode()
 
     /**
      * Collect full trace in the memory and dump to the output file at the end of the run.
      */
-    class BinaryDump : TraceRecordingMode()
+    class BinaryFileDump : TraceRecordingMode()
 
     /**
      * Collect the full trace in memory and print it as text to the output file.
@@ -46,9 +46,9 @@ sealed class TraceRecordingMode {
             return when {
                 outputMode.equals("binary", ignoreCase = true) -> {
                     if (outputOption.equals("dump", ignoreCase = true)) {
-                        BinaryDump()
+                        BinaryFileDump()
                     } else {
-                        BinaryStream(outputFilePath)
+                        BinaryFileStream(outputFilePath)
                     }
                 }
 
@@ -58,7 +58,7 @@ sealed class TraceRecordingMode {
 
                 outputMode.equals("null", ignoreCase = true) -> Null
 
-                else -> BinaryStream(outputFilePath) // Default
+                else -> BinaryFileStream(outputFilePath) // Default
             }
         }
     }

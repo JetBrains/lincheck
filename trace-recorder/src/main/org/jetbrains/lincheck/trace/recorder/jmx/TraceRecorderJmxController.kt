@@ -56,7 +56,7 @@ object TraceRecorderJmxController : TracingJmxController {
         }
     }
 
-    override fun startTracing(traceDumpFilePath: String, packTrace: Boolean) {
+    override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
         try {
             val session = TraceRecorder.startRecording(
                 recordingMode = TraceRecordingMode.parse(
