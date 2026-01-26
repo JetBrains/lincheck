@@ -160,7 +160,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass()) {
             return this
         }
-        val ownerName = CodeLocations.accessPath(tracePoint.context, tracePoint.codeLocationId)
+        val ownerName = tracePoint.accessPath
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
                 if (it.isObjectInstanceAccess()) {
@@ -303,7 +303,7 @@ abstract class AbstractTRFieldTracePointPrinter {
     }
 
     protected fun TRAppendable.appendOwner(tracePoint: TRFieldTracePoint): TRAppendable {
-        val ownerName = CodeLocations.accessPath(tracePoint.context, tracePoint.codeLocationId)
+        val ownerName = tracePoint.accessPath
         val appendDot = {
             // When lambda captures a local variable, it is wrapped into the `*Ref` class,
             // which stored primitive value in the ` element ` field. We hide such field accesses:
@@ -388,7 +388,7 @@ abstract class AbstractTRArrayTracePointPrinter {
 
     // TODO: DR-356 `ArrayElementByIndexAccessLocation` and `ArrayElementByNameAccessLocation` do not appear in trace
     protected fun TRAppendable.appendOwner(tracePoint: TRArrayTracePoint): TRAppendable {
-        val ownerName = CodeLocations.accessPath(tracePoint.context, tracePoint.codeLocationId)
+        val ownerName = tracePoint.accessPath
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
                 appendAccessPath(it)
