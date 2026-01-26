@@ -23,9 +23,9 @@ class MethodLabels internal constructor(
     catchTargets: Set<Label>
 ): Comparator<Label> {
     // Index is a serial number of the labels (starting from 0) in order method instructions visited.
-    private class LabelInfo(val index: Int, val catchStart: Boolean, var seen: Boolean)
+    private class LabelInfo(val index: Int, val isCatchTarget: Boolean, var seen: Boolean)
 
-    private val labels = labels.mapValues { (k, v) -> LabelInfo(v, catchTargets.contains(k),false) }
+    private val labels = labels.mapValues { (k, v) -> LabelInfo(v, catchTargets.contains(k), false) }
 
     override fun compare(
         o1: Label,
@@ -46,7 +46,7 @@ class MethodLabels internal constructor(
 
     fun isLabelSeen(label: Label): Boolean = labels[label]?.seen ?: false
 
-    fun isCatchTarget(label: Label): Boolean = labels[label]?.catchStart ?: false
+    fun isCatchTarget(label: Label): Boolean = labels[label]?.isCatchTarget ?: false
 
     companion object {
         val EMPTY = MethodLabels(emptyMap(), emptySet())

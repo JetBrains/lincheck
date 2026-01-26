@@ -843,7 +843,7 @@ sealed class TRExceptionProcessingTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val exception: TRObject,
-    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+    eventId: Int
 ) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
     override fun save(out: TraceWriter) {

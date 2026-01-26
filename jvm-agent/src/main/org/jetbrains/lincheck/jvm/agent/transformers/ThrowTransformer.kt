@@ -44,7 +44,7 @@ internal class ThrowTransformer(
         // Stack: exception
         dup()
         // Stack: exception, exception
-        invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         // Stack: exception, exception, threadDescriptor
         swap()
         // Stack: exception, threadDescriptor, exception

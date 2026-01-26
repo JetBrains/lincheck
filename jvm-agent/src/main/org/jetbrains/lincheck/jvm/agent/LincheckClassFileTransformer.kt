@@ -225,7 +225,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                     val extractor = LabelCollectorMethodVisitor(map)
                     m.instructions.accept(extractor)
                 }
-                val catches = m.tryCatchBlocks.map { it.handler.label } .toSet()
+                val catches = m.tryCatchBlocks.map { it.handler.label }.toSet()
                 labels to catches
             }
         )
