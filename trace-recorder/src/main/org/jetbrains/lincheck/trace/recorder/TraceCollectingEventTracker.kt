@@ -159,10 +159,10 @@ class TraceCollectingEventTracker(
 
     init {
         when (mode) {
-            is TraceRecordingMode.BinaryDump -> {
+            is TraceRecordingMode.BinaryFileDump -> {
                 strategy = MemoryTraceCollecting(context)
             }
-            is TraceRecordingMode.BinaryStream -> {
+            is TraceRecordingMode.BinaryFileStream -> {
                 check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
                 strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
             }

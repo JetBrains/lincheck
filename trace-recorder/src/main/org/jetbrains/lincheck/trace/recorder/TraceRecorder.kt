@@ -73,7 +73,7 @@ object TraceRecorder {
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
         val eventTracker = TraceCollectingEventTracker(recordingMode, createTraceContext(),
             traceStreamingFilePath =
-                if (recordingMode is TraceRecordingMode.BinaryStream) recordingMode.streamingFilePath else null
+                if (recordingMode is TraceRecordingMode.BinaryFileStream) recordingMode.streamingFilePath else null
         )
         val session = TraceRecorderSession(eventTracker)
             .also { this.session = it }
