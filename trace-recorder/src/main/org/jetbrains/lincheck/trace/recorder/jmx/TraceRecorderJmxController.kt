@@ -75,6 +75,19 @@ object TraceRecorderJmxController : TracingJmxController {
         }
     }
 
+    override fun startTcpTracing(host: String, port: Int) {
+        try {
+            val session = TraceRecorder.startRecording(
+                recordingMode = TraceRecordingMode.BinaryTcpStream(host, port),
+                startMode = TraceRecorderSession.StartMode.Dynamic,
+            )
+            Logger.info { "Started TCP trace streaming to $host:$port" }
+        } catch (t: Throwable) {
+            Logger.error { "Cannot start TCP trace streaming to $host:$port" }
+            Logger.error(t)
+        }
+    }
+
     override fun stopTracing() {
         try {
             TraceRecorder.stopRecording()
