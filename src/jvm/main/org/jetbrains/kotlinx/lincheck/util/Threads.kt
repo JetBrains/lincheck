@@ -26,3 +26,15 @@ fun <T> mutableThreadMapOf(): MutableThreadMap<T> =
 fun <T> mutableThreadMapOf(vararg pairs: Pair<ThreadId, T>): ThreadMap<T> =
     mutableMapOf(*pairs)
 
+
+// Methods moved from ArrayIntMap
+fun <T> MutableThreadMap<T>.update(key: Int, default: T, transform: (T) -> T) {
+    // TODO: could it be done with a single lookup in a map?
+    put(key, get(key)?.let(transform) ?: default)
+}
+
+fun <T> MutableThreadMap<T>.mergeReduce(other: ThreadMap<T>, reduce: (T, T) -> T) {
+    other.forEach { (key, value) ->
+        update(key, default = value) { reduce(it, value) }
+    }
+}
