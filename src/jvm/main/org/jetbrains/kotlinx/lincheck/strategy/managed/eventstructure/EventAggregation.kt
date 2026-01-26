@@ -47,14 +47,11 @@ typealias EventRemapping = Map<AtomicThreadEvent, HyperThreadEvent>
 fun Execution<AtomicThreadEvent>.aggregate(
     aggregator: EventAggregator
 ): Pair<Execution<HyperThreadEvent>, EventRemapping> {
-    val clock = MutableVectorClock(1 + maxThreadID)
-    val result = MutableExecution<HyperThreadEvent>(1 + maxThreadID)
+    val clock = MutableVectorClock()
+    val result = MutableExecution<HyperThreadEvent>()
     val remapping = mutableMapOf<AtomicThreadEvent, HyperThreadEvent>()
     val aggregated = threadMap.mapValues { (_, events) -> aggregator.aggregate(events) }
-    val aggregatedClock = MutableVectorClock(1 + maxThreadID).apply {
-        for (i in 0 .. maxThreadID)
-            this[i] = 0
-    }
+    val aggregatedClock = MutableVectorClock().apply {} // TODO, this default value is broken... (it used to be 0, now it is -1)
     while (!clock.observes(this)) {
         var position = -1
         var found = false

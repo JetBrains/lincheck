@@ -22,7 +22,11 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.Computable
+import org.jetbrains.lincheck.util.Relation
+import org.jetbrains.lincheck.util.RelationMatrix
+import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.union
 import kotlin.collections.*
 
 
@@ -49,7 +53,7 @@ class SequentialConsistencyChecker(
         check(execution.executionOrderComputable.computed)
         val executionOrder = execution.executionOrderComputable.value
             .ensure { it.isConsistent() }
-        SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
+        SequentialConsistencyReplayer().ensure {
             it.replay(executionOrder.ordering) != null
         }
         return null
@@ -172,7 +176,7 @@ class IncrementalSequentialConsistencyChecker(
         // check by trying to replay execution order
         if (state == ConsistencyVerdict.Consistent) {
             check(execution.executionOrderComputable.computed)
-            val replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID)
+            val replayer = SequentialConsistencyReplayer()
             val executionOrder = execution.executionOrderComputable.value
             if (replayer.replay(executionOrder.ordering) != null) {
                 // if replay is successful, return "consistent" verdict

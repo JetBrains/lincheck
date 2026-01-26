@@ -42,11 +42,11 @@ fun MutableVectorClock.increment(tid: ThreadId) {
 operator fun VectorClock.plus(other: VectorClock): MutableVectorClock =
     copy().apply { merge(other) }
 
-fun VectorClock(capacity: Int = 0): VectorClock =
-    MutableVectorClock(capacity)
+fun VectorClock(): VectorClock =
+    MutableVectorClock()
 
-fun MutableVectorClock(capacity: Int = 0): MutableVectorClock =
-    IntArrayClock(capacity)
+fun MutableVectorClock(): MutableVectorClock =
+    IntArrayClock()
 
 fun VectorClock.copy(): MutableVectorClock {
     // TODO: make VectorClock sealed interface?
@@ -128,6 +128,54 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
         private fun emptyIntArrayClock(capacity: Int) =
             IntArray(capacity) { -1 }
     }
+}
+
+
+private class ThreadMapClock : MutableVectorClock {
+    var clock = mutableThreadMapOf<Int>()
+
+    override fun isEmpty(): Boolean =
+        clock.isEmpty()
+
+    override fun get(tid: ThreadId): Int =
+        clock.getOrDefault(tid, -1)
+
+    override fun set(tid: ThreadId, timestamp: Int) {
+        clock.set(tid, timestamp)
+    }
+
+    override fun increment(tid: ThreadId, n: Int) {
+        // TODO: not sure what is the exact behaviour when tid is not already there
+        // Note that the default value here is 0.
+        clock.set(tid, clock.getOrDefault(tid, 0) + n)
+    }
+
+    override fun merge(other: VectorClock) {
+        // TODO: make VectorClock sealed interface?
+        check(other is ThreadMapClock)
+        for (i in other.clock.keys) {
+            clock[i] = max(get(i), other[i])
+        }
+    }
+
+    override fun clear() {
+        clock.clear();
+    }
+
+    fun copy() = ThreadMapClock().copyFrom(this)
+
+    private fun copyFrom(other: ThreadMapClock) {
+        clock = other.clock.toMutableMap();
+    }
+
+    override fun equals(other: Any?): Boolean =
+        (other is ThreadMapClock) && (clock.equals(other.clock))
+
+    override fun hashCode(): Int =
+        clock.hashCode()
+
+    override fun toString() =
+        clock.toString()
 }
 
 fun VectorClock.toHBClock(capacity: Int, tid: ThreadId, aid: Int): HBClock {

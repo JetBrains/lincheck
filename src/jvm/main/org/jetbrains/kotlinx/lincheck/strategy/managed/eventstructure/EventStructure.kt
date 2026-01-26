@@ -23,20 +23,26 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
+import org.jetbrains.kotlinx.lincheck.trace.SwitchReason
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.SortedList
+import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.ensureNull
+import org.jetbrains.lincheck.util.orEqual
+import org.jetbrains.lincheck.util.runIf
+import org.jetbrains.lincheck.util.satisfies
+import org.jetbrains.lincheck.util.sortedMutableListOf
+import org.jetbrains.lincheck.util.unreachable
 
 
 class EventStructure(
-    nParallelThreads: Int,
     val memoryInitializer: MemoryInitializer,
     // TODO: refactor --- avoid using callbacks!
     private val reportInconsistencyCallback: ReportInconsistencyCallback,
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = 0
-    val initThreadId = nParallelThreads
-    val maxThreadId = initThreadId
-    val nThreads = maxThreadId + 1
+    val initThreadId = -1
 
     /**
      * Mutable list of the event structure events.
@@ -74,7 +80,7 @@ class EventStructure(
     /**
      * The mutable execution currently being explored.
      */
-    private var _execution = MutableExtendedExecution(this.nThreads)
+    private var _execution = MutableExtendedExecution()
 
     /**
      * The execution currently being explored.
@@ -85,7 +91,7 @@ class EventStructure(
     /**
      * The frontier representing an already replayed part of the execution currently being explored.
      */
-    private var playedFrontier = MutableExecutionFrontier<AtomicThreadEvent>(this.nThreads)
+    private var playedFrontier = MutableExecutionFrontier<AtomicThreadEvent>()
 
     /**
      * An object managing the replay process of the execution currently being explored.
@@ -103,7 +109,7 @@ class EventStructure(
      * Pinned events cannot be revisited and thus do not participate in the synchronization
      * with newly added events.
      */
-    private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>(this.nThreads)
+    private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>()
 
     /**
      * The object registry, storing information about all objects
@@ -135,7 +141,7 @@ class EventStructure(
      * from the [blockedEvents] mapping, and the thread becomes fully unblocked.
      */
     private val blockedEvents: MutableThreadMap<BlockedEventDescriptor> =
-        ArrayIntMap(this.nThreads)
+        mutableThreadMapOf()
 
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
@@ -162,7 +168,7 @@ class EventStructure(
 
     fun initializeExploration() {
         // reset re-played frontier
-        playedFrontier = MutableExecutionFrontier(nThreads)
+        playedFrontier = MutableExecutionFrontier()
         playedFrontier[initThreadId] = execution[initThreadId]!!.last()
         // reset replayer state
         replayer.reset()

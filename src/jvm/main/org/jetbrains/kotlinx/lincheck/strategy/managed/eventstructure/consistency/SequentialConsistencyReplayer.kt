@@ -24,6 +24,10 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingMonitorTracker
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.Covering
+import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.ensureTrue
+import org.jetbrains.lincheck.util.unreachable
 
 fun checkByReplaying(
     execution: Execution<HyperThreadEvent>,
@@ -65,9 +69,8 @@ class SequentialConsistencyReplayViolation : SequentialConsistencyViolation() {
 }
 
 internal data class SequentialConsistencyReplayer(
-    val nThreads: Int,
     val memoryView: MutableMap<MemoryLocation, Event> = mutableMapOf(),
-    val monitorTracker: ModelCheckingMonitorTracker = ModelCheckingMonitorTracker(nThreads),
+    val monitorTracker: ModelCheckingMonitorTracker = ModelCheckingMonitorTracker(),
     val monitorMapping: MutableMap<ObjectID, Any> = mutableMapOf()
 ) {
 
@@ -95,7 +98,7 @@ internal data class SequentialConsistencyReplayer(
             label is LockLabel && label.isResponse && !label.isSynthetic -> {
                 val monitor = getMonitor(label.mutexID)
                 if (this.monitorTracker.canAcquireMonitor(event.threadId, monitor)) {
-                    this.copy().apply { monitorTracker.acquireMonitor(event.threadId, monitor).ensure() }
+                    this.copy().apply { monitorTracker.acquireMonitor(event.threadId, monitor).ensureTrue() }
                 } else null
             }
 
@@ -103,7 +106,7 @@ internal data class SequentialConsistencyReplayer(
                 this.copy().apply { monitorTracker.releaseMonitor(event.threadId, getMonitor(label.mutexID)) }
 
             label is WaitLabel && label.isRequest ->
-                this.copy().apply { monitorTracker.waitOnMonitor(event.threadId, getMonitor(label.mutexID)).ensure() }
+                this.copy().apply { monitorTracker.waitOnMonitor(event.threadId, getMonitor(label.mutexID)).ensureTrue() }
 
             label is WaitLabel && label.isResponse -> {
                 val monitor = getMonitor(label.mutexID)
@@ -149,10 +152,9 @@ internal data class SequentialConsistencyReplayer(
 
     fun copy(): SequentialConsistencyReplayer =
         SequentialConsistencyReplayer(
-            nThreads,
-            memoryView.toMutableMap(),
-            monitorTracker.copy(),
-            monitorMapping.toMutableMap(),
+            memoryView = memoryView.toMutableMap(),
+            monitorTracker = monitorTracker.copy(),
+            monitorMapping = monitorMapping.toMutableMap(),
         )
 
     private fun getMonitor(objID: ObjectID): Any {
@@ -181,8 +183,8 @@ private data class State(
 
     companion object {
         fun initial(execution: Execution<HyperThreadEvent>) = State(
-            executionClock = MutableVectorClock(1 + execution.maxThreadID),
-            replayer = SequentialConsistencyReplayer(1 + execution.maxThreadID),
+            executionClock = MutableVectorClock(),
+            replayer = SequentialConsistencyReplayer(),
         )
     }
 

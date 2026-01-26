@@ -21,6 +21,10 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.max
+import org.jetbrains.lincheck.util.orEqual
+import org.jetbrains.lincheck.util.refine
+import kotlin.to
 
 // TODO: implement VectorClock interface??
 interface ExecutionFrontier<out E : ThreadEvent> {
@@ -31,19 +35,19 @@ interface MutableExecutionFrontier<E : ThreadEvent> : ExecutionFrontier<E> {
     override val threadMap: MutableThreadMap<E?>
 }
 
-val ExecutionFrontier<*>.threadIDs: Set<ThreadID>
+val ExecutionFrontier<*>.threadIDs: Set<ThreadId>
     get() = threadMap.keys
 
 val<E : ThreadEvent> ExecutionFrontier<E>.events: List<E>
     get() = threadMap.values.filterNotNull()
 
-operator fun<E : ThreadEvent> ExecutionFrontier<E>.get(tid: ThreadID): E? =
+operator fun<E : ThreadEvent> ExecutionFrontier<E>.get(tid: ThreadId): E? =
     threadMap[tid]
 
-fun ExecutionFrontier<*>.getPosition(tid: ThreadID): Int =
+fun ExecutionFrontier<*>.getPosition(tid: ThreadId): Int =
     get(tid)?.threadPosition ?: -1
 
-fun ExecutionFrontier<*>.getNextPosition(tid: ThreadID): Int =
+fun ExecutionFrontier<*>.getNextPosition(tid: ThreadId): Int =
     1 + getPosition(tid)
 
 operator fun<E : ThreadEvent> ExecutionFrontier<E>.contains(event: E): Boolean {
@@ -51,7 +55,7 @@ operator fun<E : ThreadEvent> ExecutionFrontier<E>.contains(event: E): Boolean {
     return programOrder.orEqual(event, lastEvent)
 }
 
-operator fun<E : ThreadEvent> MutableExecutionFrontier<E>.set(tid: ThreadID, event: E?) {
+operator fun<E : ThreadEvent> MutableExecutionFrontier<E>.set(tid: ThreadId, event: E?) {
     require(tid == (event?.threadId ?: tid))
     threadMap[tid] = event
 }
@@ -103,25 +107,25 @@ inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: Lis
     }
 }
 
-fun<E : ThreadEvent> ExecutionFrontier(nThreads: Int): ExecutionFrontier<E> =
-    MutableExecutionFrontier(nThreads)
+fun<E : ThreadEvent> ExecutionFrontier(): ExecutionFrontier<E> =
+    MutableExecutionFrontier()
 
-fun<E : ThreadEvent> MutableExecutionFrontier(nThreads: Int): MutableExecutionFrontier<E> =
-    ExecutionFrontierImpl(ArrayIntMap(nThreads))
+fun<E : ThreadEvent> MutableExecutionFrontier(): MutableExecutionFrontier<E> =
+    ExecutionFrontierImpl(mutableMapOf())
 
-fun<E : ThreadEvent> executionFrontierOf(vararg pairs: Pair<ThreadID, E?>): ExecutionFrontier<E> =
+fun<E : ThreadEvent> executionFrontierOf(vararg pairs: Pair<ThreadId, E?>): ExecutionFrontier<E> =
     mutableExecutionFrontierOf(*pairs)
 
-fun<E : ThreadEvent> mutableExecutionFrontierOf(vararg pairs: Pair<ThreadID, E?>): MutableExecutionFrontier<E> =
-    ExecutionFrontierImpl(ArrayIntMap(*pairs))
+fun<E : ThreadEvent> mutableExecutionFrontierOf(vararg pairs: Pair<ThreadId, E?>): MutableExecutionFrontier<E> =
+    ExecutionFrontierImpl(mutableThreadMapOf(*pairs))
 
 fun<E : ThreadEvent> ExecutionFrontier<E>.copy(): MutableExecutionFrontier<E> {
     check(this is ExecutionFrontierImpl)
-    return ExecutionFrontierImpl(threadMap.copy())
+    return ExecutionFrontierImpl(threadMap.toMutableMap()) // NOTE: This replaces a copy operation. I hope that this is actually a copy
 }
 
 private class ExecutionFrontierImpl<E : ThreadEvent>(
-    override val threadMap: ArrayIntMap<E?>
+    override val threadMap: MutableThreadMap<E?>
 ): MutableExecutionFrontier<E>
 
 inline fun<reified E : ThreadEvent> ExecutionFrontier<E>.toExecution(): Execution<E> =

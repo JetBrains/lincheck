@@ -411,3 +411,8 @@ fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
 fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
     computeIfAbsent(key) { default }.also(apply)
 }
+
+//TODO: Add docs. or perhaps this should go to boolean, since there is another refine function there
+inline fun<reified T> List<Any?>.refine(): List<T>? {
+    return if (all { it is T }) (this as List<T>) else null
+}
