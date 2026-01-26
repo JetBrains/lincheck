@@ -22,19 +22,13 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.descriptors.Types.BOOLEAN_TYPE_BOXED
-import org.jetbrains.lincheck.descriptors.Types.BYTE_TYPE_BOXED
-import org.jetbrains.lincheck.descriptors.Types.CHAR_TYPE_BOXED
-import org.jetbrains.lincheck.descriptors.Types.INT_TYPE_BOXED
-import org.jetbrains.lincheck.descriptors.Types.LONG_TYPE_BOXED
-import org.jetbrains.lincheck.descriptors.Types.SHORT_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.util.ensureNull
 import org.jetbrains.lincheck.util.implies
 import org.jetbrains.lincheck.util.toBoolean
 import org.jetbrains.lincheck.util.toInt
 import kotlin.collections.HashMap
 import java.util.IdentityHashMap
-import org.objectweb.asm.Type
 
 
 data class ObjectEntry(
@@ -129,71 +123,63 @@ class ObjectRegistry {
 fun ObjectRegistry.getOrRegisterObjectID(obj: OpaqueValue?): ObjectID =
     if (obj == null) NULL_OBJECT_ID else getOrRegisterObjectID(obj)
 
-fun ObjectRegistry.getValue(type: Type, id: ValueID): OpaqueValue? = when (type.sort) {
-    Type.LONG       -> id.opaque()
-    Type.INT        -> id.toInt().opaque()
-    Type.BYTE       -> id.toByte().opaque()
-    Type.SHORT      -> id.toShort().opaque()
-    Type.CHAR       -> id.toChar().opaque()
-    Type.BOOLEAN    -> id.toInt().toBoolean().opaque()
-    else            -> when (type) {
-        LONG_TYPE_BOXED     -> id.opaque()
-        INT_TYPE_BOXED      -> id.toInt().opaque()
-        BYTE_TYPE_BOXED     -> id.toByte().opaque()
-        SHORT_TYPE_BOXED    -> id.toShort().opaque()
-        CHAR_TYPE_BOXED     -> id.toChar().opaque()
-        BOOLEAN_TYPE_BOXED  -> id.toInt().toBoolean().opaque()
-        else                -> get(id)?.obj
+fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {
+    Types.LONG_TYPE       -> id.opaque()
+    Types.INT_TYPE        -> id.toInt().opaque()
+    Types.BYTE_TYPE       -> id.toByte().opaque()
+    Types.SHORT_TYPE      -> id.toShort().opaque()
+    Types.CHAR_TYPE       -> id.toChar().opaque()
+    Types.BOOLEAN_TYPE    -> id.toInt().toBoolean().opaque()
+    Types.LONG_TYPE_BOXED     -> id.opaque()
+    Types.INT_TYPE_BOXED      -> id.toInt().opaque()
+    Types.BYTE_TYPE_BOXED     -> id.toByte().opaque()
+    Types.SHORT_TYPE_BOXED    -> id.toShort().opaque()
+    Types.CHAR_TYPE_BOXED     -> id.toChar().opaque()
+    Types.BOOLEAN_TYPE_BOXED  -> id.toInt().toBoolean().opaque()
+    else                -> get(id)?.obj
+}
+
+fun ObjectRegistry.getValueID(type: Types.Type, value: OpaqueValue?): ValueID {
+    if (value == null) return NULL_OBJECT_ID
+    return when (type) {
+        Types.LONG_TYPE       -> (value.unwrap() as Long)
+        Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
+        Types.BYTE_TYPE       -> (value.unwrap() as Byte).toLong()
+        Types.SHORT_TYPE      -> (value.unwrap() as Short).toLong()
+        Types.CHAR_TYPE       -> (value.unwrap() as Char).toLong()
+        Types.BOOLEAN_TYPE    -> (value.unwrap() as Boolean).toInt().toLong()
+        Types.LONG_TYPE_BOXED     -> (value.unwrap() as Long)
+        Types.INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
+        Types.BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
+        Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
+        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).toLong()
+        Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
+        else                -> get(value)?.id ?: NULL_OBJECT_ID
     }
 }
 
-fun ObjectRegistry.getValueID(type: Type, value: OpaqueValue?): ValueID {
+fun ObjectRegistry.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
     if (value == null) return NULL_OBJECT_ID
-    return when (type.sort) {
-        Type.LONG       -> (value.unwrap() as Long)
-        Type.INT        -> (value.unwrap() as Int).toLong()
-        Type.BYTE       -> (value.unwrap() as Byte).toLong()
-        Type.SHORT      -> (value.unwrap() as Short).toLong()
-        Type.CHAR       -> (value.unwrap() as Char).toLong()
-        Type.BOOLEAN    -> (value.unwrap() as Boolean).toInt().toLong()
-        else            -> when (type) {
-            LONG_TYPE_BOXED     -> (value.unwrap() as Long)
-            INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
-            BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
-            SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
-            CHAR_TYPE_BOXED     -> (value.unwrap() as Char).toLong()
-            BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
-            else                -> get(value)?.id ?: NULL_OBJECT_ID
-        }
-    }
-}
-
-fun ObjectRegistry.getOrRegisterValueID(type: Type, value: OpaqueValue?): ValueID {
-    if (value == null) return NULL_OBJECT_ID
-    return when (type.sort) {
-        Type.LONG       -> (value.unwrap() as Long)
-        Type.INT        -> (value.unwrap() as Int).toLong()
-        Type.SHORT      -> (value.unwrap() as Short).toLong()
-        Type.CHAR       -> (value.unwrap() as Char).toLong()
-
+    return when (type) {
+        Types.LONG_TYPE       -> (value.unwrap() as Long)
+        Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
+        Types.SHORT_TYPE      -> (value.unwrap() as Short).toLong()
+        Types.CHAR_TYPE       -> (value.unwrap() as Char).toLong()
         // sometimes, due to JVM internals, boolean values can be reinterpreted as byte values
         // (e.g., because of BALOAD and BASTORE instructions are used for both boolean and byte arrays);
         // thus if the type-cast failed, we try to reinterpret the value and cast it to manually
-        Type.BYTE       ->
+        Types.BYTE_TYPE       ->
             (value.unwrap() as? Byte)?.toLong() ?:
             (value.unwrap() as Boolean).toInt().toLong()
-        Type.BOOLEAN    ->
+        Types.BOOLEAN_TYPE    ->
             (value.unwrap() as? Boolean)?.toInt()?.toLong() ?:
             (value.unwrap() as Byte).toBoolean().toInt().toLong()
-
-        else            -> when (type) {
-            LONG_TYPE_BOXED     -> (value.unwrap() as Long)
-            INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
-            BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
-            SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
-            CHAR_TYPE_BOXED     -> (value.unwrap() as Char).toLong()
-            BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
-            else                -> getOrRegisterObjectID(value)
-        }
+        Types.LONG_TYPE_BOXED     -> (value.unwrap() as Long)
+        Types.INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
+        Types.BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
+        Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
+        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).toLong()
+        Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
+        else                -> getOrRegisterObjectID(value)
     }
 }

@@ -54,8 +54,7 @@ internal class EventStructureStrategy(
 
     private val memoryInitializer: MemoryInitializer = { location ->
         runInsideIgnoredSection {
-            //TODO, fix the signature or convert between types
-            location.read(eventStructure.objectRegistry::getValue)
+            location.read(eventStructure.objectRegistry::getValue)?.opaque()
         }
     }
 
