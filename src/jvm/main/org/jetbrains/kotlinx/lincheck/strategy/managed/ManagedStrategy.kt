@@ -701,6 +701,13 @@ internal abstract class ManagedStrategy(
         if (currentThreadId < 0) return
         // scenario threads are handled separately by the runner itself
         if (currentThreadId < nScenarioThreads) return
+
+        val methodId = context.getOrCreateMethodId(
+            className = "java.lang.Thread",
+            methodName = "run",
+            methodType = Types.MethodType(Types.VOID_TYPE)
+        )
+        popMethodId(currentThreadId, methodId)
         // check if the exception is internal
         if (isLincheckInternalException(exception)) {
             onInternalException(currentThreadId, exception)
