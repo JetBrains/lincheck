@@ -296,6 +296,45 @@ class LazyTraceReader private constructor(
         input.close()
     }
 
+    // TODO: unify with readRoots
+    @Synchronized
+    fun readTopLevelTracePoints(): List<List<TRTracePoint>> {
+        var start = System.currentTimeMillis()
+
+        if (!contextLoaded) {
+            loadContext()
+            Logger.debug { "Context loaded in ${System.currentTimeMillis() - start} ms" }
+            start = System.currentTimeMillis()
+            contextLoaded = true
+        }
+
+        val threadTracepoints = mutableMapOf<Int, List<TRTracePoint>>()
+
+        dataBlocks.forEach {
+            val (threadId, blocks) = it
+            data.seek(blocks.first().physicalStart)
+            val kind = data.readKind()
+            check(kind == ObjectKind.BLOCK_START) { "Thread $threadId block 0 has wrong start: $kind" }
+            val blockId = data.readInt()
+            check(blockId == threadId) { "Thread $threadId block 0 has wrong idt: $blockId" }
+
+            val tracepoints = mutableListOf<TRTracePoint>()
+            loadTracePoints(
+                threadId = threadId,
+                maxRead = Integer.MAX_VALUE,
+                reader = this::readTracePointWithPostprocessor,
+                registrator = { _, tracePoint, _ ->
+                    if (tracePoint != null) tracepoints.add(tracePoint)
+                }
+            )
+
+            threadTracepoints[threadId] = tracepoints
+        }
+        Logger.debug { "Roots loaded in ${System.currentTimeMillis() - start} ms" }
+
+        return threadTracepoints.entries.sortedBy { it.key }.map { (_, tracepoints) -> tracepoints }
+    }
+
     @Synchronized
     fun readRoots(): List<TRTracePoint> {
         var start = System.currentTimeMillis()
