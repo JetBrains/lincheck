@@ -186,6 +186,24 @@ internal class CodeLocationsContext {
         }
     }
 
+    fun restoreCodeLocation(context: TraceContext, id: Int) {
+        val value = shallowCodeLocations[id]
+        if (value != null) {
+            val stackTraceElement = StackTraceElement(
+                /* declaringClass = */ stringCache.getOrNull(value.className) ?: "<unknown class>",
+                /* methodName = */ stringCache.getOrNull(value.methodName) ?: "<unknown method>",
+                /* fileName = */ stringCache.getOrNull(value.fileName) ?: "<unknown file>",
+                /* lineNumber = */ value.lineNumber
+            )
+            val accessPath = if (value.accessPath == -1) null else context.getAccessPath(value.accessPath)
+            val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
+            val activeLocalsNames: List<String>? =
+                value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
+            val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)
+            context.restoreCodeLocation(id, location)
+        }
+    }
+
     private fun restoreAllAccessPaths(context: TraceContext) {
         shallowAccessPathsCache.forEachIndexed { id, value ->
             if (value != null) {
@@ -211,6 +229,33 @@ internal class CodeLocationsContext {
                 }
                 context.restoreAccessPath(id, AccessPath(locations))
             }
+        }
+    }
+
+    fun restoreAccessPath(context: TraceContext, id: Int) {
+        val value = shallowAccessPathsCache[id]
+        if (value != null) {
+            val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
+                when (shallowLocation) {
+                    is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
+                        context.getVariableDescriptor(shallowLocation.variableDescriptorId)
+                    )
+
+                    is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
+                        context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
+                    )
+
+                    is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
+                        context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
+                    )
+
+                    is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)
+                    is ShallowArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(
+                        context.getAccessPath(shallowLocation.accessPathId)
+                    )
+                }
+            }
+            context.restoreAccessPath(id, AccessPath(locations))
         }
     }
 
@@ -919,7 +964,7 @@ private fun loadObjects(
     }
 }
 
-private fun loadThreadName(
+internal fun loadThreadName(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
@@ -932,7 +977,7 @@ private fun loadThreadName(
     return id
 }
 
-private fun loadClassDescriptor(
+internal fun loadClassDescriptor(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
@@ -945,7 +990,7 @@ private fun loadClassDescriptor(
     return id
 }
 
-private fun loadMethodDescriptor(
+internal fun loadMethodDescriptor(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
@@ -957,7 +1002,7 @@ private fun loadMethodDescriptor(
     return id
 }
 
-private fun loadFieldDescriptor(
+internal fun loadFieldDescriptor(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
@@ -969,7 +1014,7 @@ private fun loadFieldDescriptor(
     return id
 }
 
-private fun loadVariableDescriptor(
+internal fun loadVariableDescriptor(
     input: DataInput,
     context: TraceContext,
     restore: Boolean
@@ -981,7 +1026,7 @@ private fun loadVariableDescriptor(
     return id
 }
 
-private fun loadString(
+internal fun loadString(
     input: DataInput,
     codeLocs: CodeLocationsContext,
     restore: Boolean
@@ -994,7 +1039,7 @@ private fun loadString(
     return id
 }
 
-private fun loadAccessPath(
+internal fun loadAccessPath(
     input: DataInput,
     codeLocs: CodeLocationsContext,
     restore: Boolean
@@ -1011,7 +1056,7 @@ private fun loadAccessPath(
     return id
 }
 
-private fun loadCodeLocation(
+internal fun loadCodeLocation(
     input: DataInput,
     codeLocs: CodeLocationsContext,
     restore: Boolean
