@@ -516,7 +516,8 @@ internal class EventStructure(
             //   and also grouping events for which there is no reason to make switch in-between
             //   (e.g. `Alloc` followed by a `Write`).
             do {
-                internalThreadSwitchCallback(iThread, BlockingReason.StrategySwitch)
+                //TODO: This should not be null!
+                internalThreadSwitchCallback(iThread, null)
             } while (inReplayPhase() && !canReplayNextEvent(iThread))
         }
         return replayer.currentEvent

@@ -127,6 +127,7 @@ internal class ExecutionScenarioRunner(
                 }
                 // write function's final result
                 suspensionPointResults[iThread][actorId] = createLincheckResult(result)
+                onResumeCoroutine(iThread, actorId)
             }
         }
 
@@ -160,6 +161,7 @@ internal class ExecutionScenarioRunner(
                                 }
                                 @Suppress("UNCHECKED_CAST")
                                 resWithCont.set(result to continuation as Continuation<Any?>)
+                                onResumeCoroutine(iThread, actorId)
                             }
                         }
                     }
@@ -531,6 +533,10 @@ internal class ExecutionScenarioRunner(
         (strategy as? ManagedStrategy)?.afterCoroutineResumed(iThread)
     }
 
+    fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) = {
+        (strategy as? ManagedStrategy)?.onResumeCoroutine(iResumedThread, iResumedActor)
+    }
+
     /**
      * Returns `true` if the coroutine corresponding to
      * the actor `actorId` in the thread `iThread` is resumed.
@@ -538,7 +544,9 @@ internal class ExecutionScenarioRunner(
     fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean {
         // We cannot use `completionStatuses` here since
         // they are set _before_ the result is published.
-        return suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
+        //TODO: not sure this is how it should work
+        val strategyResumed = (strategy as? ManagedStrategy)?.isCoroutineResumed(iThread, actorId) ?: true
+        return (suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null) && strategyResumed
     }
 
     /**
@@ -553,16 +561,16 @@ internal class ExecutionScenarioRunner(
      * This method is invoked by the corresponding test thread
      * after a coroutine cancellation attempt.
      */
-    fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) {
-        (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, cancellationResult)
+    fun afterCoroutineCancellation(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
+        (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, promptCancellation, cancellationResult)
     }
 
     /**
      * This method is invoked by the corresponding test thread
      * after a coroutine cancellation attempt failed with an exception.
      */
-    fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) {
-        (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, cancellationException)
+    fun afterCoroutineCancellation(iThread: Int, promptCancellation: Boolean, cancellationException: Throwable) {
+        (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, promptCancellation, cancellationException)
     }
 
     internal fun <T> cancelByLincheck(
@@ -573,10 +581,10 @@ internal class ExecutionScenarioRunner(
         beforeCouroutineCancellation(iThread)
         try {
             val cancellationResult = cont.cancelByLincheck(promptCancellation)
-            afterCoroutineCancellation(iThread, cancellationResult)
+            afterCoroutineCancellation(iThread, promptCancellation, cancellationResult)
             return cancellationResult
         } catch (throwable: Throwable) {
-            afterCoroutineCancellation(iThread, throwable)
+            afterCoroutineCancellation(iThread, promptCancellation, throwable)
             throw throwable // throw further
         }
 

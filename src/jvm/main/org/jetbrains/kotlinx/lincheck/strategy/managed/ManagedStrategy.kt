@@ -59,7 +59,7 @@ internal abstract class ManagedStrategy(
         else -> error("Unexpected runner type: ${runner.javaClass.name}")
     }
 
-    private val scenario: ExecutionScenario?
+    protected val scenario: ExecutionScenario?
         get() = (runner as? ExecutionScenarioRunner)?.scenario
 
     // The number of parallel threads in the scenario (for data structures testing mode).
@@ -663,7 +663,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
+    protected fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
         suddenInvocationResult = invocationResult
         threadScheduler.abortOtherThreads()
         threadScheduler.abortCurrentThread()
@@ -2221,7 +2221,7 @@ internal abstract class ManagedStrategy(
      *
      * @param iThread number of invoking thread.
      */
-    internal fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
+    internal open fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(runner is ExecutionScenarioRunner)
         check(isScenarioThread(iThread)) {
@@ -2238,13 +2238,28 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    internal fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
+    internal open fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"
         }
         isSuspended[iThread] = false
     }
+
+    //TODO: The two methods have been directly brought in from the new-mc. They probably need some more testing
+    /**
+     * This method is invoked by a test thread that attempts to resume coroutine.
+     */
+    internal open fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
+    }
+
+    /**
+     * This method is invoked by a test thread to check if the coroutine was resumed.
+     */
+    internal open fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        return true
+    }
+
 
     internal fun beforeCoroutineCancellation(iThread: Int) {
         check(threadScheduler.getCurrentThreadId() == iThread)
@@ -2254,7 +2269,7 @@ internal abstract class ManagedStrategy(
         lastCoroutineCancellationTracePoint[iThread] = createAndLogCancellationTracePoint()
     }
 
-    internal fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) = runInsideIgnoredSection {
+    internal open fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationResult: CancellationResult) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"
@@ -2267,7 +2282,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) = runInsideIgnoredSection {
+    open fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationException: Throwable) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"

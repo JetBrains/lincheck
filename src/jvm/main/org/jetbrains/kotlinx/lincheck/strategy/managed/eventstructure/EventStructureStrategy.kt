@@ -358,25 +358,24 @@ internal class EventStructureStrategy(
         isTestInstanceRegistered = true
     }
 
-    //NOTE: There is both onStart and onActorStart (Is there any difference, or onStart is gone?)
-    override fun onStart(iThread: Int) {
-        super.onStart(iThread)
+    override fun onThreadStart(iThread: Int) {
+        super.onThreadStart(iThread)
         if (iThread != eventStructure.mainThreadId && iThread != eventStructure.initThreadId) {
             eventStructure.addThreadStartEvent(iThread)
         }
     }
 
-    override fun onFinish(iThread: Int) {
+    override fun onThreadFinish(iThread: Int) {
         // TODO: refactor, make `switchCurrentThread` private again in ManagedStrategy,
         //   call overridden `onStart` and `onFinish` methods only when thread is active
         //   and the `currentThread` lock is held
-        awaitTurn(iThread)
+        threadScheduler.awaitTurn(iThread)
         // TODO: extract this check into a method ?
         while (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(iThread)) {
-            switchCurrentThread(iThread, mustSwitch = true)
+            switchCurrentThread(iThread, null) // TODO: Should not be null, since we would not switch we need another blocking reason
         }
         eventStructure.addThreadFinishEvent(iThread)
-        super.onFinish(iThread)
+        super.onThreadFinish(iThread)
     }
 
     override fun onActorStart(iThread: Int) {
@@ -385,8 +384,9 @@ internal class EventStructureStrategy(
         runInsideIgnoredSection {
             if (currentExecutionPart == ExecutionPart.VALIDATION)
                 return@runInsideIgnoredSection
-            // TODO: Suspcious default value
-            val actor = scenario.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
+            // TODO: Suspcious default value (and also this can maybe be null?)
+            // We probably need to add a check for that
+            val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
             eventStructure.addActorStartEvent(iThread, actor)
         }
     }
@@ -397,15 +397,14 @@ internal class EventStructureStrategy(
             if (currentExecutionPart == ExecutionPart.VALIDATION)
                 return@runInsideIgnoredSection
             // TODO: Sus default value here as well.
-            val actor = scenario.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
+            val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
             eventStructure.addActorEndEvent(iThread, actor)
         }
         super.onActorFinish(iThread)
     }
 
     private fun onInconsistency(inconsistency: Inconsistency) {
-        suddenInvocationResult = InconsistentInvocationResult(inconsistency)
-        throw ForcibleExecutionFinishError
+        abortWithSuddenInvocationResult(InconsistentInvocationResult(inconsistency))
     }
 
     // NOTE: I guess this should not be final anymore (this has been changed)
@@ -423,18 +422,27 @@ internal class EventStructureStrategy(
     }
 
     // NOTE: In ManagedStrategy we have two flavours of afterCoroutineCancelletion none of which contain promptCancellation (how do we translate it)
-    override fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
-        super.afterCoroutineCancelled(iThread, promptCancellation, cancellationResult)
+    override fun afterCoroutineCancellation(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
+        super.afterCoroutineCancellation(iThread, promptCancellation, cancellationResult)
         if (cancellationResult == CancellationResult.CANCELLATION_FAILED)
             return
-        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread], promptCancellation)
-        eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread])
+
+        //TODO: we expect this to be not null. Scary! See if we can avoid it
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancellation)
+        eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
     }
 
-    // NOTE: I could not find any matching methods in managed strategy (There is something about coroutine suspended but I think it is different)
-    override fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
-        super.onResumeCoroutine(iThread, iResumedThread, iResumedActor)
-        eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
+    // TODO: Not sure we should also have an override and add a suspend event. It seems that this overload gets called, when the overload above fails
+    override fun afterCoroutineCancellation(iThread: Int, promptCancellation: Boolean, cancellationException: Throwable) {
+        super.afterCoroutineCancellation(iThread, promptCancellation, cancellationException)
+        //TODO: we expect this to be not null. Scary! See if we can avoid it
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancellation)
+        eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
+    }
+
+    override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
+        super.onResumeCoroutine(iResumedThread, iResumedActor)
+        eventStructure.addCoroutineResumeEvent(threadScheduler.getCurrentThreadId(), iResumedThread, iResumedActor)
     }
 
     //NOTE: I could not find any corresponding method, there is `isTestThreadCoroutineSuspended`, but I do not think it matches
@@ -449,7 +457,7 @@ internal class EventStructureStrategy(
 }
 
 internal typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
-internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason) -> Unit
+internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason?) -> Unit
 
 //NOTE: things have also changed here but I have not looked it pretty deep.
 private class EventStructureObjectTracker(
