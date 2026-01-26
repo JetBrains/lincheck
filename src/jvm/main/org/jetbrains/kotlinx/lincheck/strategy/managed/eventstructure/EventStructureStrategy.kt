@@ -28,10 +28,7 @@ import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.trace.SwitchReason
 import org.jetbrains.kotlinx.lincheck.trace.Trace
-import org.jetbrains.lincheck.datastructures.scenario
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.getType
 import org.jetbrains.lincheck.trace.TraceContext
@@ -44,7 +41,9 @@ import org.jetbrains.lincheck.util.toInt
 import org.jetbrains.lincheck.util.updateInplace
 import sun.nio.ch.lincheck.TestThread
 import java.lang.reflect.*
-import org.objectweb.asm.Type
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectEntry
+import org.jetbrains.kotlinx.lincheck.util.MutableThreadMap
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 
 internal class EventStructureStrategy(
     runner: Runner,
@@ -491,23 +490,24 @@ private class EventStructureObjectTracker(
     override fun registerNewObject(obj: Any): ObjectEntry {
         val iThread = (Thread.currentThread() as TestThread).threadId
         eventStructure.addObjectAllocationEvent(iThread, obj.opaque())
+        TODO("Not yet implemented")
     }
 
-    override fun registerExternalObject(obj: Any): org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectEntry {
+    override fun registerExternalObject(obj: Any): ObjectEntry {
         TODO("Not yet implemented")
     }
 
     // NOTE: the two methods below seem to be gone
-    override fun initializeObject(obj: Any) {
-        val isRegistered = (eventStructure.objectRegistry[obj.opaque()] != null)
-        if (!isRegistered && !obj.isPrimitive()) {
-            registerNewObject(obj)
-        }
-    }
-
-    override fun getObjectId(obj: Any): ObjectID {
-        return eventStructure.objectRegistry.getOrRegisterObjectID(obj.opaque())
-    }
+//    override fun initializeObject(obj: Any) {
+//        val isRegistered = (eventStructure.objectRegistry[obj.opaque()] != null)
+//        if (!isRegistered && !obj.isPrimitive()) {
+//            registerNewObject(obj)
+//        }
+//    }
+//
+//    override fun getObjectId(obj: Any): ObjectID {
+//        return eventStructure.objectRegistry.getOrRegisterObjectID(obj.opaque())
+//    }
 
     override fun reset() {}
 
@@ -650,7 +650,7 @@ private class EventStructureMemoryTracker(
 
     override fun interceptReadResult(iThread: Int): Any? {
         return addReadResponse(iThread)?.unwrap()?.also {
-            LincheckJavaAgent.ensureObjectIsTransformed(it)
+            LincheckInstrumentation.ensureObjectIsTransformed(it)
         }
     }
 
@@ -687,7 +687,7 @@ private class EventStructureMonitorTracker(
     // for threads waiting on the mutex,
     // stores the lock stack of the current thread for the awaited mutex
     // TODO: turn into a map
-    private val waitLockStack = MutableThreadMap<MutableList<AtomicThreadEvent>>()
+    private val waitLockStack = mutableThreadMapOf<MutableList<AtomicThreadEvent>>()
 
     private fun canAcquireMonitor(iThread: Int, mutexID: ValueID): Boolean {
         val lockStack = lockStacks[mutexID]
