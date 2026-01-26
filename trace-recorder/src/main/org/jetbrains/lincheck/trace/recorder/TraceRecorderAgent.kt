@@ -21,7 +21,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_HOST
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_RMI_PORT
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_THROW_CATCH
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
@@ -53,7 +52,6 @@ internal object TraceRecorderAgent {
         ARGUMENT_JMX_HOST,
         ARGUMENT_JMX_PORT,
         ARGUMENT_RMI_PORT,
-        ARGUMENT_THROW_CATCH,
     )
 
     // entry point for a statically attached java agent

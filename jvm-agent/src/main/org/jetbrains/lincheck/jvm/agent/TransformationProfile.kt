@@ -291,8 +291,8 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
             trackThreadRun = true
 
-            trackThrows = TraceAgentParameters.isInstrumentThrowCatch()
-            trackCatchBlocks = TraceAgentParameters.isInstrumentThrowCatch()
+            trackThrows = true
+            trackCatchBlocks = true
         }
     }
 }

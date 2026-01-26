@@ -116,7 +116,6 @@ object TraceAgentParameters {
     const val ARGUMENT_JMX_HOST = "jmxHost"
     const val ARGUMENT_JMX_PORT = "jmxPort"
     const val ARGUMENT_RMI_PORT = "rmiPort"
-    const val ARGUMENT_THROW_CATCH ="instrumentThrowCatch"
 
     const val DEFAULT_JMX_HOST = "localhost"
     const val DEFAULT_JMX_PORT = 9999
@@ -276,9 +275,6 @@ object TraceAgentParameters {
     
     @JvmStatic
     fun getLineBreakpoints(): List<String> = splitPatterns(namedArgs[ARGUMENT_LINE_BREAKPOINT])
-
-    @JvmStatic
-    fun isInstrumentThrowCatch(): Boolean = namedArgs[ARGUMENT_THROW_CATCH].toBoolean()
 
     private fun splitPatterns(value: String?): List<String> {
         if (value.isNullOrBlank()) return emptyList()
