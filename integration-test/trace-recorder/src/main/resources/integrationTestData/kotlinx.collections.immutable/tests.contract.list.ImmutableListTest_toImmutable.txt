@@ -376,6 +376,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                         expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                           getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                             propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:61
+                        catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                         createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                         Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -385,6 +386,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                             propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:61
                               hasNext(): false at BufferIterator.kt:14
                               new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
+                              throw NoSuchElementException@1 at BufferIterator.kt:15
+                        catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                         createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                         Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -593,6 +596,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -602,6 +606,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                             hasNext(): false at BufferIterator.kt:14
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
+                            throw NoSuchElementException@1 at BufferIterator.kt:15
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -775,6 +781,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -784,6 +791,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                             hasPrevious(): false at BufferIterator.kt:21
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
+                            throw NoSuchElementException@1 at BufferIterator.kt:22
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -991,6 +1000,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -1000,6 +1010,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                             hasNext(): false at BufferIterator.kt:14
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
+                            throw NoSuchElementException@1 at BufferIterator.kt:15
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -1173,6 +1185,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -1182,6 +1195,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                             hasPrevious(): false at BufferIterator.kt:21
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
+                            throw NoSuchElementException@1 at BufferIterator.kt:22
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -1315,6 +1330,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -1324,6 +1340,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                             hasNext(): false at BufferIterator.kt:14
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
+                            throw NoSuchElementException@1 at BufferIterator.kt:15
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -1497,6 +1515,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -1506,6 +1525,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                             hasPrevious(): false at BufferIterator.kt:21
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
+                            throw NoSuchElementException@1 at BufferIterator.kt:22
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -1519,6 +1540,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.listIterator(-1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:15
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -1535,6 +1557,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       StringBuilder@1("index: -1, size: ").append(size ➜ 4): StringBuilder@1("index: -1, size: 4") at ListImplementation.kt:22
                       StringBuilder@1("index: -1, size: 4").toString(): "index: -1, size: 4" at ListImplementation.kt:22
                       new IndexOutOfBoundsException("index: -1, size: 4"): IndexOutOfBoundsException@1 at ListImplementation.kt:22
+                      throw IndexOutOfBoundsException@1 at ListImplementation.kt:22
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -1549,6 +1573,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 4 at CollectionBehaviors.kt:16
                   propertyFails.listIterator(5): threw IndexOutOfBoundsException at CollectionBehaviors.kt:16
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -1566,6 +1591,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       StringBuilder@1("index: 5, size: ").append(size ➜ 4): StringBuilder@1("index: 5, size: 4") at ListImplementation.kt:22
                       StringBuilder@1("index: 5, size: 4").toString(): "index: 5, size: 4" at ListImplementation.kt:22
                       new IndexOutOfBoundsException("index: 5, size: 4"): IndexOutOfBoundsException@1 at ListImplementation.kt:22
+                      throw IndexOutOfBoundsException@1 at ListImplementation.kt:22
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -1626,6 +1653,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                 getter.invoke(expected): threw ArrayIndexOutOfBoundsException at ComparisonDSL.kt:25
                   propertyFailsWith.size(): 4 at CollectionBehaviors.kt:21
                   propertyFailsWith.get(4): threw ArrayIndexOutOfBoundsException at CollectionBehaviors.kt:21
+              catch(ArrayIndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(ArrayIndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): ArrayIndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -1643,6 +1671,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       StringBuilder@1("index: 4, size: ").append(size ➜ 4): StringBuilder@1("index: 4, size: 4") at ListImplementation.kt:15
                       StringBuilder@1("index: 4, size: 4").toString(): "index: 4, size: 4" at ListImplementation.kt:15
                       new IndexOutOfBoundsException("index: 4, size: 4"): IndexOutOfBoundsException@1 at ListImplementation.kt:15
+                      throw IndexOutOfBoundsException@1 at ListImplementation.kt:15
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -1681,6 +1711,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 4 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 5): threw IndexOutOfBoundsException at CollectionBehaviors.kt:26
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -1702,6 +1733,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                             StringBuilder@1("fromIndex: 0, toIndex: 5, size: ").append(size ➜ 4): StringBuilder@1("fromIndex: 0, toIndex: 5, size: 4") at ListImplementation.kt:29
                             StringBuilder@1("fromIndex: 0, toIndex: 5, size: 4").toString(): "fromIndex: 0, toIndex: 5, size: 4" at ListImplementation.kt:29
                             new IndexOutOfBoundsException("fromIndex: 0, toIndex: 5, size: 4"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
+                            throw IndexOutOfBoundsException@1 at ListImplementation.kt:29
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -1715,6 +1748,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.subList(-1, 0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:27
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -1735,6 +1769,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                             StringBuilder@1("fromIndex: -1, toIndex: 0, size: ").append(size ➜ 4): StringBuilder@1("fromIndex: -1, toIndex: 0, size: 4") at ListImplementation.kt:29
                             StringBuilder@1("fromIndex: -1, toIndex: 0, size: 4").toString(): "fromIndex: -1, toIndex: 0, size: 4" at ListImplementation.kt:29
                             new IndexOutOfBoundsException("fromIndex: -1, toIndex: 0, size: 4"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
+                            throw IndexOutOfBoundsException@1 at ListImplementation.kt:29
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -2071,6 +2107,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                         expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                           getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                             propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:61
+                        catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                         createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                         Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -2080,6 +2117,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                             propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:61
                               hasNext(): false at BufferIterator.kt:14
                               new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
+                              throw NoSuchElementException@1 at BufferIterator.kt:15
+                        catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                         createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                         Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -2250,6 +2289,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -2259,6 +2299,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                             hasNext(): false at BufferIterator.kt:14
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
+                            throw NoSuchElementException@1 at BufferIterator.kt:15
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -2393,6 +2435,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -2402,6 +2445,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                             hasPrevious(): false at BufferIterator.kt:21
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
+                            throw NoSuchElementException@1 at BufferIterator.kt:22
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -2571,6 +2616,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -2580,6 +2626,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                             hasNext(): false at BufferIterator.kt:14
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
+                            throw NoSuchElementException@1 at BufferIterator.kt:15
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -2714,6 +2762,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -2723,6 +2772,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                             hasPrevious(): false at BufferIterator.kt:21
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
+                            throw NoSuchElementException@1 at BufferIterator.kt:22
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -2856,6 +2907,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -2865,6 +2917,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.next(): threw NoSuchElementException at CollectionBehaviors.kt:38
                             hasNext(): false at BufferIterator.kt:14
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:15
+                            throw NoSuchElementException@1 at BufferIterator.kt:15
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -2999,6 +3053,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       expected.invoke(): threw NoSuchElementException at ComparisonDSL.kt:31
                         getter.invoke(expected): threw NoSuchElementException at ComparisonDSL.kt:23
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:31
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:31
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:31
@@ -3008,6 +3063,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                           propertyFails.previous(): threw NoSuchElementException at CollectionBehaviors.kt:44
                             hasPrevious(): false at BufferIterator.kt:21
                             new NoSuchElementException(): NoSuchElementException@1 at BufferIterator.kt:22
+                            throw NoSuchElementException@1 at BufferIterator.kt:22
+                      catch(NoSuchElementException@1) at ComparisonDSL.kt:32
                       createFailure(NoSuchElementException@1): Result.Failure@1 at ComparisonDSL.kt:32
                       Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
@@ -3021,6 +3078,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.listIterator(-1): threw IndexOutOfBoundsException at CollectionBehaviors.kt:15
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -3037,6 +3095,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       StringBuilder@1("index: -1, size: ").append(size ➜ 3): StringBuilder@1("index: -1, size: 3") at ListImplementation.kt:22
                       StringBuilder@1("index: -1, size: 3").toString(): "index: -1, size: 3" at ListImplementation.kt:22
                       new IndexOutOfBoundsException("index: -1, size: 3"): IndexOutOfBoundsException@1 at ListImplementation.kt:22
+                      throw IndexOutOfBoundsException@1 at ListImplementation.kt:22
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -3051,6 +3111,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 3 at CollectionBehaviors.kt:16
                   propertyFails.listIterator(4): threw IndexOutOfBoundsException at CollectionBehaviors.kt:16
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -3068,6 +3129,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       StringBuilder@1("index: 4, size: ").append(size ➜ 3): StringBuilder@1("index: 4, size: 3") at ListImplementation.kt:22
                       StringBuilder@1("index: 4, size: 3").toString(): "index: 4, size: 3" at ListImplementation.kt:22
                       new IndexOutOfBoundsException("index: 4, size: 3"): IndexOutOfBoundsException@1 at ListImplementation.kt:22
+                      throw IndexOutOfBoundsException@1 at ListImplementation.kt:22
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -3118,6 +3181,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:25
                   propertyFailsWith.size(): 3 at CollectionBehaviors.kt:21
                   propertyFailsWith.get(3): threw IndexOutOfBoundsException at CollectionBehaviors.kt:21
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -3135,6 +3199,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                       StringBuilder@1("index: 3, size: ").append(size ➜ 3): StringBuilder@1("index: 3, size: 3") at ListImplementation.kt:15
                       StringBuilder@1("index: 3, size: 3").toString(): "index: 3, size: 3" at ListImplementation.kt:15
                       new IndexOutOfBoundsException("index: 3, size: 3"): IndexOutOfBoundsException@1 at ListImplementation.kt:15
+                      throw IndexOutOfBoundsException@1 at ListImplementation.kt:15
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -3173,6 +3239,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.size(): 3 at CollectionBehaviors.kt:26
                   propertyFails.subList(0, 4): threw IndexOutOfBoundsException at CollectionBehaviors.kt:26
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -3194,6 +3261,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                             StringBuilder@1("fromIndex: 0, toIndex: 4, size: ").append(size ➜ 3): StringBuilder@1("fromIndex: 0, toIndex: 4, size: 3") at ListImplementation.kt:29
                             StringBuilder@1("fromIndex: 0, toIndex: 4, size: 3").toString(): "fromIndex: 0, toIndex: 4, size: 3" at ListImplementation.kt:29
                             new IndexOutOfBoundsException("fromIndex: 0, toIndex: 4, size: 3"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
+                            throw IndexOutOfBoundsException@1 at ListImplementation.kt:29
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
@@ -3207,6 +3276,7 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
                 getter.invoke(expected): threw IndexOutOfBoundsException at ComparisonDSL.kt:23
                   propertyFails.subList(-1, 0): threw IndexOutOfBoundsException at CollectionBehaviors.kt:27
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:31
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:31
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:31
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:31
@@ -3227,6 +3297,8 @@ ImmutableListTest.toImmutable() at ImmutableListTest.kt:55
                             StringBuilder@1("fromIndex: -1, toIndex: 0, size: ").append(size ➜ 3): StringBuilder@1("fromIndex: -1, toIndex: 0, size: 3") at ListImplementation.kt:29
                             StringBuilder@1("fromIndex: -1, toIndex: 0, size: 3").toString(): "fromIndex: -1, toIndex: 0, size: 3" at ListImplementation.kt:29
                             new IndexOutOfBoundsException("fromIndex: -1, toIndex: 0, size: 3"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
+                            throw IndexOutOfBoundsException@1 at ListImplementation.kt:29
+              catch(IndexOutOfBoundsException@1) at ComparisonDSL.kt:32
               createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ComparisonDSL.kt:32
               Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ComparisonDSL.kt:32
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
