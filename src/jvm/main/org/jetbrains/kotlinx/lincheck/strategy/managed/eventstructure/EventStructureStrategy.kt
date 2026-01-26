@@ -32,6 +32,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelChecki
 import org.jetbrains.kotlinx.lincheck.trace.SwitchReason
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.datastructures.scenario
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.getType
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.ensure
@@ -77,9 +78,6 @@ internal class EventStructureStrategy(
     // Tracker of thread parking
     override val parkingTracker: ParkingTracker =
         EventStructureParkingTracker(eventStructure)
-
-    //TODO: Figure out what happened here?
-    override val trackFinalFields: Boolean = true
 
     val stats = Stats()
 
@@ -330,8 +328,8 @@ internal class EventStructureStrategy(
 
     override fun beforePart(part: ExecutionPart) {
         super.beforePart(part)
-        val forkedThreads = (0 until eventStructure.nThreads)
-            .filter { it != eventStructure.mainThreadId && it != eventStructure.initThreadId }
+        val forkedThreads = getUserThreadIds()
+            .filter { it!= eventStructure.mainThreadId && it != eventStructure.initThreadId }
             .toSet()
         when (part) {
             ExecutionPart.INIT -> {
@@ -356,10 +354,11 @@ internal class EventStructureStrategy(
 
     private fun registerTestInstance() {
         check(!isTestInstanceRegistered)
-        eventStructure.addObjectAllocationEvent(eventStructure.mainThreadId, runner.testInstance.opaque())
+        eventStructure.addObjectAllocationEvent(eventStructure.mainThreadId, (runner as ExecutionScenarioRunner).testInstance.opaque())
         isTestInstanceRegistered = true
     }
 
+    //NOTE: There is both onStart and onActorStart (Is there any difference, or onStart is gone?)
     override fun onStart(iThread: Int) {
         super.onStart(iThread)
         if (iThread != eventStructure.mainThreadId && iThread != eventStructure.initThreadId) {
@@ -383,20 +382,22 @@ internal class EventStructureStrategy(
     override fun onActorStart(iThread: Int) {
         super.onActorStart(iThread)
         // TODO: move ignored section to ManagedStrategyRunner
-        runInIgnoredSection {
-            if (runner.currentExecutionPart == ExecutionPart.VALIDATION)
-                return@runInIgnoredSection
-            val actor = scenario.threads[iThread][currentActorId[iThread]]
+        runInsideIgnoredSection {
+            if (currentExecutionPart == ExecutionPart.VALIDATION)
+                return@runInsideIgnoredSection
+            // TODO: Suspcious default value
+            val actor = scenario.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
             eventStructure.addActorStartEvent(iThread, actor)
         }
     }
 
     override fun onActorFinish(iThread: Int) {
         // TODO: move ignored section to ManagedStrategyRunner
-        runInIgnoredSection {
-            if (runner.currentExecutionPart == ExecutionPart.VALIDATION)
-                return@runInIgnoredSection
-            val actor = scenario.threads[iThread][currentActorId[iThread]]
+        runInsideIgnoredSection {
+            if (currentExecutionPart == ExecutionPart.VALIDATION)
+                return@runInsideIgnoredSection
+            // TODO: Sus default value here as well.
+            val actor = scenario.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
             eventStructure.addActorEndEvent(iThread, actor)
         }
         super.onActorFinish(iThread)
@@ -407,16 +408,21 @@ internal class EventStructureStrategy(
         throw ForcibleExecutionFinishError
     }
 
+    // NOTE: I guess this should not be final anymore (this has been changed)
     override fun afterCoroutineSuspended(iThread: Int) {
-        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread])
+        // TODO: Sus default value here as well.
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId.getOrDefault(iThread, 0))
         super.afterCoroutineSuspended(iThread)
     }
 
+    //NOTE: Same as above
     override fun afterCoroutineResumed(iThread: Int) {
         super.afterCoroutineResumed(iThread)
-        eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId[iThread])
+        // TODO: Sus default value here as well.
+        eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId.getOrDefault(iThread, 0))
     }
 
+    // NOTE: In ManagedStrategy we have two flavours of afterCoroutineCancelletion none of which contain promptCancellation (how do we translate it)
     override fun afterCoroutineCancelled(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
         super.afterCoroutineCancelled(iThread, promptCancellation, cancellationResult)
         if (cancellationResult == CancellationResult.CANCELLATION_FAILED)
@@ -425,11 +431,13 @@ internal class EventStructureStrategy(
         eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread])
     }
 
+    // NOTE: I could not find any matching methods in managed strategy (There is something about coroutine suspended but I think it is different)
     override fun onResumeCoroutine(iThread: Int, iResumedThread: Int, iResumedActor: Int) {
         super.onResumeCoroutine(iThread, iResumedThread, iResumedActor)
         eventStructure.addCoroutineResumeEvent(iThread, iResumedThread, iResumedActor)
     }
 
+    //NOTE: I could not find any corresponding method, there is `isTestThreadCoroutineSuspended`, but I do not think it matches
     override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
         if (!super.isCoroutineResumed(iThread, iActor))
             return false
@@ -440,28 +448,54 @@ internal class EventStructureStrategy(
     }
 }
 
-typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
-typealias InternalThreadSwitchCallback = (ThreadID, SwitchReason) -> Unit
+internal typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
+internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason) -> Unit
 
+//NOTE: things have also changed here but I have not looked it pretty deep.
 private class EventStructureObjectTracker(
     private val eventStructure: EventStructure,
 ) : ObjectTracker {
 
-    override fun registerNewObject(obj: Any) {
+
+    override fun shouldTrackObjectAccess(obj: Any?): Boolean = true
+    override fun enumerateObjectEntries(): Sequence<ObjectEntry> {
+        TODO("Not yet implemented")
+    }
+
+    override fun retain(predicate: (ObjectEntry) -> Boolean) {
+        TODO("Not yet implemented")
+    }
+
+    override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
+    override fun registerThread(threadId: Int, thread: Thread) {
+        TODO("Not yet implemented")
+    }
+
+    override fun get(id: ObjectID): ObjectEntry? {
+        TODO("Not yet implemented")
+    }
+
+    override fun get(obj: Any?): ObjectEntry? {
+        TODO("Not yet implemented")
+    }
+
+    // NOTE: we shold return an obhect enty here. Not sure if we should use the objectRegistry of the eventStructure
+    override fun registerNewObject(obj: Any): ObjectEntry {
         val iThread = (Thread.currentThread() as TestThread).threadId
         eventStructure.addObjectAllocationEvent(iThread, obj.opaque())
     }
 
-    override fun registerObjectLink(fromObject: Any, toObject: Any?) {}
+    override fun registerExternalObject(obj: Any): org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectEntry {
+        TODO("Not yet implemented")
+    }
 
+    // NOTE: the two methods below seem to be gone
     override fun initializeObject(obj: Any) {
         val isRegistered = (eventStructure.objectRegistry[obj.opaque()] != null)
         if (!isRegistered && !obj.isPrimitive()) {
             registerNewObject(obj)
         }
     }
-
-    override fun shouldTrackObjectAccess(obj: Any): Boolean = true
 
     override fun getObjectId(obj: Any): ObjectID {
         return eventStructure.objectRegistry.getOrRegisterObjectID(obj.opaque())
@@ -485,7 +519,7 @@ private class EventStructureMemoryTracker(
     private fun getValue(location: MemoryLocation, valueID: ValueID) =
         objectRegistry.getValue(location.type, valueID)
 
-    private fun getValue(type: Type, valueID: ValueID) =
+    private fun getValue(type: Types.Type, valueID: ValueID) =
         objectRegistry.getValue(type, valueID)
 
     private fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?,
@@ -526,9 +560,9 @@ private class EventStructureMemoryTracker(
                     val newValue = getValue(label.location, newValueID)
                     eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
                     label.location.write(newValue?.unwrap(), objectRegistry::getValue)
-                    return getValue(Type.BOOLEAN_TYPE, true.toInt().toLong())
+                    return getValue(Types.BOOLEAN_TYPE, true.toInt().toLong())
                 }
-                return getValue(Type.BOOLEAN_TYPE, false.toInt().toLong())
+                return getValue(Types.BOOLEAN_TYPE, false.toInt().toLong())
             }
 
             is ReadModifyWriteDescriptor.CompareAndExchangeDescriptor -> {
@@ -631,6 +665,7 @@ private class EventStructureMemoryTracker(
 
 }
 
+// NOTE: Some issues here as well , there are some missing members
 private class EventStructureMonitorTracker(
     private val eventStructure: EventStructure,
     private val objectRegistry: ObjectRegistry,
@@ -643,7 +678,8 @@ private class EventStructureMonitorTracker(
 
     // for threads waiting on the mutex,
     // stores the lock stack of the current thread for the awaited mutex
-    private val waitLockStack = ArrayIntMap<MutableList<AtomicThreadEvent>>(eventStructure.nThreads)
+    // TODO: turn into a map
+    private val waitLockStack = MutableThreadMap<MutableList<AtomicThreadEvent>>()
 
     private fun canAcquireMonitor(iThread: Int, mutexID: ValueID): Boolean {
         val lockStack = lockStacks[mutexID]
@@ -654,6 +690,20 @@ private class EventStructureMonitorTracker(
         val mutexID = objectRegistry[monitor]!!.id
         return canAcquireMonitor(iThread, mutexID)
     }
+
+    // Not sure how to proceed with these (I need to look into it)
+    override fun registerThread(threadId: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun acquiringThreads(monitor: Any): List<Int> {
+        TODO("Not yet implemented")
+    }
+
+    override fun interruptWait(threadId: Int) {
+        TODO("Not yet implemented")
+    }
+
 
     override fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
         // issue lock-request event
@@ -667,9 +717,13 @@ private class EventStructureMonitorTracker(
         return (lockResponse != null)
     }
 
-    override fun releaseMonitor(iThread: Int, monitor: Any) {
+    // NOTE: This should be a bool?
+    override fun releaseMonitor(iThread: Int, monitor: Any): Boolean {
         issueUnlock(iThread, monitor.opaque())
+        //NOTE: ???
+        return true;
     }
+
 
     private fun issueLockRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
         val mutexID = objectRegistry[monitor]!!.id
@@ -833,15 +887,27 @@ private class EventStructureMonitorTracker(
 
 }
 
+//NOTE: Same as the class above
 private class EventStructureParkingTracker(
     private val eventStructure: EventStructure,
 ) : ParkingTracker {
+
+    //NOTE: should we do anything here? This is a new method
+    override fun registerThread(threadId: Int) {
+        TODO("Not yet implemented")
+    }
+
+    // NOTE: not sure if we should handle this yet?
+    override fun interruptPark(threadId: Int) {
+        TODO("Not yet implemented")
+    }
 
     override fun park(iThread: Int) {
         eventStructure.addParkRequestEvent(iThread)
     }
 
-    override fun waitUnpark(iThread: Int): Boolean {
+    //NOTE: allowSpuriusWakeup has been added and not sure how to use that
+    override fun waitUnpark(iThread: Int, allowSpuriousWakeUp: Boolean): Boolean {
         val parkRequest = eventStructure.getPendingBlockingRequest(iThread)
             ?.takeIf { it.label is ParkLabel }
             ?: return false
@@ -852,6 +918,8 @@ private class EventStructureParkingTracker(
     override fun unpark(iThread: Int, unparkedThreadId: Int) {
         eventStructure.addUnparkEvent(iThread, unparkedThreadId)
     }
+
+
 
     override fun isParked(iThread: Int): Boolean {
         val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)

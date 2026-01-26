@@ -42,7 +42,7 @@ internal class EventStructure(
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = 0
-    val initThreadId = -1
+    val initThreadId = -1 // TODO: This ID may be very wrong?
 
     /**
      * Mutable list of the event structure events.
