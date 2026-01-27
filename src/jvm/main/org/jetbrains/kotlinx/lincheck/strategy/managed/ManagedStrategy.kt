@@ -2066,39 +2066,26 @@ internal abstract class ManagedStrategy(
                             loopId = loopId
                         )
                     )
-
-                    traceCollector?.addTracePointInternal(
-                        LoopIterationTracePoint(
-                            context = context,
-                            eventId = getNextEventId(),
-                            iThread = threadId,
-                            actorId = currentActorId[threadId]!!,
-                            codeLocation = codeLocation,
-                            loopId = loopId,
-                            iteration = 1
-                        )
-                    )
-                }
-            } else {
-                if (collectTrace) {
-                    val iteration = loopDetector.getCurrentIteration(threadId, loopId)
-                    traceCollector?.addTracePointInternal(
-                        LoopIterationTracePoint(
-                            context = context,
-                            eventId = getNextEventId(),
-                            iThread =threadId,
-                            actorId = currentActorId[threadId]!!,
-                            codeLocation = codeLocation,
-                            loopId = loopId,
-                            iteration = iteration
-                        )
-                    )
                 }
             }
-
             val methodId = getMethodId(threadId)
 
             val decision = loopDetector.onLoopIteration(threadId, codeLocation, loopId, methodId)
+
+            if (collectTrace) {
+                val iteration = loopDetector.getCurrentIteration(threadId, loopId)
+                traceCollector?.addTracePointInternal(
+                    LoopIterationTracePoint(
+                        context = context,
+                        eventId = getNextEventId(),
+                        iThread =threadId,
+                        actorId = currentActorId[threadId]!!,
+                        codeLocation = codeLocation,
+                        loopId = loopId,
+                        iteration = iteration
+                    )
+                )
+            }
 
             when(decision) {
                 LoopDetector.Decision.IDLE -> {}
