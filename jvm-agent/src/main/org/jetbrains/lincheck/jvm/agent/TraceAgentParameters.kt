@@ -210,7 +210,6 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun validateClassAndMethodArgumentsAreProvided() {
-        if (System.getProperty(LIVE_DEBUGGER_MODE_PROPERTY) == "true") return
         if (classUnderTraceDebugging.isBlank()) {
             error("Class name was not provided")
         }

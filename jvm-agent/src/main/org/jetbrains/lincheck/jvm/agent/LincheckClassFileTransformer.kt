@@ -402,8 +402,10 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             if (className.startsWith("com.android.tools.")) return false
         }
         if (isEagerlyInstrumentedClass(className)) return true
+        
+        if (isInLiveDebuggerMode) return isLiveDebuggerBreakpointClass(className)
 
-        return AnalysisProfile.DEFAULT.shouldTransform(className, "") && isLiveDebuggerBreakpointClass(className)
+        return AnalysisProfile.DEFAULT.shouldTransform(className, "")
     }
 
 
@@ -424,9 +426,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         isCoroutineDispatcherInternalClass(className) ||
         isCoroutineConcurrentKtInternalClass(className)
     
-    private fun isLiveDebuggerBreakpointClass(className: String): Boolean =
-        if (isInLiveDebuggerMode) liveDebuggerSettings.lineBreakPoints.any { it.className == className }
-        else true
+    private fun isLiveDebuggerBreakpointClass(className: String): Boolean = 
+        liveDebuggerSettings.lineBreakPoints.any { it.className == className }
+        
 
     private fun readUTF(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
         for (offset in 0 ..< utfLength) {
