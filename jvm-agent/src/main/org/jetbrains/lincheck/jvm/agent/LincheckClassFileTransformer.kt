@@ -425,7 +425,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         isCoroutineConcurrentKtInternalClass(className)
     
     private fun isLiveDebuggerBreakpointClass(className: String): Boolean =
-        liveDebuggerSettings.lineBreakPoints.any { it.className == className }
+        if (isInLiveDebuggerMode) liveDebuggerSettings.lineBreakPoints.any { it.className == className }
+        else true
 
     private fun readUTF(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
         for (offset in 0 ..< utfLength) {
