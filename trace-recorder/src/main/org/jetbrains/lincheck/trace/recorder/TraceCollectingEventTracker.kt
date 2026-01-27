@@ -781,8 +781,8 @@ class TraceCollectingEventTracker(
         
         val tracePoint = TRSnapshotLineBreakpointTracePoint(
             context = context,
-            threadId = threadData.threadId,
             codeLocationId = codeLocation,
+            threadId = threadData.threadId,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
             locals = locals.map { TRObjectOrNull(context, it) },
@@ -849,6 +849,36 @@ class TraceCollectingEventTracker(
         if (currentLoopTracePoint?.loopId == loopId) {
             exitCurrentLoop(thread, threadData)
         }
+    }
+
+    override fun onThrow(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        exception: Throwable
+    ) {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = TRThrowTracePoint(
+            context = context,
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            exception = TRObject(context, exception)
+        )
+        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+    }
+
+    override fun onCatch(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        exception: Throwable
+    ) {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = TRCatchTracePoint(
+            context = context,
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            exception = TRObject(context, exception)
+        )
+        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
 
     /**

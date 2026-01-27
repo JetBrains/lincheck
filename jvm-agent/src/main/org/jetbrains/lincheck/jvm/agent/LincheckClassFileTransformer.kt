@@ -221,13 +221,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
-                mutableMapOf<Label, Int>().also { map ->
+                val labels = mutableMapOf<Label, Int>().also { map ->
                     val extractor = LabelCollectorMethodVisitor(map)
                     m.instructions.accept(extractor)
                 }
+                val catches = m.tryCatchBlocks.map { it.handler.label }.toSet()
+                labels to catches
             }
         )
-        .mapValues { MethodLabels(it.value) }
+        .mapValues { MethodLabels(it.value.first, it.value.second) }
     }
 
 

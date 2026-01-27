@@ -40,6 +40,10 @@ internal object TracePointComparator {
             is TRSnapshotLineBreakpointTracePoint -> h
                 .add(tracePoint.stackTrace) // Should we add it as-is?
                 .addTRList(tracePoint.locals)
+            is TRThrowTracePoint -> h
+                .add(tracePoint.exception)
+            is TRCatchTracePoint -> h
+                .add(tracePoint.exception)
         }
         return h.finish()
     }
@@ -90,6 +94,12 @@ internal object TracePointComparator {
                     .add(tracePoint.argumentTypes) // It is Ok, as we use hashcode for Types.Type anyway
             // Only code location for now
             is TRSnapshotLineBreakpointTracePoint ->
+                hasher
+                    .add(tracePoint.codeLocation)
+            is TRThrowTracePoint ->
+                hasher
+                    .add(tracePoint.codeLocation)
+            is TRCatchTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
         }

@@ -179,10 +179,26 @@ class TracePointCloner(
             is TRSnapshotLineBreakpointTracePoint -> TRSnapshotLineBreakpointTracePoint(
                 context = context,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
+                threadId = threadId,
                 stackTraceCodeLocationIds = cloneCodeLocationsByIds(tracePoint, codeLocationMap, tracePoint.stackTraceCodeLocationIds),
                 currentTimeMillis = tracePoint.currentTimeMillis,
                 locals = tracePoint.locals.clone(),
+                eventId = eventId++
+            )
+
+            is TRThrowTracePoint -> TRThrowTracePoint(
+                context = context,
                 threadId = threadId,
+                codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
+                exception = tracePoint.exception.clone(),
+                eventId = eventId++
+            )
+
+            is TRCatchTracePoint -> TRCatchTracePoint(
+                context = context,
+                threadId = threadId,
+                codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
+                exception = tracePoint.exception.clone(),
                 eventId = eventId++
             )
         }
