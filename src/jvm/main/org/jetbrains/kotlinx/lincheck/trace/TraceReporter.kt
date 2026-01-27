@@ -216,15 +216,24 @@ private class TraceColumnPrinter(
         val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
         _lines.add(traceLine)
 
-        if (node is CallNode && (filter?.shouldUnfold(node) ?: true)) {
-            pushCallStack(node)
+        val childrenToPrint: List<TraceNode>? = when (node) {
+            is CallNode -> {
+                if (filter?.shouldUnfold(node) ?: true) filter?.filterChildren(node) ?: node.children
+                else null
+            }
+            is LoopNode -> node.children
+            is IterationNode -> node.children
+            else -> null
+        }
+
+        if (childrenToPrint != null) {
+            if (node is CallNode) pushCallStack(node)
             try {
-                val children = filter?.filterChildren(node) ?: node.children
-                for (child in children) {
+                for (child in childrenToPrint) {
                     appendTraceNode(child)
                 }
             } finally {
-                popCallStack()
+                if (node is CallNode) popCallStack()
             }
         }
     }

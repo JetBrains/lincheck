@@ -2053,23 +2053,46 @@ internal abstract class ManagedStrategy(
             val loop = activeLoops.find { it.threadId == threadScheduler.getCurrentThreadId() && it.loopId == loopId }
             if (loop == null) {
                 loopDetector.beforeLoopEnter(threadId, codeLocation, loopId)
-                activeLoops.add(Loop(threadScheduler.getCurrentThreadId(), loopId))
+                activeLoops.add(Loop(threadId, loopId))
 
                 if (collectTrace) {
-                    val eventId = getNextEventId()
-                    val tracePoint = addBeforeMethodCallTracePoint(
-                        eventId = eventId,
-                        threadId = threadId,
-                        owner = null,
-                        codeLocation = codeLocation,
-                        methodId = loopId,
-                        className = "Loop",
-                        methodName = "loop_$loopId",
-                        methodParams = emptyArray(),
-                        atomicMethodDescriptor = null,
-                        callType = MethodCallTracePoint.CallType.NORMAL,
+                    traceCollector?.addTracePointInternal(
+                        LoopStartTracePoint(
+                            context = context,
+                            eventId = getNextEventId(),
+                            iThread = threadId,
+                            actorId = currentActorId[threadId]!!,
+                            codeLocation = codeLocation,
+                            loopId = loopId
+                        )
                     )
-                    traceCollector?.addTracePointInternal(tracePoint)
+
+                    traceCollector?.addTracePointInternal(
+                        LoopIterationTracePoint(
+                            context = context,
+                            eventId = getNextEventId(),
+                            iThread = threadId,
+                            actorId = currentActorId[threadId]!!,
+                            codeLocation = codeLocation,
+                            loopId = loopId,
+                            iteration = 1
+                        )
+                    )
+                }
+            } else {
+                if (collectTrace) {
+                    val iteration = loopDetector.getCurrentIteration(threadId, loopId)
+                    traceCollector?.addTracePointInternal(
+                        LoopIterationTracePoint(
+                            context = context,
+                            eventId = getNextEventId(),
+                            iThread =threadId,
+                            actorId = currentActorId[threadId]!!,
+                            codeLocation = codeLocation,
+                            loopId = loopId,
+                            iteration = iteration
+                        )
+                    )
                 }
             }
 
@@ -2089,23 +2112,25 @@ internal abstract class ManagedStrategy(
                 }
             }
         }
-//TODO: need to remake a function similar to the one that was used for printing the spincycles in the old loop detector
+
     override fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
         val threadId = threadScheduler.getCurrentThreadId()
         val methodId = getMethodId(threadId)
         loopDetector.afterLoopExit(threadId, codeLocation, loopId, methodId)
+        activeLoops.removeIf { it.threadId == threadId && it.loopId == loopId }
 
         if (collectTrace) {
-            val stack = callStackTrace[threadId]
-            if (stack != null && stack.isNotEmpty()) {
-                val top = stack.last()
-                if (top.tracePoint.methodName == "loop_$loopId") {
-                    val tracePoint = top.tracePoint
-                    tracePoint.initializeVoidReturnedValue()
-                    afterMethodCall(threadId, tracePoint)
-                    traceCollector?.addStateRepresentation()
-                }
-            }
+            traceCollector?.addTracePointInternal(
+                LoopEndTracePoint(
+                    context = context,
+                    eventId = getNextEventId(),
+                    iThread = threadId,
+                    actorId = currentActorId[threadId]!!,
+                    loopId = loopId,
+                    codeLocation = codeLocation
+                )
+            )
+            traceCollector?.addStateRepresentation()
         }
     }
 

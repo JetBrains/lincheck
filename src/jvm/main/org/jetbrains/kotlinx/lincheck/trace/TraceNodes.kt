@@ -135,6 +135,33 @@ internal class ResultNode(val actorResult: ReturnedValueResult, eventNumber: Int
     override fun copy(): TraceNode = ResultNode(actorResult, eventNumber, tracePoint)
 }
 
+internal class LoopNode(
+    tracePoint: LoopStartTracePoint,
+    eventNumber: Int,
+) : TraceNode(eventNumber, tracePoint) {
+    override val tracePoint: LoopStartTracePoint get() = super.tracePoint as LoopStartTracePoint
+
+    override fun toStringImpl(withLocation: Boolean): String {
+        val iters = children.count{ it is IterationNode }
+        val loc = if (withLocation) " at ${tracePoint.toStringImpl(true).substringAfter(" at ")}" else ""
+        return "loop($iters iterations)$loc"
+    }
+
+    override fun copy(): TraceNode = LoopNode(tracePoint, eventNumber)
+}
+
+internal class IterationNode(
+    tracePoint: LoopIterationTracePoint,
+    eventNumber: Int,
+) : TraceNode(eventNumber, tracePoint) {
+    override val tracePoint: LoopIterationTracePoint get() = super.tracePoint as LoopIterationTracePoint
+
+    override fun toStringImpl(withLocation: Boolean): String =
+        tracePoint.toStringImpl(withLocation)
+
+    override fun copy(): TraceNode = IterationNode(tracePoint, eventNumber)
+}
+
 // (stable) Sort on eventNumber
 internal fun Column<TraceNode>.reorder(): Column<TraceNode> =
     sortedBy { it.eventNumber }
@@ -142,6 +169,20 @@ internal fun Column<TraceNode>.reorder(): Column<TraceNode> =
 internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<TraceNode> {
     val nodes = MutableList<MutableList<TraceNode>>(threadCount) { mutableListOf() }
     val currentNodePerThread = MutableList<CallNode?>(threadCount) { null }
+
+    val currentLoopPerThread = MutableList<LoopNode?>(threadCount) { null }
+    val currentIterPerThread = MutableList<IterationNode?>(threadCount) { null }
+
+    fun addToCurrentContainer(threadId: Int, node: TraceNode) {
+        val iteration = currentIterPerThread[threadId]
+        val currNode = currentNodePerThread[threadId]
+        when {
+            iteration != null -> iteration.addChild(node)
+            currNode != null -> currNode.addChild(node)
+            else -> nodes[threadId].add(node)
+
+        }
+    }
 
     // loop over events
     trace.trace.forEachIndexed { eventNumber, event ->
@@ -151,10 +192,7 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
         when (event) {
             is MethodCallTracePoint -> {
                 val newNode = CallNode(event, eventNumber)
-                if (currentCallNode == null) {
-                    nodes[currentThreadId].add(newNode)
-                }
-                currentCallNode?.addChild(newNode)
+                addToCurrentContainer(currentThreadId, newNode)
                 currentNodePerThread[currentThreadId] = newNode
             }
 
@@ -167,13 +205,32 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
                 }
             }
 
+            is LoopStartTracePoint -> {
+                val loopNode = LoopNode(event, eventNumber)
+                addToCurrentContainer(currentThreadId, loopNode)
+                currentLoopPerThread[currentThreadId] = loopNode
+            }
+
+            is LoopIterationTracePoint -> {
+                val loopNode = currentLoopPerThread[currentThreadId]
+                if (loopNode == null) {
+                    addToCurrentContainer(currentThreadId, EventNode(event, eventNumber))
+                }
+                else {
+                    val iterNode = IterationNode(event, eventNumber)
+                    loopNode.addChild(iterNode)
+                    currentIterPerThread[currentThreadId] = iterNode
+                }
+            }
+
+            is LoopEndTracePoint -> {
+                currentIterPerThread[currentThreadId] = null
+                currentLoopPerThread[currentThreadId] = null
+            }
+
             else -> {
                 val eventNode = EventNode(event, eventNumber)
-                if (currentCallNode != null) {
-                    currentCallNode.addChild(eventNode)
-                } else {
-                    nodes[currentThreadId].add(eventNode)
-                }
+                addToCurrentContainer(currentThreadId, eventNode)
             }
         }
     }

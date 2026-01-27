@@ -612,6 +612,49 @@ internal class MethodReturnTracePoint(
     }
 }
 
+internal class LoopStartTracePoint(
+    context: TraceContext,
+    eventId: Int,
+    iThread: Int,
+    actorId: Int,
+    codeLocation: Int,
+    val loopId: Int,
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
+    override fun toStringCompact(): String = "loop"
+    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+        LoopStartTracePoint(context, eventId, iThread, actorId, codeLocation, loopId)
+    }
+}
+
+internal class LoopIterationTracePoint(
+    context: TraceContext,
+    eventId: Int,
+    iThread: Int,
+    actorId: Int,
+    codeLocation: Int,
+    val loopId: Int,
+    val iteration: Int,
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
+    override fun toStringCompact(): String = "<iteration $iteration>"
+    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+        LoopIterationTracePoint(context, eventId, iThread, actorId, codeLocation, loopId, iteration)
+    }
+}
+
+internal class LoopEndTracePoint(
+    context: TraceContext,
+    eventId: Int,
+    iThread: Int,
+    actorId: Int,
+    codeLocation: Int,
+    val loopId: Int,
+) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
+    override fun toStringCompact(): String = ""
+    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+        LoopEndTracePoint(context, eventId, iThread, actorId, codeLocation, loopId)
+    }
+}
+
 internal sealed class SwitchReason(private val reason: String) {
     // strategy switch decision
     object StrategySwitch : SwitchReason("")

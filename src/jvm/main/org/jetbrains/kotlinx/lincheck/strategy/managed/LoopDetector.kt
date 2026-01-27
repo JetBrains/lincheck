@@ -43,6 +43,8 @@ interface LoopDetector {
         result: Any?,
     )
 
+    fun getCurrentIteration(threadId: Int, loopId: Int) : Int
+
 //  TODO: Implement in next iteration, find where to call (beforeWriteField, beforeWriteArrayElement, afterLocalWrite)
 //    fun onStageChange(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, valueHash: Int)
 }
@@ -197,5 +199,14 @@ class BoundedLoopDetector(
             // no more recursion levels
             stack.removeLast()
         }
+    }
+    override fun getCurrentIteration(threadId: Int, loopId: Int): Int {
+        val st = state(threadId)
+        val stack = st.callStack
+        val frame = stack.lastOrNull()?: return 1
+
+        val loop = frame.loops.lastOrNull {it.loopId == loopId} ?: return 1
+
+        return loop.iterationCount
     }
 }
