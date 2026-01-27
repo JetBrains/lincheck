@@ -22,7 +22,7 @@ internal data class LiveDebuggerSettings(
 }
 
 internal data class SnapshotBreakpoint(
-    val fileName: String,
+    val className: String,
     val lineNumber: Int,
 ) {
     companion object {

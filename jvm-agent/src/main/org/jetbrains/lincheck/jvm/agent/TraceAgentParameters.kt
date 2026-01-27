@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
+import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.Logger
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
@@ -209,6 +210,7 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun validateClassAndMethodArgumentsAreProvided() {
+        if (System.getProperty(LIVE_DEBUGGER_MODE_PROPERTY) == "true") return
         if (classUnderTraceDebugging.isBlank()) {
             error("Class name was not provided")
         }

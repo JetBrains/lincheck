@@ -23,6 +23,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_RMI_PORT
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
+import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
@@ -79,7 +80,10 @@ internal object TraceRecorderAgent {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
 
-        System.setProperty(TRACE_RECORDER_MODE_PROPERTY, "true")
+        val mode =  if (TraceAgentParameters.getLineBreakpoints().isEmpty()) TRACE_RECORDER_MODE_PROPERTY
+                    else LIVE_DEBUGGER_MODE_PROPERTY
+        
+        System.setProperty(mode, "true")
         validateTraceRecorderMode()
 
         // attach java agent
