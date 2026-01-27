@@ -61,7 +61,9 @@ internal object TraceRecorderAgent {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
         validateTraceRecorderMode()
-        if (isInLiveDebuggerMode) TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
+        if (!isInLiveDebuggerMode) { 
+            TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
+        }
 
         // attach java agent
         LincheckInstrumentation.attachJavaAgentStatically(inst)
