@@ -43,14 +43,14 @@ operator fun VectorClock.plus(other: VectorClock): MutableVectorClock =
     copy().apply { merge(other) }
 
 fun VectorClock(): VectorClock =
-    MutableVectorClock()
+    ThreadMapClock()
 
 fun MutableVectorClock(): MutableVectorClock =
-    IntArrayClock()
+    ThreadMapClock()
 
 fun VectorClock.copy(): MutableVectorClock {
     // TODO: make VectorClock sealed interface?
-    check(this is IntArrayClock)
+    check(this is ThreadMapClock)
     return copy()
 }
 
@@ -162,7 +162,7 @@ private class ThreadMapClock : MutableVectorClock {
         clock.clear();
     }
 
-    fun copy() = ThreadMapClock().copyFrom(this)
+    fun copy() = ThreadMapClock().apply { copyFrom(this) }
 
     private fun copyFrom(other: ThreadMapClock) {
         clock = other.clock.toMutableMap();
