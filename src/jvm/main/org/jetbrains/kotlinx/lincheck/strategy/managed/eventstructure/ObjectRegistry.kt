@@ -35,7 +35,7 @@ data class ObjectEntry(
     val id: ObjectID,
     val obj: OpaqueValue,
     val allocation: AtomicThreadEvent,
-) {
+) { // TODO: From the other thing
     init {
         require(id != NULL_OBJECT_ID)
         require(allocation.label is InitializationLabel || allocation.label is ObjectAllocationLabel)

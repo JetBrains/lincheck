@@ -461,41 +461,41 @@ internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason?) ->
 //NOTE: things have also changed here but I have not looked it pretty deep.
 private class EventStructureObjectTracker(
     private val eventStructure: EventStructure,
-) : ObjectTracker {
+) : BaseObjectTracker() {
 
 
-    override fun shouldTrackObjectAccess(obj: Any?): Boolean = true
-    override fun enumerateObjectEntries(): Sequence<ObjectEntry> {
-        TODO("Not yet implemented")
-    }
-
-    override fun retain(predicate: (ObjectEntry) -> Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
-    override fun registerThread(threadId: Int, thread: Thread) {
-        TODO("Not yet implemented")
-    }
-
-    override fun get(id: ObjectID): ObjectEntry? {
-        TODO("Not yet implemented")
-    }
-
-    override fun get(obj: Any?): ObjectEntry? {
-        TODO("Not yet implemented")
-    }
-
-    // NOTE: we shold return an obhect enty here. Not sure if we should use the objectRegistry of the eventStructure
-    override fun registerNewObject(obj: Any): ObjectEntry {
-        val iThread = (Thread.currentThread() as TestThread).threadId
-        eventStructure.addObjectAllocationEvent(iThread, obj.opaque())
-        TODO("Not yet implemented")
-    }
-
-    override fun registerExternalObject(obj: Any): ObjectEntry {
-        TODO("Not yet implemented")
-    }
+//    override fun shouldTrackObjectAccess(obj: Any?): Boolean = true
+//    override fun enumerateObjectEntries(): Sequence<ObjectEntry> {
+//        TODO("Not yet implemented")
+//    }
+//
+//    override fun retain(predicate: (ObjectEntry) -> Boolean) {
+//        TODO("Not yet implemented")
+//    }
+//
+//    override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
+//    override fun registerThread(threadId: Int, thread: Thread) {
+//        TODO("Not yet implemented")
+//    }
+//
+//    override fun get(id: ObjectID): ObjectEntry? {
+//        TODO("Not yet implemented")
+//    }
+//
+//    override fun get(obj: Any?): ObjectEntry? {
+//        TODO("Not yet implemented")
+//    }
+//
+//    // NOTE: we shold return an obhect enty here. Not sure if we should use the objectRegistry of the eventStructure
+//    override fun registerNewObject(obj: Any): ObjectEntry {
+//        val iThread = (Thread.currentThread() as TestThread).threadId
+//        eventStructure.addObjectAllocationEvent(iThread, obj.opaque())
+//        TODO("Not yet implemented")
+//    }
+//
+//    override fun registerExternalObject(obj: Any): ObjectEntry {
+//        TODO("Not yet implemented")
+//    }
 
     // NOTE: the two methods below seem to be gone
 //    override fun initializeObject(obj: Any) {
@@ -508,8 +508,10 @@ private class EventStructureObjectTracker(
 //    override fun getObjectId(obj: Any): ObjectID {
 //        return eventStructure.objectRegistry.getOrRegisterObjectID(obj.opaque())
 //    }
+//    override fun initializeObject(obj: Any) {
+//        TODO("Not yet implemented")
+//    }
 
-    override fun reset() {}
 
 }
 
@@ -686,7 +688,6 @@ private class EventStructureMonitorTracker(
 
     // for threads waiting on the mutex,
     // stores the lock stack of the current thread for the awaited mutex
-    // TODO: turn into a map
     private val waitLockStack = mutableThreadMapOf<MutableList<AtomicThreadEvent>>()
 
     private fun canAcquireMonitor(iThread: Int, mutexID: ValueID): Boolean {
@@ -700,9 +701,7 @@ private class EventStructureMonitorTracker(
     }
 
     // Not sure how to proceed with these (I need to look into it)
-    override fun registerThread(threadId: Int) {
-        TODO("Not yet implemented")
-    }
+    override fun registerThread(threadId: Int) {}
 
     override fun acquiringThreads(monitor: Any): List<Int> {
         TODO("Not yet implemented")
@@ -727,9 +726,7 @@ private class EventStructureMonitorTracker(
 
     // NOTE: This should be a bool?
     override fun releaseMonitor(iThread: Int, monitor: Any): Boolean {
-        issueUnlock(iThread, monitor.opaque())
-        //NOTE: ???
-        return true;
+        return issueUnlock(iThread, monitor.opaque())
     }
 
 
@@ -764,7 +761,7 @@ private class EventStructureMonitorTracker(
         }
     }
 
-    private fun issueUnlock(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
+    private fun issueUnlock(iThread: Int, monitor: OpaqueValue): Boolean {
         val mutexID = objectRegistry[monitor]!!.id
         // obtain current lock-responses stack, and ensure that
         // the lock is indeed acquired by the releasing thread
@@ -772,17 +769,19 @@ private class EventStructureMonitorTracker(
             .ensure { it.isNotEmpty() && (it.last().threadId == iThread) }
         val depth = lockStack.size
         // add unlock event to the event structure
-        return eventStructure.addUnlockEvent(iThread, monitor,
+        eventStructure.addUnlockEvent(iThread, monitor,
             isReentry = (depth > 1),
             reentrancyDepth = depth,
-        ).also {
-            // remove last lock-response event from the stack,
-            // since we just released the lock one time
-            lockStack.removeLast()
-            if (lockStack.isEmpty()) {
-                lockStacks.remove(mutexID)
-            }
+        )
+        // remove last lock-response event from the stack,
+        // since we just released the lock one time
+        lockStack.removeLast()
+        if (lockStack.isEmpty()) {
+            lockStacks.remove(mutexID)
         }
+
+        // Returns true the thread no longer held (TODO: Is this really the correct thing?)
+        return lockStack.isEmpty()
     }
 
     override fun isWaiting(iThread: Int): Boolean {
@@ -900,12 +899,11 @@ private class EventStructureParkingTracker(
     private val eventStructure: EventStructure,
 ) : ParkingTracker {
 
-    //NOTE: should we do anything here? This is a new method
     override fun registerThread(threadId: Int) {
-        TODO("Not yet implemented")
+        // We should probably not do anything. I assume that the Eventstrcture model does not really care when a new event is added for the parking tracker
     }
 
-    // NOTE: not sure if we should handle this yet?
+    // NOTE: not sure if we should handle this yet? Should we add a new parking label and event?
     override fun interruptPark(threadId: Int) {
         TODO("Not yet implemented")
     }
@@ -926,7 +924,6 @@ private class EventStructureParkingTracker(
     override fun unpark(iThread: Int, unparkedThreadId: Int) {
         eventStructure.addUnparkEvent(iThread, unparkedThreadId)
     }
-
 
 
     override fun isParked(iThread: Int): Boolean {
