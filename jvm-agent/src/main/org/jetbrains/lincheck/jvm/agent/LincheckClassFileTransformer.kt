@@ -390,6 +390,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     @Suppress("SpellCheckingInspection")
     fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {
+        // Don't transform Lincheck's own agent classes to avoid class loading circularly
+        if (className.startsWith("org.jetbrains.lincheck.jvm.agent.")) return false
+
         // In the stress testing mode, we can simply skip the standard
         // Java and Kotlin classes -- they do not have coroutine suspension points.
         if (instrumentationMode == STRESS) {
