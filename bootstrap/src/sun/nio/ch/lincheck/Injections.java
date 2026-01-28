@@ -787,10 +787,10 @@ public class Injections {
      *                     This includes: this, function parameters, and local variables. 
      */
 
-    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals) {
+    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
-        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, locals);
+        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, locals, traceId);
     }
 
     /**

@@ -699,6 +699,7 @@ class TRSnapshotLineBreakpointTracePoint(
     val stackTraceCodeLocationIds: List<Int>,
     val currentTimeMillis: Long,
     val locals: List<TRObject?>,
+    val requestId: String?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ): TRTracePoint(context, threadId, codeLocationId, eventId) {
     
@@ -717,6 +718,7 @@ class TRSnapshotLineBreakpointTracePoint(
         out.writeLong(currentTimeMillis)
         out.writeInt(locals.size)
         locals.forEach { out.writeTRObject(it) }
+        out.writeUTF(requestId ?: "")
         out.endWriteLeafTracepoint()
     }
 
@@ -739,7 +741,8 @@ class TRSnapshotLineBreakpointTracePoint(
             val currentTimeMillis = inp.readLong()
             val localsSize = inp.readInt()
             val locals = List(localsSize) { inp.readTRObject(context) }
-
+            val requestId = inp.readUTF().takeIf { it.isNotEmpty() }
+            
             return TRSnapshotLineBreakpointTracePoint(
                 context = context,
                 codeLocationId = codeLocationId,
@@ -747,6 +750,7 @@ class TRSnapshotLineBreakpointTracePoint(
                 stackTraceCodeLocationIds = stackTraceCodeLocationIds,
                 currentTimeMillis = currentTimeMillis,
                 locals = locals,
+                requestId = requestId,
                 eventId = eventId,
             )
         }
