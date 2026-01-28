@@ -2045,62 +2045,71 @@ internal abstract class ManagedStrategy(
 
     private val activeLoops = mutableSetOf<Loop>()
 
-    override fun onLoopIteration(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int): Unit =
-        runInsideIgnoredSection {
-            val threadId = threadScheduler.getCurrentThreadId()
+    override fun onLoopIteration(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        loopId: Int
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
 
-            // if loop with loopId is called for first time, call beforeLoopEnter and then continue
-            val loop = activeLoops.find { it.threadId == threadScheduler.getCurrentThreadId() && it.loopId == loopId }
-            if (loop == null) {
-                loopDetector.beforeLoopEnter(threadId, codeLocation, loopId)
-                activeLoops.add(Loop(threadId, loopId))
-
-                if (collectTrace) {
-                    traceCollector?.addTracePointInternal(
-                        LoopStartTracePoint(
-                            context = context,
-                            eventId = getNextEventId(),
-                            iThread = threadId,
-                            actorId = currentActorId[threadId]!!,
-                            codeLocation = codeLocation,
-                            loopId = loopId
-                        )
-                    )
-                }
-            }
-            val methodId = getMethodId(threadId)
-
-            val decision = loopDetector.onLoopIteration(threadId, codeLocation, loopId, methodId)
+        // if loop with loopId is called for first time, call beforeLoopEnter and then continue
+        val loop = activeLoops.find { it.threadId == threadScheduler.getCurrentThreadId() && it.loopId == loopId }
+        if (loop == null) {
+            loopDetector.beforeLoopEnter(threadId, codeLocation, loopId)
+            activeLoops.add(Loop(threadId, loopId))
 
             if (collectTrace) {
-                val iteration = loopDetector.getCurrentIteration(threadId, loopId)
                 traceCollector?.addTracePointInternal(
-                    LoopIterationTracePoint(
+                    LoopStartTracePoint(
                         context = context,
                         eventId = getNextEventId(),
-                        iThread =threadId,
+                        iThread = threadId,
                         actorId = currentActorId[threadId]!!,
                         codeLocation = codeLocation,
-                        loopId = loopId,
-                        iteration = iteration
+                        loopId = loopId
                     )
                 )
             }
+        }
+        val methodId = getMethodId(threadId)
 
-            when(decision) {
-                LoopDetector.Decision.IDLE -> {}
-                LoopDetector.Decision.SWITCH_THREAD -> {
-                    onSwitchPoint(threadId)
-                    switchCurrentThread(threadId, BlockingReason.LiveLocked)
-                }
+        val decision = loopDetector.onLoopIteration(threadId, codeLocation, loopId, methodId)
 
-                LoopDetector.Decision.STUCK -> {
-                    failDueToLivelock()
-                }
-            }
+        if (collectTrace) {
+            val iteration = loopDetector.getCurrentIteration(threadId, loopId)
+            traceCollector?.addTracePointInternal(
+                LoopIterationTracePoint(
+                    context = context,
+                    eventId = getNextEventId(),
+                    iThread =threadId,
+                    actorId = currentActorId[threadId]!!,
+                    codeLocation = codeLocation,
+                    loopId = loopId,
+                    iteration = iteration
+                )
+            )
         }
 
-    override fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
+        when(decision) {
+            LoopDetector.Decision.IDLE -> {}
+            LoopDetector.Decision.SWITCH_THREAD -> {
+                onSwitchPoint(threadId)
+                switchCurrentThread(threadId, BlockingReason.LiveLocked)
+            }
+
+            LoopDetector.Decision.STUCK -> {
+                failDueToLivelock()
+            }
+        }
+    }
+
+    override fun afterLoopExit(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        loopId: Int,
+        exception: Throwable?,
+        isReachableFromOutsideLoop: Boolean
+    ) = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val methodId = getMethodId(threadId)
         loopDetector.afterLoopExit(threadId, codeLocation, loopId, methodId)
