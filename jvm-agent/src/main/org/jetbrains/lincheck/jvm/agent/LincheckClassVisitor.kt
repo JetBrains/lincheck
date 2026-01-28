@@ -109,7 +109,7 @@ internal class LincheckClassVisitor(
             initialMethodVisitor = mv,
         )
         
-        val filteredLiveDebuggerSettings = LiveDebuggerSettings(liveDebuggerSettings.lineBreakPoints.filter { it.fileName == fileName })
+        val filteredLiveDebuggerSettings = LiveDebuggerSettings(liveDebuggerSettings.lineBreakPoints.filter { it.className == className.toCanonicalClassName() })
 
         // ======== Ignored Sections ========
         chain.addTransformer { adapter, mv ->

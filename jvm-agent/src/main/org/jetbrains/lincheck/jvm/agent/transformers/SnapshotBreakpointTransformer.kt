@@ -34,7 +34,7 @@ internal class SnapshotBreakpointTransformer(
     
     override fun visitLineNumber(line: Int, start: Label) {
         super.visitLineNumber(line, start)
-        if (liveDebuggerSettings.lineBreakPoints.any { it.lineNumber == line && it.fileName == fileName} ) {
+        if (liveDebuggerSettings.lineBreakPoints.any { it.lineNumber == line && it.className == className.toCanonicalClassName()} ) {
             adapter.invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             loadNewCodeLocationId()
             val activeLocals = currentActiveLocals

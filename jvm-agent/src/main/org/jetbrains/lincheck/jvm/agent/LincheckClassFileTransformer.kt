@@ -43,6 +43,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
+    
+    private val liveDebuggerSettings: LiveDebuggerSettings by lazy { LiveDebuggerSettings.readList(TraceAgentParameters.getLineBreakpoints()) }
 
     override fun transform(
         loader: ClassLoader?,
@@ -100,8 +102,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             includeClasses = includeClasses,
             excludeClasses = excludeClasses,
         )
-        
-        val liveDebuggerSettings = LiveDebuggerSettings.readList(TraceAgentParameters.getLineBreakpoints())
 
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
@@ -404,6 +404,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             if (className.startsWith("com.android.tools.")) return false
         }
         if (isEagerlyInstrumentedClass(className)) return true
+        
+        if (isInLiveDebuggerMode) return isLiveDebuggerBreakpointClass(className)
 
         return AnalysisProfile.DEFAULT.shouldTransform(className, "")
     }
@@ -425,6 +427,10 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         //  we should try to fix lazy class re-transformation logic
         isCoroutineDispatcherInternalClass(className) ||
         isCoroutineConcurrentKtInternalClass(className)
+    
+    private fun isLiveDebuggerBreakpointClass(className: String): Boolean = 
+        liveDebuggerSettings.lineBreakPoints.any { it.className == className }
+        
 
     private fun readUTF(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
         for (offset in 0 ..< utfLength) {
