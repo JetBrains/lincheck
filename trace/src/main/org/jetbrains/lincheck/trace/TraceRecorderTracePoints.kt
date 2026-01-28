@@ -718,7 +718,7 @@ class TRSnapshotLineBreakpointTracePoint(
         out.writeLong(currentTimeMillis)
         out.writeInt(locals.size)
         locals.forEach { out.writeTRObject(it) }
-        out.writeUTF(requestId ?: "")
+        out.writeNullableUTF(requestId)
         out.endWriteLeafTracepoint()
     }
 
@@ -741,7 +741,7 @@ class TRSnapshotLineBreakpointTracePoint(
             val currentTimeMillis = inp.readLong()
             val localsSize = inp.readInt()
             val locals = List(localsSize) { inp.readTRObject(context) }
-            val requestId = inp.readUTF().takeIf { it.isNotEmpty() }
+            val requestId = inp.readNullableUTF()
             
             return TRSnapshotLineBreakpointTracePoint(
                 context = context,
@@ -1134,6 +1134,22 @@ internal fun DataInput.readTRObject(context: TraceContext): TRObject? {
                 error("TRObject: Unknown Class Id $classNameId")
             }
         }
+    }
+}
+
+internal fun DataOutput.writeNullableUTF(value: String?) {
+    writeBoolean(value != null)
+    if (value != null) {
+        writeUTF(value)
+    }
+}
+
+internal fun DataInput.readNullableUTF(): String? {
+    val hasString = readBoolean()
+    return if (hasString) {
+        readUTF()
+    } else {
+        null
     }
 }
 
