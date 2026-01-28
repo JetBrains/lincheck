@@ -30,6 +30,14 @@ import java.lang.reflect.Method
  * Options for the model checking strategy.
  */
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
+
+    private var experimentalModelChecking = false
+
+    internal fun useExperimentalModelChecking(): ModelCheckingOptions {
+        experimentalModelChecking = true
+        return this
+    }
+
     override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
         return ModelCheckingCTestConfiguration(
             testClass = testClass,

@@ -2644,7 +2644,6 @@ private val BlockingReason.obstructionFreedomViolationMessage: String get() = wh
     is BlockingReason.ThreadJoin   -> OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE
     is BlockingReason.Suspended    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
     BlockingReason.SpinBound -> TODO()
-    BlockingReason.StrategySwitch -> TODO()
 }
 
 /**

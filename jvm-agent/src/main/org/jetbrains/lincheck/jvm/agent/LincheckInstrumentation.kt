@@ -90,6 +90,7 @@ enum class InstrumentationMode {
      * the thread scheduling using injected switch points.
      */
     MODEL_CHECKING,
+    EXPERIMENTAL_MODEL_CHECKING,
 
     /**
      * Trace debugging mode.
@@ -124,7 +125,7 @@ enum class InstrumentationMode {
 }
 
 val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
-    MODEL_CHECKING, TRACE_DEBUGGING -> true
+    MODEL_CHECKING, EXPERIMENTAL_MODEL_CHECKING, TRACE_DEBUGGING -> true
     else -> false
 }
 

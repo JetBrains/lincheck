@@ -24,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.verifier.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
@@ -39,10 +38,6 @@ import org.jetbrains.lincheck.util.runInsideIgnoredSection
 import org.jetbrains.lincheck.util.satisfies
 import org.jetbrains.lincheck.util.toInt
 import org.jetbrains.lincheck.util.updateInplace
-import sun.nio.ch.lincheck.TestThread
-import java.lang.reflect.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ObjectEntry
-import org.jetbrains.kotlinx.lincheck.util.MutableThreadMap
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 
 internal class EventStructureStrategy(
@@ -277,7 +272,7 @@ internal class EventStructureStrategy(
 
     var threadToSwitch : ThreadId? = null
     override fun onSwitchPoint(iThread: ThreadId) {
-        threadToSwitch = iThread;
+        threadToSwitch = iThread
     }
 
     override fun shouldSwitch(): Boolean {
@@ -357,24 +352,24 @@ internal class EventStructureStrategy(
         isTestInstanceRegistered = true
     }
 
-    override fun onThreadStart(iThread: Int) {
-        super.onThreadStart(iThread)
-        if (iThread != eventStructure.mainThreadId && iThread != eventStructure.initThreadId) {
-            eventStructure.addThreadStartEvent(iThread)
+    override fun onThreadStart(threadId: Int) {
+        super.onThreadStart(threadId)
+        if (threadId != eventStructure.mainThreadId && threadId != eventStructure.initThreadId) {
+            eventStructure.addThreadStartEvent(threadId)
         }
     }
 
-    override fun onThreadFinish(iThread: Int) {
+    override fun onThreadFinish(threadId: Int) {
         // TODO: refactor, make `switchCurrentThread` private again in ManagedStrategy,
         //   call overridden `onStart` and `onFinish` methods only when thread is active
         //   and the `currentThread` lock is held
-        threadScheduler.awaitTurn(iThread)
+        threadScheduler.awaitTurn(threadId)
         // TODO: extract this check into a method ?
-        while (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(iThread)) {
-            switchCurrentThread(iThread, null) // TODO: Should not be null, since we would not switch we need another blocking reason
+        while (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(threadId)) {
+            switchCurrentThread(threadId, null) // TODO: Should not be null, since we would not switch we need another blocking reason
         }
-        eventStructure.addThreadFinishEvent(iThread)
-        super.onThreadFinish(iThread)
+        eventStructure.addThreadFinishEvent(threadId)
+        super.onThreadFinish(threadId)
     }
 
     override fun onActorStart(iThread: Int) {
@@ -421,21 +416,21 @@ internal class EventStructureStrategy(
     }
 
     // NOTE: In ManagedStrategy we have two flavours of afterCoroutineCancelletion none of which contain promptCancellation (how do we translate it)
-    override fun afterCoroutineCancellation(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
-        super.afterCoroutineCancellation(iThread, promptCancellation, cancellationResult)
+    override fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationResult: CancellationResult) {
+        super.afterCoroutineCancellation(iThread, promptCancelatioon, cancellationResult)
         if (cancellationResult == CancellationResult.CANCELLATION_FAILED)
             return
 
         //TODO: we expect this to be not null. Scary! See if we can avoid it
-        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancellation)
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancelatioon)
         eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
     }
 
     // TODO: Not sure we should also have an override and add a suspend event. It seems that this overload gets called, when the overload above fails
-    override fun afterCoroutineCancellation(iThread: Int, promptCancellation: Boolean, cancellationException: Throwable) {
-        super.afterCoroutineCancellation(iThread, promptCancellation, cancellationException)
+    override fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationException: Throwable) {
+        super.afterCoroutineCancellation(iThread, promptCancelatioon, cancellationException)
         //TODO: we expect this to be not null. Scary! See if we can avoid it
-        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancellation)
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancelatioon)
         eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
     }
 
@@ -712,11 +707,11 @@ private class EventStructureMonitorTracker(
     }
 
 
-    override fun acquireMonitor(iThread: Int, monitor: Any): Boolean {
+    override fun acquireMonitor(threadId: Int, monitor: Any): Boolean {
         // issue lock-request event
-        val lockRequest = issueLockRequest(iThread, monitor.opaque())
+        val lockRequest = issueLockRequest(threadId, monitor.opaque())
         // if lock is acquired by another thread then postpone addition of lock-response event
-        if (!canAcquireMonitor(iThread, monitor.opaque()))
+        if (!canAcquireMonitor(threadId, monitor.opaque()))
             return false
         // try to add lock-response event
         val lockResponse = tryCompleteLockResponse(lockRequest)
@@ -725,8 +720,8 @@ private class EventStructureMonitorTracker(
     }
 
     // NOTE: This should be a bool?
-    override fun releaseMonitor(iThread: Int, monitor: Any): Boolean {
-        return issueUnlock(iThread, monitor.opaque())
+    override fun releaseMonitor(threadId: Int, monitor: Any): Boolean {
+        return issueUnlock(threadId, monitor.opaque())
     }
 
 
@@ -784,19 +779,19 @@ private class EventStructureMonitorTracker(
         return lockStack.isEmpty()
     }
 
-    override fun isWaiting(iThread: Int): Boolean {
-        val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
+    override fun isWaiting(threadId: Int): Boolean {
+        val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.takeIf { (it.label is LockLabel || it.label is WaitLabel) }
             ?: return false
         val mutexID = (blockingRequest.label as MutexLabel).mutexID
         return !(eventStructure.isPendingUnblockedRequest(blockingRequest) &&
-                canAcquireMonitor(iThread, mutexID))
+                canAcquireMonitor(threadId, mutexID))
     }
 
-    override fun waitOnMonitor(iThread: Int, monitor: Any): Boolean {
+    override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
         val mutexID = objectRegistry[monitor.opaque()]!!.id
         // check if the thread is already blocked on wait-request or (synthetic) lock-request
-        val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
+        val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.ensure { it.label.satisfies<MutexLabel> { this.mutexID == mutexID } }
             ?.ensure { it.label is LockLabel || it.label is WaitLabel }
         var waitRequest = blockingRequest?.takeIf { it.label is WaitLabel }
@@ -804,8 +799,8 @@ private class EventStructureMonitorTracker(
         // if the thread is not blocked yet, issue wait-request event;
         // this procedure will also add synthetic unlock event
         if (blockingRequest == null) {
-            check(waitLockStack[iThread] == null)
-            waitRequest = issueWaitRequest(iThread, monitor.opaque())
+            check(waitLockStack[threadId] == null)
+            waitRequest = issueWaitRequest(threadId, monitor.opaque())
         }
         // if the wait-request was already issued, try to complete it by wait-response;
         // this procedure will also add synthetic lock-request event
@@ -817,15 +812,15 @@ private class EventStructureMonitorTracker(
         // finally, check that the thread can acquire the lock back,
         // and try to complete the lock-request by lock-response
         check(lockRequest != null)
-        if (!canAcquireMonitor(iThread, mutexID))
+        if (!canAcquireMonitor(threadId, mutexID))
             return true
         val lockResponse = tryCompleteWaitLockResponse(lockRequest)
         // exit waiting if the lock response was added successfully
         return (lockResponse == null)
     }
 
-    override fun notify(iThread: Int, monitor: Any, notifyAll: Boolean) {
-        issueNotify(iThread, monitor.opaque(), notifyAll)
+    override fun notify(threadId: Int, monitor: Any, notifyAll: Boolean) {
+        issueNotify(threadId, monitor.opaque(), notifyAll)
     }
 
     private fun issueWaitRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
@@ -908,26 +903,26 @@ private class EventStructureParkingTracker(
         TODO("Not yet implemented")
     }
 
-    override fun park(iThread: Int) {
-        eventStructure.addParkRequestEvent(iThread)
+    override fun park(threadId: Int) {
+        eventStructure.addParkRequestEvent(threadId)
     }
 
     //NOTE: allowSpuriusWakeup has been added and not sure how to use that
-    override fun waitUnpark(iThread: Int, allowSpuriousWakeUp: Boolean): Boolean {
-        val parkRequest = eventStructure.getPendingBlockingRequest(iThread)
+    override fun waitUnpark(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
+        val parkRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.takeIf { it.label is ParkLabel }
             ?: return false
         val parkResponse = eventStructure.addParkResponseEvent(parkRequest)
         return (parkResponse == null)
     }
 
-    override fun unpark(iThread: Int, unparkedThreadId: Int) {
-        eventStructure.addUnparkEvent(iThread, unparkedThreadId)
+    override fun unpark(threadId: Int, unparkedThreadId: Int) {
+        eventStructure.addUnparkEvent(threadId, unparkedThreadId)
     }
 
 
-    override fun isParked(iThread: Int): Boolean {
-        val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
+    override fun isParked(threadId: Int): Boolean {
+        val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.takeIf { it.label is ParkLabel }
             ?: return false
         return !eventStructure.isPendingUnblockedRequest(blockingRequest)

@@ -292,7 +292,7 @@ abstract class AbstractThreadEvent(
 ) : AbstractEvent(label), ThreadEvent {
 
     final override val threadId: Int = when (label) {
-        is InitializationLabel -> label.initThreadID
+        is InitializationLabel -> label.initThreadId
         is ThreadStartLabel -> label.threadId
         is ActorLabel -> label.threadId
         else -> parent!!.threadId

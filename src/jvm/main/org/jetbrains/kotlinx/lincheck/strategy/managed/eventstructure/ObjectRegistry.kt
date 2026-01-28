@@ -128,13 +128,13 @@ fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when 
     Types.INT_TYPE        -> id.toInt().opaque()
     Types.BYTE_TYPE       -> id.toByte().opaque()
     Types.SHORT_TYPE      -> id.toShort().opaque()
-    Types.CHAR_TYPE       -> id.toChar().opaque()
+    Types.CHAR_TYPE       -> id.toInt().toChar().opaque()
     Types.BOOLEAN_TYPE    -> id.toInt().toBoolean().opaque()
     Types.LONG_TYPE_BOXED     -> id.opaque()
     Types.INT_TYPE_BOXED      -> id.toInt().opaque()
     Types.BYTE_TYPE_BOXED     -> id.toByte().opaque()
     Types.SHORT_TYPE_BOXED    -> id.toShort().opaque()
-    Types.CHAR_TYPE_BOXED     -> id.toChar().opaque()
+    Types.CHAR_TYPE_BOXED     -> id.toInt().toChar().opaque()
     Types.BOOLEAN_TYPE_BOXED  -> id.toInt().toBoolean().opaque()
     else                -> get(id)?.obj
 }
@@ -146,13 +146,13 @@ fun ObjectRegistry.getValueID(type: Types.Type, value: OpaqueValue?): ValueID {
         Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
         Types.BYTE_TYPE       -> (value.unwrap() as Byte).toLong()
         Types.SHORT_TYPE      -> (value.unwrap() as Short).toLong()
-        Types.CHAR_TYPE       -> (value.unwrap() as Char).toLong()
+        Types.CHAR_TYPE       -> (value.unwrap() as Char).code.toLong()
         Types.BOOLEAN_TYPE    -> (value.unwrap() as Boolean).toInt().toLong()
         Types.LONG_TYPE_BOXED     -> (value.unwrap() as Long)
         Types.INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
         Types.BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
         Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
-        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).toLong()
+        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).code.toLong()
         Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
         else                -> get(value)?.id ?: NULL_OBJECT_ID
     }
@@ -164,7 +164,7 @@ fun ObjectRegistry.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): 
         Types.LONG_TYPE       -> (value.unwrap() as Long)
         Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
         Types.SHORT_TYPE      -> (value.unwrap() as Short).toLong()
-        Types.CHAR_TYPE       -> (value.unwrap() as Char).toLong()
+        Types.CHAR_TYPE       -> (value.unwrap() as Char).code.toLong()
         // sometimes, due to JVM internals, boolean values can be reinterpreted as byte values
         // (e.g., because of BALOAD and BASTORE instructions are used for both boolean and byte arrays);
         // thus if the type-cast failed, we try to reinterpret the value and cast it to manually
@@ -178,7 +178,7 @@ fun ObjectRegistry.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): 
         Types.INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
         Types.BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
         Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
-        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).toLong()
+        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).code.toLong()
         Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
         else                -> getOrRegisterObjectID(value)
     }

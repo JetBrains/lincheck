@@ -86,7 +86,7 @@ class RelationMatrix<T>(
     override operator fun invoke(x: T, y: T): Boolean =
         get(x, y)
 
-    private inline operator fun get(i: Int, j: Int): Boolean {
+    private operator fun get(i: Int, j: Int): Boolean {
         return matrix[i][j]
     }
 

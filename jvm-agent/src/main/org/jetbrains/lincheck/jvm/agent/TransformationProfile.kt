@@ -206,6 +206,7 @@ fun createTransformationProfile(
         LIVE_DEBUGGING -> LiveDebuggerTransformationProfile(liveDebuggerSettings)
         TRACE_DEBUGGING -> TraceDebuggerDefaultTransformationProfile
         MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
+        EXPERIMENTAL_MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
     }
     if (includeClasses.isNotEmpty() || excludeClasses.isNotEmpty()) {
         return FilteredTransformationProfile(includeClasses, excludeClasses, defaultProfile)
