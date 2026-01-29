@@ -20,7 +20,6 @@ The following interleaving leads to the error:
 |                |   counter ➜ AtomicInteger#1    |
 |                |   switch                       |
 | operation(): 2 |                                |
-| STATE: 3       |                                |
 |                |   counter.getAndIncrement(): 3 |
 |                |   STATE: 4                     |
 |                |   result: 3                    |

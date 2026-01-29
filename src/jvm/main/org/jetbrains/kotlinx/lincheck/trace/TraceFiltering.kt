@@ -1,0 +1,83 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.jetbrains.kotlinx.lincheck.trace
+
+import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
+
+internal interface TraceFilter {
+    fun shouldUnfold(callNode: CallNode): Boolean
+    fun filterChildren(callNode: CallNode): List<TraceNode>
+    fun shouldFilter(tracePoint: TracePoint): Boolean
+}
+
+internal class ShortenTraceFilter : TraceFilter {
+
+    // a cache storing whether a node can be unfolded or not
+    private val unfoldableNodes = mutableMapOf<CallNode, Boolean>()
+
+    override fun shouldUnfold(callNode: CallNode): Boolean {
+        if (callNode.isRootCall && callNode.tracePoint.isThreadStart) return true
+        unfoldableNodes[callNode]?.let { return it }
+        return callNode.children.any { child ->
+            when (child) {
+                is EventNode -> with(child) {
+                    !tracePoint.isVirtual && (
+                        tracePoint.isBlocking && isLast ||
+                        tracePoint is SwitchEventTracePoint ||
+                        tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
+                    )
+                }
+                is CallNode -> {
+                    child.tracePoint.wasSuspended ||
+                    shouldUnfold(child)
+                }
+                else -> false
+            }
+        }.also { decision ->
+            unfoldableNodes[callNode] = decision
+        }
+    }
+
+    override fun filterChildren(callNode: CallNode): List<TraceNode> {
+        return callNode.children.filterNot { shouldFilter(it.tracePoint) }
+    }
+
+    override fun shouldFilter(tracePoint: TracePoint): Boolean =
+        tracePoint.isThrowableTracePoint
+}
+
+internal class VerboseTraceFilter : TraceFilter {
+    override fun shouldUnfold(callNode: CallNode): Boolean = true
+
+    override fun filterChildren(callNode: CallNode): List<TraceNode> {
+        return callNode.children.filterNot { shouldFilter(it.tracePoint) }
+    }
+
+    override fun shouldFilter(tracePoint: TracePoint): Boolean =
+        tracePoint.isThrowableTracePoint
+}
+
+// virtual trace points are not displayed in the trace
+internal val TracePoint.isVirtual: Boolean get() =
+    this.isThreadStart() || this.isThreadJoin()
+
+// trace points from `Throwable` methods are filter-out from the trace
+internal val TracePoint.isThrowableTracePoint: Boolean get() {
+    val codeLocation = (this as? CodeLocationTracePoint)?.codeLocation ?: return false
+    val stackTraceElement = CodeLocations.stackTrace(context, codeLocation)
+    return stackTraceElement.className.toCanonicalClassName() == "java.lang.Throwable"
+}
+
+internal val TracePoint.isBlocking: Boolean get() = when (this) {
+    is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
+    else -> false
+}
