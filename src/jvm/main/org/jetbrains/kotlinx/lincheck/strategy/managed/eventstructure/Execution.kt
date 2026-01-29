@@ -29,6 +29,7 @@ import org.jetbrains.lincheck.util.SortedArrayList
 import org.jetbrains.lincheck.util.SortedList
 import org.jetbrains.lincheck.util.SortedMutableList
 import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.sortedMutableListOf
 
 
 /**
@@ -178,7 +179,7 @@ private class ExecutionImpl<E : ThreadEvent>(
 
     override fun add(event: E) {
         ++size
-        threadMap[event.threadId]!!
+        threadMap.getOrDefault(event.threadId, sortedMutableListOf())
             .ensure { event.parent == it.lastOrNull() }
             .also { it.add(event) }
     }
