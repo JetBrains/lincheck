@@ -8,22 +8,27 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.jvm.agent.conditions
 
-import org.junit.jupiter.params.*
-import org.junit.jupiter.params.provider.*
+import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.jvm.agent.conditions.ConditionTestUtils.MethodInfo
+import org.junit.*
+import org.junit.Assert.*
+import org.junit.runner.*
+import org.junit.runners.*
+import org.junit.runners.Parameterized.*
 import java.io.*
-import kotlin.test.*
 
 /**
  * Tests for UNSAFE condition functions - all should fail compile-time safety verification.
  * Test cases are automatically generated from methods in [UnsafeConditions] using ASM.
  */
-class UnsafeConditionsTest {
-
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("unsafeMethods")
-    fun test(methodInfo: ConditionTestUtils.MethodInfo) {
+@RunWith(Parameterized::class)
+class UnsafeConditionsTest(
+    private val methodInfo: MethodInfo
+) {
+    @Test
+    fun test() {
         val className = UnsafeConditions::class.java.name
 
         val violations = ConditionSafetyChecker.checkForSideEffectAbsence(
@@ -32,12 +37,16 @@ class UnsafeConditionsTest {
             methodInfo.descriptor,
             this::class.java.classLoader
         )
-        assertFalse(violations.isEmpty(), "Method ${methodInfo.name} should be unsafe")
+        assertFalse(
+            "Method ${methodInfo.name} should be unsafe",
+            violations.isEmpty()
+        )
     }
 
     companion object {
         @JvmStatic
-        fun unsafeMethods(): List<ConditionTestUtils.MethodInfo> =
+        @Parameters(name = "{0}")
+        fun unsafeMethods(): Array<MethodInfo> =
             ConditionTestUtils.discoverTestMethods(UnsafeConditions::class.java)
     }
 }

@@ -18,10 +18,6 @@ sourceSets {
         java.srcDirs("src/main")
     }
 
-    test {
-        java.srcDirs("src/test")
-    }
-
     dependencies {
         // main
         val asmVersion: String by project
@@ -37,14 +33,8 @@ sourceSets {
         api("org.ow2.asm:asm-util:${asmVersion}")
         api("net.bytebuddy:byte-buddy:${byteBuddyVersion}")
         api("net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}")
-
-        // test
-        testImplementation(kotlin("test"))
-        testImplementation("org.junit.jupiter:junit-jupiter:5.9.3")
     }
 }
-
-setupTestsJDK(project)
 
 tasks {
     named<JavaCompile>("compileTestJava") {
@@ -59,11 +49,6 @@ tasks {
             project(":common"),
             project(":trace")
         )
-    }
-
-    test {
-        useJUnitPlatform()
-        configureJvmTestCommon(project)
     }
 }
 

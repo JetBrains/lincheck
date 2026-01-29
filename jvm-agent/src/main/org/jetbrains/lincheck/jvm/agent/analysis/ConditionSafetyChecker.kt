@@ -8,10 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.jvm.agent.*
-import org.jetbrains.lincheck.trace.recorder.SideEffectViolation.*
+import org.jetbrains.lincheck.jvm.agent.analysis.SideEffectViolation.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import java.util.concurrent.*
@@ -174,7 +174,7 @@ object ConditionSafetyChecker {
         }
         // Analyze the method's bytecode for violations.
         val reader = ClassReader(classBytes)
-        val classVisitor = MethodSafetyCheckingClassVisitor(
+        val classVisitor = SafetyClassAnalyzer(
             targetMethodName = methodName,
             targetMethodDescriptor = methodDescriptor,
             violations = violations,
@@ -194,10 +194,7 @@ object ConditionSafetyChecker {
         return classLoader.getResourceAsStream(resourceName)?.use { it.readBytes() }
     }
 
-    /**
-     * Class visitor that locates a specific method and delegates to SafetyCheckingMethodVisitor for analysis.
-     */
-    private class MethodSafetyCheckingClassVisitor(
+    private class SafetyClassAnalyzer(
         private val targetMethodName: String,
         private val targetMethodDescriptor: String,
         private val violations: MutableList<SideEffectViolation>,
@@ -235,7 +232,7 @@ object ConditionSafetyChecker {
                 return null
             }
             // Analyze this method's instructions.
-            return SafetyCheckingMethodVisitor(fileName, violations, classLoader, maxCallDepth)
+            return SafetyMethodAnalyzer(fileName, violations, classLoader, maxCallDepth)
         }
     }
 
@@ -243,7 +240,7 @@ object ConditionSafetyChecker {
     /**
      * Method visitor that examines each instruction and detects unsafe operations.
      */
-    private class SafetyCheckingMethodVisitor(
+    private class SafetyMethodAnalyzer(
         private val fileName: String?,
         private val violations: MutableList<SideEffectViolation>,
         private val classLoader: ClassLoader,
@@ -267,7 +264,7 @@ object ConditionSafetyChecker {
 
         override fun visitVarInsn(opcode: Int, varIndex: Int) {
             // Reject local variable writes (reads are OK)
-            if (opcode in STORE_OPCODES) {
+            if (isFieldStoreOpcode(opcode)) {
                 violations.add(
                     LocalVariableWrite(fileName, currentLineNumber, varIndex)
                 )
@@ -276,7 +273,7 @@ object ConditionSafetyChecker {
 
         override fun visitInsn(opcode: Int) {
             // Reject array writes (reads are OK).
-            if (opcode in ARRAY_STORE_OPCODES) {
+            if (isArrayStoreOpcode(opcode)) {
                 violations.add(
                     ArrayWrite(fileName, currentLineNumber)
                 )
@@ -303,12 +300,7 @@ object ConditionSafetyChecker {
             }
             // Disallow methods from the standard Java library
             // that are not whitelisted.
-            if (owner.startsWith("java/")
-                || owner.startsWith("javax/")
-                || owner.startsWith("kotlin/")
-                || owner.startsWith("sun/")
-                || owner.startsWith("jdk/")
-            ) {
+            if (isStandardLibraryClass(owner)) {
                 violations.add(
                     DisallowedMethodCall(fileName, currentLineNumber, owner, name)
                 )
@@ -339,20 +331,11 @@ object ConditionSafetyChecker {
         override fun visitInvokeDynamicInsn(
             name: String,
             descriptor: String,
-            bootstrapMethodHandle: org.objectweb.asm.Handle,
+            bootstrapMethodHandle: Handle,
             vararg bootstrapMethodArguments: Any?
         ) {
-            // Allow string concatenation.
-            if (bootstrapMethodHandle.owner == "java/lang/invoke/StringConcatFactory" &&
-                (bootstrapMethodHandle.name == "makeConcatWithConstants" ||
-                        bootstrapMethodHandle.name == "makeConcat")
-            ) {
-                return
-            }
-            // Allow Java record methods (toString, equals, hashCode).
-            if (bootstrapMethodHandle.owner == "java/lang/runtime/ObjectMethods" &&
-                bootstrapMethodHandle.name == "bootstrap"
-            ) {
+            // Allow whitelisted dynamic invocations.
+            if (isWhitelistedDynamicInvocation(bootstrapMethodHandle)) {
                 return
             }
             // Reject all other invokedynamic calls (lambdas, method references, etc.)
@@ -380,17 +363,37 @@ object ConditionSafetyChecker {
             }
             return false
         }
+
+        /**
+         * Checks if an opcode is a local variable store instruction.
+         */
+        private fun isFieldStoreOpcode(opcode: Int) =
+            opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
+
+        /**
+         * Checks if an opcode is an array store instruction.
+         */
+        private fun isArrayStoreOpcode(opcode: Int) =
+            opcode == IASTORE || opcode == LASTORE || opcode == FASTORE || opcode == DASTORE ||
+            opcode == AASTORE || opcode == BASTORE || opcode == CASTORE || opcode == SASTORE
+
+        /**
+         * Checks if a class belongs to the standard Java/Kotlin library.
+         */
+        private fun isStandardLibraryClass(owner: String) =
+            STANDARD_LIBRARY_PREFIXES.any { owner.startsWith(it) }
+
+        /**
+         * Checks if a dynamic invocation is whitelisted (safe invokedynamic operations).
+         */
+        private fun isWhitelistedDynamicInvocation(bootstrapMethodHandle: Handle): Boolean {
+            val bootstrapKey = "${bootstrapMethodHandle.owner}.${bootstrapMethodHandle.name}"
+            return bootstrapKey in WHITELISTED_DYNAMIC_INVOCATIONS
+        }
     }
 
-    // Opcodes for local variable store instructions
-    private val STORE_OPCODES = setOf(
-        ISTORE, LSTORE, FSTORE, DSTORE, ASTORE
-    )
-
-    // Opcodes for array store instructions
-    private val ARRAY_STORE_OPCODES = setOf(
-        IASTORE, LASTORE, FASTORE, DASTORE,
-        AASTORE, BASTORE, CASTORE, SASTORE
+    private val STANDARD_LIBRARY_PREFIXES = listOf(
+        "java/", "javax/", "kotlin/", "sun/", "jdk/"
     )
 
     // Whitelist of safe static JDK methods (pure functions with no side effects)
@@ -578,5 +581,15 @@ object ConditionSafetyChecker {
         "java/lang/Thread.isAlive",
         "java/lang/Thread.isInterrupted",
         "java/lang/Thread.currentThread",
+    )
+
+    // Whitelist of safe dynamic invocation bootstrap methods (invokedynamic operations)
+    private val WHITELISTED_DYNAMIC_INVOCATIONS = setOf(
+        // String concatenation (Java 9+)
+        "java/lang/invoke/StringConcatFactory.makeConcatWithConstants",
+        "java/lang/invoke/StringConcatFactory.makeConcat",
+
+        // Java record methods (toString, equals, hashCode)
+        "java/lang/runtime/ObjectMethods.bootstrap",
     )
 }

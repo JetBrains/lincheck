@@ -8,20 +8,26 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.jvm.agent.conditions
 
-import org.junit.jupiter.params.*
-import org.junit.jupiter.params.provider.*
-import kotlin.test.*
+import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.jvm.agent.conditions.ConditionTestUtils.MethodInfo
+import org.junit.*
+import org.junit.Assert.*
+import org.junit.runner.*
+import org.junit.runners.*
+import org.junit.runners.Parameterized.*
 
 /**
  * Tests for SAFE condition functions - all should pass compile-time safety verification.
  * Test cases are automatically generated from methods in [SafeConditions] using ASM.
  */
-class SafeConditionsTest {
-    @ParameterizedTest(name = "{0}")
-    @MethodSource("safeMethods")
-    fun test(methodInfo: ConditionTestUtils.MethodInfo) {
+@RunWith(Parameterized::class)
+class SafeConditionsTest(
+    private val methodInfo: MethodInfo
+) {
+    @Test
+    fun test() {
         val className = SafeConditions::class.java.name
 
         val violations = ConditionSafetyChecker.checkForSideEffectAbsence(
@@ -30,12 +36,16 @@ class SafeConditionsTest {
             methodInfo.descriptor,
             this::class.java.classLoader
         )
-        assertTrue(violations.isEmpty(), "Method ${methodInfo.name} should be safe but has violations: $violations")
+        assertTrue(
+            "Method ${methodInfo.name} should be safe but has violations: $violations",
+            violations.isEmpty()
+        )
     }
 
     companion object {
         @JvmStatic
-        fun safeMethods(): List<ConditionTestUtils.MethodInfo> =
+        @Parameters(name = "{0}")
+        fun safeMethods(): Array<MethodInfo> =
             ConditionTestUtils.discoverTestMethods(SafeConditions::class.java)
     }
 }

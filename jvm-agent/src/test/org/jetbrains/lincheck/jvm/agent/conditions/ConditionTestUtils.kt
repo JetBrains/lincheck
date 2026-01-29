@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.jvm.agent.conditions
 
 import org.objectweb.asm.Type
 import java.lang.reflect.*
@@ -33,7 +33,7 @@ object ConditionTestUtils {
      * Generates method descriptors using ASM's Type utility.
      * Excludes synthetic methods, property getters/setters, and internal Kotlin methods.
      */
-    fun discoverTestMethods(clazz: Class<*>): List<MethodInfo> {
+    fun discoverTestMethods(clazz: Class<*>): Array<MethodInfo> {
         return clazz.declaredMethods
             .filter { method ->
                 // Include only static methods
@@ -54,5 +54,6 @@ object ConditionTestUtils {
                 )
             }
             .sortedBy { it.name }
+            .toTypedArray()
     }
 }
