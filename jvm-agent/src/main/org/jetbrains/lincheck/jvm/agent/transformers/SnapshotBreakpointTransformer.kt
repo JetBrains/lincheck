@@ -29,11 +29,11 @@ internal class SnapshotBreakpointTransformer(
     context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
+    config: TransformationConfiguration,
     private val liveDebuggerSettings: LiveDebuggerSettings,
-    private val config: TransformationConfiguration,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
     
-    private val traceIdCapturers = TraceIdCapturerRegistry()
+    private val traceIdCapturers = TraceIdCapturerRegistry(config)
     
     override fun visitLineNumber(line: Int, start: Label) {
         super.visitLineNumber(line, start)
@@ -71,10 +71,7 @@ internal class SnapshotBreakpointTransformer(
                 adapter.arrayStore(OBJECT_TYPE)
             }
 
-            if (config.trackTraceIds) {
-                traceIdCapturers.loadTraceIdIfAvailable(adapter)
-            }
-            
+            traceIdCapturers.loadTraceIdIfAvailable(adapter)
             adapter.invokeStatic(Injections::onSnapshotLineBreakpoint)
         }
     }

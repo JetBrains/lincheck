@@ -10,19 +10,21 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import org.jetbrains.lincheck.jvm.agent.TransformationConfiguration
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.Method
+import kotlin.collections.listOf
 
 /**
  * Registry of all supported request id types.
 * Currently only open telemetry is supported.
  */
-internal class TraceIdCapturerRegistry {
-    private val capturers: List<TraceIdCapturer> = listOf(
-        OpenTelemetryTraceIdCapturer()
-    )
+internal class TraceIdCapturerRegistry(configuration: TransformationConfiguration) {
+    private val capturers: List<TraceIdCapturer> = if (configuration.trackTraceIds) listOf(
+            OpenTelemetryTraceIdCapturer()
+        ) else listOf()
 
     /**
      * Attempts to load a trace ID using available capturers. 
