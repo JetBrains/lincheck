@@ -359,10 +359,6 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
         if (className.startsWith("org.apache.commons.lang.")) return false
         if (className.startsWith("org.junit.")) return false
         if (className.startsWith("junit.framework.")) return false
-        // Finally, we should never instrument the Lincheck classes.
-        if (className.startsWith(LINCHECK_PACKAGE_NAME)) return false
-        if (className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME)) return false
-        if (className.startsWith(LINCHECK_RELOCATED_PACKAGE_PREFIX)) return false
         // All the classes that were not filtered out are eligible for transformation.
         return true
     }

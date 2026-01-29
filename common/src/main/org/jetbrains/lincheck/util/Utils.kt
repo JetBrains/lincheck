@@ -27,7 +27,8 @@ val isInLiveDebuggerMode by lazy { System.getProperty(LIVE_DEBUGGER_MODE_PROPERT
 fun isInLincheckPackage(className: String) =
     className.startsWith(LINCHECK_PACKAGE_NAME) ||
     className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME) ||
-    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME)
+    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME) ||
+    className.startsWith(LINCHECK_RELOCATED_PACKAGE_PREFIX)
 
 val StackTraceElement.isLincheckInternals get() =
     this.className.startsWith(LINCHECK_PACKAGE_NAME) ||
