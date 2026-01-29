@@ -14,18 +14,18 @@ import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 
 internal interface TraceFilter {
-    fun shouldUnfold(callNode: CallNode): Boolean
-    fun filterChildren(callNode: CallNode): List<TraceNode>
+    fun shouldUnfold(callNode: TraceNode): Boolean
+    fun filterChildren(callNode: TraceNode): List<TraceNode>
     fun shouldFilter(tracePoint: TracePoint): Boolean
 }
 
 internal class ShortenTraceFilter : TraceFilter {
 
     // a cache storing whether a node can be unfolded or not
-    private val unfoldableNodes = mutableMapOf<CallNode, Boolean>()
+    private val unfoldableNodes = mutableMapOf<TraceNode, Boolean>()
 
-    override fun shouldUnfold(callNode: CallNode): Boolean {
-        if (callNode.isRootCall && callNode.tracePoint.isThreadStart) return true
+    override fun shouldUnfold(callNode: TraceNode): Boolean {
+        if (callNode is CallNode && callNode.isRootCall && callNode.tracePoint.isThreadStart) return true
         unfoldableNodes[callNode]?.let { return it }
         return callNode.children.any { child ->
             when (child) {
@@ -47,7 +47,7 @@ internal class ShortenTraceFilter : TraceFilter {
         }
     }
 
-    override fun filterChildren(callNode: CallNode): List<TraceNode> {
+    override fun filterChildren(callNode: TraceNode): List<TraceNode> {
         return callNode.children.filterNot { shouldFilter(it.tracePoint) }
     }
 
@@ -56,9 +56,9 @@ internal class ShortenTraceFilter : TraceFilter {
 }
 
 internal class VerboseTraceFilter : TraceFilter {
-    override fun shouldUnfold(callNode: CallNode): Boolean = true
+    override fun shouldUnfold(callNode: TraceNode): Boolean = true
 
-    override fun filterChildren(callNode: CallNode): List<TraceNode> {
+    override fun filterChildren(callNode: TraceNode): List<TraceNode> {
         return callNode.children.filterNot { shouldFilter(it.tracePoint) }
     }
 

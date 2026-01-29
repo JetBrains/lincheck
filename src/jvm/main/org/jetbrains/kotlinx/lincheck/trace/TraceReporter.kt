@@ -191,7 +191,7 @@ private class TraceColumnPrinter(
     private val _lines: MutableList<TraceLine> = mutableListOf()
     val lines: List<TraceLine> get() = _lines
 
-    private var callStack = mutableListOf<CallNode>()
+    private var callStack = mutableListOf<TraceNode>()
     private val callDepth get() = callStack.size
 
     private var spinCycleState: SpinCycleState? = null
@@ -216,29 +216,21 @@ private class TraceColumnPrinter(
         val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
         _lines.add(traceLine)
 
-        val childrenToPrint: List<TraceNode>? = when (node) {
-            is CallNode -> {
-                if (filter?.shouldUnfold(node) ?: true) filter?.filterChildren(node) ?: node.children
-                else null
-            }
-            is LoopNode -> node.children
-            is IterationNode -> node.children
-            else -> null
-        }
-
-        if (childrenToPrint != null) {
-            if (node is CallNode) pushCallStack(node)
+        val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode
+        if (isUnfoldableNode && (filter?.shouldUnfold(node) ?: true)) {
+            pushCallStack(node)
             try {
-                for (child in childrenToPrint) {
+                val children = filter?.filterChildren(node) ?: node.children
+                for (child in children) {
                     appendTraceNode(child)
                 }
             } finally {
-                if (node is CallNode) popCallStack()
+                popCallStack()
             }
         }
     }
 
-    private fun pushCallStack(node: CallNode) {
+    private fun pushCallStack(node: TraceNode) {
         callStack.add(node)
     }
 
