@@ -787,7 +787,7 @@ class TraceCollectingEventTracker(
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
             locals = locals.map { TRObjectOrNull(context, it) },
-            requestId = traceId,
+            traceId = traceId,
         )
         // TODO maybe these tracepoints should be collected separately
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)

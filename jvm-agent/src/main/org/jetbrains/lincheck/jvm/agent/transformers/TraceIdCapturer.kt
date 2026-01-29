@@ -17,17 +17,25 @@ import org.objectweb.asm.commons.Method
 
 /**
  * Registry of all supported request id types.
- * Currently only open telemetry.
+* Currently only open telemetry is supported.
  */
-internal class SupportedRequestIdCapturers {
-    private val capturers: List<RequestIdCapturer> = listOf(
+internal class TraceIdCapturerRegistry {
+    private val capturers: List<TraceIdCapturer> = listOf(
         OpenTelemetryTraceIdCapturer()
     )
 
-    fun loadRequestIdIfAvailable(adapter: GeneratorAdapter) {
-        val loaded = capturers.any { it.loadTraceIdIfAvailable(adapter) }
-        if (loaded) return
-        adapter.visitInsn(Opcodes.ACONST_NULL)
+    /**
+     * Attempts to load a trace ID using available capturers. 
+     * If a capturer successfully loads a trace ID, the process halts.
+     * If no trace ID is available, pushes a null reference onto the stack.
+     * 
+     * @param adapter the GeneratorAdapter used for emitting bytecode instructions
+     */
+    fun loadTraceIdIfAvailable(adapter: GeneratorAdapter) = adapter.run {
+        for (capturer in capturers) {
+            if (capturer.loadTraceIdIfAvailable(adapter)) return
+        }
+        visitInsn(Opcodes.ACONST_NULL)
     }
 }
 
@@ -39,7 +47,7 @@ internal class SupportedRequestIdCapturers {
  * bytecode instructions. The availability of the tracing system is checked lazily
  * by verifying that required classes are present on the classpath.
  */
-internal abstract class RequestIdCapturer {
+internal abstract class TraceIdCapturer {
 
     /**
      * List of class names that must be present on the classpath for this capturer to be available.
@@ -68,10 +76,9 @@ internal abstract class RequestIdCapturer {
     private val isAvailable: Boolean by lazy {
         runCatching {
             shouldContainClasses.forEach { className ->
-                Class.forName(className, false, this.javaClass.classLoader)
+                Class.forName(className, /* initialize */ false, this.javaClass.classLoader)
             }
-            true
-        }.getOrNull() ?: false
+        }.isSuccess
     }
 }
 
@@ -83,11 +90,12 @@ internal abstract class RequestIdCapturer {
  * - span.getSpanContext() to get the span context
  * - spanContext.getTraceId() to retrieve the trace ID as a String
  */
-internal class OpenTelemetryTraceIdCapturer() : RequestIdCapturer() {
+internal class OpenTelemetryTraceIdCapturer : TraceIdCapturer() {
     override val shouldContainClasses: List<String> = listOf("io.opentelemetry.api.trace.Span")
-    override fun loadTraceId(adapter: GeneratorAdapter) {
+    
+    override fun loadTraceId(adapter: GeneratorAdapter) = adapter.run {
         // Call Span.current() - using visitMethodInsn for interface static method
-        adapter.visitMethodInsn(
+        visitMethodInsn(
             Opcodes.INVOKESTATIC,
             "io/opentelemetry/api/trace/Span",
             "current",
@@ -96,13 +104,13 @@ internal class OpenTelemetryTraceIdCapturer() : RequestIdCapturer() {
         )
 
         // Call span.getSpanContext()
-        adapter.invokeInterface(
+        invokeInterface(
             Type.getObjectType("io/opentelemetry/api/trace/Span"),
             Method("getSpanContext", "()Lio/opentelemetry/api/trace/SpanContext;")
         )
 
         // Call spanContext.getTraceId()
-        adapter.invokeInterface(
+        invokeInterface(
             Type.getObjectType("io/opentelemetry/api/trace/SpanContext"),
             Method("getTraceId", "()Ljava/lang/String;")
         ) 
