@@ -24,6 +24,7 @@ internal class ShortenTraceFilter : TraceFilter {
     // a cache storing whether a node can be unfolded or not
     private val unfoldableNodes = mutableMapOf<TraceNode, Boolean>()
 
+//    TODO: see what else can be used to decide unfolding (LoopNode for example)
     override fun shouldUnfold(callNode: TraceNode): Boolean {
         if (callNode is CallNode && callNode.isRootCall && callNode.tracePoint.isThreadStart) return true
         unfoldableNodes[callNode]?.let { return it }

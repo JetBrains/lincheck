@@ -216,7 +216,7 @@ private class TraceColumnPrinter(
         val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
         _lines.add(traceLine)
 
-        val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode
+        val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode || node is IterationRangeNode
         if (isUnfoldableNode && (filter?.shouldUnfold(node) ?: true)) {
             pushCallStack(node)
             try {
@@ -331,7 +331,9 @@ private val TracePoint.isSpinCycleEndTracePoint: Boolean get() =
 
 internal fun traceToCollapsedTree(trace: Trace, analysisProfile: AnalysisProfile): MultiThreadedTable<TraceNode> {
     // Turn trace into a tree which is List of sections, where a section is a list of root nodes (actors).
-    return traceToTree(trace.threadNames.size, trace)
+    var traceTree = traceToTree(trace.threadNames.size, trace)
+    traceTree = foldEquivalentLoopIterations(traceTree)
+    return traceTree
         .map { it
             .compressTrace()
             .collapseLibraries(analysisProfile)

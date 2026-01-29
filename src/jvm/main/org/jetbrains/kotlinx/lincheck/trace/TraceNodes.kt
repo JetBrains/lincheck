@@ -141,8 +141,17 @@ internal class LoopNode(
 ) : TraceNode(eventNumber, tracePoint) {
     override val tracePoint: LoopStartTracePoint get() = super.tracePoint as LoopStartTracePoint
 
+    fun totalIterations(): Int =
+        children.sumOf {
+            when (it) {
+                is IterationNode -> 1
+                is IterationRangeNode -> it.count
+                else -> 0
+            }
+        }
+
     override fun toStringImpl(withLocation: Boolean): String {
-        val iters = children.count{ it is IterationNode }
+        val iters = totalIterations()
         val loc = if (withLocation) " at ${tracePoint.toStringImpl(true).substringAfter(" at ")}" else ""
         return "loop($iters iterations)$loc"
     }
@@ -160,6 +169,25 @@ internal class IterationNode(
         tracePoint.toStringImpl(withLocation)
 
     override fun copy(): TraceNode = IterationNode(tracePoint, eventNumber)
+}
+
+// Used to print <iterations from-to> nodes when compressing iterations
+internal class IterationRangeNode(
+    startIterationPoint: LoopIterationTracePoint,
+    eventNumber: Int,
+    val from: Int,
+    val to: Int
+) : TraceNode(eventNumber, startIterationPoint) {
+
+    override val tracePoint: LoopIterationTracePoint get() = super.tracePoint as LoopIterationTracePoint
+    val count: Int get() = to - from + 1
+
+    override fun toStringImpl(withLocation: Boolean): String {
+        val loc = if (withLocation) " at ${tracePoint.toStringImpl(true).substringAfter(" at ")}" else ""
+        return "<iterations $from-$to>$loc"
+    }
+
+    override fun copy(): TraceNode = IterationRangeNode(tracePoint, eventNumber, from, to)
 }
 
 // (stable) Sort on eventNumber
@@ -180,7 +208,6 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
             iteration != null -> iteration.addChild(node)
             currNode != null -> currNode.addChild(node)
             else -> nodes[threadId].add(node)
-
         }
     }
 
@@ -242,3 +269,97 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
 
     return nodes
 }
+
+internal fun foldEquivalentLoopIterations(
+    table: MultiThreadedTable<TraceNode>
+): MultiThreadedTable<TraceNode> {
+    return table
+        .map { threadNodes ->
+            threadNodes.map { foldNode(it) }.toMutableList()
+        }
+}
+
+/**
+ * Folds equivalent loop iterations in the given [node] and its children recursively.
+ */
+private fun foldNode(node: TraceNode): TraceNode {
+    val nodeCopy = node.copy()
+
+    val foldedChildren = node.children.map { foldNode(it) }
+
+    val finalChildren = if (nodeCopy is LoopNode) {
+        foldLoopChildren(foldedChildren)
+    } else {
+        foldedChildren
+    }
+
+    for (child in finalChildren) {
+        nodeCopy.addChild(child)
+    }
+
+    return nodeCopy
+}
+
+private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
+    val result = mutableListOf<TraceNode>()
+    var startIndex = 0
+
+    while (startIndex < children.size) {
+        val node = children[startIndex]
+        if (node !is IterationNode) {
+            result += node
+            startIndex++
+            continue
+        }
+
+        val pattern = iterationPattern(node)
+
+        // While the next nodes match the pattern, extend the range
+        var endIndex = startIndex + 1
+        while (endIndex < children.size && children[endIndex] is IterationNode && iterationPattern(children[endIndex] as IterationNode) == pattern) {
+            endIndex++
+        }
+
+        // Make sure it makes sense to fold, more than 1 iteration. Otherwise, just add the original node
+        if (endIndex - startIndex >= 2) {
+            val first = children[startIndex] as IterationNode
+            val last = children[endIndex - 1] as IterationNode
+
+            val from = first.tracePoint.iteration
+            val to = last.tracePoint.iteration
+
+            val range = IterationRangeNode(
+                startIterationPoint = first.tracePoint,
+                eventNumber = first.eventNumber,
+                from = from,
+                to = to,
+            )
+
+            for (bodyChild in first.children) range.addChild(bodyChild)
+            result += range
+        } else {
+            result += node
+        }
+
+        startIndex = endIndex
+    }
+
+    return result
+}
+
+private data class NodePattern(
+    val head: String,
+    val children: List<NodePattern>
+)
+
+private fun iterationPattern(iter: IterationNode): NodePattern =
+    NodePattern(
+        head = "",
+        children = iter.children.map { nodePattern(it) }
+    )
+
+private fun nodePattern(node: TraceNode): NodePattern =
+    NodePattern(
+        head = node.toStringImpl(true),
+        children = node.children.map { nodePattern(it) }
+    )
