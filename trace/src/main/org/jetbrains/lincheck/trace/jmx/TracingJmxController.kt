@@ -37,4 +37,7 @@ interface TracingJmxController {
      * Stops the current tracing operation.
      */
     fun stopTracing()
+
+    fun addBreakpoints(breakpoints: List<String>)
+    fun removeBreakpoints(breakpoints: List<String>)
 }

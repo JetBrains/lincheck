@@ -44,7 +44,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
     
-    private val liveDebuggerSettings: LiveDebuggerSettings by lazy { LiveDebuggerSettings.readList(TraceAgentParameters.getLineBreakpoints()) }
+    val liveDebuggerSettings: LiveDebuggerSettings by lazy {
+        LiveDebuggerSettings.readList(TraceAgentParameters.getLineBreakpoints())
+    }
 
     override fun transform(
         loader: ClassLoader?,

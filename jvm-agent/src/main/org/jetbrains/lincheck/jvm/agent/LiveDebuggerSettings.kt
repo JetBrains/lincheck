@@ -10,18 +10,40 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-internal data class LiveDebuggerSettings(
-    val lineBreakPoints: List<SnapshotBreakpoint>
+data class LiveDebuggerSettings(
+    val lineBreakPoints: MutableList<SnapshotBreakpoint>
 ) {
     companion object {
         fun readList(list: List<String>): LiveDebuggerSettings {
             val parsed = list.map { SnapshotBreakpoint.read(it) }
-            return LiveDebuggerSettings(parsed)
+            return LiveDebuggerSettings(parsed.toMutableList())
         }
+    }
+
+    fun addBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
+        val breakpoints = list.map { SnapshotBreakpoint.read(it) }
+        for (breakpoint in breakpoints) {
+            if (!lineBreakPoints.contains(breakpoint)) {
+                lineBreakPoints.add(breakpoint)
+            }
+        }
+        return breakpoints
+    }
+
+    fun removeBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
+        val breakpoints = list.map { SnapshotBreakpoint.read(it) }
+        val removedBreakpoints = mutableListOf<SnapshotBreakpoint>()
+        for (breakpoint in breakpoints) {
+            if (lineBreakPoints.contains(breakpoint)) {
+                lineBreakPoints.remove(breakpoint)
+                removedBreakpoints.add(breakpoint)
+            }
+        }
+        return removedBreakpoints
     }
 }
 
-internal data class SnapshotBreakpoint(
+data class SnapshotBreakpoint(
     val className: String,
     val fileName: String,
     val lineNumber: Int,

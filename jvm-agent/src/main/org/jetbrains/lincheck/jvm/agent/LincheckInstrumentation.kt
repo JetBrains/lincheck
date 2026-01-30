@@ -331,7 +331,7 @@ object LincheckInstrumentation {
         }
     }
 
-    private fun retransformClasses(classes: List<Class<*>>) {
+    fun retransformClasses(classes: List<Class<*>>) {
         // for some reason, trying to call `retransformClasses` on an empty list can throw NPE on JVM 8
         if (classes.isEmpty()) return
 
