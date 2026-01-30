@@ -819,7 +819,8 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
+    //TODO: perhaps there is a method of not making this open, but I am not sure.
+    open fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threadScheduler.registerThread(thread, descriptor)
         isSuspended[threadId] = false
         isSpinBoundBlocked[threadId] = false

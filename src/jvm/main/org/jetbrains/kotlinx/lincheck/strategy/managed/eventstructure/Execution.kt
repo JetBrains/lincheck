@@ -119,6 +119,10 @@ interface MutableExecution<E: ThreadEvent> : Execution<E> {
     fun add(event: E)
 
     // TODO: support single (causally-last) event removal (?)
+
+    //NOTE: this has been added to be in line with interfaces
+    //TODO: Give beter documentation
+    fun registerThread(tid: ThreadId)
 }
 
 val Execution<*>.threadIDs: Set<ThreadId>
@@ -153,19 +157,19 @@ fun<E : ThreadEvent> Execution(): Execution<E> =
     MutableExecution()
 
 fun<E : ThreadEvent> MutableExecution(): MutableExecution<E> =
-    ExecutionImpl(mutableMapOf()) // TODO: Is this actually correct?
+    ExecutionImpl(mutableThreadMapOf()) // TODO: Is this actually correct?
 
 fun<E : ThreadEvent> executionOf(vararg pairs: Pair<ThreadId, List<E>>): Execution<E> =
     mutableExecutionOf(*pairs)
 
 fun<E : ThreadEvent> mutableExecutionOf(vararg pairs: Pair<ThreadId, List<E>>): MutableExecution<E> =
-    ExecutionImpl(threadMapOf(*pairs
+    ExecutionImpl(mutableThreadMapOf(*pairs
         .map { (tid, events) -> (tid to SortedArrayList(events)) }
         .toTypedArray()
     ))
 
 private class ExecutionImpl<E : ThreadEvent>(
-    override val threadMap: ThreadMap<SortedMutableList<E>>
+    override val threadMap: MutableThreadMap<SortedMutableList<E>>
 ) : MutableExecution<E> {
 
     override var size: Int = threadMap.values.sumOf { it.size }
@@ -179,9 +183,15 @@ private class ExecutionImpl<E : ThreadEvent>(
 
     override fun add(event: E) {
         ++size
-        threadMap.getOrDefault(event.threadId, sortedMutableListOf())
+        threadMap[event.threadId]!!
             .ensure { event.parent == it.lastOrNull() }
             .also { it.add(event) }
+    }
+
+    override fun registerThread(tid: ThreadId) {
+        if (!threadMap.containsKey(tid))  {
+            threadMap[tid] = sortedMutableListOf()
+        }
     }
 
     override fun equals(other: Any?): Boolean =

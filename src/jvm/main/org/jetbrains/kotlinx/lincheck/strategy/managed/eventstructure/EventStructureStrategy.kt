@@ -39,6 +39,7 @@ import org.jetbrains.lincheck.util.satisfies
 import org.jetbrains.lincheck.util.toInt
 import org.jetbrains.lincheck.util.updateInplace
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import sun.nio.ch.lincheck.ThreadDescriptor
 
 internal class EventStructureStrategy(
     runner: Runner,
@@ -322,8 +323,11 @@ internal class EventStructureStrategy(
 
     override fun beforePart(part: ExecutionPart) {
         super.beforePart(part)
-        val forkedThreads = getUserThreadIds()
-            .filter { it!= eventStructure.mainThreadId && it != eventStructure.initThreadId }
+        val forkedThreads = getRegisteredThreads()
+            .mapNotNull {
+                if (it.key == eventStructure.mainThreadId) return@mapNotNull null
+                return@mapNotNull it.key
+            }
             .toSet()
         when (part) {
             ExecutionPart.INIT -> {
@@ -344,6 +348,12 @@ internal class EventStructureStrategy(
             }
             else -> {}
         }
+    }
+
+    override fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
+        val threadId = super.registerThread(thread, descriptor)
+        eventStructure.registerThread(threadId)
+        return threadId
     }
 
     private fun registerTestInstance() {

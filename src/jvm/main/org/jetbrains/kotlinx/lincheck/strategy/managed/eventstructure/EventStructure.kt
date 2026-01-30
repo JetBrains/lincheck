@@ -148,8 +148,17 @@ internal class EventStructure(
     private val readCodeLocationsCounter = mutableMapOf<Pair<Int, Int>, Int>()
 
     init {
+        //TODO: I do not like that we have to do this, but addRootEvent relies on
+        // having the initThreadId and mainThreadId registered
+        registerThread(initThreadId)
+        registerThread(mainThreadId)
         root = addRootEvent()
         objectRegistry.initialize(root)
+    }
+
+
+    fun registerThread(threadId: ThreadId) {
+        _execution.registerThread(threadId)
     }
 
     /* ************************************************************************* */

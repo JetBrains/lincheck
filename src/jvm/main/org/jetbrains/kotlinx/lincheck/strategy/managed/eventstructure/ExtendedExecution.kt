@@ -277,6 +277,10 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
     override fun isEmpty(): Boolean =
         execution.isEmpty()
 
+    override fun registerThread(tid: ThreadId) {
+        execution.registerThread(tid)
+    }
+
     override fun add(event: AtomicThreadEvent) {
         execution.add(event)
     }
