@@ -785,8 +785,8 @@ public class Injections {
      * @param codeLocation The location of the breakpoint in the source code. Holds local variable names.
      * @param locals       An array containing the current values of local variables at the breakpoint location.
      *                     This includes: this, function parameters, and local variables. 
+     * @param traceId      ID to correlate snapshot breakpoints. Can be provided by frameworks like OpenTelemetry.
      */
-
     public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
