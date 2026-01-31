@@ -52,7 +52,7 @@ fun ObjectTracker.getFieldAccessMemoryLocation(
         return StaticFieldMemoryLocation(className, fieldName, type)
     }
     val clazz = obj!!.javaClass
-    // TODO: can this be null?
+    // TODO: If this is null then we are in a phantom static object, which is probably not what we expect
     val id = get(obj)!!.objectId
     return ObjectFieldMemoryLocation(clazz, id, clazz.name, fieldName, type)
 }

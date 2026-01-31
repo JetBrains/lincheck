@@ -197,7 +197,7 @@ internal class ExecutionScenarioRunner(
 
     private fun createTestInstance() {
         testInstance = testClass.newDefaultInstance()
-        if (strategy is ModelCheckingStrategy) {
+        if (strategy is ManagedStrategy) {
             // In the model checking mode, we need to ensure
             // that all the necessary classes and instrumented
             // after creating a test instance.

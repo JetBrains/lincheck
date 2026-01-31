@@ -28,6 +28,7 @@ import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
+import org.jetbrains.lincheck.withLincheckTestContext
 
 import org.junit.Assert
 
@@ -48,7 +49,7 @@ internal fun<Outcome> litmusTest(
         outcomes.add(getOutcome(results))
         true
     }
-    withLincheckJavaAgent(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
+    withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
         val strategy = createStrategy(testClass, testScenario)
         val failure = strategy.runIteration(INVOCATIONS, verifier)
         assert(failure == null) { failure.toString() }
