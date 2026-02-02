@@ -274,7 +274,7 @@ object ConditionSafetyChecker {
                         FieldWrite(fileName, currentLineNumber, owner, name)
                     )
                 }
-                GETFIELD, GETSTATIC -> {
+                GETSTATIC -> {
                     if (!isClassAlreadyLoaded(owner)) {
                         violations.add(
                             FieldRead(fileName, currentLineNumber, owner, name)
