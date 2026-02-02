@@ -284,6 +284,7 @@ object ConditionSafetyChecker {
                     )
                 }
                 GETSTATIC -> {
+                    // Detect static field reads of uninitialized classes.
                     if (!isStandardLibraryClass(owner) && !isClassAlreadyLoaded(owner)) {
                         violations.add(
                             UninitializedClassStaticFieldRead(fileName, currentLineNumber, owner, name)
