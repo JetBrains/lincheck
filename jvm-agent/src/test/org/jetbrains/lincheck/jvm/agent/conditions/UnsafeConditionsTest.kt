@@ -31,15 +31,15 @@ class UnsafeConditionsTest(
     fun test() {
         val className = UnsafeConditions::class.java.name
 
-        val violations = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
             className,
             methodInfo.name,
             methodInfo.descriptor,
             this::class.java.classLoader
         )
-        assertFalse(
-            "Method ${methodInfo.name} should be unsafe",
-            violations.isEmpty()
+        assertNotNull(
+            "Method ${methodInfo.name} should be unsafe but no violations found",
+            violation
         )
     }
 

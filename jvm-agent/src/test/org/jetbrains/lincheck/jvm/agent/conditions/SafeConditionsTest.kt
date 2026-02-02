@@ -30,15 +30,15 @@ class SafeConditionsTest(
     fun test() {
         val className = SafeConditions::class.java.name
 
-        val violations = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
             className,
             methodInfo.name,
             methodInfo.descriptor,
             this::class.java.classLoader
         )
-        assertTrue(
-            "Method ${methodInfo.name} should be safe but has violations: $violations",
-            violations.isEmpty()
+        assertNull(
+            "Method ${methodInfo.name} should be safe but has violations:\n$violation",
+            violation
         )
     }
 

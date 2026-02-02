@@ -30,7 +30,7 @@ sealed class SideEffectViolation {
         val owner: String,
         val fieldName: String
     ) : SideEffectViolation() {
-        override fun toString() = "Field write: $owner.$fieldName at $fileNameOrUnknown:$lineNumber"
+        override fun toString() = "Field write: $fieldName at $fileNameOrUnknown:$lineNumber"
     }
 
     data class FieldRead(
@@ -39,14 +39,14 @@ sealed class SideEffectViolation {
         val owner: String,
         val fieldName: String
     ) : SideEffectViolation() {
-        override fun toString() = "Field write: $owner.$fieldName at $fileNameOrUnknown:$lineNumber"
+        override fun toString() = "Field read: $fieldName at $fileNameOrUnknown:$lineNumber"
     }
 
     data class ArrayWrite(
         override val fileName: String?,
         override val lineNumber: Int
     ) : SideEffectViolation() {
-        override fun toString() = "Array write operation at $fileNameOrUnknown:$lineNumber"
+        override fun toString() = "Array write: at $fileNameOrUnknown:$lineNumber"
     }
 
     data class MonitorOperation(
@@ -60,9 +60,38 @@ sealed class SideEffectViolation {
         override val fileName: String?,
         override val lineNumber: Int,
         val owner: String,
-        val methodName: String
+        val methodName: String,
+        val causes: List<SideEffectViolation> = emptyList()
     ) : SideEffectViolation() {
-        override fun toString() = "Disallowed method call: $owner.$methodName at $fileNameOrUnknown:$lineNumber"
+        override fun toString(): String {
+            val sb = StringBuilder()
+            buildTree(sb, "", true)
+            return sb.toString().trimEnd()
+        }
+
+        private fun buildTree(sb: StringBuilder, prefix: String, isRoot: Boolean) {
+            val location = if (fileName != null) " at $fileNameOrUnknown:$lineNumber" else ""
+            sb.append("Disallowed method call: $methodName$location")
+
+            if (causes.isNotEmpty()) {
+                causes.forEachIndexed { index, cause ->
+                    sb.appendLine()
+                    val isLast = index == causes.lastIndex
+                    val childPrefix = if (isRoot) "" else prefix
+                    // Claude-generated magic for printing nice tree connectors.
+                    val newPrefix = childPrefix + if (isLast) "    " else "\u2502   "
+                    val connector = if (isLast) "\u2514\u2500\u2500 " else "\u251c\u2500\u2500 "
+
+                    sb.append(childPrefix).append(connector)
+                    when (cause) {
+                        is DisallowedMethodCall -> {
+                            cause.buildTree(sb, newPrefix, false)
+                        }
+                        else -> sb.append(cause.toString())
+                    }
+                }
+            }
+        }
     }
 
     data class MaxCallDepthExceeded(
@@ -71,7 +100,9 @@ sealed class SideEffectViolation {
         val owner: String,
         val methodName: String
     ) : SideEffectViolation() {
-        override fun toString() = "Maximum call depth exceeded: $owner.$methodName at $fileNameOrUnknown:$lineNumber"
+        override fun toString(): String {
+            return "Maximum call depth exceeded: $methodName at $fileNameOrUnknown:$lineNumber"
+        }
     }
 
     data class DisallowedDynamicInvocation(
@@ -80,7 +111,9 @@ sealed class SideEffectViolation {
         val bootstrapOwner: String,
         val bootstrapName: String
     ) : SideEffectViolation() {
-        override fun toString() = "Disallowed dynamic invocation: $bootstrapOwner.$bootstrapName at $fileNameOrUnknown:$lineNumber"
+        override fun toString(): String {
+            return "Disallowed dynamic invocation: $bootstrapName at $fileNameOrUnknown:$lineNumber"
+        }
     }
 
     data class ClassNotAccessible(
@@ -119,14 +152,14 @@ object ConditionSafetyChecker {
      * @param methodName The method name to check
      * @param methodDescriptor The method descriptor (e.g., "()V")
      * @param classLoader The ClassLoader to use for loading class bytecode
-     * @return list of side-effect violations found, empty if the method is safe
+     * @return DisallowedMethodCall with a tree of violations if side effects found, `null` if the method is safe
      */
     fun checkMethodForSideEffects(
         className: String,
         methodName: String,
         methodDescriptor: String,
         classLoader: ClassLoader,
-    ): List<SideEffectViolation> = checkMethodForSideEffectsInternal(
+    ): DisallowedMethodCall? = checkMethodForSideEffectsInternal(
         className = className,
         methodName = methodName,
         methodDescriptor = methodDescriptor,
@@ -136,6 +169,7 @@ object ConditionSafetyChecker {
 
     /**
      * Analyzes method bytecode for side effects (writes, disallowed calls).
+     * @return DisallowedMethodCall if violations found, `null` otherwise.
      */
     private fun checkMethodForSideEffectsInternal(
         className: String,
@@ -143,14 +177,14 @@ object ConditionSafetyChecker {
         methodDescriptor: String,
         classLoader: ClassLoader,
         maxCallDepth: Int
-    ): List<SideEffectViolation> {
+    ): DisallowedMethodCall? {
         // Store violations here.
         val violations = mutableListOf<SideEffectViolation>()
         // Load class bytecode.
         val classBytes = loadClassBytes(className, classLoader)
         if (classBytes == null) {
             violations.add(ClassNotAccessible(null, -1, className))
-            return violations
+            return DisallowedMethodCall(null, -1, className.replace('.', '/'), methodName, violations)
         }
         // Analyze the method's bytecode for violations.
         val reader = ClassReader(classBytes)
@@ -162,7 +196,7 @@ object ConditionSafetyChecker {
             maxCallDepth = maxCallDepth
         )
         reader.accept(classVisitor, ClassReader.SKIP_FRAMES)
-        return violations
+        return if (violations.isEmpty()) null else DisallowedMethodCall(null, -1, className.replace('.', '/'), methodName, violations)
     }
 
 
@@ -292,23 +326,15 @@ object ConditionSafetyChecker {
                 )
                 return
             }
-            // Allow safe method calls.
-            // TODO: printing
-            val methodViolations = checkMethodForSideEffectsInternal(
+            // Allow only safe method calls.
+            val methodCallViolationTree = checkMethodForSideEffectsInternal(
                 className = owner.replace('/', '.'),
                 methodName = name,
                 methodDescriptor = descriptor,
                 classLoader = classLoader,
                 maxCallDepth = maxCallDepth - 1
             )
-            if (methodViolations.isEmpty()) {
-                return
-            } else {
-                // TODO: make a tree of violations
-                violations.add(DisallowedMethodCall(fileName, currentLineNumber, owner, name))
-            }
-            // Add violations from the called method.
-            violations.addAll(methodViolations)
+            methodCallViolationTree?.let { violations.add(it) }
         }
 
         override fun visitInvokeDynamicInsn(
