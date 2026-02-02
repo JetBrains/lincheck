@@ -164,17 +164,6 @@ private object SafeConditions {
     @JvmStatic
     fun countSetBits(x: Int): Int = Integer.bitCount(x)
 
-    // ============ READING STATIC FIELDS ============
-
-    @JvmStatic
-    fun readStaticField(): Int = staticField
-
-    @JvmStatic
-    fun staticFieldPlusConstant(): Int = staticField + 100
-
-    @JvmStatic
-    fun compareStaticField(x: Int): Boolean = x > staticField
-
     // ============ COMPLEX BOOLEAN EXPRESSIONS ============
 
     @JvmStatic

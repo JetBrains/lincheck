@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.conditions
 
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.junit.*
 import org.junit.Assert.*
@@ -22,8 +23,9 @@ import org.junit.Assert.*
 class DisallowedMethodCallTreeTest {
 
     init {
-        // Make sure the class that contains the testing code is loaded.
-        DisallowedMethodCallTreeTestCases.javaClass
+        if (!LincheckInstrumentation.isInitialized) {
+            LincheckInstrumentation.attachJavaAgentDynamically()
+        }
     }
 
     @Test

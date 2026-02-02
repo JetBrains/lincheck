@@ -250,6 +250,17 @@ private object UnsafeConditions {
         return current
     }
 
+    // ============ READING STATIC FIELDS (UNSAFE DUE TO GETSTATIC ON UNLOADED CLASS) ============
+
+    @JvmStatic
+    fun readStaticField(): Int = staticCounter
+
+    @JvmStatic
+    fun staticFieldPlusConstant(): Int = staticCounter + 100
+
+    @JvmStatic
+    fun compareStaticField(x: Int): Boolean = x > staticCounter
+
     @JvmStatic
     fun tryWithResources(): String {
         File("test.txt").bufferedReader().use {
