@@ -58,6 +58,11 @@ class TransformationConfiguration(
 
     var trackSnapshotLineBreakpoints: Boolean = false,
 
+    /**
+     * Trace ID's provided by tracing frameworks like OpenTelemetry
+     */
+    var trackTraceIds: Boolean = false,
+
     var trackThrows: Boolean = false,
     var trackCatchBlocks: Boolean = false,
 
@@ -429,6 +434,7 @@ object LiveDebuggerTransformationProfile : TransformationProfile {
         // In live debugger mode, only track snapshot line breakpoints
         return TransformationConfiguration().apply {
             trackSnapshotLineBreakpoints = true
+            trackTraceIds = true
         }
     }
 }
