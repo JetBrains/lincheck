@@ -31,7 +31,7 @@ class UnsafeConditionsTest(
     fun test() {
         val className = UnsafeConditions::class.java.name
 
-        val violations = ConditionSafetyChecker.checkForSideEffectAbsence(
+        val violations = ConditionSafetyChecker.checkMethodForSideEffects(
             className,
             methodInfo.name,
             methodInfo.descriptor,

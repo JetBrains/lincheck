@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.SideEffectViolation.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
+import java.lang.instrument.Instrumentation
 import java.util.concurrent.*
 
 /**
@@ -34,12 +35,13 @@ sealed class SideEffectViolation {
         override fun toString() = "Field write: $owner.$fieldName at $fileNameOrUnknown:$lineNumber"
     }
 
-    data class LocalVariableWrite(
+    data class FieldRead(
         override val fileName: String?,
         override val lineNumber: Int,
-        val varIndex: Int
+        val owner: String,
+        val fieldName: String
     ) : SideEffectViolation() {
-        override fun toString() = "Local variable write at index $varIndex at $fileNameOrUnknown:$lineNumber"
+        override fun toString() = "Field write: $owner.$fieldName at $fileNameOrUnknown:$lineNumber"
     }
 
     data class ArrayWrite(
@@ -113,20 +115,6 @@ sealed class SideEffectViolation {
 object ConditionSafetyChecker {
 
     /**
-     * Cache key for method safety checks.
-     */
-    private data class MethodKey(
-        val className: String,
-        val methodName: String,
-        val methodDescriptor: String
-    )
-
-    /**
-     * Cache for storing safety check results to avoid redundant bytecode analysis.
-     */
-    private val cache = ConcurrentHashMap<MethodKey, List<SideEffectViolation>>()
-
-    /**
      * Checks if a method's bytecode is free of side effects by analyzing its instructions.
      *
      * @param className The fully qualified class name
@@ -135,29 +123,23 @@ object ConditionSafetyChecker {
      * @param classLoader The ClassLoader to use for loading class bytecode
      * @return list of side-effect violations found, empty if the method is safe
      */
-    fun checkForSideEffectAbsence(
+    fun checkMethodForSideEffects(
         className: String,
         methodName: String,
         methodDescriptor: String,
-        classLoader: ClassLoader
-    ): List<SideEffectViolation> {
-        // Perform the safety check.
-        val key = MethodKey(className, methodName, methodDescriptor)
-        return cache.computeIfAbsent(key) {
-            checkMethodForSideEffects(
-                className = className,
-                methodName = methodName,
-                methodDescriptor = methodDescriptor,
-                classLoader = classLoader,
-                maxCallDepth = 5
-            )
-        }
-    }
+        classLoader: ClassLoader,
+    ): List<SideEffectViolation> = checkMethodForSideEffectsInternal(
+        className = className,
+        methodName = methodName,
+        methodDescriptor = methodDescriptor,
+        classLoader = classLoader,
+        maxCallDepth = 5,
+    )
 
     /**
      * Analyzes method bytecode for side effects (writes, disallowed calls).
      */
-    private fun checkMethodForSideEffects(
+    private fun checkMethodForSideEffectsInternal(
         className: String,
         methodName: String,
         methodDescriptor: String,
@@ -259,15 +241,10 @@ object ConditionSafetyChecker {
                 violations.add(
                     FieldWrite(fileName, currentLineNumber, owner, name)
                 )
-            }
-        }
-
-        override fun visitVarInsn(opcode: Int, varIndex: Int) {
-            // Reject local variable writes (reads are OK)
-            if (isFieldStoreOpcode(opcode)) {
-                violations.add(
-                    LocalVariableWrite(fileName, currentLineNumber, varIndex)
-                )
+            } else if (isFieldLoadOpcode(opcode)) {
+                if (!isClassAlreadyLoaded(owner)) {
+                    violations.add(...)
+                }
             }
         }
 
@@ -314,7 +291,8 @@ object ConditionSafetyChecker {
                 return
             }
             // Allow safe method calls.
-            val methodViolations = checkMethodForSideEffects(
+            // TODO: printing
+            val methodViolations = checkMethodForSideEffectsInternal(
                 className = owner.replace('/', '.'),
                 methodName = name,
                 methodDescriptor = descriptor,
@@ -323,6 +301,9 @@ object ConditionSafetyChecker {
             )
             if (methodViolations.isEmpty()) {
                 return
+            } else {
+                // TODO: make a tree of violations
+                violations.add(DisallowedMethodCall(fileName, currentLineNumber, owner, name))
             }
             // Add violations from the called method.
             violations.addAll(methodViolations)
@@ -363,12 +344,6 @@ object ConditionSafetyChecker {
             }
             return false
         }
-
-        /**
-         * Checks if an opcode is a local variable store instruction.
-         */
-        private fun isFieldStoreOpcode(opcode: Int) =
-            opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
 
         /**
          * Checks if an opcode is an array store instruction.
@@ -480,6 +455,25 @@ object ConditionSafetyChecker {
         "java/lang/Character.toString",
         "java/lang/Character.equals",
 
+        // Kotlin stdlib read-only factory methods
+        "kotlin/collections/CollectionsKt.listOf",
+        "kotlin/collections/CollectionsKt.emptyList",
+        "kotlin/collections/CollectionsKt.setOf",
+        "kotlin/collections/CollectionsKt.emptySet",
+        "kotlin/collections/CollectionsKt.mapOf",
+        "kotlin/collections/CollectionsKt.emptyMap",
+        "kotlin/ranges/RangesKt.rangeTo",
+        "kotlin/ranges/RangesKt.until",
+        "kotlin/ranges/RangesKt.downTo",
+        "kotlin/ranges/RangesKt.coerceIn",
+        "kotlin/ranges/RangesKt.coerceAtLeast",
+        "kotlin/ranges/RangesKt.coerceAtMost",
+
+        // Kotlin extension functions for String (compiled to static methods)
+        "kotlin/text/StringsKt.contains",
+        "kotlin/text/StringsKt.startsWith",
+        "kotlin/text/StringsKt.endsWith",
+
         // Object final methods (cannot be overridden)
         "java/lang/Object.getClass",
 
@@ -502,25 +496,6 @@ object ConditionSafetyChecker {
         "java/lang/Class.getEnclosingClass",
         "java/lang/Class.toString",
         "java/lang/Class.toGenericString",
-
-        // Kotlin stdlib read-only factory methods
-        "kotlin/collections/CollectionsKt.listOf",
-        "kotlin/collections/CollectionsKt.emptyList",
-        "kotlin/collections/CollectionsKt.setOf",
-        "kotlin/collections/CollectionsKt.emptySet",
-        "kotlin/collections/CollectionsKt.mapOf",
-        "kotlin/collections/CollectionsKt.emptyMap",
-        "kotlin/ranges/RangesKt.rangeTo",
-        "kotlin/ranges/RangesKt.until",
-        "kotlin/ranges/RangesKt.downTo",
-        "kotlin/ranges/RangesKt.coerceIn",
-        "kotlin/ranges/RangesKt.coerceAtLeast",
-        "kotlin/ranges/RangesKt.coerceAtMost",
-
-        // Kotlin extension functions for String (compiled to static methods)
-        "kotlin/text/StringsKt.contains",
-        "kotlin/text/StringsKt.startsWith",
-        "kotlin/text/StringsKt.endsWith",
 
         // Java reflection read-only inspection methods (Field, Method, Constructor are final classes)
         "java/lang/reflect/Field.getName",
@@ -588,8 +563,5 @@ object ConditionSafetyChecker {
         // String concatenation (Java 9+)
         "java/lang/invoke/StringConcatFactory.makeConcatWithConstants",
         "java/lang/invoke/StringConcatFactory.makeConcat",
-
-        // Java record methods (toString, equals, hashCode)
-        "java/lang/runtime/ObjectMethods.bootstrap",
     )
 }

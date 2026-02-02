@@ -30,7 +30,7 @@ class SafeConditionsTest(
     fun test() {
         val className = SafeConditions::class.java.name
 
-        val violations = ConditionSafetyChecker.checkForSideEffectAbsence(
+        val violations = ConditionSafetyChecker.checkMethodForSideEffects(
             className,
             methodInfo.name,
             methodInfo.descriptor,
