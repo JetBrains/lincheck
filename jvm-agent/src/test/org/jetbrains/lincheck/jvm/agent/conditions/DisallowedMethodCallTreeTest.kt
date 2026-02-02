@@ -87,7 +87,6 @@ class DisallowedMethodCallTreeTest {
             """
                 Disallowed method call: multipleViolations
                 ├── Field write: counter at DisallowedMethodCallTreeTestCases.kt:36
-                ├── Field read: array at DisallowedMethodCallTreeTestCases.kt:37
                 └── Array write: at DisallowedMethodCallTreeTestCases.kt:37
             """.trimIndent(),
             output
@@ -132,7 +131,6 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: complexCase
-                ├── Field read: array at DisallowedMethodCallTreeTestCases.kt:57
                 ├── Array write: at DisallowedMethodCallTreeTestCases.kt:57
                 └── Disallowed method call: callsMethodThatWritesField
                     └── Disallowed method call: simpleFieldWrite
