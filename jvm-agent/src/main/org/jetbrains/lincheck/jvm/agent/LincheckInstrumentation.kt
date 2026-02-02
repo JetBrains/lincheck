@@ -588,6 +588,19 @@ object LincheckInstrumentation {
         className.startsWith("java.lang.")
 
     /**
+     * Checks if a class with the given canonical name has already been loaded by the JVM.
+     *
+     * @param canonicalClassName The canonical class name (e.g., "java.lang.String")
+     * @return true if the class is loaded, false otherwise or if instrumentation is not initialized
+     */
+    fun isClassLoaded(canonicalClassName: String): Boolean {
+        if (!isInitialized) {
+            return false
+        }
+        return instrumentation.allLoadedClasses.any { it.name == canonicalClassName }
+    }
+
+    /**
      * To test the byte-code transformation correctness, we can transform all classes.
      * Or when include filter is applied eager transformation is required.
      *

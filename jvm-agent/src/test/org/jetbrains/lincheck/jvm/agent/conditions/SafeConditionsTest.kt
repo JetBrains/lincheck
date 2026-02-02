@@ -340,4 +340,97 @@ private object SafeConditions {
 
     // Note: Java records would also be safe (if used), as they use invokedynamic
     // for toString/equals/hashCode via java/lang/runtime/ObjectMethods.bootstrap
+
+    // ============ LOCAL VARIABLE WRITES (SAFE - NO SIDE EFFECTS) ============
+
+    @JvmStatic
+    fun writeLocalInt(): Int {
+        val x = 5  // Local variable write - safe
+        return x
+    }
+
+    @JvmStatic
+    fun writeLocalString(): String {
+        val s = "test"  // Local variable write - safe
+        return s
+    }
+
+    @JvmStatic
+    fun multipleLocalWrites(): Int {
+        val a = 1
+        val b = 2
+        val c = a + b
+        return c
+    }
+
+    @JvmStatic
+    fun reassignLocalVariable(): Int {
+        var x = 10
+        x = 20  // Reassignment - safe
+        return x
+    }
+
+    @JvmStatic
+    fun writeLocalWithMath(): Int {
+        val x = Math.abs(-5)  // Local variable write - safe
+        return x
+    }
+
+    @JvmStatic
+    fun complexWithMultipleLocalWrites(): Int {
+        val a = 10
+        val b = 20
+        val c = a + b
+        return c
+    }
+
+    @JvmStatic
+    fun conditionalLocalWrite(flag: Boolean): Int {
+        val result = if (flag) {
+            val temp = 10
+            temp
+        } else {
+            val temp = 20
+            temp
+        }
+        return result
+    }
+
+    @JvmStatic
+    fun loopWithLocalVariable(): Int {
+        var sum = 0
+        for (i in 1..10) {
+            sum += i  // Local variable write - safe
+        }
+        return sum
+    }
+
+    @JvmStatic
+    fun localVariableInLoop(): Int {
+        var total = 0
+        for (i in 1..10) {
+            total += i
+        }
+        return total
+    }
+
+    @JvmStatic
+    fun localVariableWithWhen(x: Int): String {
+        val result = when (x) {
+            1 -> "one"
+            2 -> "two"
+            else -> "other"
+        }
+        return result
+    }
+
+    @JvmStatic
+    fun exceptionWithLocalVariable(): Int {
+        return try {
+            val x = 10
+            x
+        } catch (e: Exception) {
+            0
+        }
+    }
 }

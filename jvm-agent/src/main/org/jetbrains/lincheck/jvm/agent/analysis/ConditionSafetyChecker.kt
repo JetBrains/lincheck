@@ -14,8 +14,6 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.SideEffectViolation.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
-import java.lang.instrument.Instrumentation
-import java.util.concurrent.*
 
 /**
  * Represents a side-effect violation found during bytecode analysis.
@@ -236,14 +234,18 @@ object ConditionSafetyChecker {
         }
 
         override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
-            // Reject field writes (reads are OK)
-            if (opcode == PUTFIELD || opcode == PUTSTATIC) {
-                violations.add(
-                    FieldWrite(fileName, currentLineNumber, owner, name)
-                )
-            } else if (isFieldLoadOpcode(opcode)) {
-                if (!isClassAlreadyLoaded(owner)) {
-                    violations.add(...)
+            when (opcode) {
+                PUTFIELD, PUTSTATIC -> {
+                    violations.add(
+                        FieldWrite(fileName, currentLineNumber, owner, name)
+                    )
+                }
+                GETFIELD, GETSTATIC -> {
+                    if (!isClassAlreadyLoaded(owner)) {
+                        violations.add(
+                            FieldRead(fileName, currentLineNumber, owner, name)
+                        )
+                    }
                 }
             }
         }
@@ -364,6 +366,17 @@ object ConditionSafetyChecker {
         private fun isWhitelistedDynamicInvocation(bootstrapMethodHandle: Handle): Boolean {
             val bootstrapKey = "${bootstrapMethodHandle.owner}.${bootstrapMethodHandle.name}"
             return bootstrapKey in WHITELISTED_DYNAMIC_INVOCATIONS
+        }
+
+        /**
+         * Checks if a class has already been loaded by the JVM.
+         * Reading fields from unloaded classes can trigger class initialization,
+         * which may have side effects.
+         */
+        private fun isClassAlreadyLoaded(owner: String): Boolean {
+            val className = owner.replace('/', '.')
+            // If the class is not loaded, accessing its fields will trigger class initialization.
+            return LincheckInstrumentation.isClassLoaded(className)
         }
     }
 

@@ -80,41 +80,6 @@ private object UnsafeConditions {
         staticCounter += 5
     }
 
-    // ============ LOCAL VARIABLE WRITES ============
-
-    @JvmStatic
-    fun writeLocalInt(): Int {
-        val x = 5  // Local variable write
-        return x
-    }
-
-    @JvmStatic
-    fun writeLocalString(): String {
-        val s = "test"  // Local variable write
-        return s
-    }
-
-    @JvmStatic
-    fun multipleLocalWrites(): Int {
-        val a = 1
-        val b = 2
-        val c = a + b
-        return c
-    }
-
-    @JvmStatic
-    fun reassignLocalVariable(): Int {
-        var x = 10
-        x = 20  // Reassignment
-        return x
-    }
-
-    @JvmStatic
-    fun writeLocalWithMath(): Int {
-        val x = Math.abs(-5)  // Local variable write
-        return x
-    }
-
     // ============ ARRAY WRITES ============
 
     @JvmStatic
@@ -197,32 +162,6 @@ private object UnsafeConditions {
     // ============ NON-TRIVIAL UNSAFE CASES ============
 
     @JvmStatic
-    fun complexUnsafeWithMultipleWrites(): Int {
-        val a = 10  // Write
-        val b = 20  // Write
-        val c = a + b  // Write
-        return c
-    }
-
-    @JvmStatic
-    fun conditionalWrite(flag: Boolean): Int {
-        val result = if (flag) {
-            val temp = 10  // Write
-            temp
-        } else {
-            val temp = 20  // Write
-            temp
-        }
-        return result
-    }
-
-    @JvmStatic
-    fun loopWithLocalVariable(): Int {
-        var sum = 0  // Write
-        return sum
-    }
-
-    @JvmStatic
     fun callsUnsafeMethod(x: Int): Int {
         incrementStaticField()  // Calls unsafe function
         return x
@@ -294,31 +233,6 @@ private object UnsafeConditions {
     }
 
     @JvmStatic
-    fun localVariableInLoop(): Int {
-        var total = 0
-        for (i in 1..10) {
-            total += i  // Local variable write
-        }
-        return total
-    }
-
-    @JvmStatic
-    fun localVariableWithWhen(x: Int): String {
-        val result = when (x) {  // Local variable write
-            1 -> "one"
-            2 -> "two"
-            else -> "other"
-        }
-        return result
-    }
-
-    @JvmStatic
-    fun destructuringAssignment(pair: Pair<Int, Int>): Int {
-        val (a, b) = pair  // Two local variable writes
-        return a + b
-    }
-
-    @JvmStatic
     fun lambdaWithCapture(): () -> Int {
         var counter = 0  // Local variable write
         return { counter++ }  // Lambda captures mutable variable
@@ -340,16 +254,6 @@ private object UnsafeConditions {
     fun tryWithResources(): String {
         File("test.txt").bufferedReader().use {
             return it.readLine()
-        }
-    }
-
-    @JvmStatic
-    fun exceptionWithLocalVariable(): Int {
-        return try {
-            val x = 10  // Local write
-            x
-        } catch (e: Exception) {
-            0
         }
     }
 
@@ -397,4 +301,195 @@ private object UnsafeConditions {
     @JvmStatic
     fun callsOpenClassMethod(obj: OpenClass, x: Int): Int =
         obj.overridableMethod(x)
+
+    // ============ ADDITIONAL FIELD WRITE TESTS ============
+
+    @JvmStatic
+    var instanceField: Int = 0
+
+    @JvmStatic
+    var volatileField: Int = 0
+
+    @JvmStatic
+    fun writeInstanceField(obj: TestObject) {
+        obj.value = 42  // Instance field write
+    }
+
+    @JvmStatic
+    fun incrementInstanceField(obj: TestObject) {
+        obj.value++  // Instance field write
+    }
+
+    @JvmStatic
+    fun writeVolatileField() {
+        volatileField = 100  // Volatile field write
+    }
+
+    @JvmStatic
+    fun writeFieldInCondition(flag: Boolean) {
+        if (flag) {
+            staticCounter = 1  // Field write in conditional
+        }
+    }
+
+    @JvmStatic
+    fun writeFieldInLoop() {
+        for (i in 1..5) {
+            staticCounter = i  // Field write in loop
+        }
+    }
+
+    // ============ ADDITIONAL ARRAY WRITE TESTS ============
+
+    @JvmStatic
+    fun writeBooleanArray(arr: BooleanArray) {
+        arr[0] = true
+    }
+
+    @JvmStatic
+    fun writeByteArray(arr: ByteArray) {
+        arr[0] = 1
+    }
+
+    @JvmStatic
+    fun writeCharArray(arr: CharArray) {
+        arr[0] = 'A'
+    }
+
+    @JvmStatic
+    fun writeShortArray(arr: ShortArray) {
+        arr[0] = 1
+    }
+
+    @JvmStatic
+    fun writeLongArray(arr: LongArray) {
+        arr[0] = 1L
+    }
+
+    @JvmStatic
+    fun writeFloatArray(arr: FloatArray) {
+        arr[0] = 1.0f
+    }
+
+    @JvmStatic
+    fun writeDoubleArray(arr: DoubleArray) {
+        arr[0] = 1.0
+    }
+
+    @JvmStatic
+    fun writeObjectArray(arr: Array<String>) {
+        arr[0] = "test"
+    }
+
+    @JvmStatic
+    fun writeArrayWithComputedIndex(arr: IntArray, index: Int) {
+        arr[index * 2] = 42
+    }
+
+    // ============ COLLECTION MODIFICATION TESTS ============
+
+    @JvmStatic
+    fun addToList(list: MutableList<Int>) {
+        list.add(42)
+    }
+
+    @JvmStatic
+    fun removeFromList(list: MutableList<Int>) {
+        list.removeAt(0)
+    }
+
+    @JvmStatic
+    fun addToSet(set: MutableSet<Int>) {
+        set.add(42)
+    }
+
+    @JvmStatic
+    fun putInMap(map: MutableMap<String, Int>) {
+        map["key"] = 42
+    }
+
+    @JvmStatic
+    fun removeFromMap(map: MutableMap<String, Int>) {
+        map.remove("key")
+    }
+
+    // ============ DISALLOWED STANDARD LIBRARY CALLS ============
+
+    @JvmStatic
+    fun callSystemExit() {
+        System.exit(0)
+    }
+
+    @JvmStatic
+    fun callSystemGc() {
+        System.gc()
+    }
+
+    @JvmStatic
+    fun callRuntimeExec() {
+        Runtime.getRuntime().exec("ls")
+    }
+
+    @JvmStatic
+    fun createRandomInstance() {
+        java.util.Random().nextInt()
+    }
+
+    @JvmStatic
+    fun getCurrentTimeMillis(): Long {
+        return System.currentTimeMillis()
+    }
+
+    @JvmStatic
+    fun getNanoTime(): Long {
+        return System.nanoTime()
+    }
+
+    // ============ EXCEPTION THROWING (SIDE EFFECT) ============
+
+    @JvmStatic
+    fun throwException() {
+        throw RuntimeException("Error")
+    }
+
+    @JvmStatic
+    fun throwExceptionConditionally(flag: Boolean) {
+        if (flag) {
+            throw IllegalArgumentException("Invalid")
+        }
+    }
+
+    // ============ OBJECT CREATION WITH SIDE EFFECTS ============
+
+    @JvmStatic
+    fun createFileOutputStream() {
+        java.io.FileOutputStream("test.txt")
+    }
+
+    @JvmStatic
+    fun createSocket() {
+        java.net.Socket("localhost", 8080)
+    }
+
+    // ============ NESTED UNSAFE OPERATIONS ============
+
+    @JvmStatic
+    fun nestedFieldWrites(obj: TestObject) {
+        if (obj.value > 0) {
+            staticCounter = obj.value  // Field write
+            obj.value = 0  // Another field write
+        }
+    }
+
+    @JvmStatic
+    fun arrayAndFieldWrite(arr: IntArray) {
+        arr[0] = 10  // Array write
+        staticCounter = arr[0]  // Field write
+    }
+
+    // Helper test class
+    class TestObject {
+        @JvmField
+        var value: Int = 0
+    }
 }
