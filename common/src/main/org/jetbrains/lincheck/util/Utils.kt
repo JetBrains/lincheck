@@ -65,6 +65,14 @@ fun isThreadContainerClass(className: String): Boolean =
 fun isThreadContainerThreadStartMethod(className: String, methodName: String): Boolean =
     isThreadContainerClass(className) && methodName == "start"
 
+fun isAsmClass(className: String): Boolean =
+    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
+    className.startsWith(listOf("org", "objectweb", "asm").joinToString("."))
+
+fun isByteBuddyClass(className: String): Boolean =
+    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
+    className.startsWith(listOf("net", "bytebuddy").joinToString("."))
+
 /**
  * Checks if the given class name belongs to the IntelliJ runtime debugger agent package.
  */
