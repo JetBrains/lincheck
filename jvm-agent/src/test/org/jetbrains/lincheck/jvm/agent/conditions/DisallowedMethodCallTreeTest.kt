@@ -23,6 +23,7 @@ import org.junit.Assert.*
 class DisallowedMethodCallTreeTest {
 
     init {
+        DisallowedMethodCallTreeTestCases::class.java
         if (!LincheckInstrumentation.isInitialized) {
             LincheckInstrumentation.attachJavaAgentDynamically()
         }
@@ -155,8 +156,6 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: useSynchronized
-                ├── Monitor operation (synchronized block) at DisallowedMethodCallTreeTestCases.kt:63
-                ├── Monitor operation (synchronized block) at DisallowedMethodCallTreeTestCases.kt:63
                 └── Monitor operation (synchronized block) at DisallowedMethodCallTreeTestCases.kt:63
             """.trimIndent(),
             output

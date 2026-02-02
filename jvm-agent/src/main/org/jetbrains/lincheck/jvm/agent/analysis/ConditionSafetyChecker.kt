@@ -33,13 +33,13 @@ sealed class SideEffectViolation {
         override fun toString() = "Field write: $fieldName at $fileNameOrUnknown:$lineNumber"
     }
 
-    data class FieldRead(
+    data class UninitializedClassStaticFieldRead(
         override val fileName: String?,
         override val lineNumber: Int,
         val owner: String,
         val fieldName: String
     ) : SideEffectViolation() {
-        override fun toString() = "Field read: $fieldName at $fileNameOrUnknown:$lineNumber"
+        override fun toString() = "Field read of uninitialized class: ${owner.toCanonicalClassName().toSimpleClassName()}.$fieldName at $fileNameOrUnknown:$lineNumber"
     }
 
     data class ArrayWrite(
@@ -178,25 +178,32 @@ object ConditionSafetyChecker {
         classLoader: ClassLoader,
         maxCallDepth: Int
     ): DisallowedMethodCall? {
-        // Store violations here.
-        val violations = mutableListOf<SideEffectViolation>()
         // Load class bytecode.
         val classBytes = loadClassBytes(className, classLoader)
         if (classBytes == null) {
-            violations.add(ClassNotAccessible(null, -1, className))
-            return DisallowedMethodCall(null, -1, className.replace('.', '/'), methodName, violations)
+            val causes = listOf(ClassNotAccessible(null, -1, className))
+            return DisallowedMethodCall(null, -1, className.toInternalClassName(), methodName, causes)
         }
         // Analyze the method's bytecode for violations.
         val reader = ClassReader(classBytes)
-        val classVisitor = SafetyClassAnalyzer(
+        val safetyAnalyzer = SafetyClassAnalyzer(
             targetMethodName = methodName,
             targetMethodDescriptor = methodDescriptor,
-            violations = violations,
             classLoader = classLoader,
             maxCallDepth = maxCallDepth
         )
-        reader.accept(classVisitor, ClassReader.SKIP_FRAMES)
-        return if (violations.isEmpty()) null else DisallowedMethodCall(null, -1, className.replace('.', '/'), methodName, violations)
+        reader.accept(safetyAnalyzer, ClassReader.SKIP_FRAMES)
+        return if (safetyAnalyzer.violations.isEmpty()) {
+            null
+        } else {
+            DisallowedMethodCall(
+                fileName = null,
+                lineNumber = -1,
+                owner = className.toCanonicalClassName(),
+                methodName = methodName,
+                causes = safetyAnalyzer.violations
+            )
+        }
     }
 
 
@@ -204,20 +211,22 @@ object ConditionSafetyChecker {
      * Loads class bytecode from the classloader.
      */
     private fun loadClassBytes(className: String, classLoader: ClassLoader): ByteArray? {
-        val resourceName = className.replace('.', '/') + ".class"
+        val resourceName = className.toInternalClassName() + ".class"
         return classLoader.getResourceAsStream(resourceName)?.use { it.readBytes() }
     }
 
     private class SafetyClassAnalyzer(
         private val targetMethodName: String,
         private val targetMethodDescriptor: String,
-        private val violations: MutableList<SideEffectViolation>,
         private val classLoader: ClassLoader,
         private val maxCallDepth: Int
     ) : ClassVisitor(ASM_API) {
 
         // We need it to construct violation objects.
         private var fileName: String? = null
+
+        private var _violations = mutableListOf<SideEffectViolation>()
+        val violations: List<SideEffectViolation> get() = _violations.distinct()
 
         override fun visitSource(source: String?, debug: String?) {
             if (source != null) {
@@ -240,13 +249,13 @@ object ConditionSafetyChecker {
             val isPrivate = (access and ACC_PRIVATE) != 0
             val isStatic = (access and ACC_STATIC) != 0
             if (!isFinal && !isPrivate && !isStatic) {
-                violations.add(
+                _violations.add(
                     MethodNotFinal(fileName, -1, name)
                 )
                 return null
             }
             // Analyze this method's instructions.
-            return SafetyMethodAnalyzer(fileName, violations, classLoader, maxCallDepth)
+            return SafetyMethodAnalyzer(fileName, _violations, classLoader, maxCallDepth)
         }
     }
 
@@ -275,9 +284,9 @@ object ConditionSafetyChecker {
                     )
                 }
                 GETSTATIC -> {
-                    if (!isClassAlreadyLoaded(owner)) {
+                    if (!isStandardLibraryClass(owner) && !isClassAlreadyLoaded(owner)) {
                         violations.add(
-                            FieldRead(fileName, currentLineNumber, owner, name)
+                            UninitializedClassStaticFieldRead(fileName, currentLineNumber, owner, name)
                         )
                     }
                 }
@@ -328,7 +337,7 @@ object ConditionSafetyChecker {
             }
             // Allow only safe method calls.
             val methodCallViolationTree = checkMethodForSideEffectsInternal(
-                className = owner.replace('/', '.'),
+                className = owner.toCanonicalClassName(),
                 methodName = name,
                 methodDescriptor = descriptor,
                 classLoader = classLoader,
@@ -400,7 +409,7 @@ object ConditionSafetyChecker {
          * which may have side effects.
          */
         private fun isClassAlreadyLoaded(owner: String): Boolean {
-            val className = owner.replace('/', '.')
+            val className = owner.toCanonicalClassName()
             // If the class is not loaded, accessing its fields will trigger class initialization.
             return LincheckInstrumentation.isClassLoaded(className)
         }
