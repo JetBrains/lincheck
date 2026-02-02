@@ -20,12 +20,16 @@ import org.junit.Assert.*
  * by analyzing actual code with the ConditionSafetyChecker.
  */
 class DisallowedMethodCallTreeTest {
-    
+
+    init {
+        // Make sure the class that contains the testing code is loaded.
+        DisallowedMethodCallTreeTestCases.javaClass
+    }
 
     @Test
     fun `test simple field write`() {
         val violation = ConditionSafetyChecker.checkMethodForSideEffects(
-            TestCases::class.java.name,
+            DisallowedMethodCallTreeTestCases::class.java.name,
             "simpleFieldWrite",
             "()V",
             this::class.java.classLoader
@@ -37,8 +41,7 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: simpleFieldWrite
-                ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:185
-                └── Field write: counter at DisallowedMethodCallTreeTest.kt:185
+                └── Field write: counter at DisallowedMethodCallTreeTestCases.kt:26
             """.trimIndent(),
             output
         )
@@ -47,7 +50,7 @@ class DisallowedMethodCallTreeTest {
     @Test
     fun `test nested method calls with field write`() {
         val violation = ConditionSafetyChecker.checkMethodForSideEffects(
-            TestCases::class.java.name,
+            DisallowedMethodCallTreeTestCases::class.java.name,
             "callsMethodThatWritesField",
             "()V",
             this::class.java.classLoader
@@ -59,10 +62,8 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: callsMethodThatWritesField
-                ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:190
                 └── Disallowed method call: simpleFieldWrite
-                    ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:185
-                    └── Field write: counter at DisallowedMethodCallTreeTest.kt:185
+                    └── Field write: counter at DisallowedMethodCallTreeTestCases.kt:26
             """.trimIndent(),
             output
         )
@@ -71,7 +72,7 @@ class DisallowedMethodCallTreeTest {
     @Test
     fun `test multiple violations in same method`() {
         val violation = ConditionSafetyChecker.checkMethodForSideEffects(
-            TestCases::class.java.name,
+            DisallowedMethodCallTreeTestCases::class.java.name,
             "multipleViolations",
             "()V",
             this::class.java.classLoader
@@ -83,10 +84,9 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: multipleViolations
-                ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:195
-                ├── Field write: counter at DisallowedMethodCallTreeTest.kt:195
-                ├── Field read: array at DisallowedMethodCallTreeTest.kt:196
-                └── Array write: at DisallowedMethodCallTreeTest.kt:196
+                ├── Field write: counter at DisallowedMethodCallTreeTestCases.kt:36
+                ├── Field read: array at DisallowedMethodCallTreeTestCases.kt:37
+                └── Array write: at DisallowedMethodCallTreeTestCases.kt:37
             """.trimIndent(),
             output
         )
@@ -95,7 +95,7 @@ class DisallowedMethodCallTreeTest {
     @Test
     fun `test deeply nested calls`() {
         val violation = ConditionSafetyChecker.checkMethodForSideEffects(
-            TestCases::class.java.name,
+            DisallowedMethodCallTreeTestCases::class.java.name,
             "level1",
             "()V",
             this::class.java.classLoader
@@ -107,12 +107,9 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: level1
-                ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:211
                 └── Disallowed method call: level2
-                    ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:206
                     └── Disallowed method call: level3
-                        ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:201
-                        └── Field write: counter at DisallowedMethodCallTreeTest.kt:201
+                        └── Field write: counter at DisallowedMethodCallTreeTestCases.kt:42
             """.trimIndent(),
             output
         )
@@ -121,7 +118,7 @@ class DisallowedMethodCallTreeTest {
     @Test
     fun `test method with mixed violations and nested calls`() {
         val violation = ConditionSafetyChecker.checkMethodForSideEffects(
-            TestCases::class.java.name,
+            DisallowedMethodCallTreeTestCases::class.java.name,
             "complexCase",
             "()V",
             this::class.java.classLoader
@@ -133,14 +130,11 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: complexCase
-                ├── Field read: array at DisallowedMethodCallTreeTest.kt:216
-                ├── Array write: at DisallowedMethodCallTreeTest.kt:216
-                ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:217
+                ├── Field read: array at DisallowedMethodCallTreeTestCases.kt:57
+                ├── Array write: at DisallowedMethodCallTreeTestCases.kt:57
                 └── Disallowed method call: callsMethodThatWritesField
-                    ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:190
                     └── Disallowed method call: simpleFieldWrite
-                        ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:185
-                        └── Field write: counter at DisallowedMethodCallTreeTest.kt:185
+                        └── Field write: counter at DisallowedMethodCallTreeTestCases.kt:26
             """.trimIndent(),
             output
         )
@@ -149,7 +143,7 @@ class DisallowedMethodCallTreeTest {
     @Test
     fun `test synchronized block violation`() {
         val violation = ConditionSafetyChecker.checkMethodForSideEffects(
-            TestCases::class.java.name,
+            DisallowedMethodCallTreeTestCases::class.java.name,
             "useSynchronized",
             "()V",
             this::class.java.classLoader
@@ -161,67 +155,12 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: useSynchronized
-                ├── Monitor operation (synchronized block) at DisallowedMethodCallTreeTest.kt:222
-                ├── Field read: INSTANCE at DisallowedMethodCallTreeTest.kt:224
-                ├── Monitor operation (synchronized block) at DisallowedMethodCallTreeTest.kt:222
-                └── Monitor operation (synchronized block) at DisallowedMethodCallTreeTest.kt:222
+                ├── Monitor operation (synchronized block) at DisallowedMethodCallTreeTestCases.kt:63
+                ├── Monitor operation (synchronized block) at DisallowedMethodCallTreeTestCases.kt:63
+                └── Monitor operation (synchronized block) at DisallowedMethodCallTreeTestCases.kt:63
             """.trimIndent(),
             output
         )
     }
 
-    /**
-     * Test cases for verifying tree representation.
-     */
-    private object TestCases {
-        @JvmField
-        var counter: Int = 0
-
-        @JvmField
-        var array: IntArray = IntArray(10)
-
-        @JvmStatic
-        fun simpleFieldWrite() {
-            counter = 42
-        }
-
-        @JvmStatic
-        fun callsMethodThatWritesField() {
-            simpleFieldWrite()
-        }
-
-        @JvmStatic
-        fun multipleViolations() {
-            counter = 1
-            array[0] = 2
-        }
-
-        @JvmStatic
-        fun level3() {
-            counter = 100
-        }
-
-        @JvmStatic
-        fun level2() {
-            level3()
-        }
-
-        @JvmStatic
-        fun level1() {
-            level2()
-        }
-
-        @JvmStatic
-        fun complexCase() {
-            array[0] = 1
-            callsMethodThatWritesField()
-        }
-
-        @JvmStatic
-        fun useSynchronized() {
-            synchronized(TestCases::class.java) {
-                // synchronized block
-            }
-        }
-    }
 }
