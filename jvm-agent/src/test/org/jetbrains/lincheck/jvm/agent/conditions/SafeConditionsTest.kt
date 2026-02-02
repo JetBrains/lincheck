@@ -422,4 +422,15 @@ private object SafeConditions {
             0
         }
     }
+
+    // ============ READING STATIC FIELDS (SAFE) ============
+
+    @JvmStatic
+    fun readStaticField(): Int = staticField
+
+    @JvmStatic
+    fun staticFieldPlusConstant(): Int = staticField + 100
+
+    @JvmStatic
+    fun compareStaticField(x: Int): Boolean = x > staticField
 }
