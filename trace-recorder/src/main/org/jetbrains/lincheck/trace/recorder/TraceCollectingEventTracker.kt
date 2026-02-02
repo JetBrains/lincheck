@@ -682,6 +682,7 @@ class TraceCollectingEventTracker(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         locals: Array<Any?>,
+        traceId: String?,
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         
@@ -706,6 +707,7 @@ class TraceCollectingEventTracker(
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
             locals = locals.map { TRObjectOrNull(context, it) },
+            traceId = traceId,
         )
         // TODO maybe these tracepoints should be collected separately
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)

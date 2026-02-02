@@ -29,12 +29,15 @@ internal class SnapshotBreakpointTransformer(
     context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-    private val liveDebuggerSettings: LiveDebuggerSettings
+    config: TransformationConfiguration,
+    private val liveDebuggerSettings: LiveDebuggerSettings,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
+    
+    private val traceIdCapturers = TraceIdCapturerRegistry(config)
     
     override fun visitLineNumber(line: Int, start: Label) {
         super.visitLineNumber(line, start)
-        if (liveDebuggerSettings.lineBreakPoints.any { it.lineNumber == line && it.className == className.toCanonicalClassName()} ) {
+        if (liveDebuggerSettings.lineBreakPoints.any { it.lineNumber == line && it.className == className.toCanonicalClassName() }) {
             adapter.invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             loadNewCodeLocationId()
             val activeLocals = currentActiveLocals
@@ -68,6 +71,7 @@ internal class SnapshotBreakpointTransformer(
                 adapter.arrayStore(OBJECT_TYPE)
             }
 
+            traceIdCapturers.loadTraceIdIfAvailable(adapter)
             adapter.invokeStatic(Injections::onSnapshotLineBreakpoint)
         }
     }

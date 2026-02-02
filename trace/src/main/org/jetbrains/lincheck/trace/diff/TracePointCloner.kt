@@ -183,6 +183,7 @@ class TracePointCloner(
                 stackTraceCodeLocationIds = cloneCodeLocationsByIds(tracePoint, codeLocationMap, tracePoint.stackTraceCodeLocationIds),
                 currentTimeMillis = tracePoint.currentTimeMillis,
                 locals = tracePoint.locals.clone(),
+                traceId = tracePoint.traceId,
                 eventId = eventId++
             )
 

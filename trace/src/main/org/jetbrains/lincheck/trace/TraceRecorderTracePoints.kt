@@ -699,6 +699,7 @@ class TRSnapshotLineBreakpointTracePoint(
     val stackTraceCodeLocationIds: List<Int>,
     val currentTimeMillis: Long,
     val locals: List<TRObject?>,
+    val traceId: String?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ): TRTracePoint(context, threadId, codeLocationId, eventId) {
     
@@ -717,6 +718,7 @@ class TRSnapshotLineBreakpointTracePoint(
         out.writeLong(currentTimeMillis)
         out.writeInt(locals.size)
         locals.forEach { out.writeTRObject(it) }
+        out.writeNullableUTF(traceId)
         out.endWriteLeafTracepoint()
     }
 
@@ -739,7 +741,8 @@ class TRSnapshotLineBreakpointTracePoint(
             val currentTimeMillis = inp.readLong()
             val localsSize = inp.readInt()
             val locals = List(localsSize) { inp.readTRObject(context) }
-
+            val traceId = inp.readNullableUTF()
+            
             return TRSnapshotLineBreakpointTracePoint(
                 context = context,
                 codeLocationId = codeLocationId,
@@ -747,6 +750,7 @@ class TRSnapshotLineBreakpointTracePoint(
                 stackTraceCodeLocationIds = stackTraceCodeLocationIds,
                 currentTimeMillis = currentTimeMillis,
                 locals = locals,
+                traceId = traceId,
                 eventId = eventId,
             )
         }
@@ -1130,6 +1134,22 @@ internal fun DataInput.readTRObject(context: TraceContext): TRObject? {
                 error("TRObject: Unknown Class Id $classNameId")
             }
         }
+    }
+}
+
+internal fun DataOutput.writeNullableUTF(value: String?) {
+    writeBoolean(value != null)
+    if (value != null) {
+        writeUTF(value)
+    }
+}
+
+internal fun DataInput.readNullableUTF(): String? {
+    val hasString = readBoolean()
+    return if (hasString) {
+        readUTF()
+    } else {
+        null
     }
 }
 
