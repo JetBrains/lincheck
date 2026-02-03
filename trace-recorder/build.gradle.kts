@@ -36,7 +36,6 @@ sourceSets {
     }
 }
 
-
 tasks {
     named<JavaCompile>("compileTestJava") {
         setupJavaToolchain(project)
