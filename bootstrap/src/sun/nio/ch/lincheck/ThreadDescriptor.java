@@ -96,6 +96,12 @@ public class ThreadDescriptor {
     private int ignoredSectionDepth = 0;
 
     /**
+     * Thread-local variable to track if we are currently evaluating a breakpoint condition.
+     * When true, breakpoint hits inside the condition evaluation should not be reported.
+     */
+    private boolean insideBreakpointCondition = false;
+
+    /**
      * Creates a new thread descriptor for the given thread.
      */
     public ThreadDescriptor(Thread thread) {
@@ -247,6 +253,18 @@ public class ThreadDescriptor {
      */
     public void restoreIgnoredSectionDepth(int depth) {
         ignoredSectionDepth = depth;
+    }
+
+    public void enterBreakpointCondition() {
+        insideBreakpointCondition = true;
+    }
+
+    public void leaveBreakpointCondition() {
+        insideBreakpointCondition = false;
+    }
+
+    public boolean isInsideBreakpointCondition() {
+        return insideBreakpointCondition;
     }
 
     /**
