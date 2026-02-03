@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.trace.recorder
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
 import org.jetbrains.lincheck.util.*
@@ -201,20 +200,15 @@ fun parseOutputMode(outputMode: String?, outputOption: String?): TraceCollectorM
 }
 
 class TraceCollectingEventTracker(
-    private val className: String,
-    private val methodName: String,
-    private val traceDumpPath: String?,
-    private val mode: TraceCollectorMode,
-    private val packTrace: Boolean,
-    private val context: TraceContext
+    internal val mode: TraceCollectorMode,
+    internal val context: TraceContext,
+    internal val traceStreamingFilePath: String? = null, // should be non-null for BINARY_STREAM mode
 ) : EventTracker {
-    // We don't want to re-create this object each time we need it
-    private val analysisProfile: AnalysisProfile = AnalysisProfile(false)
+    // Analysis profile for tracing --- tells what methods should be analyzed or ignored
+    private val analysisProfile: AnalysisProfile = AnalysisProfile(analyzeStdLib = false)
 
-    private val metaInfo = TraceMetaInfo.start(TraceAgentParameters.rawArgs, className, methodName)
-
-    // [ThreadDescriptor.eventTrackerData] is weak ref, so store it here too, but use
-    // only at the end
+    // [ThreadDescriptor.eventTrackerData] is a weak reference,
+    // so store it here too, but use only at the end
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
     // Assign unique, monotonically increasing ids to threads. Using threads.size for
@@ -223,25 +217,17 @@ class TraceCollectingEventTracker(
     // Atomic counter guarantees uniqueness across threads.
     private val nextThreadId = AtomicInteger(0)
 
+    // Strategy for collecting trace points
     private val strategy: TraceCollectingStrategy
-
-    // For proper completion of threads which are not tracked from the start of the agent,
-    // of those threads which are not joined by the Main thread,
-    // we need to perform operations in them under the flag `inInjectedCode`.
-    // Note: the only place where there is a waiting on the spinner is
-    // when Main thread finishes and decides to "finish" all other running threads.
-    // By "finish" here we imply that it will dump their recorded data.
-    private val spinner = Spinner()
 
     init {
         when (mode) {
-            TraceCollectorMode.BINARY_STREAM -> {
-                check(traceDumpPath != null) { "Stream output type needs non-empty output file name" }
-                strategy = FileStreamingTraceCollecting(traceDumpPath, context)
-            }
             TraceCollectorMode.BINARY_DUMP -> {
-                check(traceDumpPath != null) { "Binary output type needs non-empty output file name" }
                 strategy = MemoryTraceCollecting(context)
+            }
+            TraceCollectorMode.BINARY_STREAM -> {
+                check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
+                strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
             }
             TraceCollectorMode.NULL -> {
                 strategy = NullTraceCollecting(context)
@@ -251,6 +237,14 @@ class TraceCollectingEventTracker(
             }
         }
     }
+
+    // For proper completion of threads which are not tracked from the start of the agent,
+    // of those threads which are not joined by the Main thread,
+    // we need to perform operations in them under the flag `inInjectedCode`.
+    // Note: the only place where there is a waiting on the spinner is
+    // when Main thread finishes and decides to "finish" all other running threads.
+    // By "finish" here we imply that it will dump their recorded data.
+    private val spinner = Spinner()
 
     override fun registerRunningThread(descriptor: ThreadDescriptor, thread: Thread): Unit = runInsideIgnoredSection {
         // must be outside of the `computeIfAbsent` call, because its body
@@ -292,13 +286,12 @@ class TraceCollectingEventTracker(
             strategy.registerCurrentThread(threadData.threadId)
             for (frame in thread.stackTrace.reversed()) {
                 if (frame.className == "sun.nio.ch.lincheck.Injections") break
-                if (
-                    !frame.isLincheckInternals &&
-                    !frame.isNativeMethod &&
-                    !analysisProfile.shouldBeHidden(frame.className, frame.methodName)
-                ) {
-                    appendMethodCall(null, frame.className, frame.methodName,  UNKNOWN_METHOD_TYPE, UNKNOWN_CODE_LOCATION_ID)
-                }
+                if (frame.isLincheckInternals ||
+                    frame.isNativeMethod ||
+                    analysisProfile.shouldBeHidden(frame.className, frame.methodName)
+                ) continue
+
+                appendMethodCall(null, frame.className, frame.methodName,  UNKNOWN_METHOD_TYPE, UNKNOWN_CODE_LOCATION_ID)
             }
         }
     }
@@ -765,7 +758,12 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
-    override fun onSnapshotLineBreakpoint(threadDescriptor: ThreadDescriptor, codeLocation: Int) = threadDescriptor.runInsideInjectedCode {
+    override fun onSnapshotLineBreakpoint(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        locals: Array<Any?>,
+        traceId: String?,
+    ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         
         // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
@@ -784,10 +782,12 @@ class TraceCollectingEventTracker(
         
         val tracePoint = TRSnapshotLineBreakpointTracePoint(
             context = context,
-            threadId = threadData.threadId,
             codeLocationId = codeLocation,
+            threadId = threadData.threadId,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
+            locals = locals.map { TRObjectOrNull(context, it) },
+            traceId = traceId,
         )
         // TODO maybe these tracepoints should be collected separately
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
@@ -853,6 +853,36 @@ class TraceCollectingEventTracker(
         }
     }
 
+    override fun onThrow(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        exception: Throwable
+    ) {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = TRThrowTracePoint(
+            context = context,
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            exception = TRObject(context, exception)
+        )
+        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+    }
+
+    override fun onCatch(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        exception: Throwable
+    ) {
+        val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
+        val tracePoint = TRCatchTracePoint(
+            context = context,
+            threadId = threadData.threadId,
+            codeLocationId = codeLocation,
+            exception = TRObject(context, exception)
+        )
+        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+    }
+
     /**
      * Method takes the currently open loop trace point in [thread] and finishes
      * its last open iteration (if it exists) and then the loop itself.
@@ -897,29 +927,25 @@ class TraceCollectingEventTracker(
         return -1
     }
 
-    private var startTime = System.currentTimeMillis()
-
-    fun enableTrace(startingCodeLocationId: Int) {
-        // Start tracing in this thread
+    internal fun registerCurrentThread(className: String, methodName: String, codeLocationId: Int) {
         val thread = Thread.currentThread()
         val threadData = ThreadData(nextThreadId.getAndIncrement())
         ThreadDescriptor.getCurrentThreadDescriptor().eventTrackerData = threadData
         threads[thread] = threadData
+        strategy.registerCurrentThread(threadData.threadId)
 
         val tracePoint = TRMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
-            codeLocationId = startingCodeLocationId,
+            codeLocationId = codeLocationId,
             methodId = context.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
             obj = null,
             parameters = emptyList()
         )
-        strategy.registerCurrentThread(threadData.threadId)
-        strategy.tracePointCreated(null,tracePoint)
+        strategy.tracePointCreated(null, tracePoint)
+
         threadData.setRootCall(tracePoint)
         threadData.pushStackFrame(tracePoint, null, isInline = false)
-
-        startTime = System.currentTimeMillis()
     }
 
     /**
@@ -966,7 +992,7 @@ class TraceCollectingEventTracker(
         completeInvokedMethodCalls(thread, threadData) { _, tp -> tp.result = TR_OBJECT_UNFINISHED_METHOD_RESULT }
     }
 
-    private fun completeMainThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
+    private fun completeCurrentThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData?
         if (threadData == null) {
             Logger.error { "Main tracing thread ${thread.name} doesn't have event tracker data" }
@@ -993,13 +1019,13 @@ class TraceCollectingEventTracker(
         }
     }
 
-    fun finishAndDumpTrace() {
+    fun finishTracing() {
         // Finish existing threads, except for Main
-        val mainThread = Thread.currentThread()
+        val currentThread = Thread.currentThread()
 
         threads
             .mapNotNull { (thread, _) ->
-                if (thread == mainThread) null
+                if (thread == currentThread) null
                 else {
                     val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread)
                     if (threadDescriptor == null || !threadDescriptor.isAnalysisEnabled) null
@@ -1014,58 +1040,30 @@ class TraceCollectingEventTracker(
                 completeRunningThread(thread, threadDescriptor)
             }
 
-
-        // Close this thread call stack (it must be 1 element, complain about problems otherwise)
-        completeMainThread(mainThread, ThreadDescriptor.getCurrentThreadDescriptor())
-
-
-        val allThreads = mutableListOf<ThreadData>()
-        allThreads.addAll(threads.values)
-        threads.clear()
+        val currentThreadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+        if (currentThreadDescriptor != null) {
+            // Close this thread call stack (it must be 1 element, complain about problems otherwise)
+            completeCurrentThread(currentThread, currentThreadDescriptor)
+        }
 
         strategy.traceEnded()
-        metaInfo.traceEnded()
+    }
 
-        Logger.debug { "Trace collected in ${System.currentTimeMillis() - startTime} ms" }
-        startTime = System.currentTimeMillis()
-
-        try {
-            val roots = mutableListOf<TRTracePoint>()
-
-            allThreads.sortBy { it.threadId }
-            allThreads.forEach { threadData ->
-                val rootCall = threadData.rootCall
-                if (rootCall == null) {
-                    Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} (\"${context.getThreadName(threadData.threadId)}\"): No root call found" }
-                } else {
-                    roots.add(rootCall)
-                }
-            }
-
-            when (mode) {
-                TraceCollectorMode.BINARY_DUMP -> {
-                    saveRecorderTrace(traceDumpPath!!, context, roots)
-                    if (packTrace) {
-                        packRecordedTrace(traceDumpPath, metaInfo)
-                    }
-                }
-                TraceCollectorMode.BINARY_STREAM -> {
-                    if (packTrace) {
-                        packRecordedTrace(traceDumpPath!!, metaInfo)
-                    }
-                }
-                TraceCollectorMode.TEXT -> printPostProcessedTrace(traceDumpPath, context, roots, false)
-                TraceCollectorMode.TEXT_VERBOSE -> printPostProcessedTrace(traceDumpPath, context, roots, true)
-                TraceCollectorMode.NULL -> {}
-            }
-        } catch (t: Throwable) {
-            Logger.error { "TraceRecorder: Cannot write output file $traceDumpPath: ${t.message} at ${t.stackTraceToString()}" }
-            return
-        } finally {
-            if (mode != TraceCollectorMode.NULL) {
-                Logger.debug { "Trace finalized in ${System.currentTimeMillis() - startTime} ms" }
+    /**
+     * Returns a list of all thread root trace points.
+     */
+    fun getThreadRoots(): List<TRTracePoint> {
+        val roots = mutableListOf<TRTracePoint>()
+        threads.values.sortedBy { it.threadId }.forEach { threadData ->
+            val rootCall = threadData.rootCall
+            if (rootCall == null) {
+                val threadName = context.getThreadName(threadData.threadId)
+                Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} ($threadName): No root call found" }
+            } else {
+                roots.add(rootCall)
             }
         }
+        return roots
     }
 
     private fun methodAnalysisSectionType(

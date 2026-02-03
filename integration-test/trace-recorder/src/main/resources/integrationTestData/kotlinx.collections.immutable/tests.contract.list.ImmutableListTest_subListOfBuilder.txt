@@ -180,6 +180,7 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
   platform = TestPlatform.JVM at ImmutableListTest.kt:170
   getCurrentPlatform(): TestPlatform.JVM at testUtils.kt:34
   joinToString(subList, "", null, null, 0, null, null, 62, null): threw ConcurrentModificationException at ImmutableListTest.kt:171
+  catch(ConcurrentModificationException@1) at ImmutableListTest.kt:171
   createFailure(ConcurrentModificationException@1): Result.Failure@1 at ImmutableListTest.kt:171
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:171
   checkResultIsFailure(ConcurrentModificationException.kclass, null, Result.Failure@1): ConcurrentModificationException@1 at ImmutableListTest.kt:171

@@ -275,13 +275,15 @@ internal class TraceDataProvider(val traceFileName: String) : AutoCloseable {
     }
 }
 
-fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSources: Boolean = true) {
-    val dataName = baseFileName
-    val indexName = "$baseFileName.$INDEX_FILENAME_EXT"
-    val outputName = "$baseFileName.$PACK_FILENAME_EXT"
-
+fun packRecordedTrace(
+    dataFileName: String,
+    indexFileName: String,
+    outputFileName: String,
+    metaInfo: TraceMetaInfo,
+    deleteSources: Boolean = true
+) {
     try {
-        ZipOutputStream(openNewFile(outputName).buffered(OUTPUT_BUFFER_SIZE)).use { zip ->
+        ZipOutputStream(openNewFile(outputFileName).buffered(OUTPUT_BUFFER_SIZE)).use { zip ->
             // Don't compress for now, but STORED requires pre-compute CRC32, and we don't want to do it.
             zip.setMethod(ZipOutputStream.DEFLATED)
             zip.setLevel(0)
@@ -289,17 +291,17 @@ fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo, deleteSourc
             // Save main meta
             saveMeta(zip, PACKED_META_ITEM_NAME, metaInfo)
             // Store data
-            copyFileIntoZip(zip, PACKED_DATA_ITEM_NAME, dataName, "data")
+            copyFileIntoZip(zip, PACKED_DATA_ITEM_NAME, dataFileName, "data")
             // Store Index
-            copyFileIntoZip(zip, PACKED_INDEX_ITEM_NAME, indexName, "index")
+            copyFileIntoZip(zip, PACKED_INDEX_ITEM_NAME, indexFileName, "index")
         }
         if (deleteSources) {
-            Files.deleteIfExists(Path(dataName))
-            Files.deleteIfExists(Path(indexName))
+            Files.deleteIfExists(Path(dataFileName))
+            Files.deleteIfExists(Path(indexFileName))
         }
-        Logger.info { "Packed trace size: ${Files.size(Path(outputName))} bytes" }
+        Logger.info { "Packed trace size: ${Files.size(Path(outputFileName))} bytes" }
     } catch (e: Throwable) {
-        Files.deleteIfExists(Path(outputName))
+        Files.deleteIfExists(Path(outputFileName))
         throw e
     }
 }

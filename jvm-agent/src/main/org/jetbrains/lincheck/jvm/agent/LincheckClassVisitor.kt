@@ -109,7 +109,7 @@ internal class LincheckClassVisitor(
             initialMethodVisitor = mv,
         )
         
-        val filteredLiveDebuggerSettings = LiveDebuggerSettings(liveDebuggerSettings.lineBreakPoints.filter { it.fileName == fileName })
+        val filteredLiveDebuggerSettings = LiveDebuggerSettings(liveDebuggerSettings.lineBreakPoints.filter { it.className == className.toCanonicalClassName() })
 
         // ======== Ignored Sections ========
         chain.addTransformer { adapter, mv ->
@@ -181,6 +181,16 @@ internal class LincheckClassVisitor(
             InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
+        // ======== Throws ========
+        chain.addTransformer { adapter, mv ->
+            ThrowTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+        }
+
+        // ======== Catch blocks ========
+        chain.addTransformer { adapter, mv ->
+            CatchBlockStartTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+        }
+
         // ======== Loops ========
         // TODO: we put loop transformer at the beginning of the chain,
         //   because it relies on original bytecode instruction numeration
@@ -198,7 +208,7 @@ internal class LincheckClassVisitor(
         // ======== SnapshotBreakpoints ========
         if (filteredLiveDebuggerSettings.lineBreakPoints.isNotEmpty()) {
             chain.addTransformer { adapter, mv ->
-                SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, filteredLiveDebuggerSettings)
+                SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, filteredLiveDebuggerSettings)
             }
         }
 

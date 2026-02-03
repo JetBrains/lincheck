@@ -35,23 +35,31 @@ import kotlin.math.max
 import kotlin.reflect.KClass
 
 object Types {
-    private fun convertAsmTypeName(className: String): Type {
-        when (className) {
-            "V" -> return VOID_TYPE
-            "I" -> return INT_TYPE
-            "J" -> return LONG_TYPE
-            "D" -> return DOUBLE_TYPE
-            "F" -> return FLOAT_TYPE
-            "Z" -> return BOOLEAN_TYPE
-            "B" -> return BYTE_TYPE
-            "S" -> return SHORT_TYPE
-            "C" -> return CHAR_TYPE
-            else -> if (className.startsWith("[")) {
-                return ArrayType(convertAsmTypeName(className.substring(1)))
-            } else {
-                require(!(!className.startsWith("L") || !className.endsWith(";"))) { "Invalid type name: $className" }
-                return ObjectType(className.substring(1, className.length - 1).replace('/', '.'))
-            }
+    fun convertAsmTypeName(asmType: org.objectweb.asm.Type): Type =
+        convertAsmTypeName(asmType.descriptor)
+
+    fun convertAsmTypeName(className: String): Type {
+        return when (className) {
+            "V" -> VOID_TYPE
+            "I" -> INT_TYPE
+            "J" -> LONG_TYPE
+            "D" -> DOUBLE_TYPE
+            "F" -> FLOAT_TYPE
+            "Z" -> BOOLEAN_TYPE
+            "B" -> BYTE_TYPE
+            "S" -> SHORT_TYPE
+            "C" -> CHAR_TYPE
+            else if (className.startsWith("[")) ->
+                ArrayType(convertAsmTypeName(className.substring(1)))
+            else ->
+                // Class name might be given in wrapping L and ; symbols or without them.
+                // L and ; might be missing when the string `className` representation is retrieved from the
+                // asm `Type::getDescriptor` method, which removes these symbols for non-internal OBJECT types.
+                // See the method's javadoc for details.
+                ObjectType(className
+                    .run { if (startsWith("L") && endsWith(";")) substring(1, length - 1) else this }
+                    .replace('/', '.')
+                )
         }
     }
 

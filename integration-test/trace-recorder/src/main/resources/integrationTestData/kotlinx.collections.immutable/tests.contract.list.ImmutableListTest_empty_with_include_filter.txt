@@ -10,6 +10,7 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
   assertTrue(true, null, 2, null) at ImmutableListTest.kt:24
   empty1.iterator(): BufferIterator@1 at ImmutableListTest.kt:26
   BufferIterator@1.next(): threw NoSuchElementException at ImmutableListTest.kt:26
+  catch(NoSuchElementException@1) at ImmutableListTest.kt:26
   createFailure(NoSuchElementException@1): Result.Failure@1 at ImmutableListTest.kt:26
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:26
   checkResultIsFailure(NoSuchElementException.kclass, null, Result.Failure@1): NoSuchElementException@1 at ImmutableListTest.kt:26

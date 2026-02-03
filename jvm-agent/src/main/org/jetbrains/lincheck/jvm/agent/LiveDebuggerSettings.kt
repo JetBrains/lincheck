@@ -22,13 +22,14 @@ internal data class LiveDebuggerSettings(
 }
 
 internal data class SnapshotBreakpoint(
+    val className: String,
     val fileName: String,
     val lineNumber: Int,
 ) {
     companion object {
         fun read(rawString: String): SnapshotBreakpoint {
             val split = rawString.split(":")
-            return SnapshotBreakpoint(split[0], split[1].toInt())
+            return SnapshotBreakpoint(split[0], split[1], split[2].toInt())
         }
     }
 }

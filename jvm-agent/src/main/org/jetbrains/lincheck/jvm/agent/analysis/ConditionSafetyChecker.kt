@@ -230,7 +230,7 @@ object ConditionSafetyChecker {
         )
         ClassReader(classBytes).accept(safetyAnalyzer, ClassReader.SKIP_FRAMES)
 
-        val allViolations = loopViolations + safetyAnalyzer.violations
+        val allViolations = (loopViolations + safetyAnalyzer.violations).sortedBy { it.lineNumber }
         return if (allViolations.isEmpty()) {
             null
         } else {

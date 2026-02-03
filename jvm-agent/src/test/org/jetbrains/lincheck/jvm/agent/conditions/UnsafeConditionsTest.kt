@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.conditions
 
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.jvm.agent.conditions.ConditionTestUtils.MethodInfo
 import org.junit.*
@@ -27,6 +28,13 @@ import java.io.*
 class UnsafeConditionsTest(
     private val methodInfo: MethodInfo
 ) {
+    init {
+        DisallowedMethodCallTreeTestCases::class.java
+        if (!LincheckInstrumentation.isInitialized) {
+            LincheckInstrumentation.attachJavaAgentDynamically()
+        }
+    }
+
     @Test
     fun test() {
         val className = UnsafeConditions::class.java.name

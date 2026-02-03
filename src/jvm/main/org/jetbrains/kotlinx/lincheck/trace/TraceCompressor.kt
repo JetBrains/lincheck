@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.util.AnalysisProfile
 import org.jetbrains.lincheck.trace.*
 
 
-internal fun SingleThreadedTable<TraceNode>.compressTrace() = this
+internal fun Column<TraceNode>.compressTrace() = this
     .compressSyntheticFieldAccess()
     .compressSuspendImpl()
     .compressDefaultPairs()
@@ -424,12 +424,12 @@ private fun String.removeStackTraceNestedClassDollarSigns(): String {
     return "${before.replaceNestedClassDollar()}.$after"
 }
 
-internal fun SingleThreadedTable<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node ->
+internal fun Column<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfile) = compressNodes { node ->
     // if should not be hidden
     if (node !is CallNode || !analysisProfile.shouldBeHidden(node)) return@compressNodes node
 
     // if cannot be hidden (due to switch point)
-    if (node.containsDescendant { it is EventNode && it.tracePoint is SwitchEventTracePoint }) 
+    if (node.contains { it is EventNode && it.tracePoint is SwitchEventTracePoint })
         return@compressNodes node
 
     val newNode = node.copy()
@@ -447,9 +447,8 @@ private fun findSubTreesToBeShown(node: TraceNode, analysisProfile: AnalysisProf
     return node.children.map { findSubTreesToBeShown(it, analysisProfile) }.flatten()
 }
 
-private fun SingleThreadedTable<TraceNode>.compressNodes(compressionRule: (TraceNode) -> TraceNode) = map {
-    it.map { it.compress(compressionRule) }
-}
+private fun SingleThreadedTable<TraceNode>.compressNodes(compressionRule: (TraceNode) -> TraceNode) =
+    map { it.compress(compressionRule) }
 
 private fun TraceNode.compress(compressionRule: (TraceNode) -> TraceNode): TraceNode {
     val compressedNode = compressionRule(this)

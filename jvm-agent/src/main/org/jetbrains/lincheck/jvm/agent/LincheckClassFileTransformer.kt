@@ -43,6 +43,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
+    
+    private val liveDebuggerSettings: LiveDebuggerSettings by lazy { LiveDebuggerSettings.readList(TraceAgentParameters.getLineBreakpoints()) }
 
     override fun transform(
         loader: ClassLoader?,
@@ -100,8 +102,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             includeClasses = includeClasses,
             excludeClasses = excludeClasses,
         )
-        
-        val liveDebuggerSettings = LiveDebuggerSettings.readList(TraceAgentParameters.getLineBreakpoints())
 
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
@@ -221,13 +221,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
-                mutableMapOf<Label, Int>().also { map ->
+                val labels = mutableMapOf<Label, Int>().also { map ->
                     val extractor = LabelCollectorMethodVisitor(map)
                     m.instructions.accept(extractor)
                 }
+                val catches = m.tryCatchBlocks.map { it.handler.label }.toSet()
+                labels to catches
             }
         )
-        .mapValues { MethodLabels(it.value) }
+        .mapValues { MethodLabels(it.value.first, it.value.second) }
     }
 
 
@@ -388,6 +390,10 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     @Suppress("SpellCheckingInspection")
     fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {
+        // NEVER instrument the Lincheck classes.
+        // Perform these checks FIRST to avoid potential class loading circularity errors.
+        if (isInLincheckPackage(className)) return false
+
         // In the stress testing mode, we can simply skip the standard
         // Java and Kotlin classes -- they do not have coroutine suspension points.
         if (instrumentationMode == STRESS) {
@@ -402,6 +408,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             if (className.startsWith("com.android.tools.")) return false
         }
         if (isEagerlyInstrumentedClass(className)) return true
+        
+        if (isInLiveDebuggerMode) return isLiveDebuggerBreakpointClass(className)
 
         return AnalysisProfile.DEFAULT.shouldTransform(className, "")
     }
@@ -423,6 +431,10 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         //  we should try to fix lazy class re-transformation logic
         isCoroutineDispatcherInternalClass(className) ||
         isCoroutineConcurrentKtInternalClass(className)
+    
+    private fun isLiveDebuggerBreakpointClass(className: String): Boolean = 
+        liveDebuggerSettings.lineBreakPoints.any { it.className == className }
+        
 
     private fun readUTF(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
         for (offset in 0 ..< utfLength) {

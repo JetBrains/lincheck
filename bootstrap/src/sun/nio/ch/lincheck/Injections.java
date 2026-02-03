@@ -772,11 +772,43 @@ public class Injections {
         if (eventTracker == null || descriptor == null) return;
         eventTracker.onMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
     }
-    
-    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation) {
+
+    /**
+     * Called from instrumented code when execution reaches a Live Debugger line breakpoint.
+     * <br>
+     * <p>
+     * A snapshot line breakpoint is a special type of breakpoint used for capturing the program state
+     * at a specific line of code without interrupting execution. This method is invoked at the breakpoint
+     * location and forwards the current execution context to the event tracker for state recording.
+     *
+     * @param descriptor   The thread descriptor of the current thread.
+     * @param codeLocation The location of the breakpoint in the source code. Holds local variable names.
+     * @param locals       An array containing the current values of local variables at the breakpoint location.
+     *                     This includes: this, function parameters, and local variables. 
+     * @param traceId      ID to correlate snapshot breakpoints. Can be provided by frameworks like OpenTelemetry.
+     */
+    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
-        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation);
+        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, locals, traceId);
+    }
+
+    /**
+     * Called before traced method throws exception
+     */
+    public static void onThrow(ThreadDescriptor descriptor, int codeLocation, Throwable exception) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onThrow(descriptor, codeLocation, exception);
+    }
+
+    /**
+     * Called before traced method starts any catch block
+     */
+    public static void onCatch(ThreadDescriptor descriptor, int codeLocation, Throwable exception) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onCatch(descriptor, codeLocation, exception);
     }
 
     /**

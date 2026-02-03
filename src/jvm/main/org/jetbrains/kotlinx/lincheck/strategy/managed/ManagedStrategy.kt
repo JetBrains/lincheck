@@ -22,7 +22,6 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.descriptors.Types.VOID_TYPE
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
@@ -308,12 +307,14 @@ internal abstract class ManagedStrategy(
     // == BASIC STRATEGY METHODS ==
 
     override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
-        val tracePoint = SectionDelimiterTracePoint(
-            context = context,
-            eventId = getNextEventId(),
-            executionPart = part,
-        )
-        traceCollector?.addTracePointInternal(tracePoint)
+        // add section delimiter trace point only in data structures mode
+        if (executionMode == ExecutionMode.DATA_STRUCTURES) {
+            val tracePoint = SectionDelimiterTracePoint(
+                context = context,eventId = getNextEventId(),
+                executionPart = part,
+            )
+            traceCollector?.addTracePointInternal(tracePoint)
+        }
 
         val nextThread = when (part) {
             INIT -> 0
@@ -1994,7 +1995,13 @@ internal abstract class ManagedStrategy(
         leaveAnalysisSection(threadId, methodSection)
     }
 
-    override fun onSnapshotLineBreakpoint(descriptor: ThreadDescriptor?, codeLocation: Int) {}
+    // SnapshotLineBreakpoint not supported for lincheck/gpmc
+    override fun onSnapshotLineBreakpoint(
+        descriptor: ThreadDescriptor?,
+        codeLocation: Int,
+        locals: Array<Any?>,
+        traceId: String?
+    ) {}
 
     override fun onInlineMethodCall(
         threadDescriptor: ThreadDescriptor,
@@ -2063,6 +2070,14 @@ internal abstract class ManagedStrategy(
 
     override fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
+    }
+
+    override fun onThrow(threadDescriptor: ThreadDescriptor, codeLocation: Int, exception: Throwable) {
+        error("Lincheck managed strategy does not support throw tracking.")
+    }
+
+    override fun onCatch(threadDescriptor: ThreadDescriptor, codeLocation: Int, exception: Throwable) {
+        error("Lincheck managed strategy does not support catch tracking.")
     }
 
     private fun methodAnalysisSectionType(

@@ -119,16 +119,16 @@ class TraceContext {
         return variables.contains(variable)
     }
 
-    fun getOrCreateVariableId(variableName: String): Int {
-        return getOrCreateVariableId(VariableDescriptor(variableName))
+    fun getOrCreateVariableId(variableName: String, type: Types.Type): Int {
+        return getOrCreateVariableId(VariableDescriptor(variableName, type))
     }
 
     fun getOrCreateVariableId(variableDescriptor: VariableDescriptor): Int {
         return variables.getOrCreateId(variableDescriptor)
     }
 
-    fun getVariableDescriptor(variableName: String): VariableDescriptor =
-        getVariableDescriptor(getOrCreateVariableId(variableName))
+    fun getVariableDescriptor(variableName: String, type: Types.Type): VariableDescriptor =
+        getVariableDescriptor(getOrCreateVariableId(variableName, type))
 
     fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
 

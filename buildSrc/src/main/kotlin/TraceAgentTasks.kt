@@ -75,14 +75,23 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
             }
         })
         from(jarWrapper)
-        
+
+        /* IMPORTANT NOTE!
+         *
+         * Shadowing will also substitute ALL strings containing package names in ALL source files;
+         * when adding a new shadowed package, use `listOf(...)` hack to circumvent package shadowing:
+         * for instance, instead of `org.objectweb.asm`, use `listOf("org", "objectweb", "asm").joinToString(".")`.
+         *
+         * To minimize the affected surface area, all package-related string checks should be extracted into
+         * separate utility functions and be kept in `common/src/main/org/jetbrains/lincheck/util/Utils.kt`.
+         */
         val packagesToShade = listOf(
             "org.objectweb.asm",
             "net.bytebuddy",
         )
         
         packagesToShade.forEach { packageName ->
-            relocate(packageName, "shadow.$packageName")
+            relocate(packageName, "org.jetbrains.lincheck.shadow.$packageName")
         }
 
         manifest {
@@ -90,6 +99,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
             attributes(
                 mapOf(
                     "Premain-Class" to premainClass,
+                    "Agent-Class" to premainClass,
                     "Can-Redefine-Classes" to "true",
                     "Can-Retransform-Classes" to "true"
                 )

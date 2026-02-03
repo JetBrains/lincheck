@@ -212,7 +212,7 @@ object LincheckInstrumentation {
         this.javaAgentAttachType = JavaAgentAttachType.STATIC
     }
 
-    fun attachJavaAgentDynamically() {
+    fun attachJavaAgentDynamically(instrumentation: Instrumentation? = null) {
         check(javaAgentAttachType == null) {
             "Java agent was already attached" + when (javaAgentAttachType) {
                 JavaAgentAttachType.STATIC -> " statically"
@@ -224,12 +224,16 @@ object LincheckInstrumentation {
             "Lincheck instrumentation is already initialized"
         }
 
-        /* Dynamically attaches byte buddy instrumentation to this JVM instance.
+        /* Dynamically attaches an agent to this JVM instance.
          * Please note that the dynamic attach feature will be disabled by default in future JVM releases.
          * However, at the moment of implementing this logic (March 2024), it was the smoothest way
          * to inject code in the user codebase when the `java.base` module also needs to be instrumented.
          */
-        instrumentation = ByteBuddyAgent.install()
+        this.instrumentation = instrumentation ?: run {
+            // use byte-buddy if an instrumentation instance was not provided
+            ByteBuddyAgent.install()
+        }
+
         javaAgentAttachType = JavaAgentAttachType.DYNAMIC
     }
 
@@ -597,8 +601,14 @@ object LincheckInstrumentation {
         if (!isInitialized) {
             return false
         }
+        val expectedClassLoaders = Collections.newSetFromMap<ClassLoader>(IdentityHashMap())
+        var loader: ClassLoader? = classLoader
+        while (loader != null) {
+            expectedClassLoaders.add(loader)
+            loader = loader.parent
+        }
         return instrumentation.allLoadedClasses.any {
-            it.name == canonicalClassName && it.classLoader === classLoader
+            it.name == canonicalClassName && expectedClassLoaders.contains(it.classLoader)
         }
     }
 

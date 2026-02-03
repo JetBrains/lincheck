@@ -320,6 +320,11 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
             if (isThreadContainerClass(className)) return true
             return false
         }
+        // Old legacy Java std library for CORBA,
+        // for instance, `org/omg/stub/javax/management`;
+        // can appear on Java 8 when JMX is used.
+        if (className.startsWith("org.omg.")) return false
+
         // We do not need to instrument most standard Kotlin classes.
         // However, we need to inject the Lincheck analysis into the classes
         // related to collections, iterators, random and coroutines.
@@ -346,22 +351,23 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
         if (isIntellijRuntimeAgentClass(className)) return false
         // We should never instrument the JetBrains coverage package classes (for instance, relocated ASM library).
         if (isJetBrainsCoverageClass(className)) return false
+
+        // Do not instrument bytecode-manipulation libraries
+        // (special care required to circumvent package shadowing, see `TraceAgentTasks.kt`).
+        if (isAsmClass(className) || isByteBuddyClass(className)) return false
+
         // We can also safely do not instrument some libraries for performance reasons.
         if (className.startsWith("com.esotericsoftware.kryo.")) return false
-        if (className.startsWith("net.bytebuddy.")) return false
         if (className.startsWith("net.rubygrapefruit.platform.")) return false
         if (className.startsWith("io.mockk.")) return false
         if (className.startsWith("it.unimi.dsi.fastutil.")) return false
         if (className.startsWith("worker.org.gradle.")) return false
-        if (className.startsWith("org.objectweb.asm.")) return false
         if (className.startsWith("org.gradle.")) return false
         if (className.startsWith("org.slf4j.")) return false
         if (className.startsWith("org.apache.commons.lang.")) return false
         if (className.startsWith("org.junit.")) return false
         if (className.startsWith("junit.framework.")) return false
-        // Finally, we should never instrument the Lincheck classes.
-        if (className.startsWith(LINCHECK_PACKAGE_NAME)) return false
-        if (className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME)) return false
+
         // All the classes that were not filtered out are eligible for transformation.
         return true
     }

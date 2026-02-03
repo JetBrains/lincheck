@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.conditions
 
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.jvm.agent.conditions.ConditionTestUtils.MethodInfo
 import org.junit.*
@@ -26,6 +27,13 @@ import org.junit.runners.Parameterized.*
 class SafeConditionsTest(
     private val methodInfo: MethodInfo
 ) {
+    init {
+        DisallowedMethodCallTreeTestCases::class.java
+        if (!LincheckInstrumentation.isInitialized) {
+            LincheckInstrumentation.attachJavaAgentDynamically()
+        }
+    }
+
     @Test
     fun test() {
         val className = SafeConditions::class.java.name
@@ -396,6 +404,24 @@ private object SafeConditions {
             temp
         }
         return result
+    }
+
+    @JvmStatic
+    fun loopWithLocalVariable(): Int {
+        var sum = 0
+        for (i in 1..10) {
+            sum += i  // Local variable write - safe
+        }
+        return sum
+    }
+
+    @JvmStatic
+    fun localVariableInLoop(): Int {
+        var total = 0
+        for (i in 1..10) {
+            total += i
+        }
+        return total
     }
 
     @JvmStatic

@@ -16,9 +16,9 @@ import java.lang.invoke.MethodHandles.Lookup
 import java.lang.invoke.MethodType
 
 // Trace agent modes
-private const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
-private const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
-private const val LIVE_DEBUGGER_MODE_PROPERTY = "lincheck.liveDebuggerMode"
+const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
+const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"
+const val LIVE_DEBUGGER_MODE_PROPERTY = "lincheck.liveDebuggerMode"
 val isInTraceDebuggerMode by lazy { System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
 val isInTraceRecorderMode by lazy { System.getProperty(TRACE_RECORDER_MODE_PROPERTY, "false").toBoolean() }
 val isInLiveDebuggerMode by lazy { System.getProperty(LIVE_DEBUGGER_MODE_PROPERTY, "false").toBoolean() }
@@ -27,16 +27,18 @@ val isInLiveDebuggerMode by lazy { System.getProperty(LIVE_DEBUGGER_MODE_PROPERT
 fun isInLincheckPackage(className: String) =
     className.startsWith(LINCHECK_PACKAGE_NAME) ||
     className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME) ||
-    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME)
+    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME) ||
+    className.startsWith(LINCHECK_RELOCATED_PACKAGE_PREFIX)
 
 val StackTraceElement.isLincheckInternals get() =
     this.className.startsWith(LINCHECK_PACKAGE_NAME) ||
     this.className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME)
 
-internal const val LINCHECK_PACKAGE_NAME            = "org.jetbrains.lincheck."
-internal const val LINCHECK_KOTLINX_PACKAGE_NAME    = "org.jetbrains.kotlinx.lincheck."
-internal const val LINCHECK_RUNNER_PACKAGE_NAME     = "org.jetbrains.kotlinx.lincheck.runner."
-internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME  = "sun.nio.ch.lincheck."
+internal const val LINCHECK_PACKAGE_NAME             = "org.jetbrains.lincheck."
+internal const val LINCHECK_KOTLINX_PACKAGE_NAME     = "org.jetbrains.kotlinx.lincheck."
+internal const val LINCHECK_RUNNER_PACKAGE_NAME      = "org.jetbrains.kotlinx.lincheck.runner."
+internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME   = "sun.nio.ch.lincheck."
+internal const val LINCHECK_RELOCATED_PACKAGE_PREFIX = "org.jetbrains.lincheck.shadow."
 
 /**
  * Test if the given class name corresponds to a Java lambda class.
@@ -62,6 +64,14 @@ fun isThreadContainerClass(className: String): Boolean =
 
 fun isThreadContainerThreadStartMethod(className: String, methodName: String): Boolean =
     isThreadContainerClass(className) && methodName == "start"
+
+fun isAsmClass(className: String): Boolean =
+    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
+    className.startsWith(listOf("org", "objectweb", "asm").joinToString("."))
+
+fun isByteBuddyClass(className: String): Boolean =
+    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
+    className.startsWith(listOf("net", "bytebuddy").joinToString("."))
 
 /**
  * Checks if the given class name belongs to the IntelliJ runtime debugger agent package.
