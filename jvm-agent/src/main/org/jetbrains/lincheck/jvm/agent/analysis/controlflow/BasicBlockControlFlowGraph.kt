@@ -230,11 +230,34 @@ class BasicBlockControlFlowGraph(
         for (e in normalExits) {
             val last = lastOpcodeIndexOf(e.source) ?: continue
             val lastInstruction = instructions.get(last)
-            require(isRecognizedIfJumpOpcode(lastInstruction.opcode)) {
-                """
-                    Normal loop exit fall-through edge must be produced by an IF* opcode at the end of the source block: 
-                    source=B${e.source}, target=B${e.target}, opcode=${lastInstruction.opcode}
-                """.trimIndent()
+            when (e.label) {
+                is EdgeLabel.FallThrough -> {
+                    require(isRecognizedIfJumpOpcode(lastInstruction.opcode)) {
+                        """
+                            Normal loop exit fall-through edge must be produced by an IF* opcode at the end of the source block
+                            at $className::$method, source=B${e.source}, target=B${e.target}, opcode=${lastInstruction.opcode}
+                        """
+                        .trimIndent()
+                    }
+                }
+                is EdgeLabel.Jump -> {
+                    require(isRecognizedJumpOpcode(lastInstruction.opcode)) {
+                        """
+                        Normal loop exit jump edge must be produced by a recognized jump opcode at the end of the source block
+                        at $className::$method, source=B${e.source}, target=B${e.target}, opcode=${lastInstruction.opcode}
+                        """
+                        .trimIndent()
+                    }
+                }
+                is EdgeLabel.Exception -> {
+                    error(
+                        """
+                        Normal loop exit edge must not be an exception edge 
+                        at $className::$method, source=B${e.source}, target=B${e.target}, opcode=${lastInstruction.opcode}
+                        """
+                        .trimIndent()
+                    )
+                }
             }
          }
     }
