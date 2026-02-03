@@ -53,6 +53,7 @@ internal class EventStructure(
      * List of the event structure events.
      */
     val events: SortedList<AtomicThreadEvent> = _events
+    val objectRegistry = ObjectRegistry(this)
 
     /**
      * Root event of the whole event structure.
@@ -112,12 +113,6 @@ internal class EventStructure(
     private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>()
 
     /**
-     * The object registry, storing information about all objects
-     * created during the execution currently being explored.
-     */
-    val objectRegistry = ObjectRegistry()
-
-    /**
      * For each blocked thread, stores a descriptor of the blocked event.
      *
      * The thread may become blocked when it issues a request-event
@@ -153,7 +148,7 @@ internal class EventStructure(
         registerThread(initThreadId)
         registerThread(mainThreadId)
         root = addRootEvent()
-        objectRegistry.initialize(root)
+//        objectRegistry.initialize(root)
     }
 
 
@@ -188,7 +183,7 @@ internal class EventStructure(
             replayer.setNextEvent()
         }
         // reset object indices --- retain only external events
-        objectRegistry.retain { it.isExternal }
+//        objectRegistry.retain { it.isExternal }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
         readCodeLocationsCounter.clear()
@@ -340,9 +335,9 @@ internal class EventStructure(
         val conflicts = getConflictingEvents(iThread, label, parent, dependencies)
         if (isCausalityViolated(parent, dependencies, conflicts))
             return null
-        val allocation = objectRegistry[label.objectID]?.allocation
+        val allocation = objectRegistry.getAllocation(label.objectID)
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
-            objectRegistry[it]?.allocation
+            objectRegistry.getAllocation(it)
         }
         val event = AtomicThreadEventImpl(
             label = label,
@@ -539,7 +534,7 @@ internal class EventStructure(
     /* ************************************************************************* */
 
     fun allocationEvent(id: ObjectID): AtomicThreadEvent? {
-        return objectRegistry[id]?.allocation
+        return objectRegistry.getAllocation(id)
     }
 
     /* ************************************************************************* */
@@ -758,8 +753,9 @@ internal class EventStructure(
         return createEvent(initThreadId, label, parent = null, dependencies = emptyList(), visit = false)!!
             .also { event ->
                 val id = STATIC_OBJECT_ID
-                val entry = ObjectEntry(id, StaticObject.opaque(), event)
-                objectRegistry.register(entry)
+                // TODO: Figure out how to load the static object
+//                val entry = RegistryObjectEntry(id, StaticObject.opaque(), event)
+//                objectRegistry.register(entry)
                 addEventToCurrentExecution(event)
             }
     }
@@ -946,18 +942,19 @@ internal class EventStructure(
         return responseEvent
     }
 
-    fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue): AtomicThreadEvent {
+    fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue, objectID: ObjectID): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
             check(event.label is ObjectAllocationLabel)
+            // TODO: Is this a reasonable check?
+            check(event.label.objectID == objectID)
             val id = event.label.objectID
-            val entry = ObjectEntry(id, value, event)
-            objectRegistry.register(entry)
+//            val entry = RegistryObjectEntry(id, value, event)
+//            objectRegistry.register(entry)
             addEventToCurrentExecution(event)
             return event
         }
-        val id = objectRegistry.nextObjectID
         val label = ObjectAllocationLabel(
-            objectID = id,
+            objectID = objectID,
             className = value.unwrap().javaClass.simpleName,
             memoryInitializer = { location ->
                 val initValue = memoryInitializer(location)
@@ -967,8 +964,9 @@ internal class EventStructure(
         val parent = playedFrontier[iThread]
         val dependencies = listOf<AtomicThreadEvent>()
         return createEvent(iThread, label, parent, dependencies)!!.also { event ->
-            val entry = ObjectEntry(id, value, event)
-            objectRegistry.register(entry)
+//            TODO: assumes object is already allocated
+//            val entry = RegistryObjectEntry(id, value, event)
+//            objectRegistry.register(entry)
             addEventToCurrentExecution(event)
         }
     }

@@ -21,109 +21,52 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.util.ensureNull
-import org.jetbrains.lincheck.util.implies
 import org.jetbrains.lincheck.util.toBoolean
 import org.jetbrains.lincheck.util.toInt
-import kotlin.collections.HashMap
-import java.util.IdentityHashMap
+import sun.nio.ch.lincheck.TestThread
 
 
-data class ObjectEntry(
-    val id: ObjectID,
-    val obj: OpaqueValue,
-    val allocation: AtomicThreadEvent,
-) { // TODO: From the other thing
-    init {
-        require(id != NULL_OBJECT_ID)
-        require(allocation.label is InitializationLabel || allocation.label is ObjectAllocationLabel)
-        require((id == STATIC_OBJECT_ID || obj.isPrimitive()) implies (allocation.label is InitializationLabel))
+internal class ObjectRegistry(private val eventStructure: EventStructure): BaseObjectTracker() {
+
+    var allocationMap: MutableMap<ObjectID, AtomicThreadEvent> = mutableMapOf()
+    var objMap: MutableMap<ObjectID, OpaqueValue> = mutableMapOf()
+
+    override fun registerExternalObject(obj: Any): ObjectEntry {
+        return super.registerExternalObject(obj).also { addEntries(obj, it) }
     }
 
-    val isExternal: Boolean
-        get() = (allocation.label is InitializationLabel)
+    override fun registerNewObject(obj: Any): ObjectEntry {
+        return super.registerNewObject(obj).also { addEntries(obj, it) }
+    }
 
+    fun registerExternalObjectForThread(obj: Any, threadId: ThreadId): ObjectEntry {
+        return super.registerExternalObject(obj).also { addEntries(obj, it, threadId) }
+    }
+
+    private fun addEntries(obj: Any, entry: ObjectEntry, iThread: ThreadId? = null ) {
+        val iThread = iThread ?: (Thread.currentThread() as? TestThread)?.threadId
+        if (iThread != null) {
+            val allocationEvent = eventStructure.addObjectAllocationEvent(iThread,obj.opaque(), entry.objectId)
+            allocationMap[entry.objectId] = allocationEvent
+            objMap[entry.objectId] = obj.opaque()
+        }
+    }
+
+    fun getAllocation(id: ObjectID) : AtomicThreadEvent? {
+        return allocationMap[id]
+    }
+
+    fun getObject(id: ObjectID): OpaqueValue? {
+        return objMap[id]
+    }
 }
 
-class ObjectRegistry {
-
-    private var objectCounter = 0L
-
-    private val objectIdIndex = HashMap<ObjectID, ObjectEntry>()
-
-    private val objectIndex = IdentityHashMap<Any, ObjectEntry>()
-    private val primitiveIndex = HashMap<Any, ObjectEntry>()
-
-    val nextObjectID: ObjectID
-        get() = 1 + objectCounter
-
-    private var initEvent: AtomicThreadEvent? = null
-
-    fun initialize(initEvent: AtomicThreadEvent) {
-        require(initEvent.label is InitializationLabel)
-        this.initEvent = initEvent
-    }
-
-    fun register(entry: ObjectEntry) {
-        check(entry.id != NULL_OBJECT_ID)
-        check(entry.id <= objectCounter + 1)
-        check(!entry.obj.isPrimitive)
-        objectIdIndex.put(entry.id, entry).ensureNull()
-        objectIndex.put(entry.obj.unwrap(), entry).ensureNull()
-        if (entry.id != STATIC_OBJECT_ID) {
-            objectCounter++
-        }
-    }
-
-    private fun registerPrimitiveObject(obj: OpaqueValue): ObjectID {
-        check(obj.isPrimitive)
-        val entry = primitiveIndex.computeIfAbsent(obj.unwrap()) {
-            val id = ++objectCounter
-            val entry = ObjectEntry(id, obj, initEvent!!)
-            objectIdIndex.put(entry.id, entry).ensureNull()
-            return@computeIfAbsent entry
-        }
-        return entry.id
-    }
-
-    private fun registerExternalObject(obj: OpaqueValue): ObjectID {
-        if (obj.isPrimitive) {
-            return registerPrimitiveObject(obj)
-        }
-        val id = nextObjectID
-        val entry = ObjectEntry(id, obj, initEvent!!)
-        register(entry)
-        return id
-    }
-
-    fun getOrRegisterObjectID(obj: OpaqueValue): ObjectID {
-        get(obj)?.let { return it.id }
-        val className = obj.unwrap().javaClass.simpleName
-        val id = registerExternalObject(obj)
-        (initEvent!!.label as InitializationLabel).trackExternalObject(className, id)
-        return id
-    }
-
-    operator fun get(id: ObjectID): ObjectEntry? =
-        objectIdIndex[id]
-
-    operator fun get(obj: OpaqueValue): ObjectEntry? =
-        if (obj.isPrimitive) primitiveIndex[obj.unwrap()] else objectIndex[obj.unwrap()]
-
-    fun retain(predicate: (ObjectEntry) -> Boolean) {
-        objectIdIndex.values.retainAll(predicate)
-        objectIndex.values.retainAll(predicate)
-        primitiveIndex.values.retainAll(predicate)
-    }
-
-}
-
-fun ObjectRegistry.getOrRegisterObjectID(obj: OpaqueValue?): ObjectID =
+internal fun ObjectRegistry.getOrRegisterObjectID(obj: OpaqueValue?): ObjectID =
     if (obj == null) NULL_OBJECT_ID else getOrRegisterObjectID(obj)
 
-fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {
+internal fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {
     Types.LONG_TYPE       -> id.opaque()
     Types.INT_TYPE        -> id.toInt().opaque()
     Types.BYTE_TYPE       -> id.toByte().opaque()
@@ -136,29 +79,29 @@ fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when 
     Types.SHORT_TYPE_BOXED    -> id.toShort().opaque()
     Types.CHAR_TYPE_BOXED     -> id.toInt().toChar().opaque()
     Types.BOOLEAN_TYPE_BOXED  -> id.toInt().toBoolean().opaque()
-    else                -> get(id)?.obj
+    else                -> getObject(id)
 }
 
-fun ObjectRegistry.getValueID(type: Types.Type, value: OpaqueValue?): ValueID {
-    if (value == null) return NULL_OBJECT_ID
-    return when (type) {
-        Types.LONG_TYPE       -> (value.unwrap() as Long)
-        Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
-        Types.BYTE_TYPE       -> (value.unwrap() as Byte).toLong()
-        Types.SHORT_TYPE      -> (value.unwrap() as Short).toLong()
-        Types.CHAR_TYPE       -> (value.unwrap() as Char).code.toLong()
-        Types.BOOLEAN_TYPE    -> (value.unwrap() as Boolean).toInt().toLong()
-        Types.LONG_TYPE_BOXED     -> (value.unwrap() as Long)
-        Types.INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
-        Types.BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
-        Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
-        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).code.toLong()
-        Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
-        else                -> get(value)?.id ?: NULL_OBJECT_ID
-    }
-}
+//internal fun ObjectRegistry.getValueID(type: Types.Type, value: OpaqueValue?): ValueID {
+//    if (value == null) return NULL_OBJECT_ID
+//    return when (type) {
+//        Types.LONG_TYPE       -> (value.unwrap() as Long)
+//        Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
+//        Types.BYTE_TYPE       -> (value.unwrap() as Byte).toLong()
+//        Types.SHORT_TYPE      -> (value.unwrap() as Short).toLong()
+//        Types.CHAR_TYPE       -> (value.unwrap() as Char).code.toLong()
+//        Types.BOOLEAN_TYPE    -> (value.unwrap() as Boolean).toInt().toLong()
+//        Types.LONG_TYPE_BOXED     -> (value.unwrap() as Long)
+//        Types.INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
+//        Types.BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
+//        Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
+//        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).code.toLong()
+//        Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
+//        else                -> get(value)?.id ?: NULL_OBJECT_ID
+//    }
+//}
 
-fun ObjectRegistry.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
+internal fun ObjectRegistry.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
     if (value == null) return NULL_OBJECT_ID
     return when (type) {
         Types.LONG_TYPE       -> (value.unwrap() as Long)

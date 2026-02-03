@@ -63,7 +63,7 @@ internal class EventStructureStrategy(
 
     // Tracker of objects.
     override val objectTracker: ObjectTracker =
-        EventStructureObjectTracker(eventStructure)
+        eventStructure.objectRegistry
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker =
         EventStructureMemoryTracker(eventStructure, objectTracker)
@@ -358,7 +358,9 @@ internal class EventStructureStrategy(
 
     private fun registerTestInstance() {
         check(!isTestInstanceRegistered)
-        eventStructure.addObjectAllocationEvent(eventStructure.mainThreadId, (runner as ExecutionScenarioRunner).testInstance.opaque())
+        val testInstance = (runner as ExecutionScenarioRunner).testInstance
+        //NOTE: The threadID may be messed up. See how this can be fixed.
+        (objectTracker as ObjectRegistry).registerExternalObjectForThread(testInstance, eventStructure.mainThreadId)
         isTestInstanceRegistered = true
     }
 
@@ -462,63 +464,6 @@ internal class EventStructureStrategy(
 
 internal typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
 internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason?) -> Unit
-
-//NOTE: things have also changed here but I have not looked it pretty deep.
-private class EventStructureObjectTracker(
-    private val eventStructure: EventStructure,
-) : BaseObjectTracker() {
-
-
-//    override fun shouldTrackObjectAccess(obj: Any?): Boolean = true
-//    override fun enumerateObjectEntries(): Sequence<ObjectEntry> {
-//        TODO("Not yet implemented")
-//    }
-//
-//    override fun retain(predicate: (ObjectEntry) -> Boolean) {
-//        TODO("Not yet implemented")
-//    }
-//
-//    override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
-//    override fun registerThread(threadId: Int, thread: Thread) {
-//        TODO("Not yet implemented")
-//    }
-//
-//    override fun get(id: ObjectID): ObjectEntry? {
-//        TODO("Not yet implemented")
-//    }
-//
-//    override fun get(obj: Any?): ObjectEntry? {
-//        TODO("Not yet implemented")
-//    }
-//
-//    // NOTE: we shold return an obhect enty here. Not sure if we should use the objectRegistry of the eventStructure
-//    override fun registerNewObject(obj: Any): ObjectEntry {
-//        val iThread = (Thread.currentThread() as TestThread).threadId
-//        eventStructure.addObjectAllocationEvent(iThread, obj.opaque())
-//        TODO("Not yet implemented")
-//    }
-//
-//    override fun registerExternalObject(obj: Any): ObjectEntry {
-//        TODO("Not yet implemented")
-//    }
-
-    // NOTE: the two methods below seem to be gone
-//    override fun initializeObject(obj: Any) {
-//        val isRegistered = (eventStructure.objectRegistry[obj.opaque()] != null)
-//        if (!isRegistered && !obj.isPrimitive()) {
-//            registerNewObject(obj)
-//        }
-//    }
-//
-//    override fun getObjectId(obj: Any): ObjectID {
-//        return eventStructure.objectRegistry.getOrRegisterObjectID(obj.opaque())
-//    }
-//    override fun initializeObject(obj: Any) {
-//        TODO("Not yet implemented")
-//    }
-
-
-}
 
 private class EventStructureMemoryTracker(
     private val eventStructure: EventStructure,
@@ -701,7 +646,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
-        val mutexID = objectRegistry[monitor]!!.id
+        val mutexID = objectRegistry[monitor]!!.objectId
         return canAcquireMonitor(iThread, mutexID)
     }
 
@@ -736,7 +681,7 @@ private class EventStructureMonitorTracker(
 
 
     private fun issueLockRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectRegistry[monitor]!!.id
+        val mutexID = objectRegistry[monitor]!!.objectId
         // check if the thread is already blocked on the lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
             ?.ensure { it.label.satisfies<LockLabel> { this.mutexID == mutexID } }
@@ -767,7 +712,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun issueUnlock(iThread: Int, monitor: OpaqueValue): Boolean {
-        val mutexID = objectRegistry[monitor]!!.id
+        val mutexID = objectRegistry[monitor]!!.objectId
         // obtain current lock-responses stack, and ensure that
         // the lock is indeed acquired by the releasing thread
         val lockStack = lockStacks[mutexID]!!
@@ -799,7 +744,7 @@ private class EventStructureMonitorTracker(
     }
 
     override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
-        val mutexID = objectRegistry[monitor.opaque()]!!.id
+        val mutexID = objectRegistry[monitor.opaque()]!!.objectId
         // check if the thread is already blocked on wait-request or (synthetic) lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.ensure { it.label.satisfies<MutexLabel> { this.mutexID == mutexID } }
@@ -834,7 +779,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun issueWaitRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectRegistry[monitor]!!.id
+        val mutexID = objectRegistry[monitor]!!.objectId
         // obtain the current lock-responses stack, and ensure that
         // the lock is indeed acquired by the waiting thread
         val lockStack = lockStacks[mutexID]!!
