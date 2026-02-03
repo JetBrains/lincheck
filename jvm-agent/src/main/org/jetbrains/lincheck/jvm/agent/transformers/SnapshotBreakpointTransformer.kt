@@ -11,17 +11,18 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
-import org.jetbrains.lincheck.trace.TraceContext
-import org.objectweb.asm.Label
-import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes.ILOAD
-import org.objectweb.asm.commons.GeneratorAdapter
-import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
-import sun.nio.ch.lincheck.Injections
+import org.jetbrains.lincheck.trace.*
+import org.objectweb.asm.*
+import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.commons.*
+import org.objectweb.asm.commons.InstructionAdapter.*
+import sun.nio.ch.lincheck.*
+import kotlin.collections.forEach
+import kotlin.collections.orEmpty
 
 internal class SnapshotBreakpointTransformer(
-    fileName: String, 
-    className: String, 
+    fileName: String,
+    className: String,
     methodName: String,
     descriptor: String,
     access: Int,
@@ -34,45 +35,104 @@ internal class SnapshotBreakpointTransformer(
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
     
     private val traceIdCapturers = TraceIdCapturerRegistry(config)
-    
-    override fun visitLineNumber(line: Int, start: Label) {
-        super.visitLineNumber(line, start)
-        if (liveDebuggerSettings.lineBreakPoints.any { it.lineNumber == line && it.className == className.toCanonicalClassName() }) {
-            adapter.invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-            loadNewCodeLocationId()
-            val activeLocals = currentActiveLocals
-            
-            // Pushes local variable values onto the stack as Object[], including
-            // - this
-            // - method parameters
-            // - local variables
-            
-            // Push new array size
-            adapter.push(activeLocals.size)
-            
-            // Create new array of size activeLocals.size 
-            adapter.newArray(OBJECT_TYPE)
-            
-            activeLocals.forEachIndexed { index, localVariableInfo ->
-                
-                // Duplicate reference of the newly created array, as it will be consumed by arrayStore
-                adapter.dup()
-                
-                // Push the array index of where to store the variable value
-                adapter.push(index)
-                
-                // Load the variable at slot localVariableInfo.index
-                adapter.visitVarInsn(localVariableInfo.type.getOpcode(ILOAD), localVariableInfo.index)
-                
-                // Boxes primitive values
-                adapter.box(localVariableInfo.type)
-                
-                // Stores the boxed variable value in the new array
-                adapter.arrayStore(OBJECT_TYPE)
-            }
 
-            traceIdCapturers.loadTraceIdIfAvailable(adapter)
-            adapter.invokeStatic(Injections::onSnapshotLineBreakpoint)
+    override fun visitLineNumber(line: Int, start: Label) = adapter.run {
+        super.visitLineNumber(line, start)
+        val breakpointSettings = liveDebuggerSettings.lineBreakPoints.firstOrNull {
+            it.lineNumber == line && it.className == className.toCanonicalClassName()
         }
+        if (breakpointSettings == null) return@run
+
+        callIfNotInsideBreakpointCondition {
+            if (breakpointSettings.conditionClassName == null) {
+                injectBreakpointHit()
+            } else {
+                ifStatement(
+                    condition = {
+                        // The condition may execute code with an installed breakpoint.
+                        // To not make a breakpoint hit, we track when we compute the condition.
+                        invokeStatic(Injections::enterBreakpointCondition)
+                        injectConditionCall(breakpointSettings)
+                        invokeStatic(Injections::leaveBreakpointCondition)
+                    },
+                    thenClause = {
+                        injectBreakpointHit()
+                    }
+                )
+            }
+        }
+    }
+
+    private fun GeneratorAdapter.injectConditionCall(breakpointSettings: SnapshotBreakpoint) {
+        // Extract argument names and load their values
+        val argNames = breakpointSettings.conditionArgs.orEmpty()
+        val argTypes = mutableListOf<Type>()
+
+        argNames.forEach { argName ->
+            // Find the local variable by name in the current active locals
+            val localVar = currentActiveLocals.firstOrNull { it.name == argName }
+            if (localVar != null) {
+                // Load the local variable value
+                visitVarInsn(localVar.type.getOpcode(ILOAD), localVar.index)
+                argTypes.add(localVar.type)
+            } else {
+                // If variable not found, handle gracefully by skipping this condition
+                throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpointSettings.lineNumber}")
+            }
+        }
+
+        // Call the condition function with the loaded arguments
+        invokeStatic(
+            Type.getObjectType(breakpointSettings.conditionClassName!!.toInternalClassName()),
+            Method(
+                breakpointSettings.conditionMethodName!!,
+                Type.BOOLEAN_TYPE,
+                argTypes.toTypedArray()
+            )
+        )
+    }
+
+    private fun GeneratorAdapter.callIfNotInsideBreakpointCondition(block: () -> Unit) {
+        ifStatement(
+            condition = {
+                invokeStatic(Injections::isNotInsideBreakpointCondition)
+            },
+            thenClause = {
+                block()
+            }
+        )
+    }
+
+    private fun GeneratorAdapter.injectBreakpointHit() {
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+        loadNewCodeLocationId()
+        val activeLocals = currentActiveLocals
+
+        // Pushes local variable values onto the stack as Object[], including
+        // - this
+        // - method parameters
+        // - local variables
+
+        // Push new array size
+        push(activeLocals.size)
+
+        // Create new array of size activeLocals.size
+        newArray(OBJECT_TYPE)
+
+        activeLocals.forEachIndexed { index, localVariableInfo ->
+            // Duplicate reference of the newly created array, as it will be consumed by arrayStore
+            dup()
+            // Push the array index of where to store the variable value
+            push(index)
+            // Load the variable at slot localVariableInfo.index
+            visitVarInsn(localVariableInfo.type.getOpcode(ILOAD), localVariableInfo.index)
+            // Boxes primitive values
+            box(localVariableInfo.type)
+            // Stores the boxed variable value in the new array
+            arrayStore(OBJECT_TYPE)
+        }
+
+        traceIdCapturers.loadTraceIdIfAvailable(adapter)
+        invokeStatic(Injections::onSnapshotLineBreakpoint)
     }
 }
