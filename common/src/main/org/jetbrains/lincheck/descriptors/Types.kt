@@ -299,19 +299,17 @@ fun KClass<*>.getType(): Type = when (this) {
     else            -> OBJECT_TYPE
 }
 
-fun KClass<*>.getArrayElementType(): Type = when (this) {
-    IntArray::class     -> INT_TYPE
-    ByteArray::class    -> BYTE_TYPE
-    ShortArray::class   -> SHORT_TYPE
-    LongArray::class    -> LONG_TYPE
-    FloatArray::class   -> FLOAT_TYPE
-    DoubleArray::class  -> DOUBLE_TYPE
-    CharArray::class    -> CHAR_TYPE
-    BooleanArray::class -> BOOLEAN_TYPE
-    Array::class        -> OBJECT_TYPE
-
+fun KClass<*>.getArrayElementType(): Type = when {
+    this == IntArray::class     -> INT_TYPE
+    this == ByteArray::class    -> BYTE_TYPE
+    this == ShortArray::class   -> SHORT_TYPE
+    this == LongArray::class    -> LONG_TYPE
+    this == FloatArray::class   -> FLOAT_TYPE
+    this == DoubleArray::class  -> DOUBLE_TYPE
+    this == CharArray::class    -> CHAR_TYPE
+    this == BooleanArray::class -> BOOLEAN_TYPE
+    this.java.isArray           -> OBJECT_TYPE // We cannot
     // TODO: should we handle atomic arrays?
-
     else                -> throw IllegalArgumentException("Argument is not array")
 }
 
