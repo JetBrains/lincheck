@@ -434,12 +434,6 @@ private object UnsafeConditions {
     }
 
     @JvmStatic
-    fun callRuntimeExec() {
-        @Suppress("DEPRECATED")
-        Runtime.getRuntime().exec("ls")
-    }
-
-    @JvmStatic
     fun createRandomInstance() {
         java.util.Random().nextInt()
     }
