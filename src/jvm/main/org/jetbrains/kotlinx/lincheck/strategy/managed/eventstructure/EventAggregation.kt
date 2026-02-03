@@ -51,7 +51,8 @@ fun Execution<AtomicThreadEvent>.aggregate(
     val result = MutableExecution<HyperThreadEvent>()
     val remapping = mutableMapOf<AtomicThreadEvent, HyperThreadEvent>()
     val aggregated = threadMap.mapValues { (_, events) -> aggregator.aggregate(events) }
-    val aggregatedClock = MutableVectorClock().apply {} // TODO, this default value is broken... (it used to be 0, now it is -1)
+    val aggregatedClock = MutableVectorClock(0) // TODO, this default value is broken... (it used to be 0, now it is -1)
+    threadMap.keys.forEach { threadID -> result.registerThread(threadID) }
     while (!clock.observes(this)) {
         var position = -1
         var found = false

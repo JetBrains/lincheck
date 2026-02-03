@@ -45,8 +45,8 @@ operator fun VectorClock.plus(other: VectorClock): MutableVectorClock =
 fun VectorClock(): VectorClock =
     ThreadMapClock()
 
-fun MutableVectorClock(): MutableVectorClock =
-    ThreadMapClock()
+fun MutableVectorClock(defaultVal: Int = -1): MutableVectorClock =
+    ThreadMapClock(defaultVal)
 
 fun VectorClock.copy(): MutableVectorClock {
     // TODO: make VectorClock sealed interface?
@@ -131,14 +131,14 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
 }
 
 
-private class ThreadMapClock : MutableVectorClock {
+private class ThreadMapClock(private val defaultVal: Int = -1) : MutableVectorClock {
     var clock = mutableThreadMapOf<Int>()
 
     override fun isEmpty(): Boolean =
         clock.isEmpty()
 
     override fun get(tid: ThreadId): Int =
-        clock.getOrDefault(tid, -1)
+        clock.getOrDefault(tid, defaultVal)
 
     override fun set(tid: ThreadId, timestamp: Int) {
         clock.set(tid, timestamp)
@@ -147,7 +147,7 @@ private class ThreadMapClock : MutableVectorClock {
     override fun increment(tid: ThreadId, n: Int) {
         // TODO: not sure what is the exact behaviour when tid is not already there
         // Note that the default value here is 0.
-        clock.set(tid, clock.getOrDefault(tid, 0) + n)
+        clock.set(tid, get(tid) + n)
     }
 
     override fun merge(other: VectorClock) {
@@ -179,7 +179,7 @@ private class ThreadMapClock : MutableVectorClock {
 }
 
 fun VectorClock.toHBClock(capacity: Int, tid: ThreadId, aid: Int): HBClock {
-    check(this is IntArrayClock)
+    check(this is ThreadMapClock)
     val result = emptyClock(capacity)
     for (i in 0 until capacity) {
         if (i == tid) {
