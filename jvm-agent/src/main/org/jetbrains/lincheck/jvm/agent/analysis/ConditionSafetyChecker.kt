@@ -285,7 +285,7 @@ object ConditionSafetyChecker {
                 }
                 GETSTATIC -> {
                     // Detect static field reads of uninitialized classes.
-                    if (!isStandardLibraryClass(owner) && !isClassAlreadyLoaded(owner)) {
+                    if (!isStandardLibraryClass(owner) && !isClassAlreadyLoaded(owner, classLoader)) {
                         violations.add(
                             UninitializedClassStaticFieldRead(fileName, currentLineNumber, owner, name)
                         )
@@ -409,10 +409,10 @@ object ConditionSafetyChecker {
          * Reading fields from unloaded classes can trigger class initialization,
          * which may have side effects.
          */
-        private fun isClassAlreadyLoaded(owner: String): Boolean {
+        private fun isClassAlreadyLoaded(owner: String, classLoader: ClassLoader): Boolean {
             val className = owner.toCanonicalClassName()
             // If the class is not loaded, accessing its fields will trigger class initialization.
-            return LincheckInstrumentation.isClassLoaded(className)
+            return LincheckInstrumentation.isClassLoaded(className, classLoader)
         }
     }
 

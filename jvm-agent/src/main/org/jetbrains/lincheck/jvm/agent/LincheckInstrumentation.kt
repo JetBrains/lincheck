@@ -593,11 +593,13 @@ object LincheckInstrumentation {
      * @param canonicalClassName The canonical class name (e.g., "java.lang.String")
      * @return true if the class is loaded, false otherwise or if instrumentation is not initialized
      */
-    fun isClassLoaded(canonicalClassName: String): Boolean {
+    fun isClassLoaded(canonicalClassName: String, classLoader: ClassLoader): Boolean {
         if (!isInitialized) {
             return false
         }
-        return instrumentation.allLoadedClasses.any { it.name == canonicalClassName }
+        return instrumentation.allLoadedClasses.any {
+            it.name == canonicalClassName && it.classLoader === classLoader
+        }
     }
 
     /**
