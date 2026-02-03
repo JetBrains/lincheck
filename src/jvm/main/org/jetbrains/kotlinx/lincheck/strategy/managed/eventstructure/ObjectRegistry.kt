@@ -26,6 +26,7 @@ import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.util.toBoolean
 import org.jetbrains.lincheck.util.toInt
 import sun.nio.ch.lincheck.TestThread
+import org.jetbrains.lincheck.util.*
 
 
 internal class ObjectRegistry(private val eventStructure: EventStructure): BaseObjectTracker() {
@@ -34,23 +35,23 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     var objMap: MutableMap<ObjectID, OpaqueValue> = mutableMapOf()
 
     override fun registerExternalObject(obj: Any): ObjectEntry {
-        return super.registerExternalObject(obj).also { addEntries(obj, it) }
+        return super.registerExternalObject(obj).also { addEntries(obj, it.objectId) }
     }
 
     override fun registerNewObject(obj: Any): ObjectEntry {
-        return super.registerNewObject(obj).also { addEntries(obj, it) }
+        return super.registerNewObject(obj).also { addEntries(obj, it.objectId) }
     }
 
     fun registerExternalObjectForThread(obj: Any, threadId: ThreadId): ObjectEntry {
-        return super.registerExternalObject(obj).also { addEntries(obj, it, threadId) }
+        return super.registerExternalObject(obj).also { addEntries(obj, it.objectId, threadId) }
     }
 
-    private fun addEntries(obj: Any, entry: ObjectEntry, iThread: ThreadId? = null ) {
+    private fun addEntries(obj: Any, objectID: ObjectID, iThread: ThreadId? = null ) {
         val iThread = iThread ?: (Thread.currentThread() as? TestThread)?.threadId
         if (iThread != null) {
-            val allocationEvent = eventStructure.addObjectAllocationEvent(iThread,obj.opaque(), entry.objectId)
-            allocationMap[entry.objectId] = allocationEvent
-            objMap[entry.objectId] = obj.opaque()
+            val allocationEvent = eventStructure.addObjectAllocationEvent(iThread,obj.opaque(), objectID)
+            allocationMap[objectID] = allocationEvent
+            objMap[objectID] = obj.opaque()
         }
     }
 
@@ -63,8 +64,17 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     }
 }
 
+
+// Any -> UniqueStableId
+// if primitive (Int, Long ...) or value type -> something based on (
+// if value (something based on ) ->
+
 internal fun ObjectRegistry.getOrRegisterObjectID(obj: OpaqueValue?): ObjectID =
-    if (obj == null) NULL_OBJECT_ID else getOrRegisterObjectID(obj)
+    when {
+        obj == null -> NULL_OBJECT_ID
+        obj.unwrap().isImmutable -> obj.hashCode().toLong() //Sus?
+        else -> registerObjectIfAbsent(obj.unwrap()).objectId
+    }
 
 internal fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {
     Types.LONG_TYPE       -> id.opaque()
