@@ -33,7 +33,7 @@ object ConditionTestUtils {
      * Generates method descriptors using ASM's Type utility.
      * Excludes synthetic methods, property getters/setters, and internal Kotlin methods.
      */
-    fun discoverTestMethods(clazz: Class<*>): Array<MethodInfo> {
+    fun discoverTestMethods(clazz: Class<*>): List<MethodInfo> {
         return clazz.declaredMethods
             .filter { method ->
                 // Include only static methods
@@ -54,6 +54,5 @@ object ConditionTestUtils {
                 )
             }
             .sortedBy { it.name }
-            .toTypedArray()
     }
 }

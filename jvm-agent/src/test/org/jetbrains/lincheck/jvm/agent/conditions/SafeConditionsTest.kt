@@ -46,7 +46,20 @@ class SafeConditionsTest(
         @JvmStatic
         @Parameters(name = "{0}")
         fun safeMethods(): Array<MethodInfo> =
-            ConditionTestUtils.discoverTestMethods(SafeConditions::class.java)
+            ConditionTestUtils.discoverTestMethods(SafeConditions::class.java).filterNot {
+                // String concatenation is not safe in Java 8, as it creates a StringBuilder instance
+                it.name.contains("concat", ignoreCase = true) && javaVersion <= 8
+            }.toTypedArray()
+
+        private val javaVersion: Int = run {
+            val version = System.getProperty("java.version")
+            // Java 8 format: "1.8.x", Java 9+: "9.x", "11.x", etc.
+            if (version.startsWith("1.")) {
+                version.substringAfter("1.").substringBefore('.').toIntOrNull() ?: 8
+            } else {
+                version.substringBefore('.').toIntOrNull() ?: 8
+            }
+        }
     }
 }
 

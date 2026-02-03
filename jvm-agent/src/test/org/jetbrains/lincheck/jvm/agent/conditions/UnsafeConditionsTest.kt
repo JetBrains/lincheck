@@ -47,7 +47,7 @@ class UnsafeConditionsTest(
         @JvmStatic
         @Parameters(name = "{0}")
         fun unsafeMethods(): Array<MethodInfo> =
-            ConditionTestUtils.discoverTestMethods(UnsafeConditions::class.java)
+            ConditionTestUtils.discoverTestMethods(UnsafeConditions::class.java).toTypedArray()
     }
 }
 
@@ -427,6 +427,7 @@ private object UnsafeConditions {
 
     @JvmStatic
     fun callRuntimeExec() {
+        @Suppress("DEPRECATED")
         Runtime.getRuntime().exec("ls")
     }
 
