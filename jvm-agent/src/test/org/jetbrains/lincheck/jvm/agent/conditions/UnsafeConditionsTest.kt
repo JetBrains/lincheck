@@ -159,6 +159,50 @@ private object UnsafeConditions {
         return if (x <= 0) 0 else mutuallyRecursiveA(x - 1)
     }
 
+    // ============ LOOPS ============
+
+    @JvmStatic
+    fun simpleForLoop(): Int {
+        var sum = 0
+        for (i in 1..10) {
+            sum += i  // Loop with local variable
+        }
+        return sum
+    }
+
+    @JvmStatic
+    fun whileLoop(n: Int): Int {
+        var i = 0
+        var sum = 0
+        while (i < n) {
+            sum += i
+            i++
+        }
+        return sum
+    }
+
+    @JvmStatic
+    fun doWhileLoop(n: Int): Int {
+        var i = 0
+        var sum = 0
+        do {
+            sum += i
+            i++
+        } while (i < n)
+        return sum
+    }
+
+    @JvmStatic
+    fun nestedLoop(): Int {
+        var sum = 0
+        for (i in 1..5) {
+            for (j in 1..5) {
+                sum += i * j
+            }
+        }
+        return sum
+    }
+
     // ============ NON-TRIVIAL UNSAFE CASES ============
 
     @JvmStatic

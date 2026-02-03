@@ -399,24 +399,6 @@ private object SafeConditions {
     }
 
     @JvmStatic
-    fun loopWithLocalVariable(): Int {
-        var sum = 0
-        for (i in 1..10) {
-            sum += i  // Local variable write - safe
-        }
-        return sum
-    }
-
-    @JvmStatic
-    fun localVariableInLoop(): Int {
-        var total = 0
-        for (i in 1..10) {
-            total += i
-        }
-        return total
-    }
-
-    @JvmStatic
     fun localVariableWithWhen(x: Int): String {
         val result = when (x) {
             1 -> "one"

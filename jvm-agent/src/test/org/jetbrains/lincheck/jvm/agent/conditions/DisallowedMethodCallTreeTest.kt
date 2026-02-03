@@ -162,4 +162,142 @@ class DisallowedMethodCallTreeTest {
         )
     }
 
+    @Test
+    fun `test simple loop violation`() {
+        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+            DisallowedMethodCallTreeTestCases::class.java.name,
+            "simpleLoop",
+            "()V",
+            this::class.java.classLoader
+        )
+
+        assertNotNull(violation)
+        val output = violation!!.toString()
+
+        // Loop only contains local variable writes (which are safe)
+        assertEquals(
+            """
+                Disallowed method call: simpleLoop
+                └── Loop detected at DisallowedMethodCallTreeTestCases.kt:71
+            """.trimIndent(),
+            output
+        )
+    }
+
+    @Test
+    fun `test while loop violation`() {
+        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+            DisallowedMethodCallTreeTestCases::class.java.name,
+            "whileLoopExample",
+            "()V",
+            this::class.java.classLoader
+        )
+
+        assertNotNull(violation)
+        val output = violation!!.toString()
+
+        // Loop only contains local variable writes (which are safe)
+        assertEquals(
+            """
+                Disallowed method call: whileLoopExample
+                └── Loop detected at DisallowedMethodCallTreeTestCases.kt:79
+            """.trimIndent(),
+            output
+        )
+    }
+
+    @Test
+    fun `test loop with field write violation`() {
+        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+            DisallowedMethodCallTreeTestCases::class.java.name,
+            "loopWithFieldWrite",
+            "()V",
+            this::class.java.classLoader
+        )
+
+        assertNotNull(violation)
+        val output = violation!!.toString()
+
+        // Loop only contains local variable writes (which are safe)
+        assertEquals(
+            """
+                Disallowed method call: loopWithFieldWrite
+                └── Loop detected at DisallowedMethodCallTreeTestCases.kt:87
+            """.trimIndent(),
+            output
+        )
+    }
+
+    @Test
+    fun `test forEach loop violation`() {
+        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+            DisallowedMethodCallTreeTestCases::class.java.name,
+            "forEachLoop",
+            "()V",
+            this::class.java.classLoader
+        )
+
+        assertNotNull(violation)
+        val output = violation!!.toString()
+
+        // forEach is compiled to bytecode with iterator calls and array writes
+        assertEquals(
+            """
+                Disallowed method call: forEachLoop
+                ├── Loop detected at DisallowedMethodCallTreeTestCases.kt:117
+                ├── Array write: at DisallowedMethodCallTreeTestCases.kt:94
+                ├── Disallowed method call: iterator at DisallowedMethodCallTreeTestCases.kt:117
+                ├── Disallowed method call: hasNext at DisallowedMethodCallTreeTestCases.kt:117
+                ├── Disallowed method call: next at DisallowedMethodCallTreeTestCases.kt:117
+                └── Disallowed method call: intValue at DisallowedMethodCallTreeTestCases.kt:117
+            """.trimIndent(),
+            output
+        )
+    }
+
+    @Test
+    fun `test repeat loop violation`() {
+        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+            DisallowedMethodCallTreeTestCases::class.java.name,
+            "repeatLoop",
+            "()V",
+            this::class.java.classLoader
+        )
+
+        assertNotNull(violation)
+        val output = violation!!.toString()
+
+        // repeat contains a loop internally
+        assertEquals(
+            """
+                Disallowed method call: repeatLoop
+                └── Loop detected at DisallowedMethodCallTreeTestCases.kt:102
+            """.trimIndent(),
+            output
+        )
+    }
+
+    @Test
+    fun `test multiple loops violation`() {
+        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+            DisallowedMethodCallTreeTestCases::class.java.name,
+            "multipleLoops",
+            "()V",
+            this::class.java.classLoader
+        )
+
+        assertNotNull(violation)
+        val output = violation!!.toString()
+
+        // Method contains two separate loops
+        assertEquals(
+            """
+                Disallowed method call: multipleLoops
+                ├── Loop detected at DisallowedMethodCallTreeTestCases.kt:108
+                └── Loop detected at DisallowedMethodCallTreeTestCases.kt:111
+            """.trimIndent(),
+            output
+        )
+    }
+
 }
