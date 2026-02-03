@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.SideEffectViolation.*
-import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.tree.*
@@ -232,32 +231,21 @@ object ConditionSafetyChecker {
         methodName: String,
         methodDescriptor: String
     ): List<SideEffectViolation> {
-        val methodNode = classNode.methods.firstOrNull {
+        val methodNode = classNode.methods.first {
             it.name == methodName && (methodDescriptor.isEmpty() || it.desc == methodDescriptor)
-        } ?: return emptyList() // todo failed to analyze method violation (introduce a new violation type)
-
-        val cfg = try {
-            buildControlFlowGraph(owner, methodNode)
-        } catch (_: Throwable) {
-            return emptyList() // todo failed to analyze method violation (introduce a new violation type) and wrap the whole method with try-catch block
         }
-
+        // Build a control-flow graph and compute back edges.
+        val cfg = buildControlFlowGraph(owner, methodNode)
         cfg.computeLoopInformation()
-        val backEdges = cfg.backEdges ?: emptySet()
-
-        if (backEdges.isEmpty()) return emptyList()
-
-        // For each back edge, find the line number of the loop header
-        // Use a set to track unique loop headers to avoid duplicates
-        val loopHeaders = cfg.loopInfo!!.loops.map { it.header }.toSet()
-        return loopHeaders.map { headerIndex ->
+        val backEdges = cfg.backEdges!!
+        // For each back edge, find the line number of the loop header.
+        val uniqueLoopHeaders = backEdges.map { it.target }.distinct()
+        return uniqueLoopHeaders.map { headerIndex ->
             val headerBlock = cfg.basicBlocks[headerIndex]
-
             // First, try to find a line number in the header block itself.
             var lineNumber = headerBlock.range.firstNotNullOfOrNull {
                 cfg.instructions.get(it) as? LineNumberNode
             }?.line
-
             // If not found, search backward through all instructions before the header.
             if (lineNumber == null) {
                 val headerStartIndex = headerBlock.range.first()
@@ -265,7 +253,7 @@ object ConditionSafetyChecker {
                     cfg.instructions.get(it) as? LineNumberNode
                 }?.line
             }
-
+            // Construct a violation.
             LoopDetected(classNode.sourceFile, lineNumber ?: -1)
         }
     }
