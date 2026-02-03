@@ -320,6 +320,11 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
             if (isThreadContainerClass(className)) return true
             return false
         }
+        // Old legacy Java std library for CORBA,
+        // for instance, `org/omg/stub/javax/management`;
+        // can appear on Java 8 when JMX is used.
+        if (className.startsWith("org.omg.")) return false
+
         // We do not need to instrument most standard Kotlin classes.
         // However, we need to inject the Lincheck analysis into the classes
         // related to collections, iterators, random and coroutines.
