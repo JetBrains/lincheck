@@ -139,6 +139,15 @@ sealed class SideEffectViolation {
     ) : SideEffectViolation() {
         override fun toString() = "Loop detected at $fileNameOrUnknown:$lineNumber"
     }
+
+    data class AnalysisFailed(
+        val reason: String
+    ) : SideEffectViolation() {
+        override val fileName = null
+        override val lineNumber = -1
+
+        override fun toString() = "Analysis failed: $reason"
+    }
 }
 
 /**
@@ -167,13 +176,27 @@ object ConditionSafetyChecker {
         methodName: String,
         methodDescriptor: String,
         classLoader: ClassLoader,
-    ): DisallowedMethodCall? = checkMethodForSideEffectsInternal(
-        className = className,
-        methodName = methodName,
-        methodDescriptor = methodDescriptor,
-        classLoader = classLoader,
-        maxCallDepth = 5,
-    )
+    ): DisallowedMethodCall? = try {
+        checkMethodForSideEffectsInternal(
+            className = className,
+            methodName = methodName,
+            methodDescriptor = methodDescriptor,
+            classLoader = classLoader,
+            maxCallDepth = 5,
+        )
+    } catch (t: Throwable) {
+        DisallowedMethodCall(
+            fileName = null,
+            lineNumber = -1,
+            owner = className,
+            methodName = methodName,
+            causes = listOf(
+                AnalysisFailed(
+                    reason = "${t.javaClass.simpleName}: ${t.message}"
+                )
+            )
+        )
+    }
 
     /**
      * Analyzes method bytecode for side effects (writes, disallowed calls).
