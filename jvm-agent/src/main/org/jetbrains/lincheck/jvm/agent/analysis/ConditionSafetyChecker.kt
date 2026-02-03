@@ -183,6 +183,8 @@ object ConditionSafetyChecker {
             methodDescriptor = methodDescriptor,
             classLoader = classLoader,
             maxCallDepth = 5,
+            callerFileName = null,
+            callerLineNumber = -1
         )
     } catch (t: Throwable) {
         DisallowedMethodCall(
@@ -207,7 +209,9 @@ object ConditionSafetyChecker {
         methodName: String,
         methodDescriptor: String,
         classLoader: ClassLoader,
-        maxCallDepth: Int
+        maxCallDepth: Int,
+        callerFileName: String?,
+        callerLineNumber: Int
     ): DisallowedMethodCall? {
         // Load class bytecode.
         val classBytes = loadClassBytes(className, classLoader)
@@ -235,8 +239,8 @@ object ConditionSafetyChecker {
             null
         } else {
             DisallowedMethodCall(
-                fileName = null,
-                lineNumber = -1,
+                fileName = callerFileName,
+                lineNumber = callerLineNumber,
                 owner = className.toCanonicalClassName(),
                 methodName = methodName,
                 causes = allViolations
@@ -432,7 +436,9 @@ object ConditionSafetyChecker {
                 methodName = name,
                 methodDescriptor = descriptor,
                 classLoader = classLoader,
-                maxCallDepth = maxCallDepth - 1
+                maxCallDepth = maxCallDepth - 1,
+                callerFileName = fileName,
+                callerLineNumber = currentLineNumber
             )
             methodCallViolationTree?.let { violations.add(it) }
         }

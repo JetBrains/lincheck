@@ -65,7 +65,7 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: callsMethodThatWritesField
-                └── Disallowed method call: simpleFieldWrite
+                └── Disallowed method call: simpleFieldWrite at DisallowedMethodCallTreeTestCases.kt:31
                     └── Field write: counter at DisallowedMethodCallTreeTestCases.kt:26
             """.trimIndent(),
             output
@@ -109,8 +109,8 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: level1
-                └── Disallowed method call: level2
-                    └── Disallowed method call: level3
+                └── Disallowed method call: level2 at DisallowedMethodCallTreeTestCases.kt:52
+                    └── Disallowed method call: level3 at DisallowedMethodCallTreeTestCases.kt:47
                         └── Field write: counter at DisallowedMethodCallTreeTestCases.kt:42
             """.trimIndent(),
             output
@@ -133,8 +133,8 @@ class DisallowedMethodCallTreeTest {
             """
                 Disallowed method call: complexCase
                 ├── Array write: at DisallowedMethodCallTreeTestCases.kt:57
-                └── Disallowed method call: callsMethodThatWritesField
-                    └── Disallowed method call: simpleFieldWrite
+                └── Disallowed method call: callsMethodThatWritesField at DisallowedMethodCallTreeTestCases.kt:58
+                    └── Disallowed method call: simpleFieldWrite at DisallowedMethodCallTreeTestCases.kt:31
                         └── Field write: counter at DisallowedMethodCallTreeTestCases.kt:26
             """.trimIndent(),
             output
@@ -244,8 +244,8 @@ class DisallowedMethodCallTreeTest {
         assertEquals(
             """
                 Disallowed method call: forEachLoop
-                ├── Loop detected at DisallowedMethodCallTreeTestCases.kt:117
                 ├── Array write: at DisallowedMethodCallTreeTestCases.kt:94
+                ├── Loop detected at DisallowedMethodCallTreeTestCases.kt:117
                 ├── Disallowed method call: iterator at DisallowedMethodCallTreeTestCases.kt:117
                 ├── Disallowed method call: hasNext at DisallowedMethodCallTreeTestCases.kt:117
                 ├── Disallowed method call: next at DisallowedMethodCallTreeTestCases.kt:117
