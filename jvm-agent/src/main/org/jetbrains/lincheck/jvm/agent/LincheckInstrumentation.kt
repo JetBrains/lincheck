@@ -597,8 +597,14 @@ object LincheckInstrumentation {
         if (!isInitialized) {
             return false
         }
+        val expectedClassLoaders = Collections.newSetFromMap<ClassLoader>(IdentityHashMap())
+        var loader: ClassLoader? = classLoader
+        while (loader != null) {
+            expectedClassLoaders.add(loader)
+            loader = loader.parent
+        }
         return instrumentation.allLoadedClasses.any {
-            it.name == canonicalClassName && it.classLoader === classLoader
+            it.name == canonicalClassName && expectedClassLoaders.contains(it.classLoader)
         }
     }
 
