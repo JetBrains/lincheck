@@ -170,7 +170,7 @@ open class ObjectEntry(
  * the identity hash code [ObjectEntry.objectHashCode] is stored in the lower 32-bits.
  */
 val ObjectEntry.objectId: ObjectID get() =
-    (objectNumber.toLong() shl 32)
+    (objectNumber.toLong() shl 32) //TODO: Fix objectID and make object registry use objectNumber only
 
 /**
  * Extracts and returns the object number from the given object id.

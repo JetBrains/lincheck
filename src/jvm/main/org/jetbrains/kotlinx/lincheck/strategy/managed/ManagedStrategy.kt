@@ -139,6 +139,8 @@ internal abstract class ManagedStrategy(
     // Whether an additional information requires for the trace construction should be collected.
     protected var collectTrace = false
 
+    protected open val trackFinalFields = false
+
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
 
@@ -1611,7 +1613,7 @@ internal abstract class ManagedStrategy(
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldDescriptor: FieldDescriptor): Boolean =
-      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && !fieldDescriptor.isFinal
+      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && (trackFinalFields || !fieldDescriptor.isFinal)
 
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects

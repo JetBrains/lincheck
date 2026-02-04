@@ -74,6 +74,8 @@ internal class EventStructureStrategy(
     override val parkingTracker: ParkingTracker =
         EventStructureParkingTracker(eventStructure)
 
+    override val trackFinalFields = true
+
     val stats = Stats()
 
     override fun shouldInvokeBeforeEvent(): Boolean {
