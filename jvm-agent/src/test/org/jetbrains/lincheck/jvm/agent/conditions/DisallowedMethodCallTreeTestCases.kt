@@ -64,4 +64,52 @@ object DisallowedMethodCallTreeTestCases {
             // synchronized block
         }
     }
+
+    @JvmStatic
+    fun simpleLoop() {
+        var sum = 0
+        for (i in 1..10) {
+            sum += i
+        }
+    }
+
+    @JvmStatic
+    fun whileLoopExample() {
+        var i = 0
+        while (i < 10) {
+            i++
+        }
+    }
+
+    @JvmStatic
+    fun loopWithFieldWrite() {
+        var sum = 0
+        for (i in 1..5) {
+            sum += i
+        }
+    }
+
+    @JvmStatic
+    fun forEachLoop() {
+        val list = listOf(1, 2, 3, 4, 5)
+        var sum = 0
+        list.forEach { sum += it }
+    }
+
+    @JvmStatic
+    fun repeatLoop() {
+        var sum = 0
+        repeat(10) { sum += it }
+    }
+
+    @JvmStatic
+    fun multipleLoops() {
+        var sum = 0
+        for (i in 1..5) {
+            sum += i
+        }
+        for (j in 1..3) {
+            sum += j
+        }
+    }
 }

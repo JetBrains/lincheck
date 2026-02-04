@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.SideEffectViolation.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
+import org.objectweb.asm.tree.*
 
 /**
  * Represents a side-effect violation found during bytecode analysis.
@@ -131,6 +132,22 @@ sealed class SideEffectViolation {
     ) : SideEffectViolation() {
         override fun toString() = "Method $methodName is not final and can be overridden at runtime at $fileNameOrUnknown:$lineNumber"
     }
+
+    data class LoopDetected(
+        override val fileName: String?,
+        override val lineNumber: Int
+    ) : SideEffectViolation() {
+        override fun toString() = "Loop detected at $fileNameOrUnknown:$lineNumber"
+    }
+
+    data class AnalysisFailed(
+        val reason: String
+    ) : SideEffectViolation() {
+        override val fileName = null
+        override val lineNumber = -1
+
+        override fun toString() = "Analysis failed: $reason"
+    }
 }
 
 /**
@@ -159,13 +176,29 @@ object ConditionSafetyChecker {
         methodName: String,
         methodDescriptor: String,
         classLoader: ClassLoader,
-    ): DisallowedMethodCall? = checkMethodForSideEffectsInternal(
-        className = className,
-        methodName = methodName,
-        methodDescriptor = methodDescriptor,
-        classLoader = classLoader,
-        maxCallDepth = 5,
-    )
+    ): DisallowedMethodCall? = try {
+        checkMethodForSideEffectsInternal(
+            className = className,
+            methodName = methodName,
+            methodDescriptor = methodDescriptor,
+            classLoader = classLoader,
+            maxCallDepth = 5,
+            callerFileName = null,
+            callerLineNumber = -1
+        )
+    } catch (t: Throwable) {
+        DisallowedMethodCall(
+            fileName = null,
+            lineNumber = -1,
+            owner = className,
+            methodName = methodName,
+            causes = listOf(
+                AnalysisFailed(
+                    reason = "${t.javaClass.simpleName}: ${t.message}"
+                )
+            )
+        )
+    }
 
     /**
      * Analyzes method bytecode for side effects (writes, disallowed calls).
@@ -176,7 +209,9 @@ object ConditionSafetyChecker {
         methodName: String,
         methodDescriptor: String,
         classLoader: ClassLoader,
-        maxCallDepth: Int
+        maxCallDepth: Int,
+        callerFileName: String?,
+        callerLineNumber: Int
     ): DisallowedMethodCall? {
         // Load class bytecode.
         val classBytes = loadClassBytes(className, classLoader)
@@ -184,25 +219,69 @@ object ConditionSafetyChecker {
             val causes = listOf(ClassNotAccessible(null, -1, className))
             return DisallowedMethodCall(null, -1, className.toInternalClassName(), methodName, causes)
         }
-        // Analyze the method's bytecode for violations.
-        val reader = ClassReader(classBytes)
+
+        // Parse class to check for loops
+        val classNode = ClassNode()
+        ClassReader(classBytes).accept(classNode, ClassReader.SKIP_FRAMES)
+        val loopViolations = checkForLoops(className.toInternalClassName(), classNode, methodName, methodDescriptor)
+
+        // Analyze the method's bytecode for other violations
         val safetyAnalyzer = SafetyClassAnalyzer(
             targetMethodName = methodName,
             targetMethodDescriptor = methodDescriptor,
             classLoader = classLoader,
             maxCallDepth = maxCallDepth
         )
-        reader.accept(safetyAnalyzer, ClassReader.SKIP_FRAMES)
-        return if (safetyAnalyzer.violations.isEmpty()) {
+        ClassReader(classBytes).accept(safetyAnalyzer, ClassReader.SKIP_FRAMES)
+
+        val allViolations = (loopViolations + safetyAnalyzer.violations).sortedBy { it.lineNumber }
+        return if (allViolations.isEmpty()) {
             null
         } else {
             DisallowedMethodCall(
-                fileName = null,
-                lineNumber = -1,
+                fileName = callerFileName,
+                lineNumber = callerLineNumber,
                 owner = className.toCanonicalClassName(),
                 methodName = methodName,
-                causes = safetyAnalyzer.violations
+                causes = allViolations
             )
+        }
+    }
+
+    /**
+     * Checks for loops in a method by detecting back edges in the control flow graph.
+     * Back edges indicate loops and can be detected even in irreducible CFGs.
+     */
+    private fun checkForLoops(
+        owner: String,
+        classNode: ClassNode,
+        methodName: String,
+        methodDescriptor: String
+    ): List<SideEffectViolation> {
+        val methodNode = classNode.methods.first {
+            it.name == methodName && (methodDescriptor.isEmpty() || it.desc == methodDescriptor)
+        }
+        // Build a control-flow graph and compute back edges.
+        val cfg = buildControlFlowGraph(owner, methodNode)
+        cfg.computeLoopInformation()
+        val backEdges = cfg.backEdges!!
+        // For each back edge, find the line number of the loop header.
+        val uniqueLoopHeaders = backEdges.map { it.target }.distinct()
+        return uniqueLoopHeaders.map { headerIndex ->
+            val headerBlock = cfg.basicBlocks[headerIndex]
+            // First, try to find a line number in the header block itself.
+            var lineNumber = headerBlock.range.firstNotNullOfOrNull {
+                cfg.instructions.get(it) as? LineNumberNode
+            }?.line
+            // If not found, search backward through all instructions before the header.
+            if (lineNumber == null) {
+                val headerStartIndex = headerBlock.range.first()
+                lineNumber = (headerStartIndex - 1 downTo 0).firstNotNullOfOrNull {
+                    cfg.instructions.get(it) as? LineNumberNode
+                }?.line
+            }
+            // Construct a violation.
+            LoopDetected(classNode.sourceFile, lineNumber ?: -1)
         }
     }
 
@@ -224,9 +303,21 @@ object ConditionSafetyChecker {
 
         // We need it to construct violation objects.
         private var fileName: String? = null
+        private var currentClassName: String? = null
 
         private var _violations = mutableListOf<SideEffectViolation>()
         val violations: List<SideEffectViolation> get() = _violations.distinct()
+
+        override fun visit(
+            version: Int,
+            access: Int,
+            name: String,
+            signature: String?,
+            superName: String?,
+            interfaces: Array<out String>?
+        ) {
+            currentClassName = name
+        }
 
         override fun visitSource(source: String?, debug: String?) {
             if (source != null) {
@@ -255,7 +346,7 @@ object ConditionSafetyChecker {
                 return null
             }
             // Analyze this method's instructions.
-            return SafetyMethodAnalyzer(fileName, _violations, classLoader, maxCallDepth)
+            return SafetyMethodAnalyzer(fileName, currentClassName, _violations, classLoader, maxCallDepth)
         }
     }
 
@@ -265,6 +356,7 @@ object ConditionSafetyChecker {
      */
     private class SafetyMethodAnalyzer(
         private val fileName: String?,
+        private val currentClassName: String?,
         private val violations: MutableList<SideEffectViolation>,
         private val classLoader: ClassLoader,
         private val maxCallDepth: Int
@@ -285,7 +377,9 @@ object ConditionSafetyChecker {
                 }
                 GETSTATIC -> {
                     // Detect static field reads of uninitialized classes.
-                    if (!isStandardLibraryClass(owner) && !isClassAlreadyLoaded(owner, classLoader)) {
+                    // Allow reading from the same class (it will be initialized by the time the method is called)
+                    val isSameClass = currentClassName != null && owner == currentClassName
+                    if (!isSameClass && !isStandardLibraryClass(owner) && !isClassAlreadyLoaded(owner, classLoader)) {
                         violations.add(
                             UninitializedClassStaticFieldRead(fileName, currentLineNumber, owner, name)
                         )
@@ -342,7 +436,9 @@ object ConditionSafetyChecker {
                 methodName = name,
                 methodDescriptor = descriptor,
                 classLoader = classLoader,
-                maxCallDepth = maxCallDepth - 1
+                maxCallDepth = maxCallDepth - 1,
+                callerFileName = fileName,
+                callerLineNumber = currentLineNumber
             )
             methodCallViolationTree?.let { violations.add(it) }
         }
