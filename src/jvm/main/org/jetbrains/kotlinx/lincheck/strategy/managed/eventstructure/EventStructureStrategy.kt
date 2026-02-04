@@ -74,7 +74,7 @@ internal class EventStructureStrategy(
     override val parkingTracker: ParkingTracker =
         EventStructureParkingTracker(eventStructure)
 
-    override val trackFinalFields = true
+    override val trackFinalFields = false
 
     val stats = Stats()
 
