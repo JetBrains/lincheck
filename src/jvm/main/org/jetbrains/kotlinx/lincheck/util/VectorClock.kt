@@ -162,7 +162,11 @@ private class ThreadMapClock(private val defaultVal: Int = -1) : MutableVectorCl
         clock.clear();
     }
 
-    fun copy() = ThreadMapClock().apply { copyFrom(this) }
+    fun copy(): ThreadMapClock  {
+        val newClock = ThreadMapClock()
+        newClock.clock = clock.toMutableMap()
+        return newClock
+    }
 
     private fun copyFrom(other: ThreadMapClock) {
         clock = other.clock.toMutableMap();
