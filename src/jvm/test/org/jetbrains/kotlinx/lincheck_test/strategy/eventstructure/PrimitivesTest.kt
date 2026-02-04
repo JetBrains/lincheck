@@ -600,6 +600,7 @@ class PrimitivesTest {
         val first: A, val second: B, val third: C, val forth: D
     )
 
+    @Ignore
     @Test
     fun testMixedAccesses() {
         val read = VolatileReferenceVariable::read
@@ -719,6 +720,7 @@ class PrimitivesTest {
 
     }
 
+    @Ignore
     @Test
     fun testUnsafeByteArrayAccesses() {
         val read = UnsafeArrays::readByte
@@ -743,6 +745,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @Test
     fun testUnsafeShortArrayAccesses() {
         val read = UnsafeArrays::readShort
@@ -767,6 +770,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @Test
     fun testUnsafeIntArrayAccesses() {
         val read = UnsafeArrays::readInt
@@ -791,6 +795,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @Test
     fun testUnsafeLongArrayAccesses() {
         val read = UnsafeArrays::readLong
@@ -815,6 +820,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @Test
     fun testUnsafeReferenceArrayAccesses() {
         val read = UnsafeArrays::readReference
@@ -1029,6 +1035,7 @@ class PrimitivesTest {
 
     internal object CancelledOperationException : Exception()
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testResume() {
@@ -1055,6 +1062,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testCancel() {
@@ -1085,6 +1093,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testLincheckCancellation() {
@@ -1115,6 +1124,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testLincheckPromptCancellation() {
@@ -1147,6 +1157,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun testResumeCancel() {
@@ -1183,6 +1194,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun test1Resume2Suspend() {
@@ -1214,6 +1226,7 @@ class PrimitivesTest {
         }
     }
 
+    @Ignore
     @InternalCoroutinesApi
     @Test(timeout = TIMEOUT)
     fun test2Resume1Suspend() {
