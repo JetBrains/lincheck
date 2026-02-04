@@ -146,6 +146,7 @@ fun Strategy.verify(scenario: ExecutionScenario, result: InvocationResult, verif
     val analysisProfile = if (this is ManagedStrategy) this.analysisProfile else AnalysisProfile.DEFAULT
     return when (result) {
         is SpinCycleFoundAndReplayRequired -> null
+        is InconsistentInvocationResult -> null
         is CompletedInvocationResult ->
             if (!verifier.verifyResults(scenario, result.results)) {
                 val (trace, traceResult) = tryCollectTrace(result)
