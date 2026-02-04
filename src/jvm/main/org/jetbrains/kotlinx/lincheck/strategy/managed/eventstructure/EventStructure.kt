@@ -148,7 +148,7 @@ internal class EventStructure(
         registerThread(initThreadId)
         registerThread(mainThreadId)
         root = addRootEvent()
-//        objectRegistry.initialize(root)
+        objectRegistry.initialize(root)
     }
 
 

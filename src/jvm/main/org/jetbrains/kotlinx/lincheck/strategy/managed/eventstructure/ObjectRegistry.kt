@@ -34,8 +34,22 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     var allocationMap: MutableMap<ObjectID, AtomicThreadEvent> = mutableMapOf()
     var objMap: MutableMap<ObjectID, OpaqueValue> = mutableMapOf()
 
+    private var initEvent: AtomicThreadEvent? = null
+
+    fun initialize(initEvent: AtomicThreadEvent) {
+        require(initEvent.label is InitializationLabel)
+        this.initEvent = initEvent
+    }
+
     override fun registerExternalObject(obj: Any): ObjectEntry {
-        return super.registerExternalObject(obj).also { addEntries(obj, it.objectId) }
+        return super.registerExternalObject(obj).also {
+            val objectID = it.objectId;
+            // External object are related to the
+            allocationMap[objectID] = initEvent!!
+            // TODO: See if we need this
+            (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objectID)
+            objMap[objectID] = obj.opaque()
+        }
     }
 
     override fun registerNewObject(obj: Any): ObjectEntry {
