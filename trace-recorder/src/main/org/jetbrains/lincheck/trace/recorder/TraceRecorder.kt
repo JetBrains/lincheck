@@ -71,15 +71,9 @@ object TraceRecorder {
         }
 
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        val eventTracker = TraceCollectingEventTracker(
-            mode = recordingMode,
-            layout = if (isInLiveDebuggerMode) TraceDataLayout.FLAT else TraceDataLayout.TREE,
-            context = createTraceContext(),
-            traceStreamingFilePath =
-                if (recordingMode is TraceRecordingMode.BinaryFileStream) recordingMode.streamingFilePath else null
-        )
-        val session = TraceRecorderSession(eventTracker)
+        val session = createSession(recordingMode)
             .also { this.session = it }
+        val eventTracker = session.eventTracker
 
         var currentThreadDescriptor: ThreadDescriptor? = null
         when (startMode) {
@@ -167,5 +161,28 @@ object TraceRecorder {
     private fun createTraceContext(): TraceContext {
         // TODO: currently we always re-use the same global context
         return LincheckInstrumentation.context
+    }
+
+    private fun createSession(recordingMode: TraceRecordingMode): TraceRecorderSession {
+        val eventTracker = TraceCollectingEventTracker(
+            mode = recordingMode,
+            layout = if (isInLiveDebuggerMode) TraceDataLayout.FLAT else TraceDataLayout.TREE,
+            context = createTraceContext(),
+            traceStreamingFilePath =
+                if (recordingMode is TraceRecordingMode.BinaryFileStream) recordingMode.streamingFilePath else null
+        )
+
+        var tcpServer: TcpTraceServer? = null
+        if (recordingMode is TraceRecordingMode.BinaryTcpStream) {
+            try {
+                tcpServer = TcpTraceServer(eventTracker.subscriptionService!!)
+                Logger.info { "Started TCP trace streaming server on port $${tcpServer.port}" }
+            } catch (t: Throwable) {
+                Logger.error { "Cannot start TCP trace trace server" }
+                Logger.error(t)
+            }
+        }
+
+        return TraceRecorderSession(eventTracker, tcpServer)
     }
 }
