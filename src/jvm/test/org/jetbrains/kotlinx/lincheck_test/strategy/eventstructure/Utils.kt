@@ -87,6 +87,11 @@ internal fun createVerifier(testScenario: ExecutionScenario?, verify: (Execution
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             require(testScenario == scenario)
             require(results != null)
+            results.parallelResults.flatten().forEach {
+                if(it is ExceptionResult) {
+                    throw it.throwable
+                }
+            }
             return verify(results)
         }
 
