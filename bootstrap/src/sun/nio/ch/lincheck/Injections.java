@@ -298,6 +298,35 @@ public class Injections {
     }
 
     /**
+     * Thread-local variable to track if we are currently evaluating a breakpoint condition.
+     * When true, breakpoint hits inside the condition evaluation should not be reported.
+     */
+    private static final ThreadLocal<Boolean> insideBreakpointCondition = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * Marks the current thread as being inside a breakpoint condition evaluation.
+     */
+    public static void enterBreakpointCondition() {
+        insideBreakpointCondition.set(true);
+    }
+
+    /**
+     * Marks the current thread as having exited a breakpoint condition evaluation.
+     */
+    public static void leaveBreakpointCondition() {
+        insideBreakpointCondition.set(false);
+    }
+
+    /**
+     * Checks if the current thread is not inside a breakpoint condition evaluation.
+     *
+     * @return true if not inside a condition evaluation, false otherwise.
+     */
+    public static boolean isNotInsideBreakpointCondition() {
+        return !insideBreakpointCondition.get();
+    }
+
+    /**
      * Registers a thread for event tracking, creating a new thread descriptor if one does not already exist.
      *
      * @param eventTracker the event tracker to associate with the thread.
@@ -771,35 +800,6 @@ public class Injections {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
         eventTracker.onMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
-    }
-
-    /**
-     * Thread-local variable to track if we are currently evaluating a breakpoint condition.
-     * When true, breakpoint hits inside the condition evaluation should not be reported.
-     */
-    private static final ThreadLocal<Boolean> insideBreakpointCondition = ThreadLocal.withInitial(() -> false);
-
-    /**
-     * Marks the current thread as being inside a breakpoint condition evaluation.
-     */
-    public static void enterBreakpointCondition() {
-        insideBreakpointCondition.set(true);
-    }
-
-    /**
-     * Marks the current thread as having exited a breakpoint condition evaluation.
-     */
-    public static void leaveBreakpointCondition() {
-        insideBreakpointCondition.set(false);
-    }
-
-    /**
-     * Checks if the current thread is not inside a breakpoint condition evaluation.
-     *
-     * @return true if not inside a condition evaluation, false otherwise.
-     */
-    public static boolean isNotInsideBreakpointCondition() {
-        return !insideBreakpointCondition.get();
     }
 
     /**

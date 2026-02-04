@@ -17,6 +17,8 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.*
 import sun.nio.ch.lincheck.*
+import kotlin.collections.forEach
+import kotlin.collections.orEmpty
 
 internal class SnapshotBreakpointTransformer(
     fileName: String,
@@ -36,8 +38,9 @@ internal class SnapshotBreakpointTransformer(
 
     override fun visitLineNumber(line: Int, start: Label) = adapter.run {
         super.visitLineNumber(line, start)
-        val breakpointSettings =
-            liveDebuggerSettings.lineBreakPoints.firstOrNull { it.lineNumber == line && it.className == className.toCanonicalClassName() }
+        val breakpointSettings = liveDebuggerSettings.lineBreakPoints.firstOrNull {
+            it.lineNumber == line && it.className == className.toCanonicalClassName()
+        }
         if (breakpointSettings == null) return@run
 
         callIfNotInsideBreakpointCondition {
@@ -46,37 +49,10 @@ internal class SnapshotBreakpointTransformer(
             } else {
                 ifStatement(
                     condition = {
-                        // Mark that we're entering condition evaluation
+                        // The condition may execute code with an installed breakpoint.
+                        // To not make a breakpoint hit, we track when we compute the condition.
                         invokeStatic(Injections::enterBreakpointCondition)
-
-                        // Extract argument names and load their values
-                        val argNames = breakpointSettings.conditionArgs.orEmpty()
-                        val argTypes = mutableListOf<Type>()
-
-                        argNames.forEach { argName ->
-                            // Find the local variable by name in the current active locals
-                            val localVar = currentActiveLocals.firstOrNull { it.name == argName }
-                            if (localVar != null) {
-                                // Load the local variable value
-                                visitVarInsn(localVar.type.getOpcode(ILOAD), localVar.index)
-                                argTypes.add(localVar.type)
-                            } else {
-                                // If variable not found, handle gracefully by skipping this condition
-                                throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpointSettings.lineNumber}")
-                            }
-                        }
-
-                        // Call the condition function with the loaded arguments
-                        invokeStatic(
-                            Type.getObjectType(breakpointSettings.conditionClassName.toInternalClassName()),
-                            Method(
-                                breakpointSettings.conditionMethodName,
-                                Type.BOOLEAN_TYPE,
-                                argTypes.toTypedArray()
-                            )
-                        )
-
-                        // Mark that we're leaving condition evaluation
+                        injectConditionCall(breakpointSettings)
                         invokeStatic(Injections::leaveBreakpointCondition)
                     },
                     thenClause = {
@@ -87,7 +63,36 @@ internal class SnapshotBreakpointTransformer(
         }
     }
 
-    private inline fun GeneratorAdapter.callIfNotInsideBreakpointCondition(block: () -> Unit) {
+    private fun GeneratorAdapter.injectConditionCall(breakpointSettings: SnapshotBreakpoint) {
+        // Extract argument names and load their values
+        val argNames = breakpointSettings.conditionArgs.orEmpty()
+        val argTypes = mutableListOf<Type>()
+
+        argNames.forEach { argName ->
+            // Find the local variable by name in the current active locals
+            val localVar = currentActiveLocals.firstOrNull { it.name == argName }
+            if (localVar != null) {
+                // Load the local variable value
+                visitVarInsn(localVar.type.getOpcode(ILOAD), localVar.index)
+                argTypes.add(localVar.type)
+            } else {
+                // If variable not found, handle gracefully by skipping this condition
+                throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpointSettings.lineNumber}")
+            }
+        }
+
+        // Call the condition function with the loaded arguments
+        invokeStatic(
+            Type.getObjectType(breakpointSettings.conditionClassName!!.toInternalClassName()),
+            Method(
+                breakpointSettings.conditionMethodName!!,
+                Type.BOOLEAN_TYPE,
+                argTypes.toTypedArray()
+            )
+        )
+    }
+
+    private fun GeneratorAdapter.callIfNotInsideBreakpointCondition(block: () -> Unit) {
         ifStatement(
             condition = {
                 invokeStatic(Injections::isNotInsideBreakpointCondition)
