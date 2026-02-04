@@ -360,7 +360,7 @@ internal class EventStructureStrategy(
         check(!isTestInstanceRegistered)
         val testInstance = (runner as ExecutionScenarioRunner).testInstance
         //NOTE: The threadID may be messed up. See how this can be fixed.
-        (objectTracker as ObjectRegistry).registerExternalObjectForThread(testInstance, eventStructure.mainThreadId)
+        (objectTracker as ObjectRegistry).registerTestInstance(testInstance, eventStructure.mainThreadId)
         isTestInstanceRegistered = true
     }
 

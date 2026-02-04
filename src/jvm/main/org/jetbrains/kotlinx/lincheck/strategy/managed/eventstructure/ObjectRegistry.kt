@@ -42,7 +42,7 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
         return super.registerNewObject(obj).also { addEntries(obj, it.objectId) }
     }
 
-    fun registerExternalObjectForThread(obj: Any, threadId: ThreadId): ObjectEntry {
+    fun registerTestInstance(obj: Any, threadId: ThreadId): ObjectEntry {
         return super.registerExternalObject(obj).also { addEntries(obj, it.objectId, threadId) }
     }
 
