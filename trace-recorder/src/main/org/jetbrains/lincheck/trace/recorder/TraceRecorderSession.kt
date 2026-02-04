@@ -37,7 +37,7 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
      * - [FromMethod] means that the tracing was started from a specific method.
      * - [Dynamic] means that the tracing was started dynamically by external request during application run.
      */
-    internal sealed class StartMode {
+    sealed class StartMode {
         data class FromMethod(
             val thread: Thread,
             val className: String,
@@ -162,13 +162,13 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
         try {
             val roots = eventTracker.getThreadRoots()
             when (mode) {
-                TraceCollectorMode.BINARY_DUMP -> {
+                is TraceRecordingMode.BinaryDump -> {
                     saveRecorderTrace(traceDumpFilePath, context, roots)
                     if (packTrace) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                TraceCollectorMode.BINARY_STREAM -> {
+                is TraceRecordingMode.BinaryStream -> {
                     check(traceDumpFilePath == eventTracker.traceStreamingFilePath) {
                         // TODO: it should be easy to support dumping to a different file later: just copy file
                         "Trace dump filename in binary stream mode should match the filename of streaming file"
@@ -177,20 +177,17 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                TraceCollectorMode.TEXT -> {
-                    printPostProcessedTrace(traceDumpFilePath, context, roots, false)
+                is TraceRecordingMode.Text -> {
+                    printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)
                 }
-                TraceCollectorMode.TEXT_VERBOSE -> {
-                    printPostProcessedTrace(traceDumpFilePath, context, roots, true)
-                }
-                TraceCollectorMode.NULL -> {}
+                TraceRecordingMode.Null -> {}
             }
             Logger.info { "Trace was saved to $traceDumpFilePath" }
         } catch (t: Throwable) {
             Logger.error { "TraceRecorder: Cannot write output file $traceDumpFilePath: ${t.message} at ${t.stackTraceToString()}" }
             return
         } finally {
-            if (mode != TraceCollectorMode.NULL) {
+            if (mode != TraceRecordingMode.Null) {
                 Logger.debug { "Trace written in ${System.currentTimeMillis() - traceWriteStartTime} ms" }
             }
         }
