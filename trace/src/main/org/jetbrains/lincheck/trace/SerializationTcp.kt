@@ -13,9 +13,12 @@ package org.jetbrains.lincheck.trace
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.util.Logger
 import java.io.*
-import java.net.Socket
 import java.net.ServerSocket
+import java.net.Socket
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.LockSupport
 import java.util.concurrent.locks.ReentrantLock
@@ -23,53 +26,90 @@ import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
 /**
- * Simplified TCP-based trace collecting strategy that streams trace data to a remote host.
- * Writes directly to TCP stream with synchronization for thread safety.
+ * TCP-based trace collecting strategy that streams trace data to multiple subscribers.
+ *
+ * This class maintains a pool of subscribers that receive trace data.
+ * Recorded trace points are first written into a bounded queue
+ * and then polled and served to each subscriber by a background thread.
+ * As a simple backpressure defense mechanism, when the queue is full, the oldest trace points are dropped.
+ *
+ * Limitations:
+ * - supports only [TRSnapshotLineBreakpointTracePoint] trace points;
+ * - trace points are streamed as a flat list (no tree structure).
+ *
+ * @param context the trace context containing descriptors and metadata
+ * @param queueCapacity the maximum number of trace points to the buffer.
  */
 class TcpStreamingTraceCollecting(
-    private val host: String,
-    private val port: Int,
     val context: TraceContext,
-) : TraceCollectingStrategy, ContextSavingState {
+    private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
+) : TraceCollectingStrategy, TcpTraceSubscriptionService, Closeable {
 
-    private val socket: Socket
-    private val outputStream: DataOutputStream
-    private val writer: TcpTraceWriter
+    private val subscribers = mutableListOf<TraceSubscriber>()
+    private val tracePointQueue = ArrayBlockingQueue<TRSnapshotLineBreakpointTracePoint>(queueCapacity)
+
+    private val recordedPoints = AtomicInteger(0)
+    private val droppedPoints = AtomicLong(0)
 
     private val lock = ReentrantLock()
 
-    private val points = AtomicInteger(0)
+    @Volatile
+    private var running = true
 
-    init {
+    private val writerThread: Thread = thread(name = "TcpTraceWriter", isDaemon = true) {
+        writerThreadLoop()
+    }
+
+    override fun addSubscriber(socket: Socket): TraceSubscriber? = lock.withLock {
         try {
-            // Establish TCP connection
-            socket = Socket(host, port)
             socket.tcpNoDelay = true // Disable Nagle's algorithm for lower latency
-            outputStream = DataOutputStream(BufferedOutputStream(socket.getOutputStream(), SOCKET_OUTPUT_BUFFER_SIZE))
-            writer = TcpTraceWriter(context, this, outputStream, outputStream)
+
+            val outputStream = DataOutputStream(BufferedOutputStream(socket.getOutputStream(), SOCKET_OUTPUT_BUFFER_SIZE))
+
+            // Create a trace context state for this subscriber (each subscriber gets an independent state)
+            val subscriberContextState = SubscriberContextState()
+            val writer = TcpTraceWriter(context, subscriberContextState, outputStream, outputStream)
 
             // Send header
-            lock.withLock {
-                outputStream.writeLong(TRACE_MAGIC)
-                outputStream.writeLong(TRACE_VERSION)
-                outputStream.flush()
-            }
+            outputStream.writeLong(TRACE_MAGIC)
+            outputStream.writeLong(TRACE_VERSION)
+            outputStream.flush()
 
-            Logger.info { "TCP trace streaming initialized to $host:$port" }
+            val subscriber = TraceSubscriber(socket, outputStream, writer).also {
+                subscribers.add(it)
+            }
+            Logger.info { "Added TCP trace subscriber from ${socket.remoteSocketAddress}. Total subscribers: ${subscribers.size}." }
+
+            return subscriber
         } catch (e: IOException) {
-            Logger.error { "Failed to initialize TCP streaming to $host:$port: ${e.message}" }
-            throw e
+            Logger.error { "Failed to add subscriber from ${socket.remoteSocketAddress}" }
+            Logger.error(e)
+            try {
+                socket.close()
+            } catch (_: IOException) {
+                Logger.error { "Failed to close subscriber socket" }
+                Logger.error(e)
+            }
+            return null
         }
     }
 
-    override fun registerCurrentThread(threadId: Int) {
-        lock.withLock {
-            context.setThreadName(threadId, Thread.currentThread().name)
-        }
+    override fun removeSubscriber(subscriber: TraceSubscriber): Unit = lock.withLock {
+        subscriber.close()
+        subscribers.remove(subscriber)
+        Logger.info { "Removed TCP trace subscriber. Total subscribers: ${subscribers.size}" }
+    }
+
+    override fun subscriberCount(): Int = lock.withLock {
+        subscribers.count { it.isActive }
+    }
+
+    override fun registerCurrentThread(threadId: Int) = lock.withLock {
+        context.setThreadName(threadId, Thread.currentThread().name)
     }
 
     override fun completeThread(thread: Thread) {
-        // No-op: we write directly without per-thread buffers
+        // No-op: all threads write directly to the shared queue, no per-thread buffers to flush
     }
 
     override fun tracePointCreated(parent: TRContainerTracePoint?, created: TRTracePoint) {
@@ -77,19 +117,15 @@ class TcpStreamingTraceCollecting(
             "Only snapshot line breakpoints are supported by TCP trace collection strategy"
         }
 
-        lock.withLock {
-            points.incrementAndGet()
+        recordedPoints.incrementAndGet()
 
-            // Write block start
-            outputStream.writeKind(ObjectKind.BLOCK_START)
-            outputStream.writeInt(created.threadId)
-
-            // Write trace point
-            created.save(writer)
-
-            // Write block end
-            outputStream.writeKind(ObjectKind.BLOCK_END)
-            outputStream.flush()
+        // Try to add to the queue; if full, drop the oldest element and try again (backpressure defense)
+        while (!tracePointQueue.offer(created)) {
+            val dropped = tracePointQueue.poll()
+            if (dropped != null) {
+                droppedPoints.incrementAndGet()
+                Logger.warn { "Trace point queue full, dropping oldest trace point" }
+            }
         }
     }
 
@@ -100,62 +136,177 @@ class TcpStreamingTraceCollecting(
     }
 
     override fun traceEnded() {
-        lock.withLock {
-            try {
-                // Send EOF marker
-                outputStream.writeKind(ObjectKind.EOF)
-                outputStream.flush()
-                outputStream.close()
-                socket.close()
-            } catch (e: IOException) {
-                Logger.error { "Error closing TCP connection: ${e.message}" }
-            }
+        // Signal the writer thread to stop
+        running = false
 
-            Logger.info { "TCP trace streaming completed. Points: ${points.get()}" }
+        // Wait for the writer thread to finish processing remaining items
+        try {
+            writerThread.join(5_000) // Wait up to 5 seconds
+        } catch (_: InterruptedException) {
+            Logger.warn { "Interrupted while waiting for writer thread to finish" }
+        }
+        if (writerThread.isAlive) {
+            Logger.warn { "TCP trace writer thread did not finish in time" }
+        }
+
+        // Send EOF to all subscribers and close them
+        lock.withLock {
+            for (subscriber in subscribers) {
+                if (subscriber.isActive) {
+                    subscriber.close()
+                }
+            }
+            subscribers.clear()
+        }
+
+        Logger.info {
+            val recorded = recordedPoints.get()
+            val dropped = droppedPoints.get()
+            "TCP trace streaming completed: recorded $recorded trace points, dropped $dropped trace points"
         }
     }
 
-    // `ContextSavingState` implementation.
-    // TODO: for simplicity, we do not attempt deduplication or interning;
+    override fun close() {
+        traceEnded()
+    }
+
+    private fun writerThreadLoop() {
+        while (running || tracePointQueue.isNotEmpty()) {
+            try {
+                val tracePoint = tracePointQueue.poll(100, TimeUnit.MILLISECONDS) ?: continue
+                writeTracePointToAllSubscribers(tracePoint)
+            } catch (_: InterruptedException) {
+                Logger.info { "Trace writer thread interrupted" }
+                break
+            } catch (t: Throwable) {
+                Logger.error { "Error in trace writer thread" }
+                Logger.error(t)
+            }
+        }
+
+        // Drain remaining items
+        while (tracePointQueue.isNotEmpty()) {
+            try {
+                val tracePoint = tracePointQueue.poll() ?: break
+                writeTracePointToAllSubscribers(tracePoint)
+            } catch (t: Throwable) {
+                Logger.error { "Error in trace writer thread" }
+                Logger.error(t)
+            }
+        }
+    }
+
+    private fun writeTracePointToAllSubscribers(tracePoint: TRSnapshotLineBreakpointTracePoint) {
+        val subscribers = lock.withLock {
+            subscribers.apply { retainAll { it.isActive } }.toList()
+        }
+
+        for (subscriber in subscribers) {
+            if (!subscriber.isActive) {
+                // simply skip inactive subscribers,
+                // next trace point writer will clean up inactive subscribers
+                continue
+            }
+
+            try {
+                // Write block start
+                subscriber.outputStream.writeKind(ObjectKind.BLOCK_START)
+                subscriber.outputStream.writeInt(tracePoint.threadId)
+
+                // Write trace point
+                tracePoint.save(subscriber.writer)
+
+                // Write block end
+                subscriber.outputStream.writeKind(ObjectKind.BLOCK_END)
+                subscriber.outputStream.flush()
+            } catch (e: IOException) {
+                Logger.error { "Error writing to subscriber ${subscriber.socket.remoteSocketAddress}" }
+                Logger.error(e)
+                subscriber.deactivate()
+            }
+        }
+    }
+
+    companion object {
+        private const val DEFAULT_QUEUE_CAPACITY = 1024
+    }
+}
+
+interface TcpTraceSubscriptionService {
+    fun addSubscriber(socket: Socket): TraceSubscriber?
+    fun removeSubscriber(subscriber: TraceSubscriber)
+    fun subscriberCount(): Int
+}
+
+/**
+ * Represents a trace data subscriber.
+ *
+ * @param socket the underlying TCP socket to send trace data to.
+ * @param outputStream the data output stream for writing to the socket.
+ * @param writer the trace writer for serializing trace points.
+ * @param connectedAt timestamp when the subscriber connected.
+ */
+class TraceSubscriber internal constructor(
+    val socket: Socket,
+    val outputStream: DataOutputStream,
+    internal val writer: TcpTraceWriter,
+    val connectedAt: Long = System.currentTimeMillis(),
+) : Closeable {
+    @Volatile
+    var isActive: Boolean = true
+        private set
+
+    fun deactivate() {
+        isActive = false
+    }
+
+    override fun close() {
+        deactivate()
+        writer.close()
+        try {
+            socket.close()
+        } catch (e: IOException) {
+            Logger.error { "Error closing subscriber socket" }
+            Logger.error(e)
+        }
+    }
+}
+
+/**
+ * Per-subscriber trace context state.
+ * Each subscriber maintains its own state since we don't deduplicate across subscribers.
+ */
+private class SubscriberContextState : ContextSavingState {
+    // TODO: for simplicity, we do not attempt deduplication or string interning;
     //       just store all data in-place whenever requested.
-
-    override fun isClassDescriptorSaved(id: Int): Boolean = false
-
-    override fun markClassDescriptorSaved(id: Int): Unit = Unit
-
-    override fun isMethodDescriptorSaved(id: Int): Boolean = false
-
-    override fun markMethodDescriptorSaved(id: Int): Unit = Unit
-
-    override fun isFieldDescriptorSaved(id: Int): Boolean = false
-
-    override fun markFieldDescriptorSaved(id: Int): Unit = Unit
-
-    override fun isVariableDescriptorSaved(id: Int): Boolean = false
-
-    override fun markVariableDescriptorSaved(id: Int): Unit = Unit
-
-    override fun isCodeLocationSaved(id: Int): Boolean = false
-
-    override fun markCodeLocationSaved(id: Int): Unit = Unit
+    //       See JBRes-7900 for details.
 
     private val stringId = AtomicInteger(1)
     private val accessPathId = AtomicInteger(1)
 
-    override fun isStringSaved(value: String): Int = -(stringId.getAndIncrement())
+    override fun isClassDescriptorSaved(id: Int): Boolean = false
+    override fun markClassDescriptorSaved(id: Int): Unit = Unit
+    override fun isMethodDescriptorSaved(id: Int): Boolean = false
+    override fun markMethodDescriptorSaved(id: Int): Unit = Unit
+    override fun isFieldDescriptorSaved(id: Int): Boolean = false
+    override fun markFieldDescriptorSaved(id: Int): Unit = Unit
+    override fun isVariableDescriptorSaved(id: Int): Boolean = false
+    override fun markVariableDescriptorSaved(id: Int): Unit = Unit
+    override fun isCodeLocationSaved(id: Int): Boolean = false
+    override fun markCodeLocationSaved(id: Int): Unit = Unit
 
+    override fun isStringSaved(value: String): Int = -(stringId.getAndIncrement())
     override fun markStringSaved(value: String): Unit = Unit
 
     override fun isAccessPathSaved(value: AccessPath): Int = -(accessPathId.getAndIncrement())
-
     override fun markAccessPathSaved(value: AccessPath): Unit = Unit
 }
 
 /**
- * Simple direct trace writer that writes to a DataOutputStream without buffering.
- * Used for TCP streaming where we write directly to the network stream.
+ * Trace writer for trace TCP streaming
+ * Performs simple direct writes to a [DataOutputStream] without buffering.
  */
-private class TcpTraceWriter(
+internal class TcpTraceWriter(
     context: TraceContext,
     contextState: ContextSavingState,
     dataOutput: DataOutput,
@@ -173,19 +324,14 @@ private class TcpTraceWriter(
     override fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long) {
         // No index for TCP streaming
     }
-
-    override fun close() {
-        // Do not close the underlying stream
-    }
 }
 
 /**
  * Incremental TCP trace reader that reads trace data from a TCP stream.
  *
- * Designed for live debugger mode where only [TRSnapshotLineBreakpointTracePoint] trace points
- * are streamed as a flat list (no tree structure).
- *
- * The reader runs in a background thread and continuously reads from the TCP stream.
+ * Limitations:
+ * - supports only [TRSnapshotLineBreakpointTracePoint] trace points;
+ * - trace points are streamed as a flat list (no tree structure).
  *
  * @param socket the TCP socket to read from.
  */
@@ -454,19 +600,24 @@ class TcpTraceReader(private val socket: Socket) : Closeable {
 }
 
 /**
- * TCP server that listens for incoming trace connections and delegates reading to [TcpTraceReader].
+ * TCP server that listens for incoming trace reader connections.
  *
- * This class separates the concern of accepting connections from reading trace data.
- * When a client connects, it creates a [TcpTraceReader] to handle the incoming trace stream.
+ * The server maintains a [TcpStreamingTraceCollecting] instance
+ * and registers incoming connections as subscribers to receive trace data.
  *
- * @param context the trace context
  * @param port the port to listen on (0 for any available port)
+ * @param subscriptionService the service to register trace data subscribers.
  */
 class TcpTraceServer(
-    val port: Int = 0,
-    val onConnection: (TcpTraceReader) -> Unit,
+    val subscriptionService: TcpTraceSubscriptionService,
+    port: Int = 0,
 ) : Closeable {
     private val serverSocket: ServerSocket = ServerSocket(port)
+
+    /**
+     * The actual port the server is listening on.
+     */
+    val port: Int get() = serverSocket.localPort
 
     @Volatile
     private var running = true
@@ -491,8 +642,8 @@ class TcpTraceServer(
         Logger.info { "Waiting for TCP trace connection on port $port..." }
         try {
             val socket = serverSocket.accept()
-            Logger.info { "TCP trace client connected from ${socket.remoteSocketAddress}" }
-            onConnection(TcpTraceReader(socket))
+            Logger.info { "TCP trace reader connected from ${socket.remoteSocketAddress}" }
+            subscriptionService.addSubscriber(socket)
         } catch (e: IOException) {
             if (running) {
                 Logger.error { "Failed to accept TCP connection: ${e.message}" }

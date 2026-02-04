@@ -36,12 +36,13 @@ sealed class TraceRecordingMode {
     class Text(val verbose: Boolean = false) : TraceRecordingMode()
 
     /**
-     * Stream binary trace data over TCP connection to a remote host.
+     * Stream binary trace data over TCP to connected readers.
      *
-     * @param host the hostname or IP address to connect to
-     * @param port the port number to connect to
+     * The trace producer acts as a server,
+     * listening for incoming reader connections on an assigned port.
+     * Multiple readers can connect and receive the trace data simultaneously.
      */
-    class BinaryTcpStream(val host: String, val port: Int) : TraceRecordingMode()
+    object BinaryTcpStream : TraceRecordingMode()
 
     /**
      * Throws away all recorded trace data.

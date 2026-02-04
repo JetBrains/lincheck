@@ -15,7 +15,10 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
 
-class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
+class TraceRecorderSession(
+    val eventTracker: TraceCollectingEventTracker,
+    val tcpServer: TcpTraceServer? = null
+) {
     internal sealed class State {
         object NotStarted : State()
 
@@ -120,7 +123,17 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
         )
         Logger.debug { "Trace collected in ${endTime - currentState.startTime} ms" }
 
+        stopTcpServer()
         finishHook.get()?.invoke(this)
+    }
+
+    private fun stopTcpServer() {
+        try {
+            tcpServer?.close()
+        } catch (t: Throwable) {
+            Logger.error { "Cannot stop TCP trace server" }
+            Logger.error(t)
+        }
     }
 
     fun installOnFinishHook(hook: TraceRecorderSession.() -> Unit) {
@@ -179,7 +192,7 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
                 }
                 is TraceRecordingMode.BinaryTcpStream -> {
                     // TCP streaming - trace already sent over network, nothing to dump to file
-                    Logger.info { "TCP trace streaming completed to ${mode.host}:${mode.port}" }
+                    error("Trace is streamed over TCP, no data stored to save into a file")
                 }
                 is TraceRecordingMode.Text -> {
                     printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)
