@@ -25,6 +25,9 @@ import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.*
 import java.lang.reflect.Array as ReflectArray
 import java.lang.reflect.*
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
+import java.util.concurrent.atomic.AtomicLongFieldUpdater
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlin.reflect.KClass
 
 typealias ValueMapper = (Types.Type, ValueID) -> OpaqueValue?
@@ -92,11 +95,17 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
         }
         AtomicApiKind.ATOMIC_FIELD_UPDATER -> {
             check(accessLocation is FieldAccessLocation)
+            val type = when {
+                receiver is AtomicReferenceFieldUpdater<*,*> -> Types.OBJECT_TYPE
+                receiver is AtomicLongFieldUpdater<*> -> Types.OBJECT_TYPE
+                receiver is AtomicIntegerFieldUpdater<*> -> Types.OBJECT_TYPE
+                else -> unreachable()
+            }
             getFieldAccessMemoryLocation(
                 obj = info.obj,
                 className = accessLocation.className,
                 fieldName = accessLocation.fieldName,
-                type = Types.INT_TYPE,
+                type = type,
                 isStatic = (accessLocation is StaticFieldAccessLocation),
                 isFinal = false, // TODO: fixme?
             )
