@@ -188,7 +188,7 @@ internal fun AtomicMethodDescriptor.getAtomicObjectAccessInfo(
     }
     return AtomicMethodAccessInfo(
         obj = atomic,
-        clazz = null,
+        clazz = atomic::class.java,
         location = null,
         arguments = arguments.asList()
     )
