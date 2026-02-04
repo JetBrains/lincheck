@@ -794,7 +794,7 @@ class TraceCollectingEventTracker(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         exception: Throwable
-    ) {
+    ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRThrowTracePoint(
             context = context,
@@ -809,7 +809,7 @@ class TraceCollectingEventTracker(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         exception: Throwable
-    ) {
+    ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val tracePoint = TRCatchTracePoint(
             context = context,
