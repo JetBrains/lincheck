@@ -11,10 +11,20 @@
 package org.jetbrains.lincheck.util
 
 import java.io.*
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
+/**
+ * Logging utilities for the Lincheck framework.
+ *
+ * Supports logging to `stderr` or to a specified file.
+ * If a log file is specified through the `lincheck.logFile` system property,
+ * then the file-based logging is used. Otherwise, messages are logged to the standard error stream.
+ *
+ * Logging levels can be configured using the `lincheck.logLevel` system property, see [LoggingLevel].
+ *
+ * NOTE: when stderr is used, log messages from shutdown hooks are not guaranteed to be written.
+ */
 object Logger {
+
     val logFile: File? = System.getProperty("lincheck.logFile")?.let { fileName ->
         File(fileName).also { runCatching { initFile(it) }.getOrNull() }
     }
