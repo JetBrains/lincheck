@@ -649,7 +649,7 @@ internal class LoopEndTracePoint(
     codeLocation: Int,
     val loopId: Int,
 ) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(): String = ""
+    override fun toStringCompact(): String = "loop end"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
         LoopEndTracePoint(context, eventId, iThread, actorId, codeLocation, loopId)
     }

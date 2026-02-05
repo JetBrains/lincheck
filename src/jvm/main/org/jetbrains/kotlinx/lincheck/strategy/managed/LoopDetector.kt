@@ -43,7 +43,7 @@ interface LoopDetector {
         result: Any?,
     )
 
-    fun getCurrentIteration(threadId: Int, loopId: Int) : Int
+    fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int) : Int
 
 //  TODO: Implement in next iteration, find where to call (beforeWriteField, beforeWriteArrayElement, afterLocalWrite)
 //    fun onStageChange(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, valueHash: Int)
@@ -51,6 +51,7 @@ interface LoopDetector {
 
 data class ActiveLoopInfo (
     val loopId: Int,
+    val codeLocation: Int,
     var iterationCount: Int = 0,
 )
 
@@ -104,7 +105,7 @@ class BoundedLoopDetector(
             stack.addLast(it)
         }
 
-        frame.loops.addLast(ActiveLoopInfo(loopId))
+        frame.loops.addLast(ActiveLoopInfo(loopId, codeLocation))
     }
 
     override fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int): LoopDetector.Decision {
@@ -117,7 +118,7 @@ class BoundedLoopDetector(
             return LoopDetector.Decision.IDLE
         }
 
-        val loop = frame.loops.lastOrNull {it.loopId == loopId} ?: ActiveLoopInfo(loopId).also {
+        val loop = frame.loops.lastOrNull {it.loopId == loopId && it.codeLocation == codeLocation} ?: ActiveLoopInfo(loopId, codeLocation).also {
             frame.loops.addLast(it)
         }
 
@@ -141,6 +142,7 @@ class BoundedLoopDetector(
         val frame = stack.lastOrNull()?: return
 
         val loop = frame.loops.lastOrNull {it.loopId == loopId} ?: return
+        loop.iterationCount = 0 // reset iteration count as a sanity check
         if (frame.loops.lastOrNull() === loop) {
             frame.loops.removeLast()
         } else {
@@ -200,12 +202,12 @@ class BoundedLoopDetector(
             stack.removeLast()
         }
     }
-    override fun getCurrentIteration(threadId: Int, loopId: Int): Int {
+    override fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {
         val st = state(threadId)
         val stack = st.callStack
         val frame = stack.lastOrNull()?: return 1
 
-        val loop = frame.loops.lastOrNull {it.loopId == loopId} ?: return 1
+        val loop = frame.loops.lastOrNull {it.loopId == loopId && it.codeLocation == codeLocation} ?: return 1
 
         return loop.iterationCount
     }

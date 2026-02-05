@@ -677,12 +677,12 @@ internal abstract class ManagedStrategy(
             methodName = "run",
             methodType = Types.MethodType(Types.VOID_TYPE)
         )
-        popMethodId(currentThreadId, methodId)
         val eventId = getNextEventId()
         val threadRunTracePoint = callStackTrace[currentThreadId]?.firstOrNull()?.tracePoint
         val threadEndTracePoint = threadRunTracePoint?.let { MethodReturnTracePoint(context, eventId, it) }
         if (threadEndTracePoint != null) traceCollector?.addTracePoint(threadEndTracePoint)
         disableAnalysis()
+        popMethodId(currentThreadId, methodId)
         loopDetector.resetThread(currentThreadId)
         onThreadFinish(currentThreadId)
     }
@@ -771,6 +771,7 @@ internal abstract class ManagedStrategy(
         randoms.clear()
         methodIdStack.clear()
         loopDetector.resetAll()
+        activeLoopStack.clear()
     }
 
     override fun awaitUserThreads(timeoutNano: Long): Long {
@@ -923,6 +924,11 @@ internal abstract class ManagedStrategy(
         check(actor != null) { "Could not find current actor" }
 
         val methodDescriptor = getAsmMethod(actor.method).descriptor
+        val methodId = context.createAndRegisterMethodDescriptor(
+            className = actor.method.declaringClass.name.toCanonicalClassName(),
+            methodName = actor.method.name,
+            methodType = Types.convertAsmMethodType(methodDescriptor)
+        ).id
         val tracePoint = addBeforeMethodCallTracePoint(
             eventId = getNextEventId(),
             threadId = iThread,
@@ -931,16 +937,13 @@ internal abstract class ManagedStrategy(
             className = actor.method.declaringClass.name,
             methodName = actor.method.name,
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = context.createAndRegisterMethodDescriptor(
-                className = actor.method.declaringClass.name.toCanonicalClassName(),
-                methodName = actor.method.name,
-                methodType = Types.convertAsmMethodType(methodDescriptor)
-            ).id,
+            methodId = methodId,
             methodParams = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,
         )
         traceCollector?.addTracePointInternal(tracePoint)
+        pushMethodId(iThread, methodId)
         enableAnalysis()
     }
 
@@ -951,6 +954,21 @@ internal abstract class ManagedStrategy(
             disableAnalysis()
             return
         }
+
+        val actorId = currentActorId[iThread]!!
+        val scenario = runner.scenario
+        val actor = if (actorId < scenario.threads[iThread].size) scenario.threads[iThread][actorId]
+        else runner.validationFunction
+        check(actor != null) { "Could not find current actor" }
+        val methodDescriptor = getAsmMethod(actor.method).descriptor
+
+        val methodId = context.getOrCreateMethodId(
+            className = actor.method.declaringClass.name.toCanonicalClassName(),
+            methodName = actor.method.name,
+            methodType = Types.convertAsmMethodType(methodDescriptor)
+        )
+
+        popMethodId(iThread, methodId)
 
         val actorStartTracePoint = traceCollector?.trace
                 ?.filterIsInstance<MethodCallTracePoint>()
@@ -1837,7 +1855,6 @@ internal abstract class ManagedStrategy(
         }
 
         val threadId = threadScheduler.getCurrentThreadId()
-        popMethodId(threadId, methodId)
 
 // TODO: check what result to pass
         loopDetector.onMethodExit(
@@ -1885,6 +1902,7 @@ internal abstract class ManagedStrategy(
                 traceCollector?.addStateRepresentation()
             }
         }
+        popMethodId(threadId, methodId)
         // if the method has certain guarantees, leave the corresponding section
         leaveAnalysisSection(threadId, methodSection)
     }
@@ -1905,7 +1923,7 @@ internal abstract class ManagedStrategy(
         }
 
         val threadId = threadScheduler.getCurrentThreadId()
-        popMethodId(threadId, methodId)
+
 
     // TODO: check what result to pass
         loopDetector.onMethodExit(
@@ -1938,6 +1956,7 @@ internal abstract class ManagedStrategy(
             afterMethodCall(threadId, tracePoint)
             traceCollector?.addStateRepresentation()
         }
+        popMethodId(threadId, methodId)
         // if the method has certain guarantees, leave the corresponding section
         leaveAnalysisSection(threadId, methodSection)
     }
@@ -1959,6 +1978,8 @@ internal abstract class ManagedStrategy(
     ) = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
         val methodDescriptor = context.methodPool[methodId]
+        pushMethodId(threadId, methodId)
+
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
@@ -1993,6 +2014,7 @@ internal abstract class ManagedStrategy(
                 traceCollector!!.addStateRepresentation()
             }
         }
+        popMethodId(threadId, methodId)
     }
 
     override fun onInlineMethodCallException(
@@ -2009,6 +2031,7 @@ internal abstract class ManagedStrategy(
                 traceCollector!!.addStateRepresentation()
             }
         }
+        popMethodId(threadId, methodId)
     }
 
     // -- LOOPS --
@@ -2039,11 +2062,15 @@ internal abstract class ManagedStrategy(
     }
 
     data class Loop(
-        val threadId: Int,
         val loopId: Int,
+        val methodId: Int,
+        val codeLocation: Int,
     )
 
-    private val activeLoops = mutableSetOf<Loop>()
+    private val activeLoopStack = mutableThreadMapOf<ArrayDeque<Loop>>()
+    private fun loopStack(threadId: Int): ArrayDeque<Loop> {
+        return activeLoopStack.getOrPut(threadId) { ArrayDeque() }
+    }
 
     override fun onLoopIteration(
         threadDescriptor: ThreadDescriptor,
@@ -2051,12 +2078,15 @@ internal abstract class ManagedStrategy(
         loopId: Int
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
+        val methodId = getMethodId(threadId)
+        val stack = loopStack(threadId)
 
         // if loop with loopId is called for first time, call beforeLoopEnter and then continue
-        val loop = activeLoops.find { it.threadId == threadScheduler.getCurrentThreadId() && it.loopId == loopId }
+        val loop =  stack.lastOrNull()  { it.loopId == loopId && it.methodId == methodId && it.codeLocation == codeLocation }
+
         if (loop == null) {
             loopDetector.beforeLoopEnter(threadId, codeLocation, loopId)
-            activeLoops.add(Loop(threadId, loopId))
+            stack.addLast(Loop(loopId, methodId, codeLocation))
 
             if (collectTrace) {
                 traceCollector?.addTracePointInternal(
@@ -2071,12 +2101,11 @@ internal abstract class ManagedStrategy(
                 )
             }
         }
-        val methodId = getMethodId(threadId)
 
         val decision = loopDetector.onLoopIteration(threadId, codeLocation, loopId, methodId)
 
         if (collectTrace) {
-            val iteration = loopDetector.getCurrentIteration(threadId, loopId)
+            val iteration = loopDetector.getCurrentIteration(threadId, loopId, codeLocation)
             traceCollector?.addTracePointInternal(
                 LoopIterationTracePoint(
                     context = context,
@@ -2098,9 +2127,28 @@ internal abstract class ManagedStrategy(
             }
 
             LoopDetector.Decision.STUCK -> {
+                // TODO: should we add a LoopEndTracePoint here as well or not?
+                if (collectTrace) {
+                    traceCollector?.addTracePointInternal(
+                        LoopEndTracePoint(
+                            context = context,
+                            eventId = getNextEventId(),
+                            iThread = threadId,
+                            actorId = currentActorId[threadId]!!,
+                            loopId = loopId,
+                            codeLocation = codeLocation
+                        )
+                    )
+                    traceCollector?.addStateRepresentation()
+                }
                 failDueToLivelock()
             }
         }
+    }
+
+    fun loopIsInStack(threadId: Int, loopId: Int): Boolean {
+        val stack = loopStack(threadId)
+        return stack.any { it.loopId == loopId }
     }
 
     override fun afterLoopExit(
@@ -2110,23 +2158,42 @@ internal abstract class ManagedStrategy(
         exception: Throwable?,
         isReachableFromOutsideLoop: Boolean
     ) = threadDescriptor.runInsideIgnoredSection {
-        val threadId = threadScheduler.getCurrentThreadId()
-        val methodId = getMethodId(threadId)
-        loopDetector.afterLoopExit(threadId, codeLocation, loopId, methodId)
-        activeLoops.removeIf { it.threadId == threadId && it.loopId == loopId }
+        if(!isReachableFromOutsideLoop || loopIsInStack(threadScheduler.getCurrentThreadId(), loopId)) {
+            val threadId = threadScheduler.getCurrentThreadId()
+            val methodId = getMethodId(threadId)
+            val stack = loopStack(threadId)
 
-        if (collectTrace) {
-            traceCollector?.addTracePointInternal(
-                LoopEndTracePoint(
-                    context = context,
-                    eventId = getNextEventId(),
-                    iThread = threadId,
-                    actorId = currentActorId[threadId]!!,
-                    loopId = loopId,
-                    codeLocation = codeLocation
+            // Remove the loop from the stack with the closest codeLocation to the one provided.
+            // TODO: check if it makes sense, otherwise I can remove the check for closest codeLocation
+            val indexToRemove = stack.withIndex()
+                .filter { it.value.loopId == loopId && it.value.methodId == methodId }
+                .minByOrNull { kotlin.math.abs(it.value.codeLocation - codeLocation)}?.index
+            val loop = if (indexToRemove != null) {
+                val temp = ArrayDeque<Loop>()
+                while (stack.size - 1 > indexToRemove) temp.addFirst(stack.removeLast())
+                val found = stack.removeLast()
+                for (item in temp) stack.addLast(item)
+                found
+            } else null
+
+            val enterCodeLocation = loop?.codeLocation ?: codeLocation
+            loopDetector.afterLoopExit(threadId, enterCodeLocation, loopId, methodId)
+
+             if (collectTrace) {
+                traceCollector?.addTracePointInternal(
+                    LoopEndTracePoint(
+                        context = context,
+                        eventId = getNextEventId(),
+                        iThread = threadId,
+                        actorId = currentActorId[threadId]!!,
+                        loopId = loopId,
+                        codeLocation = enterCodeLocation
+                    )
                 )
-            )
-            traceCollector?.addStateRepresentation()
+                traceCollector?.addStateRepresentation()
+            }
+        } else {
+            // Log?
         }
     }
 
