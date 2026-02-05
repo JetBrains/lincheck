@@ -298,6 +298,32 @@ public class Injections {
     }
 
     /**
+     * Marks the current thread as being inside a breakpoint condition evaluation.
+     */
+    public static void enterBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return;
+        descriptor.enterBreakpointCondition();
+    }
+
+    /**
+     * Marks the current thread as having exited a breakpoint condition evaluation.
+     */
+    public static void leaveBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return;
+        descriptor.leaveBreakpointCondition();
+    }
+
+    /**
+     * Checks if the current thread is not inside a breakpoint condition evaluation.
+     *
+     * @return true if not inside a condition evaluation, false otherwise.
+     */
+    public static boolean isNotInsideBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return true;
+        return !descriptor.isInsideBreakpointCondition();
+    }
+
+    /**
      * Registers a thread for event tracking, creating a new thread descriptor if one does not already exist.
      *
      * @param eventTracker the event tracker to associate with the thread.
@@ -784,7 +810,7 @@ public class Injections {
      * @param descriptor   The thread descriptor of the current thread.
      * @param codeLocation The location of the breakpoint in the source code. Holds local variable names.
      * @param locals       An array containing the current values of local variables at the breakpoint location.
-     *                     This includes: this, function parameters, and local variables. 
+     *                     This includes: this, function parameters, and local variables.
      * @param traceId      ID to correlate snapshot breakpoints. Can be provided by frameworks like OpenTelemetry.
      */
     public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId) {
