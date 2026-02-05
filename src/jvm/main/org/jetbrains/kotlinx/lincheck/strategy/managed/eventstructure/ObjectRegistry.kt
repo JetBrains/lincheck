@@ -44,6 +44,11 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     override fun registerExternalObject(obj: Any): ObjectEntry {
         return super.registerExternalObject(obj).also {
             val objectID = it.objectId;
+            check(allocationMap.containsKey(objectID) == objMap.containsKey(objectID))
+            if(allocationMap.containsKey(objectID)) {
+                return@also
+            }
+
             // External object are related to the
             allocationMap[objectID] = initEvent!!
             // TODO: See if we need this
