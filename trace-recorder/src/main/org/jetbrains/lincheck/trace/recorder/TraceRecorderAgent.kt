@@ -63,7 +63,7 @@ internal object TraceRecorderAgent {
     fun premain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
-        computeProjectPackagesIfRequested()
+        computeProjectPackagesIfNeeded()
 
         validateTraceRecorderMode()
         if (!isInLiveDebuggerMode) {
@@ -86,7 +86,7 @@ internal object TraceRecorderAgent {
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
-        computeProjectPackagesIfRequested()
+        computeProjectPackagesIfNeeded()
 
         val mode =  if (TraceAgentParameters.getLineBreakpoints().isEmpty()) TRACE_RECORDER_MODE_PROPERTY
                     else LIVE_DEBUGGER_MODE_PROPERTY
@@ -111,7 +111,7 @@ internal object TraceRecorderAgent {
     }
 
     @JvmStatic
-    private fun computeProjectPackagesIfRequested() {
+    private fun computeProjectPackagesIfNeeded() {
         // Pre-compute include patterns from project packages if requested
         TraceAgentParameters.computeProjectPackagesIfNeeded()
     }

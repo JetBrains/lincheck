@@ -60,8 +60,8 @@ object TraceRecorderJmxController : TracingJmxController {
         try {
             val session = TraceRecorder.startRecording(
                 recordingMode = TraceRecordingMode.parse(
-                    outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-                    outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                    outputMode = TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_FORMAT),
+                    outputOption = TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_FOPTION),
                     outputFilePath = traceDumpFilePath,
                 ),
                 startMode = TraceRecorderSession.StartMode.Dynamic,

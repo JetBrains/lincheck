@@ -279,6 +279,7 @@ object TraceAgentParameters {
         runCatching {
             val excludeDirs = splitPatterns(namedArgs[ARGUMENT_EXCLUDE_DIR_PATHS]).map { Paths.get(it) }
             computedProjectIncludePatterns = computeProjectPackages(Paths.get(root), excludeDirs).map { "$it.*" }
+            Logger.warn { "Computed project packages from path '$root': $computedProjectIncludePatterns" }
         }.onFailure {
             Logger.warn { "Failed to compute project packages from path '$root': ${it.message}" }
         }
