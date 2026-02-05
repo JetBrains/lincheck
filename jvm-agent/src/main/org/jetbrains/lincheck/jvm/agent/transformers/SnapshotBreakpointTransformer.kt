@@ -43,24 +43,52 @@ internal class SnapshotBreakpointTransformer(
         }
         if (breakpointSettings == null) return@run
 
-        callIfNotInsideBreakpointCondition {
+        // STACK: <empty>
+        val exitLabel = newLabel()
+        val threadDescriptorLocal = newLocal(OBJECT_TYPE)
+        retrieveThreadDescriptorOrExit(threadDescriptorLocal, exitLabel)
+        // STACK: <empty>
+
+        callIfNotInsideBreakpointCondition(threadDescriptorLocal) {
             if (breakpointSettings.conditionClassName == null) {
-                injectBreakpointHit()
+                injectBreakpointHit(threadDescriptorLocal)
             } else {
                 ifStatement(
                     condition = {
                         // The condition may execute code with an installed breakpoint.
                         // To not make a breakpoint hit, we track when we compute the condition.
-                        invokeStatic(Injections::enterBreakpointCondition)
+                        enterBreakpointCondition(threadDescriptorLocal)
                         injectConditionCall(breakpointSettings)
-                        invokeStatic(Injections::leaveBreakpointCondition)
+                        leaveBreakpointCondition(threadDescriptorLocal)
                     },
                     thenClause = {
-                        injectBreakpointHit()
+                        injectBreakpointHit(threadDescriptorLocal)
                     }
                 )
             }
         }
+
+        visitLabel(exitLabel)
+    }
+
+    private fun GeneratorAdapter.retrieveThreadDescriptorOrExit(threadDescriptorLocal: Int, exitLabel: Label) {
+        // STACK: <empty>
+        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+        // STACK: threadDescriptor
+        dup()
+        storeLocal(threadDescriptorLocal)
+        // STACK: threadDescriptor
+        ifNull(exitLabel)
+    }
+
+    private fun GeneratorAdapter.enterBreakpointCondition(threadDescriptorLocal: Int) {
+        loadLocal(threadDescriptorLocal)
+        invokeStatic(Injections::enterBreakpointCondition)
+    }
+
+    private fun GeneratorAdapter.leaveBreakpointCondition(threadDescriptorLocal: Int) {
+        loadLocal(threadDescriptorLocal)
+        invokeStatic(Injections::leaveBreakpointCondition)
     }
 
     private fun GeneratorAdapter.injectConditionCall(breakpointSettings: SnapshotBreakpoint) {
@@ -92,9 +120,10 @@ internal class SnapshotBreakpointTransformer(
         )
     }
 
-    private fun GeneratorAdapter.callIfNotInsideBreakpointCondition(block: () -> Unit) {
+    private fun GeneratorAdapter.callIfNotInsideBreakpointCondition(threadDescriptorLocal: Int, block: () -> Unit) {
         ifStatement(
             condition = {
+                loadLocal(threadDescriptorLocal)
                 invokeStatic(Injections::isNotInsideBreakpointCondition)
             },
             thenClause = {
@@ -103,8 +132,8 @@ internal class SnapshotBreakpointTransformer(
         )
     }
 
-    private fun GeneratorAdapter.injectBreakpointHit() {
-        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+    private fun GeneratorAdapter.injectBreakpointHit(threadDescriptorLocal: Int) {
+        loadLocal(threadDescriptorLocal)
         loadNewCodeLocationId()
         val activeLocals = currentActiveLocals
 

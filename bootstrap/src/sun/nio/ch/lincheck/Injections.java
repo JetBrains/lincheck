@@ -300,15 +300,17 @@ public class Injections {
     /**
      * Marks the current thread as being inside a breakpoint condition evaluation.
      */
-    public static void enterBreakpointCondition() {
-        getOrRegisterCurrentThreadDescriptor().enterBreakpointCondition();
+    public static void enterBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return;
+        descriptor.enterBreakpointCondition();
     }
 
     /**
      * Marks the current thread as having exited a breakpoint condition evaluation.
      */
-    public static void leaveBreakpointCondition() {
-        getOrRegisterCurrentThreadDescriptor().leaveBreakpointCondition();
+    public static void leaveBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return;
+        descriptor.leaveBreakpointCondition();
     }
 
     /**
@@ -316,8 +318,9 @@ public class Injections {
      *
      * @return true if not inside a condition evaluation, false otherwise.
      */
-    public static boolean isNotInsideBreakpointCondition() {
-        return !getOrRegisterCurrentThreadDescriptor().isInsideBreakpointCondition();
+    public static boolean isNotInsideBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return true;
+        return !descriptor.isInsideBreakpointCondition();
     }
 
     /**
