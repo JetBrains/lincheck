@@ -316,7 +316,7 @@ abstract class AbstractThreadEvent(
     }
 
     override fun toString(): String {
-        return "#${id}: [${threadId}, ${threadPosition}] $label"
+        return "[${threadId}, ${threadPosition}] $label"
     }
 
     override fun predNth(n: Int): ThreadEvent? {

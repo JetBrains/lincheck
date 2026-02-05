@@ -31,13 +31,19 @@ import java.util.concurrent.locks.LockSupport.*
 import java.lang.invoke.MethodHandles
 import jdk.internal.misc.Unsafe
 import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.ExecutionPrinter
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.Ignore
 import org.junit.Test
+import org.junit.Rule
+import org.junit.rules.TestName
 import kotlin.reflect.jvm.javaMethod
 
 class PrimitivesTest {
+
+    @get:Rule
+    val testName = TestName()
 
     class PlainPrimitiveVariable {
         private var variable: Int = 0
@@ -53,6 +59,8 @@ class PrimitivesTest {
 
     @Test
     fun testPlainPrimitiveAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
+
         val write = PlainPrimitiveVariable::write
         val read = PlainPrimitiveVariable::read
         val testScenario = scenario {
@@ -90,6 +98,8 @@ class PrimitivesTest {
 
     @Test
     fun testPlainReferenceAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
+
         val write = PlainReferenceVariable::write
         val read = PlainReferenceVariable::read
         val testScenario = scenario {
@@ -125,6 +135,8 @@ class PrimitivesTest {
 
     @Test
     fun testPrimitiveArrayAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
+
         val write = PrimitiveArray::write
         val read = PrimitiveArray::read
         val index = 2
@@ -161,6 +173,7 @@ class PrimitivesTest {
 
     @Test
     fun testReferenceArrayAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
         val write = ReferenceArray::write
         val read = ReferenceArray::read
         val index = 2
@@ -211,6 +224,7 @@ class PrimitivesTest {
 
     @Test
     fun testAtomicAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = AtomicVariable::read
         val write = AtomicVariable::write
         val testScenario = scenario {
@@ -234,6 +248,7 @@ class PrimitivesTest {
 
     @Test
     fun testCompareAndSet() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = AtomicVariable::read
         val compareAndSet = AtomicVariable::compareAndSet
         val testScenario = scenario {
@@ -263,6 +278,7 @@ class PrimitivesTest {
 
     @Test
     fun testGetAndAdd() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = AtomicVariable::read
         val getAndAdd = AtomicVariable::getAndAdd
         val testScenario = scenario {
@@ -292,6 +308,7 @@ class PrimitivesTest {
 
     @Test
     fun testAddAndGet() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = AtomicVariable::read
         val addAndGet = AtomicVariable::addAndGet
         val testScenario = scenario {
@@ -442,6 +459,7 @@ class PrimitivesTest {
 
     @Test
     fun testAtomicFieldUpdaterAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = VolatileReferenceVariable::afuRead
         val write = VolatileReferenceVariable::afuWrite
         val testScenario = scenario {
@@ -465,6 +483,7 @@ class PrimitivesTest {
 
     @Test
     fun testVarHandleAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = VolatileReferenceVariable::vhRead
         val write = VolatileReferenceVariable::vhWrite
         val testScenario = scenario {
@@ -488,6 +507,7 @@ class PrimitivesTest {
 
     @Test
     fun testUnsafeAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = VolatileReferenceVariable::unsafeRead
         val write = VolatileReferenceVariable::unsafeWrite
         val testScenario = scenario {
@@ -511,6 +531,7 @@ class PrimitivesTest {
 
     @Test
     fun testAtomicFieldUpdaterCompareAndSet() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = VolatileReferenceVariable::afuRead
         val compareAndSet = VolatileReferenceVariable::afuCompareAndSet
         val testScenario = scenario {
@@ -540,6 +561,7 @@ class PrimitivesTest {
 
     @Test
     fun testVarHandleCompareAndSet() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = VolatileReferenceVariable::vhRead
         val compareAndSet = VolatileReferenceVariable::vhCompareAndSet
         val testScenario = scenario {
@@ -569,6 +591,7 @@ class PrimitivesTest {
 
     @Test
     fun testUnsafeCompareAndSet() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = VolatileReferenceVariable::unsafeRead
         val compareAndSet = VolatileReferenceVariable::unsafeCompareAndSet
         val testScenario = scenario {
@@ -897,6 +920,7 @@ class PrimitivesTest {
 
     @Test
     fun testSynchronized() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = SynchronizedVariable::read
         val addAndGet = SynchronizedVariable::addAndGet
         val testScenario = scenario {
@@ -927,6 +951,7 @@ class PrimitivesTest {
 
     @Test
     fun testWaitNotify() {
+        ExecutionPrinter.setup(testName.methodName)
         val writeAndNotify = SynchronizedVariable::writeAndNotify
         val waitAndRead = SynchronizedVariable::waitAndRead
         val testScenario = scenario {
@@ -976,6 +1001,7 @@ class PrimitivesTest {
 
     @Test
     fun testParking() {
+        ExecutionPrinter.setup(testName.methodName)
         val writeAndUnpark = ParkLatchedVariable::writeAndUnpark
         val parkAndRead = ParkLatchedVariable::parkAndRead
         val testScenario = scenario {
