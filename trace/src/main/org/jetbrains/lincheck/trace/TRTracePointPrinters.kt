@@ -23,9 +23,9 @@ interface TRAppendable {
     fun appendMethodName(md: MethodDescriptor): TRAppendable
     fun appendFieldName(fd: FieldDescriptor): TRAppendable
     fun appendVariableName(vd: VariableDescriptor): TRAppendable
-    fun appendArray(arr: TRObject): TRAppendable
+    fun appendArray(arr: TRValue): TRAppendable
     fun appendArrayIndex(index: Int): TRAppendable
-    fun appendObject(obj: TRObject?): TRAppendable
+    fun appendObject(obj: TRValue?): TRAppendable
     fun appendKeyword(keyword: String): TRAppendable
     fun appendSpecialSymbol(symbol: String): TRAppendable
     fun append(text: String?): TRAppendable
@@ -90,9 +90,9 @@ abstract class AbstractTRAppendable: TRAppendable {
     final override fun appendVariableName(vd: VariableDescriptor) = appendVariableName(vd.name.prettifyVariableName(), vd)
     protected open fun appendVariableName(prettyVariableName: String, vd: VariableDescriptor): TRAppendable = append(prettyVariableName)
 
-    override fun appendArray(arr: TRObject): TRAppendable = append(arr.toString())
+    override fun appendArray(arr: TRValue): TRAppendable = append(arr.toString())
     override fun appendArrayIndex(index: Int): TRAppendable = append(index.toString())
-    override fun appendObject(obj: TRObject?): TRAppendable = append(obj.toString())
+    override fun appendObject(obj: TRValue?): TRAppendable = append(obj.toString())
     override fun appendKeyword(keyword: String): TRAppendable = append(keyword)
     override fun appendSpecialSymbol(symbol: String): TRAppendable = append(symbol)
 
@@ -207,7 +207,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             val accessPath = argumentNames[i]
             when {
                 accessPath == null -> appendObject(parameter)
-                parameter?.isPrimitive == true -> {
+                parameter is TRPrimitive -> {
                     appendAccessPath(accessPath)
                     append(" ")
                     appendSpecialSymbol(READ_ACCESS_SYMBOL)
