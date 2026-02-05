@@ -261,7 +261,7 @@ class TraceCollectingEventTracker(
                     threadId = threadData.threadId,
                     codeLocationId = -1,
                     methodId = context.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
-                    obj = TRObject(context, thread),
+                    obj = TRValue(context, thread),
                     parameters = emptyList()
                 )
                 strategy.tracePointCreated(null, tracePoint)
@@ -415,7 +415,7 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            array = TRObject(context, array),
+            array = TRValue(context, array),
             index = index,
             value = TRObjectOrNull(context, value)
         )
@@ -460,7 +460,7 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            array = TRObject(context, array),
+            array = TRValue(context, array),
             index = index,
             value = TRObjectOrNull(context, value)
         )
@@ -802,7 +802,7 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            exception = TRObject(context, exception)
+            exception = TRValue(context, exception)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -817,7 +817,7 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            exception = TRObject(context, exception)
+            exception = TRValue(context, exception)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -892,12 +892,12 @@ class TraceCollectingEventTracker(
     private fun pushMethodCall(
         thread: Thread,
         threadData: ThreadData,
-        obj: TRObject?,
+        obj: TRValue?,
         className: String,
         methodName: String,
         methodType: Types.MethodType,
         codeLocationId: Int,
-        params: List<TRObject> = emptyList()
+        params: List<TRValue> = emptyList()
     ) {
         val parentTracePoint = threadData.currentMethodCallTracePoint()
         val methodCall = TRMethodCallTracePoint(
