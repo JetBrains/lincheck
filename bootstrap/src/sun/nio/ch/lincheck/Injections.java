@@ -298,23 +298,17 @@ public class Injections {
     }
 
     /**
-     * Thread-local variable to track if we are currently evaluating a breakpoint condition.
-     * When true, breakpoint hits inside the condition evaluation should not be reported.
-     */
-    private static final ThreadLocal<Boolean> insideBreakpointCondition = ThreadLocal.withInitial(() -> false);
-
-    /**
      * Marks the current thread as being inside a breakpoint condition evaluation.
      */
     public static void enterBreakpointCondition() {
-        insideBreakpointCondition.set(true);
+        getOrRegisterCurrentThreadDescriptor().enterBreakpointCondition();
     }
 
     /**
      * Marks the current thread as having exited a breakpoint condition evaluation.
      */
     public static void leaveBreakpointCondition() {
-        insideBreakpointCondition.set(false);
+        getOrRegisterCurrentThreadDescriptor().leaveBreakpointCondition();
     }
 
     /**
@@ -323,7 +317,7 @@ public class Injections {
      * @return true if not inside a condition evaluation, false otherwise.
      */
     public static boolean isNotInsideBreakpointCondition() {
-        return !insideBreakpointCondition.get();
+        return !getOrRegisterCurrentThreadDescriptor().isInsideBreakpointCondition();
     }
 
     /**
