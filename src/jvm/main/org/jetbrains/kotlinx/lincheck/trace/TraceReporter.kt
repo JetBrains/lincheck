@@ -333,6 +333,7 @@ internal fun traceToCollapsedTree(trace: Trace, analysisProfile: AnalysisProfile
     // Turn trace into a tree which is List of sections, where a section is a list of root nodes (actors).
     var traceTree = traceToTree(trace.threadNames.size, trace)
     traceTree = foldEquivalentLoopIterations(traceTree)
+    traceTree = foldRecursiveCalls(traceTree)
     return traceTree
         .map { it
             .compressTrace()

@@ -190,6 +190,19 @@ internal class IterationRangeNode(
     override fun copy(): TraceNode = IterationRangeNode(tracePoint, eventNumber, from, to)
 }
 
+internal class RecursionNode(
+    val node: CallNode,
+    val depth: Int,
+    eventNumber: Int,
+) : TraceNode(eventNumber, node.tracePoint) {
+
+    override fun toStringImpl(withLocation: Boolean): String {
+        return "${node.toStringImpl(withLocation)} [recursion x $depth]"
+    }
+
+    override fun copy(): TraceNode = RecursionNode(node, depth, eventNumber)
+}
+
 // (stable) Sort on eventNumber
 internal fun Column<TraceNode>.reorder(): Column<TraceNode> =
     sortedBy { it.eventNumber }
@@ -386,3 +399,81 @@ private fun nodePattern(node: TraceNode): NodePattern =
         head = node.toStringImpl(true),
         children = node.children.map { nodePattern(it) }
     )
+
+internal fun foldRecursiveCalls(
+    table: MultiThreadedTable<TraceNode>
+): MultiThreadedTable<TraceNode> {
+    return table.map { threadNodes ->
+        threadNodes.map { foldRecursion(it) }.toMutableList()
+    }.toMutableList()
+}
+
+private fun foldRecursion(node: TraceNode): TraceNode {
+    // check if node is the start of a recursion chain
+    if (node is CallNode) {
+        val chain = detectRecursionChain(node)
+
+        if (chain.size > 1) {
+            val depth = chain.size
+            val tailNode = chain.last()
+
+            val recursionNode = RecursionNode(
+                node = node,
+                depth = depth,
+                eventNumber = node.eventNumber
+            )
+
+            // Skip folding the recursive child of the head node, as it will be represented by the recursion node itself. We then apply foldRecursion to the rest of the children to handle nested structures.
+            val nextInChain = chain[1]
+            node.children.forEach { child ->
+                if (child !== nextInChain) {
+                    recursionNode.addChild(foldRecursion(child))
+                }
+            }
+
+            // Apply fold to the children of the tail node to handle any nested structures within the tail
+            tailNode.children.forEach { child ->
+                recursionNode.addChild(foldRecursion(child))
+            }
+
+            return recursionNode
+        }
+    }
+
+    // Propagate folding to children of non-recursive nodes
+    val newNode = node.copy()
+    node.children.forEach { child ->
+        newNode.addChild(foldRecursion(child))
+    }
+    return newNode
+}
+
+// Returns the list of CallNodes forming the recursion chain (including head and tail).
+// If no recursion is detected, returns a list with only the head.
+private fun detectRecursionChain(head: CallNode): List<CallNode> {
+    val chain = mutableListOf<CallNode>()
+    chain.add(head)
+
+    var current = head
+    while (true) {
+        // Find a child that calls the same method
+        val recursiveChild = current.children.firstOrNull {
+            isRecursiveChild(current, it)
+        } as? CallNode
+
+        if (recursiveChild == null) {
+            break
+        }
+
+        chain.add(recursiveChild)
+        current = recursiveChild
+    }
+    return chain
+}
+
+
+private fun isRecursiveChild(parent: CallNode, child: TraceNode): Boolean {
+    return child is CallNode &&
+            child.tracePoint.methodName == parent.tracePoint.methodName &&
+            child.tracePoint.className == parent.tracePoint.className
+}
