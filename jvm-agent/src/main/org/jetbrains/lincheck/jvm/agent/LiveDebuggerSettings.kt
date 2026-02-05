@@ -18,6 +18,7 @@ data class LiveDebuggerSettings(
             val parsed = list.map { SnapshotBreakpoint.read(it) }
             return LiveDebuggerSettings(parsed.toMutableList())
         }
+        const val MAX_ARRAY_ELEMENTS = 10
     }
 
     fun addBreakpoints(list: List<String>): List<SnapshotBreakpoint> {

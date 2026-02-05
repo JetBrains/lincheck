@@ -132,7 +132,8 @@ internal data class ShallowCodeLocation(
     val lineNumber: Int,
     val accessPath: Int,
     val argumentNames: List<Int>?,
-    val activeLocalsNames: List<Int>?
+    val activeLocalsNames: List<Int>?,
+    val activeLocalsKinds: List<Int>?
 )
 
 internal class ShallowAccessPath(val locations: MutableList<ShallowAccessLocation>)
@@ -180,7 +181,8 @@ internal class CodeLocationsContext {
                 val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
                 val activeLocalsNames: List<String>? =
                     value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
-                val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)
+                val activeLocals = activeLocalsNames?.zip(value.activeLocalsKinds!!)?.map { (name, kind) -> ActiveLocal(name, LocalKind.entries[kind]) }
+                val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
                 context.restoreCodeLocation(id, location)
             }
         }
@@ -199,7 +201,8 @@ internal class CodeLocationsContext {
             val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
             val activeLocalsNames: List<String>? =
                 value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
-            val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)
+            val activeLocals = activeLocalsNames?.zip(value.activeLocalsKinds!!)?.map { (name, kind) -> ActiveLocal(name, LocalKind.entries[kind]) }
+            val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
             context.restoreCodeLocation(id, location)
         }
     }
@@ -1079,6 +1082,10 @@ internal fun loadCodeLocation(
         nActiveLocalsNames == 0 -> null
         else -> List(nActiveLocalsNames) { input.readInt() }
     }
+    val activeLocalsKinds = when {
+        nActiveLocalsNames == 0 -> null
+        else -> List(nActiveLocalsNames) { input.readInt() }
+    }
 
     if (restore) {
         val scl = ShallowCodeLocation(
@@ -1088,7 +1095,8 @@ internal fun loadCodeLocation(
             lineNumber = lineNumber,
             accessPath = accessPathId,
             argumentNames = argumentNameIds,
-            activeLocalsNames = activeLocalsNamesIds
+            activeLocalsNames = activeLocalsNamesIds,
+            activeLocalsKinds = activeLocalsKinds
         )
         codeLocs.loadCodeLocation(id, scl)
     }

@@ -62,16 +62,16 @@ interface TraceCollectingStrategy {
  */
 internal interface TraceWriter : DataOutput, Closeable {
     /**
-     * Saves dependencies of [TRObject], if needed.
-     * This must be called before [startWriteAnyTracepoint] for all used [TRObject]s.
+     * Saves dependencies of [TRValue], if needed.
+     * This must be called before [startWriteAnyTracepoint] for all used [TRValue]s.
      */
-    fun preWriteTRObject(value: TRObject?)
+    fun preWriteTRValue(value: TRValue?)
 
     /**
-     * Saves [TRObject] itself.
+     * Saves [TRValue] itself.
      * Must be called after [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter].
      */
-    fun writeTRObject(value: TRObject?)
+    fun writeTRValue(value: TRValue?)
 
     /**
      * Marks the beginning of a tracepoint (before the first byte of tracepoint is written).
@@ -204,15 +204,27 @@ internal sealed class TraceWriterBase(
         writeIndexCell(ObjectKind.EOF,-1, -1, -1)
     }
 
-    override fun preWriteTRObject(value: TRObject?) {
+    override fun preWriteTRValue(value: TRValue?) {
         check(!inTracepointBody) { "Cannot write TRObject dependency into tracepoint body" }
-        if (value == null || value.isPrimitive || value.isSpecial) return
+        if (value == null || value is TRPrimitive || value.isSpecial) return
         writeClassDescriptor(value.classNameId)
+        // Recursively register class descriptors for all field values
+        if (value is TRObject) {
+            value.fields.values.forEach { fieldValue ->
+                preWriteTRValue(fieldValue)
+            }
+        }
+        
+        if (value is TRArray) {
+            value.capturedElements.forEach { capturedElement ->
+                preWriteTRValue(capturedElement)
+            }
+        }
     }
 
-    override fun writeTRObject(value: TRObject?) {
+    override fun writeTRValue(value: TRValue?) {
         check(inTracepointBody) { "Cannot write TRObject outside tracepoint body" }
-        dataOutput.writeTRObject(value)
+        dataOutput.writeTRValue(value)
     }
 
     override fun startWriteAnyTracepoint() {
@@ -338,7 +350,7 @@ internal sealed class TraceWriterBase(
         val codeLocation = context.stackTrace(id)
         val accessPath = context.accessPath(id)
         val argumentNames = context.methodCallArgumentNames(id)
-        val activeLocalsNames = context.activeLocalsNames(id)
+        val activeLocals = context.activeLocals(id)
         // All strings only once. It will have duplications with class and method descriptors,
         // but size loss is negligible and this way is simpler
         val fileNameId = writeString(codeLocation.fileName)
@@ -346,7 +358,7 @@ internal sealed class TraceWriterBase(
         val methodNameId = writeString(codeLocation.methodName)
         val accessPathId = writeAccessPath(accessPath)
         val argumentNamesIds = argumentNames?.map { writeAccessPath(it) }
-        val activeLocalsIds = activeLocalsNames?.map { writeString(it) }
+        val activeLocalNameIds = activeLocals?.map { writeString(it.localName) }
 
         // Code location into data and position into index
         val position = currentDataPosition
@@ -359,8 +371,9 @@ internal sealed class TraceWriterBase(
         dataOutput.writeInt(accessPathId)
         dataOutput.writeInt(argumentNamesIds?.size ?: 0)
         argumentNamesIds?.forEach { dataOutput.writeInt(it) }
-        dataOutput.writeInt(activeLocalsIds?.size ?: 0)
-        activeLocalsIds?.forEach { dataOutput.writeInt(it) }
+        dataOutput.writeInt(activeLocalNameIds?.size ?: 0)
+        activeLocalNameIds?.forEach { dataOutput.writeInt(it) }
+        activeLocals?.forEach { dataOutput.writeInt(it.localKind.ordinal) }
         contextState.markCodeLocationSaved(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)

@@ -114,13 +114,13 @@ internal object TracePointComparator {
     private fun HasherMzHash64.add(type: Types.Type): HasherMzHash64 =
         add(type.hashCode())
 
-    private fun HasherMzHash64.add(obj: TRObject?): HasherMzHash64 =
+    private fun HasherMzHash64.add(obj: TRValue?): HasherMzHash64 =
         if (obj == null) add(TR_OBJECT_NULL)
-        else if (obj.isPrimitive) add(obj.classNameId).add(obj.primitiveValue.hashCode())
+        else if (obj is TRPrimitive) add(obj.classNameId).add(obj.primitiveValue.hashCode())
         else if (obj.classNameId < 0) add(obj.classNameId)
         else add(obj.className.adornedClassNameRepresentation())
 
-    private fun HasherMzHash64.addTRList(list: List<TRObject?>): HasherMzHash64 {
+    private fun HasherMzHash64.addTRList(list: List<TRValue?>): HasherMzHash64 {
         list.forEach { add(it) }
         return this
     }
