@@ -120,6 +120,7 @@ object TraceAgentParameters {
     const val DEFAULT_JMX_HOST = "localhost"
     const val DEFAULT_JMX_PORT = 9999
     const val DEFAULT_RMI_PORT = 9998
+    const val DEFAULT_TRACE_PORT = 9997
 
     @JvmStatic
     lateinit var rawArgs: String

@@ -609,8 +609,8 @@ class TcpTraceReader(private val socket: Socket) : Closeable {
  * @param subscriptionService the service to register trace data subscribers.
  */
 class TcpTraceServer(
+    port: Int,
     val subscriptionService: TcpTraceSubscriptionService,
-    port: Int = 0,
 ) : Closeable {
     private val serverSocket: ServerSocket = ServerSocket(port)
 

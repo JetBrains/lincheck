@@ -76,7 +76,7 @@ object TraceRecorderJmxController : TracingJmxController {
         }
     }
 
-    override fun startTcpTracing(): Int {
+    override fun startTcpTracing() {
         try {
             val session = TraceRecorder.startRecording(
                 recordingMode = TraceRecordingMode.BinaryTcpStream,
@@ -85,14 +85,12 @@ object TraceRecorderJmxController : TracingJmxController {
 
             if (session == null) {
                 Logger.warn { "TCP trace streaming session was not started (recording already in progress)" }
-                return -1
+                return
             }
-
-            return session.tcpServer?.port ?: -1
         } catch (t: Throwable) {
             Logger.error { "Cannot start TCP trace streaming" }
             Logger.error(t)
-            return -1
+            return
         }
     }
 
