@@ -687,11 +687,9 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         
         // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
-        val stackTrace = Thread.currentThread().stackTrace
+        val stackTrace = Exception().stackTrace
             // Removes lincheck related calls
             .filter { !isInLincheckPackage(it.className) }
-            // Removes the getStackTrace method
-            .drop(1)
         
         val stackTraceCodeLocationIds = stackTrace.map { stackTraceElement ->
             // TODO JBRes-7631 prevent duplicate code locations
