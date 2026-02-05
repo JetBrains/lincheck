@@ -59,7 +59,7 @@ fun computeProjectPackages(root: Path, excludeDirPaths: List<Path> = emptyList()
         }
     )
 
-    val maxLinesRead = 50
+    val maxLinesRead = 300
     val packages = mutableListOf<String>()
     for (file in files) {
         val pkg = readPackageName(file, maxLinesRead) ?: continue
