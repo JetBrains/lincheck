@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.Injections
@@ -174,7 +175,10 @@ object TraceRecorder {
         var tcpServer: TcpTraceServer? = null
         if (recordingMode is TraceRecordingMode.BinaryTcpStream) {
             try {
-                tcpServer = TcpTraceServer(eventTracker.subscriptionService!!)
+                tcpServer = TcpTraceServer(
+                    port = TraceAgentParameters.DEFAULT_TRACE_PORT,
+                    subscriptionService = eventTracker.subscriptionService!!,
+                )
                 Logger.info { "Started TCP trace streaming server on port $${tcpServer.port}" }
             } catch (t: Throwable) {
                 Logger.error { "Cannot start TCP trace trace server" }
