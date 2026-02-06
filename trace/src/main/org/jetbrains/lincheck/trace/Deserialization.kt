@@ -187,7 +187,9 @@ internal class CodeLocationsContext {
             /* lineNumber = */ value.lineNumber
         )
         val accessPath = if (value.accessPath != -1) context.getAccessPath(value.accessPath) else null
-        val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
+        val argumentNames = value.argumentNames?.map {
+            if (it != -1) context.getAccessPath(it) else null
+        }
         val activeLocalsNames: List<String>? =
             value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
         val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)

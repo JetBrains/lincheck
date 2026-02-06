@@ -168,8 +168,7 @@ object TraceRecorder {
             mode = recordingMode,
             layout = if (isInLiveDebuggerMode) TraceDataLayout.FLAT else TraceDataLayout.TREE,
             context = createTraceContext(),
-            traceStreamingFilePath =
-                if (recordingMode is TraceRecordingMode.BinaryFileStream) recordingMode.streamingFilePath else null
+            traceStreamingFilePath = (recordingMode as? TraceRecordingMode.BinaryFileStream)?.streamingFilePath
         )
 
         var tcpServer: TcpTraceServer? = null
