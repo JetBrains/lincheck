@@ -36,6 +36,10 @@ data class LiveDebuggerSettings(
         }
         return removedBreakpoints
     }
+    
+    companion object {
+        const val MAX_ARRAY_ELEMENTS = 10
+    }
 }
 
 data class SnapshotBreakpoint(

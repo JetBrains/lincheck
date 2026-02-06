@@ -10,10 +10,8 @@
 
 package org.jetbrains.lincheck.util
 
-import org.jetbrains.lincheck.descriptors.FieldDescriptor
-import org.jetbrains.lincheck.descriptors.toDescriptor
-import org.jetbrains.lincheck.trace.TraceContext
 import java.util.concurrent.ConcurrentHashMap
+import java.lang.reflect.Array as ReflectArray
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
 import sun.misc.Unsafe
@@ -181,6 +179,67 @@ fun getFieldOffsetViaUnsafe(field: Field): Long {
 
 private val fieldDescriptorByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long>, Any /* FieldDescriptor */>()
 private val DESCRIPTOR_NOT_FOUND = Any() // cannot store `null` in the cache.
+
+// Cache for class -> declared fields mapping (for snapshot breakpoint field capture)
+private val declaredFieldsCache = ConcurrentHashMap<Class<*>, Array<Field>>()
+
+fun findFieldsForObject(obj: Any?): Map<String, Any?> {
+    // Null fields and primitives do not have fields
+    if (obj == null || obj::class.javaPrimitiveType != null) return emptyMap()
+
+    val clazz = obj::class.java
+    // Skip primitive box types and strings
+    if (clazz.isPrimitive || clazz == String::class.java) return emptyMap()
+
+    val fields = declaredFieldsCache.getOrPut(clazz) {
+        clazz.declaredFields
+            .filter { !Modifier.isStatic(it.modifiers) }
+            .toTypedArray()
+    }
+
+    return buildMap {
+        fields.forEach { field ->
+            val result = readFieldSafely(obj, field)
+            if (result.isSuccess) put(field.name, result.getOrNull())
+        }
+    }
+}
+
+fun findArrayLength(arr: Any?): Int = when (arr) {
+    is Array<*> -> arr.size
+    is IntArray -> arr.size
+    is LongArray -> arr.size
+    is ByteArray -> arr.size
+    is ShortArray -> arr.size
+    is CharArray -> arr.size
+    is FloatArray -> arr.size
+    is DoubleArray -> arr.size
+    is BooleanArray -> arr.size
+    else -> ReflectArray.getLength(arr)
+}
+
+fun findElementsForArray(arr: Any?, nElements: Int): List<Any?> {
+    // Null or non-array returns empty list
+    if (arr == null || !arr::class.java.isArray) return emptyList()
+    return buildList {
+        for (i in 0 until nElements) {
+            val result = runCatching {
+                readArrayElementViaUnsafe(arr, i)
+            }.recoverCatching {
+                ReflectArray.get(arr, i)
+            }.onFailure { exception -> 
+                Logger.debug { "Failed to read elements from index $i: $exception" }
+                Logger.debug(exception)
+            }
+            
+            if (result.isSuccess) {
+                add(result.getOrNull())
+            } else {
+                add(null)
+            }
+        }
+    }
+}
 
 @Suppress("DEPRECATION")
 fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kind: FieldKind): String? =

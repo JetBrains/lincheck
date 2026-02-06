@@ -1065,10 +1065,10 @@ fun TRObjectWithFields(context: TraceContext, obj: Any, fields: Map<String, Any?
     return TRObject(classId, System.identityHashCode(obj), context.getClassDescriptor(classId), trObjectMap)
 }
 
-fun TRArrayWithElements(context: TraceContext, arr: Array<*>, elements: List<Any?>): TRArray {
+fun TRArrayWithElements(context: TraceContext, arr: Any, size: Int, elements: List<Any?>): TRArray {
     val classId = context.getOrCreateClassId(arr.javaClass.name)
     val elementsAsTRValues = elements.map { value -> TRObjectOrNull(context, value) }
-    return TRArray(classId, System.identityHashCode(arr), context.getClassDescriptor(classId), arr.size, elementsAsTRValues)
+    return TRArray(classId, System.identityHashCode(arr), context.getClassDescriptor(classId), size, elementsAsTRValues)
 }
 
 fun TRValue(context: TraceContext, obj: Any): TRValue {
@@ -1114,7 +1114,17 @@ fun TRValue(context: TraceContext, obj: Any): TRValue {
         is BigDecimal -> TRPrimitive(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
         is Class<*> -> TRPrimitive(TR_OBJECT_P_JAVA_CLASS, 0, "${obj.simpleName}.class")
         is KClass<*> -> TRPrimitive(TR_OBJECT_P_KOTLIN_CLASS, 0, "${obj.simpleName}.kclass")
+        
+        // Arrays
         is Array<*> -> defaultTRArray(obj.size)
+        is IntArray -> defaultTRArray(obj.size)
+        is LongArray -> defaultTRArray(obj.size)
+        is ByteArray -> defaultTRArray(obj.size)
+        is ShortArray -> defaultTRArray(obj.size)
+        is CharArray -> defaultTRArray(obj.size)
+        is FloatArray -> defaultTRArray(obj.size)
+        is DoubleArray -> defaultTRArray(obj.size)
+        is BooleanArray -> defaultTRArray(obj.size)
 
         // Generic case
         // TODO Make parametrized
@@ -1166,12 +1176,13 @@ internal fun DataOutput.writeTRValue(value: TRValue?) {
         }
 
         is TRArray -> {
+            writeInt(value.classNameId)
             if (value.classNameId >= 0) {
-                writeInt(value.classNameId)
                 writeInt(value.identityHashCode)
                 
                 // Negative for arrays where -1 is empty array
                 val encodedElementsSize = (value.capturedElements.size + 1) * -1
+                println("WRITING ARRAY: $encodedElementsSize ${value.toString()}")
                 writeInt(encodedElementsSize)
                 value.capturedElements.forEach { element -> this@writeTRValue.writeTRValue(element) }
                 writeInt(value.totalSize)
@@ -1210,16 +1221,16 @@ internal fun DataInput.readTRObject(context: TraceContext): TRValue? {
                 }
                 val totalSize = readInt()
                 TRArray(classNameId, identityHashCode, context.getClassDescriptor(classNameId), totalSize, capturedElements)
-            }
-        
-            val fields = buildMap {
-                repeat(childrenSize) {
-                    val fieldName = readUTF()
-                    val fieldValue = readTRObject(context)
-                    put(fieldName, fieldValue)
+            } else {
+                val fields = buildMap {
+                    repeat(childrenSize) {
+                        val fieldName = readUTF()
+                        val fieldValue = readTRObject(context)
+                        put(fieldName, fieldValue)
+                    }
                 }
+                TRObject(classNameId, identityHashCode, context.getClassDescriptor(classNameId), fields)
             }
-            TRObject(classNameId, identityHashCode, context.getClassDescriptor(classNameId), fields)
         }
         else -> error("TRObject: Unknown Class Id $classNameId")
     }
