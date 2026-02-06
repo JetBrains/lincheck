@@ -119,12 +119,27 @@ class TcpStreamingTraceCollecting(
 
         recordedPoints.incrementAndGet()
 
-        // Try to add to the queue; if full, drop the oldest element and try again (backpressure defense)
+        // Try to add to the queue; if full, drop the oldest element and try again (backpressure defense).
+        var dropped = 0
+        var timestamp = System.currentTimeMillis()
         while (!tracePointQueue.offer(created)) {
-            val dropped = tracePointQueue.poll()
-            if (dropped != null) {
+            if (tracePointQueue.poll() != null) {
                 droppedPoints.incrementAndGet()
-                Logger.warn { "Trace point queue full, dropping oldest trace point" }
+
+                // Do not do logging on each iteration to avoid throttling.
+                // Instead, log on each N seconds passed.
+                // Re-check time only on each K drop to reduce overhead.
+                dropped++
+                if (dropped % 100 == 0) {
+                    val now = System.currentTimeMillis()
+                    val elapsed = (now - timestamp)
+                    if (elapsed > 30_000 /* 30 sec */) {
+                        timestamp = now
+                        Logger.warn {
+                            "Trace point queue full, dropped $dropped trace points in this batch)"
+                        }
+                    }
+                }
             }
         }
     }
