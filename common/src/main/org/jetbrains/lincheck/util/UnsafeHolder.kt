@@ -192,7 +192,7 @@ fun findFieldsForObject(obj: Any?): Map<String, Any?> {
     if (clazz.isPrimitive || clazz == String::class.java) return emptyMap()
 
     val fields = declaredFieldsCache.getOrPut(clazz) {
-        clazz.declaredFields
+        clazz.allDeclaredFieldWithSuperclasses
             .filter { !Modifier.isStatic(it.modifiers) }
             .toTypedArray()
     }
