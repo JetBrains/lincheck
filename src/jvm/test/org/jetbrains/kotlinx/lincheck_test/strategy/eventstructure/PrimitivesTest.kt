@@ -365,8 +365,6 @@ class PrimitivesTest {
         }
     }
 
-    // TODO: repair!!!
-    @Ignore
     @Test
     fun testGlobalAtomicAccesses() {
         val read = GlobalAtomicVariable::read
@@ -623,7 +621,6 @@ class PrimitivesTest {
         val first: A, val second: B, val third: C, val forth: D
     )
 
-    @Ignore
     @Test
     fun testMixedAccesses() {
         val read = VolatileReferenceVariable::read
@@ -743,7 +740,6 @@ class PrimitivesTest {
 
     }
 
-    @Ignore
     @Test
     fun testUnsafeByteArrayAccesses() {
         val read = UnsafeArrays::readByte
@@ -768,7 +764,6 @@ class PrimitivesTest {
         }
     }
 
-    @Ignore
     @Test
     fun testUnsafeShortArrayAccesses() {
         val read = UnsafeArrays::readShort
@@ -793,7 +788,6 @@ class PrimitivesTest {
         }
     }
 
-    @Ignore
     @Test
     fun testUnsafeIntArrayAccesses() {
         val read = UnsafeArrays::readInt
@@ -818,7 +812,6 @@ class PrimitivesTest {
         }
     }
 
-    @Ignore
     @Test
     fun testUnsafeLongArrayAccesses() {
         val read = UnsafeArrays::readLong
@@ -843,7 +836,6 @@ class PrimitivesTest {
         }
     }
 
-    @Ignore
     @Test
     fun testUnsafeReferenceArrayAccesses() {
         val read = UnsafeArrays::readReference
