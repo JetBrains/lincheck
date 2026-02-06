@@ -136,8 +136,10 @@ class TcpStreamingTraceCollecting(
                     if (elapsed > 30_000 /* 30 sec */) {
                         timestamp = now
                         Logger.warn {
-                            "Trace point queue full, dropped $dropped trace points in this batch)"
+                            val rate = dropped / (elapsed.toDouble() / 1_000)
+                            "Trace point queue full, dropped $dropped trace points in this batch, dropping rate: $rate points/sec"
                         }
+                        dropped = 0
                     }
                 }
             }
