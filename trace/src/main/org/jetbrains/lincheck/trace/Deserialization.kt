@@ -169,94 +169,65 @@ internal class CodeLocationsContext {
     fun restoreAllCodeLocations(context: TraceContext) {
         restoreAllAccessPaths(context)
         shallowCodeLocations.forEachIndexed { id, value ->
-            if (value != null) {
-                val stackTraceElement = StackTraceElement(
-                    /* declaringClass = */ stringCache.getOrNull(value.className) ?: "<unknown class>",
-                    /* methodName = */ stringCache.getOrNull(value.methodName) ?: "<unknown method>",
-                    /* fileName = */ stringCache.getOrNull(value.fileName) ?: "<unknown file>",
-                    /* lineNumber = */ value.lineNumber
-                )
-                val accessPath = if (value.accessPath == -1) null else context.getAccessPath(value.accessPath)
-                val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
-                val activeLocalsNames: List<String>? =
-                    value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
-                val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)
-                context.restoreCodeLocation(id, location)
-            }
+            if (value == null) return@forEachIndexed
+            restoreCodeLocation(context, id, value)
         }
     }
 
     fun restoreCodeLocation(context: TraceContext, id: Int) {
-        val value = shallowCodeLocations[id]
-        if (value != null) {
-            val stackTraceElement = StackTraceElement(
-                /* declaringClass = */ stringCache.getOrNull(value.className) ?: "<unknown class>",
-                /* methodName = */ stringCache.getOrNull(value.methodName) ?: "<unknown method>",
-                /* fileName = */ stringCache.getOrNull(value.fileName) ?: "<unknown file>",
-                /* lineNumber = */ value.lineNumber
-            )
-            val accessPath = if (value.accessPath == -1) null else context.getAccessPath(value.accessPath)
-            val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
-            val activeLocalsNames: List<String>? =
-                value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
-            val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)
-            context.restoreCodeLocation(id, location)
-        }
+        val value = shallowCodeLocations[id] ?: return
+        restoreCodeLocation(context, id, value)
+    }
+
+    private fun restoreCodeLocation(context: TraceContext, id: Int, value: ShallowCodeLocation) {
+        val stackTraceElement = StackTraceElement(
+            /* declaringClass = */ stringCache.getOrNull(value.className) ?: "<unknown class>",
+            /* methodName = */ stringCache.getOrNull(value.methodName) ?: "<unknown method>",
+            /* fileName = */ stringCache.getOrNull(value.fileName) ?: "<unknown file>",
+            /* lineNumber = */ value.lineNumber
+        )
+        val accessPath = if (value.accessPath != -1) context.getAccessPath(value.accessPath) else null
+        val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
+        val activeLocalsNames: List<String>? =
+            value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
+        val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)
+        context.restoreCodeLocation(id, location)
     }
 
     private fun restoreAllAccessPaths(context: TraceContext) {
         shallowAccessPathsCache.forEachIndexed { id, value ->
-            if (value != null) {
-                val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
-                    when (shallowLocation) {
-                        is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
-                            context.getVariableDescriptor(shallowLocation.variableDescriptorId)
-                        )
-
-                        is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
-                            context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
-                        )
-
-                        is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
-                            context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
-                        )
-
-                        is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)
-                        is ShallowArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(
-                            context.getAccessPath(shallowLocation.accessPathId)
-                        )
-                    }
-                }
-                context.restoreAccessPath(id, AccessPath(locations))
-            }
+            if (value == null) return@forEachIndexed
+            restoreAccessPath(context, id, value)
         }
     }
 
     fun restoreAccessPath(context: TraceContext, id: Int) {
-        val value = shallowAccessPathsCache[id]
-        if (value != null) {
-            val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
-                when (shallowLocation) {
-                    is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
-                        context.getVariableDescriptor(shallowLocation.variableDescriptorId)
-                    )
+        val value = shallowAccessPathsCache[id] ?: return
+        restoreAccessPath(context, id, value)
+    }
 
-                    is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
-                        context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
-                    )
+    private fun restoreAccessPath(context: TraceContext, id: Int, value: ShallowAccessPath) {
+        val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
+            when (shallowLocation) {
+                is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
+                    context.getVariableDescriptor(shallowLocation.variableDescriptorId)
+                )
 
-                    is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
-                        context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
-                    )
+                is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
+                    context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
+                )
 
-                    is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)
-                    is ShallowArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(
-                        context.getAccessPath(shallowLocation.accessPathId)
-                    )
-                }
+                is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
+                    context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
+                )
+
+                is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)
+                is ShallowArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(
+                    context.getAccessPath(shallowLocation.accessPathId)
+                )
             }
-            context.restoreAccessPath(id, AccessPath(locations))
         }
+        context.restoreAccessPath(id, AccessPath(locations))
     }
 
     private fun <T> load(container: MutableList<T?>, id: Int, value: T) {
