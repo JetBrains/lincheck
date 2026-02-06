@@ -109,55 +109,6 @@ internal fun Trace.moveStartingSwitchPointsOutOfMethodCalls(): Trace {
 }
 
 /**
- * Idea is to convert unclosed loops method calls to [SpinCycleStartTracePoint]
- */
-internal fun Trace.convertOpenLoopsToSpinCycles(): Trace {
-    val newTrace = this.trace.toMutableList()
-    // ThreadId -> Stack of open method calls
-    val openMethods = mutableMapOf<Int, Stack<Int>>()
-
-    for (currentPos in newTrace.indices) {
-        val point = newTrace[currentPos]
-        val stack = openMethods.getOrPut(point.iThread) { Stack() }
-
-        if (point is MethodCallTracePoint)
-            stack.push(currentPos)
-        else if (point is MethodReturnTracePoint) {
-            if (stack.isNotEmpty()) stack.pop()
-        }
-    }
-
-    // For each thread, find if the last opened method is represented by a loop
-    for ((_, stack) in openMethods) {
-        if (stack.isNotEmpty()) {
-            val lastOpenMethodIdx = stack.peek()
-            val lastOpenMethod = newTrace[lastOpenMethodIdx]
-            if (lastOpenMethod is MethodCallTracePoint && lastOpenMethod.methodName.startsWith("loop_")) {
-                val callStackElements = stack.dropLast(1).map {
-                    val tracePoint = newTrace[lastOpenMethodIdx] as MethodCallTracePoint
-                    CallStackTraceElement(
-                        id = tracePoint.eventId,
-                        tracePoint = tracePoint,
-                        instance = null,
-                        methodInvocationId = -1
-                    )
-                }
-
-                newTrace[lastOpenMethodIdx] = SpinCycleStartTracePoint(
-                    context = lastOpenMethod.context,
-                    eventId = lastOpenMethod.eventId,
-                    iThread = lastOpenMethod.iThread,
-                    actorId = lastOpenMethod.actorId,
-                    callStackTrace = callStackElements
-                )
-            }
-        }
-    }
-
-    return Trace(newTrace, this.threadNames)
-}
-
-/**
  * Adjusts the positions of `SpinCycleStartTracePoint` instances within the trace
  * corresponding to recursive spin-locks, ensuring that the recursive spin-lock is marked
  * at the point of the recursive method call trace point.

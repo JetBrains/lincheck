@@ -830,7 +830,6 @@ private fun LincheckFailure.preprocessTrace(): Trace {
         .run { if (failure !is ValidationFailure) removeValidationSection() else this }
         .removeRedundantSectionDelimiters()
         .moveStartingSwitchPointsOutOfMethodCalls()
-        .convertOpenLoopsToSpinCycles()
         .numberExceptionResults()
 }
 
