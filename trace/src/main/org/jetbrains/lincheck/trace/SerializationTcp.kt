@@ -145,9 +145,7 @@ class TcpStreamingTraceCollecting(
     }
 
     override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {
-        check(false) {
-            "Container trace points are not supported by TCP trace collection strategy"
-        }
+        error("Container trace points are not supported by TCP trace collection strategy")
     }
 
     override fun traceEnded() {
