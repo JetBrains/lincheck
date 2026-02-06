@@ -31,6 +31,7 @@ import org.jetbrains.lincheck.util.*
 
 internal class ObjectRegistry(private val eventStructure: EventStructure): BaseObjectTracker() {
 
+    var externalIds = mutableSetOf<ObjectID>()
     var allocationMap: MutableMap<ObjectID, AtomicThreadEvent> = mutableMapOf()
     var objMap: MutableMap<ObjectID, OpaqueValue> = mutableMapOf()
 
@@ -64,12 +65,17 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     }
 
     fun registerTestInstance(obj: Any, threadId: ThreadId): ObjectEntry {
-        return super.registerExternalObject(obj).also { addEntries(obj, it.objectId, threadId) }
+        return super.registerExternalObject(obj).also {
+            val allocationEvent = eventStructure.addObjectAllocationEvent(threadId,obj.opaque(), it.objectId)
+            allocationMap[it.objectId] = allocationEvent
+            objMap[it.objectId] = obj.opaque()
+        }
     }
 
     private fun addEntries(obj: Any, objectID: ObjectID, iThread: ThreadId? = null ) {
         val iThread = iThread ?: (Thread.currentThread() as? TestThread)?.threadId
         if (iThread != null) {
+            externalIds.add(objectID)
             val allocationEvent = eventStructure.addObjectAllocationEvent(iThread,obj.opaque(), objectID)
             allocationMap[objectID] = allocationEvent
             objMap[objectID] = obj.opaque()
@@ -86,6 +92,22 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     fun getObject(id: ObjectID): OpaqueValue? {
         return primitiveMap[id] ?: objMap[id]
     }
+
+    fun getOrRegisterPrimitveValue(value: OpaqueValue): ObjectID {
+        check(value.unwrap().isImmutable)
+        primitiveMap[value.hashCode().toLong()] = value
+        return value.hashCode().toLong()
+    }
+
+    // TODO: I do not think that this does anything
+    override fun reset() {
+        super.reset()
+        externalIds.forEach {
+            allocationMap.remove(it)
+            objMap.remove(it)
+        }
+    }
+
 }
 
 
