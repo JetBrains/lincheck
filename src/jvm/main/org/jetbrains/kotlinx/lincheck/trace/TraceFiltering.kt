@@ -28,6 +28,12 @@ internal class ShortenTraceFilter : TraceFilter {
     override fun shouldUnfold(callNode: TraceNode): Boolean {
         if (callNode is CallNode && callNode.isRootCall && callNode.tracePoint.isThreadStart) return true
         unfoldableNodes[callNode]?.let { return it }
+
+        if (callNode.children.lastOrNull() is LoopNode || callNode.children.lastOrNull() is IterationRangeNode || callNode.children.lastOrNull() is RecursionNode) {
+            unfoldableNodes[callNode] = true
+            return true
+        }
+
         return callNode.children.any { child ->
             when (child) {
                 is EventNode -> with(child) {

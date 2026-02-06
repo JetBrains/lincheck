@@ -211,10 +211,41 @@ private class TraceColumnPrinter(
             return
         }
         updateSpinCycleState(node)
+//        TODO: do it for iteration range as well
+        if (node is LoopNode && !verbose) {
+            val loopLine = node.toStringImpl(withLocation = false)
+            var loopTitle = loopLine.substringBefore(":")
+            var iterations = loopLine.substringAfter(":").split(";").map { it.trim() }.dropLast(1) // drop last empty element after split
 
-        val nodeLine = getPrefix() + node.toStringImpl(withLocation = verbose)
-        val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
-        _lines.add(traceLine)
+            var prefixIterations = getPrefix() + " "
+
+            if (iterations.lastOrNull()?.contains("switch (reason: active lock detected)") ?: false ) {
+
+                loopTitle = "┌╶> $loopTitle"
+
+                iterations = iterations.mapIndexed { index, iteration ->
+                    val arrow = if (index == iterations.lastIndex) "└╶╶ " else "|    "
+                    arrow + iteration
+                }
+                prefixIterations= prefixIterations.dropLast(1)
+            }
+            val loopTitleLine = TraceLine(node.eventNumber, node.iThread, getPrefix() + loopTitle)
+            _lines.add(loopTitleLine)
+
+            val traceLines = iterations.filter{ !it.isEmpty() }.map { iteration ->
+                    TraceLine(node.eventNumber, node.iThread, prefixIterations + iteration)
+            }
+            traceLines.forEach { traceLine ->
+                _lines.add(traceLine)
+            }
+        }
+
+        else {
+            val nodeLine = getPrefix() + node.toStringImpl(withLocation = verbose)
+
+            val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
+            _lines.add(traceLine)
+        }
 
         val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode || node is IterationRangeNode
         if (isUnfoldableNode && (filter?.shouldUnfold(node) ?: true)) {
