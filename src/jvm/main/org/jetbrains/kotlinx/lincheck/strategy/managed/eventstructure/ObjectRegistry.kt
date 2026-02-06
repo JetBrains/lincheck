@@ -95,8 +95,8 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
 
     fun getOrRegisterPrimitveValue(value: OpaqueValue): ObjectID {
         check(value.unwrap().isImmutable)
-        primitiveMap[value.hashCode().toLong()] = value
-        return value.hashCode().toLong()
+        primitiveMap[value.unwrap().hashCode().toLong()] = value
+        return value.unwrap().hashCode().toLong()
     }
 
     // TODO: I do not think that this does anything
