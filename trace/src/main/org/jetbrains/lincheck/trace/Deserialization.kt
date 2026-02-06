@@ -112,7 +112,8 @@ internal data class ShallowCodeLocation(
     val lineNumber: Int,
     val accessPath: Int,
     val argumentNames: List<Int>?,
-    val activeLocalsNames: List<Int>?
+    val activeLocalsNames: List<Int>?,
+    val activeLocalsKinds: List<Int>?
 )
 
 internal class ShallowAccessPath(val locations: MutableList<ShallowAccessLocation>)
@@ -172,7 +173,8 @@ internal class CodeLocationsContext {
         }
         val activeLocalsNames: List<String>? =
             value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
-        val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)
+        val activeLocals = activeLocalsNames?.zip(value.activeLocalsKinds!!)?.map { (name, kind) -> ActiveLocal(name, LocalKind.entries[kind]) }
+                val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
         context.restoreCodeLocation(id, location)
     }
 

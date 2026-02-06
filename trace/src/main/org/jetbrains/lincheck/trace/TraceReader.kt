@@ -397,6 +397,10 @@ internal fun loadCodeLocation(
         nActiveLocalsNames == 0 -> null
         else -> List(nActiveLocalsNames) { input.readInt() }
     }
+    val activeLocalsKinds = when {
+        nActiveLocalsNames == 0 -> null
+        else -> List(nActiveLocalsNames) { input.readInt() }
+    }
 
     if (restore) {
         val scl = ShallowCodeLocation(
@@ -406,7 +410,8 @@ internal fun loadCodeLocation(
             lineNumber = lineNumber,
             accessPath = accessPathId,
             argumentNames = argumentNameIds,
-            activeLocalsNames = activeLocalsNamesIds
+            activeLocalsNames = activeLocalsNamesIds,
+            activeLocalsKinds = activeLocalsKinds
         )
         codeLocs.loadCodeLocation(id, scl)
     }

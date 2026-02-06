@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.ActiveLocal
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocation
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
@@ -142,7 +143,7 @@ class TraceContext {
         stackTraceElement: StackTraceElement,
         accessPath: AccessPath? = null,
         argumentNames: List<AccessPath?>? = null,
-        activeLocals: List<String>? = null
+        activeLocals: List<ActiveLocal>? = null
     ): Int {
         val id = locations.size
         val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
@@ -180,7 +181,7 @@ class TraceContext {
         return loc.argumentNames
     }
 
-    fun activeLocalsNames(codeLocationId: Int): List<String>? {
+    fun activeLocals(codeLocationId: Int): List<ActiveLocal>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
         val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
         return loc.activeLocals

@@ -65,3 +65,15 @@ data class VariableDescriptor(
     val name: String,
     val type: Types.Type
 )
+
+
+data class ActiveLocal(
+    val localName: String,
+    val localKind: LocalKind,
+)
+
+enum class LocalKind {
+    THIS,
+    PARAMETER,
+    VARIABLE,
+}
