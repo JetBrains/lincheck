@@ -195,7 +195,7 @@ class TraceCollectingEventTracker(
 
     // Subscription service for the case when TCP trace streaming mode is used.
     // Clients can subscribe to receive trace points.
-    val subscriptionService: TcpStreamingTraceCollecting? =
+    val subscriptionService: TcpTraceSubscriptionService? =
         (this.strategy as? TcpStreamingTraceCollecting)
 
     // For proper completion of threads which are not tracked from the start of the agent,
