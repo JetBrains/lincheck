@@ -48,7 +48,7 @@ class TcpStreamingTraceCollecting(
     private val subscribers = mutableListOf<TraceSubscriber>()
     private val tracePointQueue = ArrayBlockingQueue<TRSnapshotLineBreakpointTracePoint>(queueCapacity)
 
-    private val recordedPoints = AtomicInteger(0)
+    private val recordedPoints = AtomicLong(0)
     private val droppedPoints = AtomicLong(0)
 
     private val lock = ReentrantLock()
@@ -64,7 +64,7 @@ class TcpStreamingTraceCollecting(
         try {
             socket.tcpNoDelay = true // Disable Nagle's algorithm for lower latency
 
-            val outputStream = DataOutputStream(BufferedOutputStream(socket.getOutputStream(), SOCKET_OUTPUT_BUFFER_SIZE))
+            val outputStream = DataOutputStream(BufferedOutputStream(socket.getOutputStream(), SOCKET_BUFFER_SIZE))
 
             // Create a trace context state for this subscriber (each subscriber gets an independent state)
             val subscriberContextState = SubscriberContextState()
@@ -171,7 +171,7 @@ class TcpStreamingTraceCollecting(
     }
 
     private fun writerThreadLoop() {
-        while (running || tracePointQueue.isNotEmpty()) {
+        while (/* volatile read */ running || tracePointQueue.isNotEmpty()) {
             try {
                 val tracePoint = tracePointQueue.poll(100, TimeUnit.MILLISECONDS) ?: continue
                 writeTracePointToAllSubscribers(tracePoint)
@@ -209,6 +209,10 @@ class TcpStreamingTraceCollecting(
             }
 
             try {
+                // TODO: for simplicity, we wrap each trace point into a separate block;
+                //       in the future, as an optimization, we can group several consecutive trace points
+                //       from the same thread into a single block.
+
                 // Write block start
                 subscriber.outputStream.writeKind(ObjectKind.BLOCK_START)
                 subscriber.outputStream.writeInt(tracePoint.threadId)
@@ -326,6 +330,8 @@ internal class TcpTraceWriter(
     }
 }
 
+internal typealias SnapshotLineBreakpointListener = (TRSnapshotLineBreakpointTracePoint) -> Unit
+
 /**
  * Incremental TCP trace reader that reads trace data from a TCP stream.
  *
@@ -336,7 +342,7 @@ internal class TcpTraceWriter(
  * @param socket the TCP socket to read from.
  */
 class TcpTraceReader(private val socket: Socket) : Closeable {
-    private val inputStream = socket.getInputStream().buffered(SOCKET_OUTPUT_BUFFER_SIZE)
+    private val inputStream = socket.getInputStream().buffered(SOCKET_BUFFER_SIZE)
     private val dataInput = DataInputStream(inputStream)
 
     init {
@@ -356,7 +362,7 @@ class TcpTraceReader(private val socket: Socket) : Closeable {
 
     private val threadTracePoints = mutableMapOf<Int, MutableList<TRSnapshotLineBreakpointTracePoint>>()
 
-    private val tracePointListeners = mutableListOf<(TRSnapshotLineBreakpointTracePoint) -> Unit>()
+    private val tracePointListeners = mutableListOf<SnapshotLineBreakpointListener>()
 
     enum class State { RUNNING, PAUSED, STOPPED, EOF }
 
@@ -667,4 +673,4 @@ class TcpTraceServer(
     }
 }
 
-private const val SOCKET_OUTPUT_BUFFER_SIZE = 128 // 128 byte
+private const val SOCKET_BUFFER_SIZE = 128 // 128 byte
