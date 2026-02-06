@@ -34,6 +34,8 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     var allocationMap: MutableMap<ObjectID, AtomicThreadEvent> = mutableMapOf()
     var objMap: MutableMap<ObjectID, OpaqueValue> = mutableMapOf()
 
+    var primitiveMap: MutableMap<ValueID, OpaqueValue> = mutableMapOf()
+
     private var initEvent: AtomicThreadEvent? = null
 
     fun initialize(initEvent: AtomicThreadEvent) {
@@ -78,8 +80,10 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
         return allocationMap[id]
     }
 
+    // TODO: This is a bit stupid since we have no way to tell from just
+    // the ObjectID if we have an immutable value or an object
     fun getObject(id: ObjectID): OpaqueValue? {
-        return objMap[id]
+        return primitiveMap[id] ?: objMap[id]
     }
 }
 
@@ -91,7 +95,7 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
 internal fun ObjectRegistry.getOrRegisterObjectID(obj: OpaqueValue?): ObjectID =
     when {
         obj == null -> NULL_OBJECT_ID
-        obj.unwrap().isImmutable -> obj.hashCode().toLong() //Sus?
+        obj.unwrap().isImmutable -> getOrRegisterPrimitveValue(obj)
         else -> registerObjectIfAbsent(obj.unwrap()).objectId
     }
 
