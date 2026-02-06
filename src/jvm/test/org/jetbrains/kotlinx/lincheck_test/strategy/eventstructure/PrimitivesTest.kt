@@ -623,6 +623,7 @@ class PrimitivesTest {
 
     @Test
     fun testMixedAccesses() {
+        ExecutionPrinter.setup(testName.methodName)
         val read = VolatileReferenceVariable::read
         val afuRead = VolatileReferenceVariable::afuRead
         val vhRead = VolatileReferenceVariable::vhRead
