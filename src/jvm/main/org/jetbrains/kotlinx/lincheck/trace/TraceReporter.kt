@@ -212,30 +212,45 @@ private class TraceColumnPrinter(
         }
         updateSpinCycleState(node)
 //        TODO: Iterations with ranges do not show up. In those cases the node is CallNode.
-        if (node is LoopNode && !verbose) {
+        if ((node is LoopNode || node is CallNode) && !verbose) {
             val loopLine = node.toStringImpl(withLocation = false)
             var loopTitle = loopLine.substringBefore(":")
             var iterations = loopLine.substringAfter(":").split(";").map { it.trim() }.dropLast(1) // drop last empty element after split
 
             var prefixIterations = getPrefix() + " "
 
-            if (iterations.lastOrNull()?.contains("switch (reason: active lock detected)") ?: false ) {
+            if (iterations.any { it.contains("switch (reason: active lock detected)") }) {
+                val switchIndex = iterations.indexOfFirst { it.contains("switch (reason: active lock detected)") }
 
                 loopTitle = "┌╶> $loopTitle"
 
                 iterations = iterations.mapIndexed { index, iteration ->
-                    val arrow = if (index == iterations.lastIndex) "└╶╶ " else "|    "
+                    val arrow = when {
+                        index < switchIndex -> "|    "
+                        index == switchIndex -> "└╶╶ "
+                        else -> "     "
+                    }
                     arrow + iteration
                 }
-                prefixIterations= prefixIterations.dropLast(1)
+                prefixIterations = prefixIterations.dropLast(1)
             }
             val loopTitleLine = TraceLine(node.eventNumber, node.iThread, getPrefix() + loopTitle)
             _lines.add(loopTitleLine)
 
-            val traceLines = iterations.filter{ !it.isEmpty() }.map { iteration ->
-                    TraceLine(node.eventNumber, node.iThread, prefixIterations + iteration)
+            val traceLines = iterations.filter { !it.isEmpty() }
+
+            // get event numbers from iterations
+            val iterationEventNumbers = iterations.map { iteration ->
+                iteration.substringAfterLast("(").substringBefore(")").toIntOrNull()
             }
-            traceLines.forEach { traceLine ->
+
+            // remove the event numbers from the iteration strings
+            val iterationsWithoutEventNumbers = traceLines.map { iteration ->
+                iteration.substringBeforeLast("(").trimEnd()
+            }
+            iterationsWithoutEventNumbers.zip(iterationEventNumbers).map { (iteration, eventNumber) ->
+                TraceLine(eventNumber ?: node.eventNumber, node.iThread, prefixIterations + iteration)
+            }.forEach { traceLine ->
                 _lines.add(traceLine)
             }
         }

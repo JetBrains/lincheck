@@ -118,10 +118,20 @@ internal class CallNode(
         isActor = true
     }
 
-    //TODO: might need to verify for LoopNodes in the children of node here to include them in the "interleaving leads to error" part of the table
-    // otherwise, check what needs unfolding
-    override fun toStringImpl(withLocation: Boolean): String =
-        tracePoint.toStringImpl(withLocation)
+    override fun toStringImpl(withLocation: Boolean): String {
+        if(!withLocation && children.any { it is LoopNode }) {
+            val sb = StringBuilder()
+            sb.append("${tracePoint.methodName}() loops: ")
+            sb.append(computeInterleavingErrorLoops(this))
+            children.forEach { child ->
+                sb.append(computeInterleavingErrorLoops(child))
+            }
+            return sb.toString()
+        } 
+        else {
+            return tracePoint.toStringImpl(true)
+        }
+    }
 
     override fun copy(): TraceNode = CallNode(tracePoint, eventNumber)
         .also { it.returnEventNumber = returnEventNumber}
@@ -158,20 +168,26 @@ internal class LoopNode(
         else {
             val sb = StringBuilder()
             sb.append("$base:")
-            children.forEach { node ->
-                val codeFragmentChildren = node.children.map { child ->
-                    child.toStringImpl(false)
-                }
-                codeFragmentChildren.forEach { child ->
-                    if (!child.contains("loop(") && !sb.contains(child))
-                            sb.append(child).append(";")
-                }
-            }
+            sb.append(computeInterleavingErrorLoops(this))
             return sb.toString()
         }
     }
 
     override fun copy(): TraceNode = LoopNode(tracePoint, eventNumber)
+}
+
+private fun computeInterleavingErrorLoops(node: TraceNode): String {
+    val sb = StringBuilder()
+    node.children.forEach { node ->
+        val codeFragmentChildren = node.children.map { child ->
+            child.toStringImpl(false) + "(${child.eventNumber})"
+        }
+        codeFragmentChildren.forEach { child ->
+            if (!child.contains("loop(") && !sb.contains(child))
+                sb.append(child).append(";")
+        }
+    }
+    return sb.toString()
 }
 
 internal class IterationNode(
