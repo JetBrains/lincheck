@@ -28,10 +28,8 @@ interface TracingJmxController {
      * The trace producer acts as a server,
      * listening for incoming reader connections on an automatically assigned port.
      * Clients should connect to this port using [TcpTraceReader] class.
-     *
-     * @return the port the server is listening on.
      */
-    fun startTcpTracing(): Int
+    fun startTcpTracing()
 
     /**
      * Stops the current tracing operation.
