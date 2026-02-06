@@ -10,15 +10,18 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import org.jetbrains.lincheck.descriptors.LocalKind
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClasses
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.util.TraceClassVisitor
 import java.io.File
 import java.io.PrintWriter
@@ -172,8 +175,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                         val index = local.index
                         val type = Type.getType(local.desc)
                         val name = sanitizeVariableName(classNode.name, local.name, config, type) ?: return@forEach
+                        val localKind = computeLocalKind(name, index, m)
                         val info = LocalVariableInfo(
-                            name, local.index, type, local.start.label to local.end.label
+                            name, local.index, type, local.start.label to local.end.label, localKind
                         )
                         map.getOrPut(index) { mutableListOf() }.add(info)
                     }
@@ -181,6 +185,17 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
         .mapValues { MethodVariables(it.value) }
+    }
+    
+    private fun computeLocalKind(name: String, index: Int, methodNode: MethodNode): LocalKind {
+        val isStatic = (methodNode.access and Opcodes.ACC_STATIC) != 0
+        val parameterSlotCount = Type.getArgumentTypes(methodNode.desc).sumOf { it.size }
+        val firstLocalVarIndex = parameterSlotCount + if (isStatic) 0 else 1
+        return when {
+            isThisName(name) -> LocalKind.THIS
+            index < firstLocalVarIndex -> LocalKind.PARAMETER
+            else -> LocalKind.VARIABLE
+        }
     }
 
     private fun sanitizeVariableName(owner: String, originalName: String, config: TransformationConfiguration, type: Type): String? {

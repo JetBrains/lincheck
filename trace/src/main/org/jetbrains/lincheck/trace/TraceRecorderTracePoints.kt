@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.ActiveLocal
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
@@ -26,7 +27,6 @@ import org.jetbrains.lincheck.trace.DefaultTRLoopTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLineBreakpointSnapshotTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRThrowTracePointPrinter.append
-import org.jetbrains.lincheck.trace.TRObject
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
@@ -116,7 +116,7 @@ sealed class TRTracePoint(
     }
 
     val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(context, codeLocationId)
-    val activeLocals: List<String> get() = CodeLocations.activeLocals(context, codeLocationId) ?: emptyList() // used in plugin
+    val activeLocals: List<ActiveLocal> get() = CodeLocations.activeLocals(context, codeLocationId) ?: emptyList() // used in plugin
     val accessPath: AccessPath? get() = CodeLocations.accessPath(context, codeLocationId)
 
     fun toText(verbose: Boolean): String {
