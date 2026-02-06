@@ -33,7 +33,6 @@ import org.junit.Test
  * These tests check that [EventStructureStrategy] adheres to the weak memory model.
  * It contains various litmus tests to check for specific weak behaviors.
  */
-@Ignore
 class MemoryModelTest {
 
     private val read = SharedMemory::read
