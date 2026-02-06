@@ -77,6 +77,7 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     }
 
     fun getAllocation(id: ObjectID) : AtomicThreadEvent? {
+        if(id == STATIC_OBJECT_ID) return initEvent;
         return allocationMap[id]
     }
 
