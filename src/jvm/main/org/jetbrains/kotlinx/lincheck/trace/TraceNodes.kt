@@ -118,6 +118,8 @@ internal class CallNode(
         isActor = true
     }
 
+    //TODO: might need to verify for LoopNodes in the children of node here to include them in the "interleaving leads to error" part of the table
+    // otherwise, check what needs unfolding
     override fun toStringImpl(withLocation: Boolean): String =
         tracePoint.toStringImpl(withLocation)
 
@@ -144,8 +146,7 @@ internal class LoopNode(
     fun totalIterations(): Int =
         children.sumOf {
             when (it) {
-                is IterationNode -> 1
-                is IterationRangeNode -> it.count
+                is IterationNode -> it.count
                 else -> 0
             }
         }
@@ -176,32 +177,23 @@ internal class LoopNode(
 internal class IterationNode(
     tracePoint: LoopIterationTracePoint,
     eventNumber: Int,
+    val from: Int = tracePoint.iteration,
+    val to: Int = tracePoint.iteration
 ) : TraceNode(eventNumber, tracePoint) {
     override val tracePoint: LoopIterationTracePoint get() = super.tracePoint as LoopIterationTracePoint
 
-    override fun toStringImpl(withLocation: Boolean): String =
-        tracePoint.toStringImpl(withLocation)
-
-    override fun copy(): TraceNode = IterationNode(tracePoint, eventNumber)
-}
-
-// Used to print <iterations from-to> nodes when compressing iterations
-internal class IterationRangeNode(
-    startIterationPoint: LoopIterationTracePoint,
-    eventNumber: Int,
-    val from: Int,
-    val to: Int
-) : TraceNode(eventNumber, startIterationPoint) {
-
-    override val tracePoint: LoopIterationTracePoint get() = super.tracePoint as LoopIterationTracePoint
     val count: Int get() = to - from + 1
+    val isIterationRange: Boolean get() = count > 1
 
     override fun toStringImpl(withLocation: Boolean): String {
-        val loc = if (withLocation) " at ${tracePoint.toStringImpl(true).substringAfter(" at ")}" else ""
-        return "<iterations $from-$to>$loc"
+        if (isIterationRange) {
+            val loc = if (withLocation) " at ${tracePoint.toStringImpl(true).substringAfter(" at ")}" else ""
+            return "<iterations $from-$to>$loc"
+        }
+        return tracePoint.toStringImpl(withLocation)
     }
 
-    override fun copy(): TraceNode = IterationRangeNode(tracePoint, eventNumber, from, to)
+    override fun copy(): TraceNode = IterationNode(tracePoint, eventNumber, from, to)
 }
 
 internal class RecursionNode(
@@ -378,8 +370,8 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
             val from = first.tracePoint.iteration
             val to = last.tracePoint.iteration
 
-            val range = IterationRangeNode(
-                startIterationPoint = first.tracePoint,
+            val range = IterationNode(
+                tracePoint=first.tracePoint,
                 eventNumber = first.eventNumber,
                 from = from,
                 to = to,

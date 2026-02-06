@@ -211,7 +211,7 @@ private class TraceColumnPrinter(
             return
         }
         updateSpinCycleState(node)
-//        TODO: do it for iteration range as well
+//        TODO: Iterations with ranges do not show up. In those cases the node is CallNode.
         if (node is LoopNode && !verbose) {
             val loopLine = node.toStringImpl(withLocation = false)
             var loopTitle = loopLine.substringBefore(":")
@@ -247,7 +247,7 @@ private class TraceColumnPrinter(
             _lines.add(traceLine)
         }
 
-        val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode || node is IterationRangeNode
+        val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode
         if (isUnfoldableNode && (filter?.shouldUnfold(node) ?: true)) {
             pushCallStack(node)
             try {

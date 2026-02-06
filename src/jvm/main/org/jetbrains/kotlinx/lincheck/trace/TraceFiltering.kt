@@ -29,7 +29,7 @@ internal class ShortenTraceFilter : TraceFilter {
         if (callNode is CallNode && callNode.isRootCall && callNode.tracePoint.isThreadStart) return true
         unfoldableNodes[callNode]?.let { return it }
 
-        if (callNode.children.lastOrNull() is LoopNode || callNode.children.lastOrNull() is IterationRangeNode || callNode.children.lastOrNull() is RecursionNode) {
+        if (callNode.children.lastOrNull() is LoopNode || callNode.children.lastOrNull() is RecursionNode) {
             unfoldableNodes[callNode] = true
             return true
         }
