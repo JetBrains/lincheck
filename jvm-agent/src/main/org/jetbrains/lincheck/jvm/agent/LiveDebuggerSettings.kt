@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-internal data class LiveDebuggerSettings(
+data class LiveDebuggerSettings(
     val lineBreakPoints: List<SnapshotBreakpoint>
 ) {
     companion object {
@@ -18,10 +18,11 @@ internal data class LiveDebuggerSettings(
             val parsed = list.map { SnapshotBreakpoint.read(it) }
             return LiveDebuggerSettings(parsed)
         }
+        const val MAX_ARRAY_ELEMENTS = 10
     }
 }
 
-internal data class SnapshotBreakpoint(
+data class SnapshotBreakpoint(
     val className: String,
     val fileName: String,
     val lineNumber: Int,

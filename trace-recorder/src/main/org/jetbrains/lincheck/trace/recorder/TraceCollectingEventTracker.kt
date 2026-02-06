@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.jvm.agent.LiveDebuggerSettings
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
@@ -698,13 +699,29 @@ class TraceCollectingEventTracker(
         
         val timeStamp = System.currentTimeMillis()
         
+        val locals = locals.filterNotNull().map { local ->
+            if (local::class.java.isArray) {
+                val arraySize = findArrayLength(local)
+                val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
+                val elements = findElementsForArray(local, elementsToRead)
+                TRArrayWithElements(context, local, arraySize, elements)
+            } else {
+                val objectFields = findFieldsForObject(local)
+                if (objectFields.isNotEmpty()) {
+                    TRObjectWithFields(context, local, objectFields)
+                } else {
+                    TRValue(context, local)
+                }
+            }
+        }
+        
         val tracePoint = TRSnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = codeLocation,
             threadId = threadData.threadId,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
-            locals = locals.map { TRObjectOrNull(context, it) },
+            locals = locals,
             traceId = traceId,
         )
         // TODO maybe these tracepoints should be collected separately
