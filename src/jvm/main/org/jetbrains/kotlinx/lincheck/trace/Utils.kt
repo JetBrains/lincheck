@@ -150,63 +150,6 @@ internal fun Trace.moveStartingSwitchPointsOutOfMethodCalls(): Trace {
  * @return A new trace instance with updated trace point ordering.
  */
 
-//TODO: refactor to work for new loop detector
-//internal fun Trace.moveSpinCycleStartTracePoints(): Trace {
-//    val newTrace = this.trace.toMutableList()
-//
-//    for (currentPosition in newTrace.indices) {
-//        val tracePoint = newTrace[currentPosition]
-//        if (tracePoint !is SpinCycleStartTracePoint) continue
-//
-//        check(currentPosition > 0)
-//
-//        // find a beginning of the current thread section
-//        var currentThreadSectionStartPosition = newTrace.indexOfLast(from = currentPosition - 1) {
-//            it.iThread != tracePoint.iThread
-//        }
-//        ++currentThreadSectionStartPosition
-//
-//        // find the next thread switch
-//        val nextThreadSwitchPosition = newTrace.indexOf(from = currentPosition + 1) {
-//            it is SwitchEventTracePoint || it is ObstructionFreedomViolationExecutionAbortTracePoint
-//        }
-//        if (nextThreadSwitchPosition == currentPosition + 1) continue
-//
-//        // compute call stack traces
-//        val currentStackTrace = mutableListOf<MethodCallTracePoint>()
-//        val stackTraces = mutableListOf<List<MethodCallTracePoint>>()
-//        for (n in currentThreadSectionStartPosition .. currentPosition) {
-//            stackTraces.add(currentStackTrace.toList())
-//            if (newTrace[n] is MethodCallTracePoint) {
-//                currentStackTrace.add(newTrace[n] as MethodCallTracePoint)
-//            } else if (newTrace[n] is MethodReturnTracePoint) {
-//                currentStackTrace.removeLastOrNull()
-//            }
-//        }
-//
-//        // compute the patched stack trace of the spin cycle trace point
-//        val spinCycleStartStackTrace = tracePoint.callStackTrace
-////        val spinCycleStartPatchedStackTrace = recomputeSpinCycleStartCallStack(
-////            spinCycleStartTracePoint = newTrace[currentPosition],
-////            spinCycleEndTracePoint = newTrace[nextThreadSwitchPosition],
-////        )
-//        val stackTraceElementsDropCount = spinCycleStartStackTrace.size //- spinCycleStartPatchedStackTrace.size
-//        val spinCycleStartStackTraceSize = stackTraces.lastOrNull()?.size ?: 0
-//        val callStackSize = (spinCycleStartStackTraceSize - stackTraceElementsDropCount).coerceAtLeast(0)
-//
-//        // find the position where to move the spin cycle start trace point
-//        val i = currentPosition
-//        var j = currentPosition
-//        val k = currentThreadSectionStartPosition
-//        while (j >= k && stackTraces[j - k].size > callStackSize) {
-//            --j
-//        }
-//
-//        newTrace.move(i, j)
-//    }
-//
-//    return Trace(newTrace, this.threadNames)
-//}
 
 internal fun Trace.removeRedundantSectionDelimiters(): Trace {
     val firstTracePoint = trace.firstOrNull() ?: return this
@@ -326,4 +269,191 @@ internal fun List<TraceNode>.appendResultNodes() {
         )
         node.addChild(resultNode)
     }
+}
+
+internal fun foldEquivalentLoopIterations(
+    table: MultiThreadedTable<TraceNode>
+): MultiThreadedTable<TraceNode> {
+    return table
+        .map { threadNodes ->
+            threadNodes.map { foldNode(it) }.toMutableList()
+        }
+}
+
+/**
+ * Folds equivalent loop iterations in the given [node] and its children recursively.
+ */
+private fun foldNode(node: TraceNode): TraceNode {
+    val nodeCopy = node.copy()
+
+    val foldedChildren = node.children.map { foldNode(it) }
+
+    val finalChildren = if (nodeCopy is LoopNode) {
+        foldLoopChildren(foldedChildren)
+    } else {
+        foldedChildren
+    }
+
+    for (child in finalChildren) {
+        nodeCopy.addChild(child)
+    }
+
+    return nodeCopy
+}
+
+private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
+    val result = mutableListOf<TraceNode>()
+    var startIndex = 0
+
+    while (startIndex < children.size) {
+        val node = children[startIndex]
+        if (node !is IterationNode) {
+            result += node
+            startIndex++
+            continue
+        }
+
+        val pattern = iterationPattern(node)
+
+        // While the next nodes match the pattern, extend the range
+        var endIndex = startIndex + 1
+        while (endIndex < children.size && children[endIndex] is IterationNode && iterationPattern(children[endIndex] as IterationNode) == pattern) {
+            endIndex++
+        }
+
+        // Make sure it makes sense to fold, more than 1 iteration. Otherwise, just add the original node
+        if (endIndex - startIndex >= 2) {
+            val first = children[startIndex] as IterationNode
+            val last = children[endIndex - 1] as IterationNode
+
+            val from = first.tracePoint.iteration
+            val to = last.tracePoint.iteration
+
+            val range = IterationNode(
+                tracePoint=first.tracePoint,
+                eventNumber = first.eventNumber,
+                from = from,
+                to = to,
+            )
+
+            for (bodyChild in first.children) range.addChild(bodyChild)
+            result += range
+        } else {
+            result += node
+        }
+
+        startIndex = endIndex
+    }
+
+    return result
+}
+
+private data class NodePattern(
+    val head: String,
+    val children: List<NodePattern>
+)
+
+private fun iterationPattern(iter: IterationNode): NodePattern =
+    NodePattern(
+        head = "",
+        children = iter.children.map { nodePattern(it) }
+    )
+
+private fun nodePattern(node: TraceNode): NodePattern =
+    NodePattern(
+        head = node.toStringImpl(true),
+        children = node.children.map { nodePattern(it) }
+    )
+
+internal fun foldRecursiveCalls(
+    table: MultiThreadedTable<TraceNode>
+): MultiThreadedTable<TraceNode> {
+    return table.map { threadNodes ->
+        threadNodes.map { foldRecursion(it) }.toMutableList()
+    }.toMutableList()
+}
+
+private fun foldRecursion(node: TraceNode): TraceNode {
+    // check if node is the start of a recursion chain
+    if (node is CallNode) {
+        val chain = detectRecursionChain(node)
+
+        if (chain.size > 1) {
+            val depth = chain.size
+            val tailNode = chain.last()
+
+            val recursionNode = RecursionNode(
+                node = node,
+                depth = depth,
+                eventNumber = node.eventNumber
+            )
+
+            // Skip folding the recursive child of the head node, as it will be represented by the recursion node itself. We then apply foldRecursion to the rest of the children to handle nested structures.
+            val nextInChain = chain[1]
+            node.children.forEach { child ->
+                if (child !== nextInChain) {
+                    recursionNode.addChild(foldRecursion(child))
+                }
+            }
+
+            // Apply fold to the children of the tail node to handle any nested structures within the tail
+            tailNode.children.forEach { child ->
+                recursionNode.addChild(foldRecursion(child))
+            }
+
+            return recursionNode
+        }
+    }
+
+    // Propagate folding to children of non-recursive nodes
+    val newNode = node.copy()
+    node.children.forEach { child ->
+        newNode.addChild(foldRecursion(child))
+    }
+    return newNode
+}
+
+// Returns the list of CallNodes forming the recursion chain (including head and tail).
+// If no recursion is detected, returns a list with only the head.
+private fun detectRecursionChain(head: CallNode): List<CallNode> {
+    val chain = mutableListOf<CallNode>()
+    chain.add(head)
+
+    var current = head
+    while (true) {
+        // Find a child that calls the same method
+        val recursiveChild = current.children.firstOrNull {
+            isRecursiveChild(current, it)
+        } as? CallNode
+
+        if (recursiveChild == null) {
+            break
+        }
+
+        chain.add(recursiveChild)
+        current = recursiveChild
+    }
+    return chain
+}
+
+
+private fun isRecursiveChild(parent: CallNode, child: TraceNode): Boolean {
+    return child is CallNode &&
+            child.tracePoint.methodName == parent.tracePoint.methodName &&
+            child.tracePoint.className == parent.tracePoint.className
+}
+
+internal fun computeInterleavingErrorLoops(node: TraceNode): String {
+    val sb = StringBuilder()
+    println("intram recursiv?")
+    node.children.forEach { node ->
+        val codeFragmentChildren = node.children.map { child ->
+            child.toStringImpl(false) + "(${child.eventNumber})"
+        }
+        codeFragmentChildren.forEach { child ->
+            if (!child.contains("loop(") && !sb.contains(child))
+                sb.append(child).append(";")
+        }
+    }
+    return sb.toString()
 }
