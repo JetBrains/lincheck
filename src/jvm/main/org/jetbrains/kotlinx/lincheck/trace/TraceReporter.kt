@@ -262,7 +262,7 @@ private class TraceColumnPrinter(
             _lines.add(traceLine)
         }
 
-        val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode
+        val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode || node is RecursionNode
         if (isUnfoldableNode && (filter?.shouldUnfold(node) ?: true)) {
             pushCallStack(node)
             try {

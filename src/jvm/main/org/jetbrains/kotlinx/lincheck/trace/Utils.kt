@@ -445,7 +445,6 @@ private fun isRecursiveChild(parent: CallNode, child: TraceNode): Boolean {
 
 internal fun computeInterleavingErrorLoops(node: TraceNode): String {
     val sb = StringBuilder()
-    println("intram recursiv?")
     node.children.forEach { node ->
         val codeFragmentChildren = node.children.map { child ->
             child.toStringImpl(false) + "(${child.eventNumber})"
