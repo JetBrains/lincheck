@@ -23,8 +23,8 @@ interface LoopDetector {
     fun resetThread(threadId: Int) // when a thread finishes
 
     fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int)
-    fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int): Decision
-    fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int)
+    fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Pair<Boolean, Decision>
+    fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, isReachableFromOutsideLoop: Boolean): Int?
 
     // TODO: at the moment params are only passed, but not used
     fun onMethodEnter(
@@ -45,23 +45,36 @@ interface LoopDetector {
 
     fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int) : Int
 
+    fun currentMethodId(threadId: Int): Int
+    fun loopIsInStack(threadId: Int, loopId: Int) : Boolean
+
 //  TODO: Implement in next iteration, find where to call (beforeWriteField, beforeWriteArrayElement, afterLocalWrite)
 //    fun onStageChange(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, valueHash: Int)
 }
 
-data class ActiveLoopInfo (
+private data class LoopKey(
     val loopId: Int,
     val codeLocation: Int,
+)
+
+private data class ActiveLoopInfo (
+    val key: LoopKey,
     var iterationCount: Int = 0,
 )
 
-data class ActiveMethodCallInfo(
+private data class LoopContext (
+    val loopId: Int,
+    val methodId: Int,
+    val codeLocation: Int,
+)
+
+private data class ActiveMethodCallInfo(
     val methodId: Int,
     var depth: Int = 1,
     val loops: ArrayDeque<ActiveLoopInfo> = ArrayDeque(),
 )
 
-data class LoopDetectorThreadState(
+private data class LoopDetectorThreadState(
     val threadId: Int,
     val callStack: ArrayDeque<ActiveMethodCallInfo> = ArrayDeque(),
 )
@@ -82,13 +95,20 @@ class BoundedLoopDetector(
     // shouldSwitch(): Boolean ???
 
     private val threadStates = mutableThreadMapOf<LoopDetectorThreadState>()
+    // Per-thread stack of currently active loops
+    private val activeLoopStack = mutableThreadMapOf<ArrayDeque<LoopContext>>()
+
+    private fun loopStack(thread: Int): ArrayDeque<LoopContext> =
+        activeLoopStack.getOrPut(thread) { ArrayDeque() }
 
     override fun resetAll() {
         threadStates.clear()
+        activeLoopStack.clear()
     }
 
     override fun resetThread(threadId: Int) {
         threadStates.remove(threadId)
+        activeLoopStack.remove(threadId)
     }
 
     private fun state(threadId: Int): LoopDetectorThreadState =
@@ -96,7 +116,66 @@ class BoundedLoopDetector(
             LoopDetectorThreadState(threadId)
         }
 
+    override fun currentMethodId(threadId: Int): Int {
+        val st = threadStates[threadId] ?: return -1
+        return st.callStack.lastOrNull()?.methodId ?: -1
+    }
+
+    override fun loopIsInStack(threadId: Int, loopId: Int): Boolean {
+        val stack = activeLoopStack[threadId] ?: return false
+        return stack.any { it.loopId == loopId }
+    }
+
     // --- LOOP LEVEL ---
+    override fun onLoopIteration(
+        threadId: Int,
+        codeLocation: Int,
+        loopId: Int
+    ): Pair<Boolean, LoopDetector.Decision> {
+        val methodId = currentMethodId(threadId)
+        val stack = loopStack(threadId)
+
+        val loop = stack.lastOrNull { it.loopId == loopId && it.codeLocation == codeLocation && it.methodId == methodId }
+        val started = if (loop == null) {
+            beforeLoopEnter(threadId, codeLocation, loopId)
+            stack.addLast(LoopContext(loopId, methodId, codeLocation))
+            true
+        } else {
+            false
+        }
+        val decision = computeLoopDecision(threadId, codeLocation, loopId, methodId)
+        return Pair(started, decision)
+    }
+
+    override fun afterLoopExit(
+        threadId: Int,
+        codeLocation: Int,
+        loopId: Int,
+        isReachableFromOutsideLoop: Boolean
+    ): Int? {
+        if (!isReachableFromOutsideLoop || loopIsInStack(threadId, loopId)) {
+            val methodId = currentMethodId(threadId)
+            val stack = loopStack(threadId)
+
+            val indexToRemove = stack.withIndex()
+                .filter{ it.value.loopId == loopId && it.value.methodId == methodId }
+                .minByOrNull { kotlin.math.abs(it.value.codeLocation - codeLocation) }
+                ?.index
+            val loop = if (indexToRemove != null) {
+                val temp = ArrayDeque<LoopContext>()
+                while (stack.size - 1 > indexToRemove) temp.addFirst(stack.removeLast())
+                val found = stack.removeLast()
+                for (l in temp) stack.addLast(l)
+                found
+            } else null
+
+            val enterCodeLocation = loop?.codeLocation ?: codeLocation
+            removeLoopFromStack(threadId, loopId,)
+            return enterCodeLocation
+        }
+        return null
+    }
+
     override fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int) {
         val st = state(threadId)
         val stack = st.callStack
@@ -105,10 +184,10 @@ class BoundedLoopDetector(
             stack.addLast(it)
         }
 
-        frame.loops.addLast(ActiveLoopInfo(loopId, codeLocation))
+        frame.loops.addLast(ActiveLoopInfo(LoopKey(loopId, codeLocation)))
     }
 
-    override fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int): LoopDetector.Decision {
+    private fun computeLoopDecision(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int): LoopDetector.Decision {
         val st = state(threadId)
         val stack = st.callStack
         val frame = stack.lastOrNull()?: return LoopDetector.Decision.IDLE
@@ -118,7 +197,7 @@ class BoundedLoopDetector(
             return LoopDetector.Decision.IDLE
         }
 
-        val loop = frame.loops.lastOrNull {it.loopId == loopId && it.codeLocation == codeLocation} ?: ActiveLoopInfo(loopId, codeLocation).also {
+        val loop = frame.loops.lastOrNull { it.key.loopId == loopId && it.key.codeLocation == codeLocation } ?: ActiveLoopInfo(LoopKey(loopId, codeLocation)).also {
             frame.loops.addLast(it)
         }
 
@@ -136,17 +215,17 @@ class BoundedLoopDetector(
 
     }
 
-    override fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, methodId: Int) {
+    private fun removeLoopFromStack(threadId: Int, loopId: Int) {
         val st = state(threadId)
         val stack = st.callStack
         val frame = stack.lastOrNull()?: return
 
-        val loop = frame.loops.lastOrNull {it.loopId == loopId} ?: return
+        val loop = frame.loops.lastOrNull { it.key.loopId == loopId } ?: return
         loop.iterationCount = 0 // reset iteration count as a sanity check
         if (frame.loops.lastOrNull() === loop) {
             frame.loops.removeLast()
         } else {
-            val idx = frame.loops.indexOfLast {it.loopId == loopId}
+            val idx = frame.loops.indexOfLast { it.key.loopId == loopId }
             if (idx != -1) {
                 frame.loops.removeAt(idx)
             }
@@ -189,25 +268,23 @@ class BoundedLoopDetector(
         val st = state(threadId)
         val stack = st.callStack
         val top = stack.lastOrNull() ?: return
+        if (top.methodId == methodId) {
+                if (top.depth > 1) top.depth -= 1 else stack.removeLast()
+                return
+            }
 
-        if (top.methodId != methodId) {
-            // something is wrong
-            return
-        }
-
-        if (top.depth > 1) {
-            top.depth -= 1
-        } else {
-            // no more recursion levels
-            stack.removeLast()
-        }
+        // If methodId is not on top, then we need to find it in the stack and remove all frames above it.
+        val idx = stack.indexOfLast { it.methodId == methodId }
+        if (idx == -1) return
+        while (stack.size - 1 > idx) stack.removeLast()
+        val frame = stack.lastOrNull() ?: return
+        if (frame.depth > 1) frame.depth -= 1 else stack.removeLast()
     }
     override fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {
         val st = state(threadId)
         val stack = st.callStack
         val frame = stack.lastOrNull()?: return 1
-
-        val loop = frame.loops.lastOrNull {it.loopId == loopId && it.codeLocation == codeLocation} ?: return 1
+        val loop = frame.loops.lastOrNull { it.key.loopId == loopId && it.key.codeLocation == codeLocation } ?: return 1
 
         return loop.iterationCount
     }
