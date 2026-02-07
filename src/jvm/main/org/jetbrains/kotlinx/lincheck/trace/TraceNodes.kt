@@ -119,13 +119,24 @@ internal class CallNode(
     }
 
     override fun toStringImpl(withLocation: Boolean): String {
-        if(!withLocation && children.firstOrNull() is LoopNode && !children.any { it.children == children }) {
-            val sb = StringBuilder()
-            sb.append("${tracePoint.methodName}() loops: ")
-            if (children.any { it is CallNode && it.tracePoint.methodName == this.tracePoint.methodName }) {
-                return "${tracePoint.methodName}() [recursion calls detected]"
+        if (!withLocation)  {
+            if (children.any { it is LoopNode } && !children.any { it.children == children}) {
+                val sb = StringBuilder()
+                sb.append(tracePoint.toStringImpl(false))
+                if (children.any { it is CallNode && it.tracePoint.methodName == this.tracePoint.methodName }) {
+                    return "${tracePoint.methodName}() [potential infinite recursion detected]"
+                }
+                else {
+                    val loopNodes = children.filterIsInstance<LoopNode>()
+                    if (loopNodes.isNotEmpty()) {
+                        sb.append(" is looping ")
+                    }
+                }
+
+                return sb.toString()
             }
-            return sb.toString()
+            else
+                return tracePoint.toStringImpl(false)
         }
         else {
             return tracePoint.toStringImpl(true)
@@ -166,7 +177,7 @@ internal class LoopNode(
         if (withLocation) return "$base at ${tracePoint.toStringImpl(true).substringAfter(" at ")}"
         else {
             val sb = StringBuilder()
-            sb.append("$base:")
+            sb.append("$base::")
             sb.append(computeInterleavingErrorLoops(this))
             return sb.toString()
         }
