@@ -119,15 +119,14 @@ internal class CallNode(
     }
 
     override fun toStringImpl(withLocation: Boolean): String {
-        if(!withLocation && children.any { it is LoopNode }) {
+        if(!withLocation && children.firstOrNull() is LoopNode && !children.any { it.children == children }) {
             val sb = StringBuilder()
             sb.append("${tracePoint.methodName}() loops: ")
-            sb.append(computeInterleavingErrorLoops(this))
-            children.forEach { child ->
-                sb.append(computeInterleavingErrorLoops(child))
+            if (children.any { it is CallNode && it.tracePoint.methodName == this.tracePoint.methodName }) {
+                return "${tracePoint.methodName}() [recursion calls detected]"
             }
             return sb.toString()
-        } 
+        }
         else {
             return tracePoint.toStringImpl(true)
         }
