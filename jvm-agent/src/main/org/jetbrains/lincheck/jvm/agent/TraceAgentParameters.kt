@@ -41,9 +41,6 @@ import javax.management.remote.JMXServiceURL
  *
  * - exclude — semicolon-separated list of exclude patterns (optional).
  *       Example: `exclude="org.example.internal.*;**.generated.*"`
- *       
- * - lineBreakpoints — semicolon-separated list of line breakpoints to capture snapshots from.
- *       This is functionality for the live debugger project.
  *
  * - pack — boolean that enables zipping trace artifact files, it is false by default.
  *       Example: `pack=true`
@@ -111,7 +108,6 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
-    const val ARGUMENT_LINE_BREAKPOINT = "breakpoints"
     const val ARGUMENT_JMX_SERVER = "jmxServer"
     const val ARGUMENT_JMX_HOST = "jmxHost"
     const val ARGUMENT_JMX_PORT = "jmxPort"
@@ -274,9 +270,6 @@ object TraceAgentParameters {
     @JvmStatic
     fun getExcludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_EXCLUDE])
     
-    @JvmStatic
-    fun getLineBreakpoints(): List<String> = splitPatterns(namedArgs[ARGUMENT_LINE_BREAKPOINT])
-
     private fun splitPatterns(value: String?): List<String> {
         if (value.isNullOrBlank()) return emptyList()
         return value.split(';')
