@@ -10,7 +10,29 @@
 
 package org.jetbrains.lincheck.trace.jmx
 
+import org.jetbrains.lincheck.trace.TcpTraceReader
+
 interface TracingJmxController {
-    fun startTracing(traceDumpFilePath: String, packTrace: Boolean)
+
+    /**
+     * Starts tracing writing the trace output to the specified file.
+     *
+     * @param traceDumpFilePath the file path where the trace output will be saved.
+     * @param packTrace whether to compress the trace output into a zip file.
+     */
+    fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean)
+
+    /**
+     * Starts TCP trace streaming.
+     *
+     * The trace producer acts as a server,
+     * listening for incoming reader connections on an automatically assigned port.
+     * Clients should connect to this port using [TcpTraceReader] class.
+     */
+    fun startTcpTracing()
+
+    /**
+     * Stops the current tracing operation.
+     */
     fun stopTracing()
 }

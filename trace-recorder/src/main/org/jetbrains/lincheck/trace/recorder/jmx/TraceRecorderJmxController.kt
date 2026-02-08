@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.trace.recorder.jmx
 
-import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.trace.TcpTraceServer
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
 import org.jetbrains.lincheck.trace.recorder.TraceRecorder
 import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent
@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.trace.recorder.TraceRecorderSession
 import org.jetbrains.lincheck.trace.recorder.TraceRecordingMode
 import org.jetbrains.lincheck.util.Logger
 import java.lang.management.ManagementFactory
+import java.util.IdentityHashMap
 import javax.management.ObjectName
 import javax.management.StandardMBean
 
@@ -56,7 +57,7 @@ object TraceRecorderJmxController : TracingJmxController {
         }
     }
 
-    override fun startTracing(traceDumpFilePath: String, packTrace: Boolean) {
+    override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
         try {
             val session = TraceRecorder.startRecording(
                 recordingMode = TraceRecordingMode.parse(
@@ -71,6 +72,23 @@ object TraceRecorderJmxController : TracingJmxController {
             }
         } catch (t: Throwable) {
             Logger.error { "Cannot start trace recording" }
+            Logger.error(t)
+        }
+    }
+
+    override fun startTcpTracing() {
+        try {
+            val session = TraceRecorder.startRecording(
+                recordingMode = TraceRecordingMode.BinaryTcpStream,
+                startMode = TraceRecorderSession.StartMode.Dynamic,
+            )
+
+            if (session == null) {
+                Logger.warn { "TCP trace streaming session was not started (recording already in progress)" }
+                return
+            }
+        } catch (t: Throwable) {
+            Logger.error { "Cannot start TCP trace streaming" }
             Logger.error(t)
         }
     }

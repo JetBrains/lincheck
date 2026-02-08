@@ -33,7 +33,7 @@ internal data class IndexCell(
     val endPos: Long
 )
 
-private interface BlockSaver {
+internal interface BlockSaver {
     fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>)
 }
 
@@ -41,7 +41,7 @@ private interface BlockSaver {
 // Leave some space for metadata
 private const val MAX_STRING_SIZE = PER_THREAD_DATA_BUFFER_SIZE - 1024
 
-private class BufferedTraceWriter (
+internal class BufferedTraceWriter(
     override val writerId: Int,
     context: TraceContext,
     contextState: ContextSavingState,

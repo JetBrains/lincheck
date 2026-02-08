@@ -15,7 +15,10 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
 
-class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
+class TraceRecorderSession(
+    val eventTracker: TraceCollectingEventTracker,
+    val tcpServer: TcpTraceServer? = null
+) {
     internal sealed class State {
         object NotStarted : State()
 
@@ -120,7 +123,17 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
         )
         Logger.debug { "Trace collected in ${endTime - currentState.startTime} ms" }
 
+        stopTcpServer()
         finishHook.get()?.invoke(this)
+    }
+
+    private fun stopTcpServer() {
+        try {
+            tcpServer?.close()
+        } catch (t: Throwable) {
+            Logger.error { "Cannot stop TCP trace server" }
+            Logger.error(t)
+        }
     }
 
     fun installOnFinishHook(hook: TraceRecorderSession.() -> Unit) {
@@ -162,13 +175,13 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
         try {
             val roots = eventTracker.getThreadRoots()
             when (mode) {
-                is TraceRecordingMode.BinaryDump -> {
+                is TraceRecordingMode.BinaryFileDump -> {
                     saveRecorderTrace(traceDumpFilePath, context, roots)
                     if (packTrace) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                is TraceRecordingMode.BinaryStream -> {
+                is TraceRecordingMode.BinaryFileStream -> {
                     check(traceDumpFilePath == eventTracker.traceStreamingFilePath) {
                         // TODO: it should be easy to support dumping to a different file later: just copy file
                         "Trace dump filename in binary stream mode should match the filename of streaming file"
@@ -176,6 +189,10 @@ class TraceRecorderSession(val eventTracker: TraceCollectingEventTracker) {
                     if (packTrace) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
+                }
+                is TraceRecordingMode.BinaryTcpStream -> {
+                    // TCP streaming - trace already sent over network, nothing to dump to file
+                    error("Trace is streamed over TCP, no data stored to save into a file")
                 }
                 is TraceRecordingMode.Text -> {
                     printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)
