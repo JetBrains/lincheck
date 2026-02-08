@@ -94,8 +94,7 @@ class TraceAgentTransformer(
 
             return bytes
         } catch (e: Throwable) {
-            Logger.error { "Unable to transform $internalClassName" }
-            Logger.error(e)
+            Logger.error(e) { "Unable to transform $internalClassName" }
             return classBytes
         }
     }

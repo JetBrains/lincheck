@@ -44,16 +44,14 @@ object TraceRecorderJmxController : TracingJmxController {
 
             Logger.info { "JMX MBean registered successfully at $MBEAN_OBJECT_NAME" }
         } catch (e: Exception) {
-            Logger.error { "Failed to register JMX MBean at $MBEAN_OBJECT_NAME" }
-            Logger.error(e)
+            Logger.error(e) { "Failed to register JMX MBean at $MBEAN_OBJECT_NAME" }
         }
 
         // register shutdown hook
         try {
             Runtime.getRuntime().addShutdownHook(Thread(this::shutdownHook))
         } catch (e: Exception) {
-            Logger.error { "Failed to register shutdown hook for JMX MBean at $MBEAN_OBJECT_NAME" }
-            Logger.error(e)
+            Logger.error(e) { "Failed to register shutdown hook for JMX MBean at $MBEAN_OBJECT_NAME" }
         }
     }
 
@@ -71,8 +69,7 @@ object TraceRecorderJmxController : TracingJmxController {
                 dumpTrace(traceDumpFilePath, packTrace)
             }
         } catch (t: Throwable) {
-            Logger.error { "Cannot start trace recording" }
-            Logger.error(t)
+            Logger.error(t) { "Cannot start trace recording" }
         }
     }
 
@@ -88,8 +85,7 @@ object TraceRecorderJmxController : TracingJmxController {
                 return
             }
         } catch (t: Throwable) {
-            Logger.error { "Cannot start TCP trace streaming" }
-            Logger.error(t)
+            Logger.error(t) { "Cannot start TCP trace streaming" }
         }
     }
 
@@ -97,8 +93,7 @@ object TraceRecorderJmxController : TracingJmxController {
         try {
             TraceRecorder.stopRecording()
         } catch (t: Throwable) {
-            Logger.error { "Cannot stop trace recording" }
-            Logger.error(t)
+            Logger.error(t) { "Cannot stop trace recording" }
         }
     }
 

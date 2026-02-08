@@ -82,13 +82,11 @@ class TcpStreamingTraceCollecting(
 
             return subscriber
         } catch (e: IOException) {
-            Logger.error { "Failed to add subscriber from ${socket.remoteSocketAddress}" }
-            Logger.error(e)
+            Logger.error(e) { "Failed to add subscriber from ${socket.remoteSocketAddress}" }
             try {
                 socket.close()
             } catch (_: IOException) {
-                Logger.error { "Failed to close subscriber socket" }
-                Logger.error(e)
+                Logger.error(e) { "Failed to close subscriber socket" }
             }
             return null
         }
@@ -194,8 +192,7 @@ class TcpStreamingTraceCollecting(
                 Logger.info { "Trace writer thread interrupted" }
                 break
             } catch (t: Throwable) {
-                Logger.error { "Error in trace writer thread" }
-                Logger.error(t)
+                Logger.error(t) { "Error in trace writer thread" }
             }
         }
 
@@ -205,8 +202,7 @@ class TcpStreamingTraceCollecting(
                 val tracePoint = tracePointQueue.poll() ?: break
                 writeTracePointToAllSubscribers(tracePoint)
             } catch (t: Throwable) {
-                Logger.error { "Error in trace writer thread" }
-                Logger.error(t)
+                Logger.error(t) { "Error in trace writer thread" }
             }
         }
     }
@@ -239,8 +235,7 @@ class TcpStreamingTraceCollecting(
                 subscriber.outputStream.writeKind(ObjectKind.BLOCK_END)
                 subscriber.outputStream.flush()
             } catch (e: IOException) {
-                Logger.error { "Error writing to subscriber ${subscriber.socket.remoteSocketAddress}" }
-                Logger.error(e)
+                Logger.error(e) { "Error writing to subscriber ${subscriber.socket.remoteSocketAddress}" }
                 subscriber.deactivate()
             }
         }
@@ -285,8 +280,7 @@ class TraceSubscriber internal constructor(
         try {
             socket.close()
         } catch (e: IOException) {
-            Logger.error { "Error closing subscriber socket" }
-            Logger.error(e)
+            Logger.error(e) { "Error closing subscriber socket" }
         }
     }
 }

@@ -137,8 +137,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 )
             }
         } catch (e: Throwable) {
-            Logger.error { "Unable to transform $internalClassName" }
-            Logger.error(e)
+            Logger.error(e) { "Unable to transform $internalClassName" }
             classBytes
         }
     }
