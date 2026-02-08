@@ -54,6 +54,10 @@ object Logger {
         log(LoggingLevel.DEBUG, lazyMessage)
     }
 
+    inline fun verbose(lazyMessage: () -> String) {
+        log(LoggingLevel.VERBOSE, lazyMessage)
+    }
+
     inline fun error(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
         log(LoggingLevel.ERROR, e, lazyMessage)
     }
@@ -68,6 +72,10 @@ object Logger {
 
     inline fun debug(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
         log(LoggingLevel.DEBUG, e, lazyMessage)
+    }
+
+    inline fun verbose(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.VERBOSE, e, lazyMessage)
     }
 
     inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
@@ -119,5 +127,5 @@ object Logger {
 @JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
 
 enum class LoggingLevel {
-    DEBUG, INFO, WARN, ERROR, OFF
+    VERBOSE, DEBUG, INFO, WARN, ERROR, OFF
 }
