@@ -72,16 +72,12 @@ object Logger {
 
     inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
-            write(logLevel, lazyMessage(), logWriter)
-        }
-    }
-
-    fun write(logLevel: LoggingLevel, s: String, writer: Writer) {
-        try {
-            writer.write("[${logLevel.name}] $s$LINE_SEPARATOR")
-            writer.flush()
-        } catch (e: IOException) {
-            e.printStackTrace()
+            try {
+                logWriter.write("[${logLevel.name}] ${lazyMessage()}$LINE_SEPARATOR")
+                logWriter.flush()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -102,9 +98,9 @@ object Logger {
         if (file.exists()) file.delete()
         file.createNewFile()
     }
-}
 
-private val LINE_SEPARATOR = System.lineSeparator()
+    val LINE_SEPARATOR: String = System.lineSeparator()
+}
 
 @JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
 
