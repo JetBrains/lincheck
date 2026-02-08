@@ -268,3 +268,25 @@ fun <T> Tree.Node<T>.findLastNode(predicate: (Tree.Node<T>) -> Boolean): Tree.No
     if (predicate(this)) return this
     return null
 }
+
+// ========================================================
+//   Leaf (first/last)
+// ========================================================
+
+fun <T> Tree.Node<T>.firstLeaf(): Tree.Node<T>? {
+    if (children.isEmpty()) return null
+    var currentNode = this
+    while (currentNode.children.isNotEmpty()) {
+        currentNode = currentNode.children.first()
+    }
+    return currentNode
+}
+
+fun <T> Tree.Node<T>.lastLeaf(): Tree.Node<T>? {
+    if (children.isEmpty()) return null
+    var currentNode = this
+    while (currentNode.children.isNotEmpty()) {
+        currentNode = currentNode.children.last()
+    }
+    return currentNode
+}
