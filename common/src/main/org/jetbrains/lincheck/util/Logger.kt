@@ -93,10 +93,14 @@ object Logger {
 
     private fun initFile(file: File) {
         // create parent directories
-        file.parentFile?.let { if (!it.exists()) it.mkdirs() }
+        file.parentFile?.let { parent ->
+            if (!parent.exists()) parent.mkdirs()
+        }
 
-        // create file
-        if (file.exists()) file.delete()
+        // create the file
+        if (file.exists()) {
+            file.delete()
+        }
         file.createNewFile()
     }
 
