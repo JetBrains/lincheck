@@ -54,20 +54,20 @@ object Logger {
         log(LoggingLevel.DEBUG, lazyMessage)
     }
 
-    fun error(e: Throwable) {
-        log(LoggingLevel.ERROR, e)
+    inline fun error(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.ERROR, e, lazyMessage)
     }
 
-    fun warn(e: Throwable) {
-        log(LoggingLevel.WARN, e)
+    inline fun warn(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.WARN, e, lazyMessage)
     }
 
-    fun info(e: Throwable) {
-        log(LoggingLevel.INFO, e)
+    inline fun info(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.INFO, e, lazyMessage)
     }
 
-    fun debug(e: Throwable) {
-        log(LoggingLevel.DEBUG, e)
+    inline fun debug(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.DEBUG, e, lazyMessage)
     }
 
     inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
@@ -81,13 +81,21 @@ object Logger {
         }
     }
 
-    private fun log(logLevel: LoggingLevel, throwable: Throwable) {
+    inline fun log(logLevel: LoggingLevel, throwable: Throwable, lazyMessage: () -> String = { throwable.message ?: "" }) {
         log(logLevel) {
-            val writer = StringWriter()
-            PrintWriter(writer).use { printer ->
-                throwable.printStackTrace(printer)
+            val writer = StringWriter().apply {
+                PrintWriter(this).use { printer ->
+                    throwable.printStackTrace(printer)
+                }
             }
-            writer.toString()
+            val message = lazyMessage()
+            val stackTrace = writer.toString()
+            if (message.isNotEmpty()) {
+                val paddedStackTrace = stackTrace.lines().joinToString(separator = LINE_SEPARATOR) { TAB + it }
+                "${message}${LINE_SEPARATOR}${paddedStackTrace}"
+            } else {
+                stackTrace
+            }
         }
     }
 
@@ -104,6 +112,7 @@ object Logger {
         file.createNewFile()
     }
 
+    val TAB: String = "\t"
     val LINE_SEPARATOR: String = System.lineSeparator()
 }
 
