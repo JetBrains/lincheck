@@ -83,10 +83,11 @@ object Logger {
 
     private fun log(logLevel: LoggingLevel, throwable: Throwable) {
         log(logLevel) {
-            StringWriter().use { writer ->
-                throwable.printStackTrace(PrintWriter(writer))
-                writer.toString()
+            val writer = StringWriter()
+            PrintWriter(writer).use { printer ->
+                throwable.printStackTrace(printer)
             }
+            writer.toString()
         }
     }
 
