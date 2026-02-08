@@ -38,21 +38,37 @@ object Logger {
         runCatching { LoggingLevel.valueOf(it) }.getOrElse { DEFAULT_LOG_LEVEL }
     } ?: DEFAULT_LOG_LEVEL
 
-    inline fun error(lazyMessage: () -> String) = log(LoggingLevel.ERROR, lazyMessage)
+    inline fun error(lazyMessage: () -> String) {
+        log(LoggingLevel.ERROR, lazyMessage)
+    }
 
-    inline fun warn(lazyMessage: () -> String) = log(LoggingLevel.WARN, lazyMessage)
+    inline fun warn(lazyMessage: () -> String) {
+        log(LoggingLevel.WARN, lazyMessage)
+    }
 
-    inline fun info(lazyMessage: () -> String) = log(LoggingLevel.INFO, lazyMessage)
+    inline fun info(lazyMessage: () -> String) {
+        log(LoggingLevel.INFO, lazyMessage)
+    }
 
-    inline fun debug(lazyMessage: () -> String) = log(LoggingLevel.DEBUG, lazyMessage)
+    inline fun debug(lazyMessage: () -> String) {
+        log(LoggingLevel.DEBUG, lazyMessage)
+    }
 
-    fun error(e: Throwable) = log(LoggingLevel.ERROR, e)
+    fun error(e: Throwable) {
+        log(LoggingLevel.ERROR, e)
+    }
 
-    fun warn(e: Throwable) = log(LoggingLevel.WARN, e)
+    fun warn(e: Throwable) {
+        log(LoggingLevel.WARN, e)
+    }
 
-    fun info(e: Throwable) = log(LoggingLevel.INFO, e)
+    fun info(e: Throwable) {
+        log(LoggingLevel.INFO, e)
+    }
 
-    fun debug(e: Throwable) = log(LoggingLevel.DEBUG, e)
+    fun debug(e: Throwable) {
+        log(LoggingLevel.DEBUG, e)
+    }
 
     inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
