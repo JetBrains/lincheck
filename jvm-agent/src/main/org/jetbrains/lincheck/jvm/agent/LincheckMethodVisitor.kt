@@ -98,7 +98,7 @@ internal open class LincheckMethodVisitor(
             stackTraceElement,
             accessPath,
             argumentNames,
-            currentActiveLocals.map { it.name }.toList()
+            currentActiveLocals.map { it.toActiveLocal() }.toList()
         )
         push(codeLocationId)
         return codeLocationId

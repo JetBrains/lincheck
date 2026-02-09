@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.jvm.agent.LiveDebuggerSettings
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
@@ -261,7 +262,7 @@ class TraceCollectingEventTracker(
                     threadId = threadData.threadId,
                     codeLocationId = -1,
                     methodId = context.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
-                    obj = TRObject(context, thread),
+                    obj = TRValue(context, thread),
                     parameters = emptyList()
                 )
                 strategy.tracePointCreated(null, tracePoint)
@@ -415,7 +416,7 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            array = TRObject(context, array),
+            array = TRValue(context, array),
             index = index,
             value = TRObjectOrNull(context, value)
         )
@@ -460,7 +461,7 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            array = TRObject(context, array),
+            array = TRValue(context, array),
             index = index,
             value = TRObjectOrNull(context, value)
         )
@@ -706,11 +707,9 @@ class TraceCollectingEventTracker(
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         
         // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
-        val stackTrace = Thread.currentThread().stackTrace
+        val stackTrace = Exception().stackTrace
             // Removes lincheck related calls
             .filter { !isInLincheckPackage(it.className) }
-            // Removes the getStackTrace method
-            .drop(1)
         
         val stackTraceCodeLocationIds = stackTrace.map { stackTraceElement ->
             // TODO JBRes-7631 prevent duplicate code locations
@@ -719,13 +718,29 @@ class TraceCollectingEventTracker(
         
         val timeStamp = System.currentTimeMillis()
         
+        val locals = locals.filterNotNull().map { local ->
+            if (local::class.java.isArray) {
+                val arraySize = findArrayLength(local)
+                val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
+                val elements = findElementsForArray(local, elementsToRead)
+                TRArrayWithElements(context, local, arraySize, elements)
+            } else {
+                val objectFields = findFieldsForObject(local)
+                if (objectFields.isNotEmpty()) {
+                    TRObjectWithFields(context, local, objectFields)
+                } else {
+                    TRValue(context, local)
+                }
+            }
+        }
+        
         val tracePoint = TRSnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = codeLocation,
             threadId = threadData.threadId,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
-            locals = locals.map { TRObjectOrNull(context, it) },
+            locals = locals,
             traceId = traceId,
         )
         // TODO maybe these tracepoints should be collected separately
@@ -802,7 +817,7 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            exception = TRObject(context, exception)
+            exception = TRValue(context, exception)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -817,7 +832,7 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            exception = TRObject(context, exception)
+            exception = TRValue(context, exception)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -892,12 +907,12 @@ class TraceCollectingEventTracker(
     private fun pushMethodCall(
         thread: Thread,
         threadData: ThreadData,
-        obj: TRObject?,
+        obj: TRValue?,
         className: String,
         methodName: String,
         methodType: Types.MethodType,
         codeLocationId: Int,
-        params: List<TRObject> = emptyList()
+        params: List<TRValue> = emptyList()
     ) {
         val parentTracePoint = threadData.currentMethodCallTracePoint()
         val methodCall = TRMethodCallTracePoint(

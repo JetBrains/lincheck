@@ -205,13 +205,17 @@ class TracePointCloner(
         }
     }
 
-    private fun TRObject.clone(): TRObject =
-        if (isPrimitive) {
-            TRObject(classNameId, identityHashCode, primitiveValue!!)
-        } else {
+    private fun TRValue.clone(): TRValue = when (this) {
+        is TRPrimitive -> TRPrimitive(classNameId, identityHashCode, primitiveValue)
+        is TRArray -> {
             val cid = context.getOrCreateClassId(className)
-            TRObject(cid, identityHashCode, context.getClassDescriptor(cid))
+            TRArray(cid, identityHashCode, context.getClassDescriptor(cid), totalSize, capturedElements.clone())
         }
+        is TRObject -> {
+            val cid = context.getOrCreateClassId(className)
+            TRObject(cid, identityHashCode, context.getClassDescriptor(cid), fields.clone()) 
+        }
+    }
 
     private fun VariableDescriptor.clone(): Int =
         context.getOrCreateVariableId(this.name, this.type)
@@ -222,9 +226,15 @@ class TracePointCloner(
     private fun MethodDescriptor.clone(): Int =
         context.getOrCreateMethodId(this.className, this.methodName, this.methodSignature.methodType)
 
-    private fun List<TRObject?>.clone(): List<TRObject?> {
-        val result = mutableListOf<TRObject?>()
+    private fun List<TRValue?>.clone(): List<TRValue?> {
+        val result = mutableListOf<TRValue?>()
         forEach { result.add(it?.clone()) }
+        return result
+    }
+    
+    private fun <T> Map<T, TRValue?>.clone(): Map<T, TRValue?> {
+        val result = mutableMapOf<T, TRValue?>()
+        forEach { (key, value) -> result[key] = value?.clone() }
         return result
     }
 
