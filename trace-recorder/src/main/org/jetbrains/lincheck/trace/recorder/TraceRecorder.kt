@@ -10,13 +10,11 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
-import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.*
-import sun.nio.ch.lincheck.Injections
-import sun.nio.ch.lincheck.ThreadDescriptor
-import java.util.concurrent.atomic.AtomicInteger
+import sun.nio.ch.lincheck.*
+import java.util.concurrent.atomic.*
 
 /**
  * The `TraceRecorder` object manages the trace recording process.
@@ -157,6 +155,24 @@ object TraceRecorder {
         check(session.isFinished()) { "Tracing was not stopped" }
 
         session.dumpTrace(traceDumpFilePath, packTrace)
+    }
+
+    fun addBreakpoints(breakpoints: List<String>) {
+        val addedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings.addBreakpoints(breakpoints)
+        val classNamesToRetransform = addedBreakpoints.map { it.className }.toSet()
+        val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
+            .filter { it.name in classNamesToRetransform }
+
+        LincheckInstrumentation.retransformClasses(classesToRetransform)
+    }
+
+    fun removeBreakpoints(breakpoints: List<String>) {
+        val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings.removeBreakpoints(breakpoints)
+        val classNamesToRetransform = removedBreakpoints.map { it.className }.toSet()
+        val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
+            .filter { it.name in classNamesToRetransform }
+
+        LincheckInstrumentation.retransformClasses(classesToRetransform)
     }
 
     private fun createTraceContext(): TraceContext {

@@ -107,6 +107,14 @@ object TraceRecorderJmxController : TracingJmxController {
             stopTracing()
         }
     }
+
+    override fun addBreakpoints(breakpoints: List<String>) {
+        TraceRecorder.addBreakpoints(breakpoints)
+    }
+
+    override fun removeBreakpoints(breakpoints: List<String>) {
+        TraceRecorder.removeBreakpoints(breakpoints)
+    }
 }
 
 private const val MBEAN_OBJECT_NAME = "org.jetbrains.lincheck:type=TracingController"

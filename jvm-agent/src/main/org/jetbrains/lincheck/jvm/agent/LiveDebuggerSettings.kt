@@ -10,18 +10,35 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-internal data class LiveDebuggerSettings(
-    val lineBreakPoints: List<SnapshotBreakpoint>
+data class LiveDebuggerSettings(
+    val lineBreakPoints: MutableList<SnapshotBreakpoint>
 ) {
-    companion object {
-        fun readList(list: List<String>): LiveDebuggerSettings {
-            val parsed = list.map { SnapshotBreakpoint.read(it) }
-            return LiveDebuggerSettings(parsed)
+    fun addBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
+        val breakpoints = list.map { SnapshotBreakpoint.read(it) }
+        val addedBreakpoints = mutableListOf<SnapshotBreakpoint>()
+        for (breakpoint in breakpoints) {
+            if (!lineBreakPoints.contains(breakpoint)) {
+                lineBreakPoints.add(breakpoint)
+                addedBreakpoints.add(breakpoint)
+            }
         }
+        return addedBreakpoints
+    }
+
+    fun removeBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
+        val breakpoints = list.map { SnapshotBreakpoint.read(it) }
+        val removedBreakpoints = mutableListOf<SnapshotBreakpoint>()
+        for (breakpoint in breakpoints) {
+            if (lineBreakPoints.contains(breakpoint)) {
+                lineBreakPoints.remove(breakpoint)
+                removedBreakpoints.add(breakpoint)
+            }
+        }
+        return removedBreakpoints
     }
 }
 
-internal data class SnapshotBreakpoint(
+data class SnapshotBreakpoint(
     val className: String,
     val fileName: String,
     val lineNumber: Int,
@@ -49,5 +66,25 @@ internal data class SnapshotBreakpoint(
                 conditionArgs = conditionArgs
             ).also { println("Read breakpoint: $it") }
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as SnapshotBreakpoint
+
+        if (lineNumber != other.lineNumber) return false
+        if (className != other.className) return false
+        if (fileName != other.fileName) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = lineNumber
+        result = 31 * result + className.hashCode()
+        result = 31 * result + fileName.hashCode()
+        return result
     }
 }
