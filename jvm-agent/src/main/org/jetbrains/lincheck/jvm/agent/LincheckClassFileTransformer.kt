@@ -41,7 +41,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     private val transformedClassesCachesByMode =
         ConcurrentHashMap<InstrumentationMode, ConcurrentHashMap<String, ByteArray>>()
 
-    val transformedClassesCache
+    val transformedClassesCache: MutableMap<String, ByteArray>
         get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
 
     private val statsTracker: TransformationStatisticsTracker? =
@@ -79,14 +79,17 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         ) {
             return null
         }
-        return transformImpl(loader, internalClassName, classBytes)
+
+        return transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
+            transformImpl(loader, internalClassName, classBytes)
+        }
     }
 
     fun transformImpl(
         loader: ClassLoader?,
         internalClassName: String,
         classBytes: ByteArray
-    ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
+    ): ByteArray {
         Logger.debug { "Transforming $internalClassName" }
 
         val reader = ClassReader(classBytes)
@@ -128,7 +131,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             val timeNano = measureTimeNano {
                 classNode.accept(visitor)
             }
-            writer.toByteArray().also { transformedBytes ->
+            return writer.toByteArray().also { transformedBytes ->
                 if (dumpTransformedSources) {
                     dumpClassBytecode(classNode.name, transformedBytes)
                 }
@@ -141,7 +144,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         } catch (e: Throwable) {
             Logger.warn(e) { "Unable to transform $internalClassName, proceeding without instrumentation" }
-            classBytes
+            return classBytes
         }
     }
 
