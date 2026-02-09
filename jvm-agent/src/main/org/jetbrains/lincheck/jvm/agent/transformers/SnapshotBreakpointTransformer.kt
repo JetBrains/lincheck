@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
@@ -38,10 +39,13 @@ internal class SnapshotBreakpointTransformer(
 
     override fun visitLineNumber(line: Int, start: Label) = adapter.run {
         super.visitLineNumber(line, start)
+
         val breakpointSettings = liveDebuggerSettings.lineBreakPoints.firstOrNull {
             it.lineNumber == line && it.className == className.toCanonicalClassName()
         }
         if (breakpointSettings == null) return@run
+
+        Logger.debug { "Inserting snapshot breakpoint at ${className}:${line}" }
 
         // STACK: <empty>
         val exitLabel = newLabel()
