@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.toType
 import org.jetbrains.lincheck.trace.CompressingPostprocessor.compressAccessPairs
 
@@ -30,6 +29,9 @@ interface TracePostprocessor {
 }
 
 object CompressingPostprocessor : TracePostprocessor {
+    private val COVERAGE_LOCAL_VAR_NAMES = setOf($$"__$coverage_local$__", $$"__$hits$__" /* might be loaded via LDC */)
+    private val COVERAGE_FIELD_NAMES = setOf($$"__$hits$__", $$"__$traceMask$__", $$"__$classData$__")
+
 
     override fun postprocess(reader: LazyTraceReader, tracePoint: TRTracePoint): TRTracePoint? {
         return tracePoint
@@ -257,13 +259,10 @@ object CompressingPostprocessor : TracePostprocessor {
         fun TRTracePoint.isCoverageLocalVarAccess(varNames: Set<String>) = this is TRLocalVariableTracePoint && varNames.contains(name)
         fun TRTracePoint.isCoverageFieldAccess(varNames: Set<String>) = this is TRFieldTracePoint && varNames.contains(name)
 
-        val coverageLocalVarNames = setOf($$"__$coverage_local$__", $$"__$hits$__" /* might be loaded via LDC */)
-        val coverageFieldNames = setOf($$"__$hits$__", $$"__$traceMask$__", $$"__$classData$__")
-
         if (
-            isCoverageArrayAccess(coverageLocalVarNames + coverageFieldNames) ||
-            isCoverageLocalVarAccess(coverageLocalVarNames) ||
-            isCoverageFieldAccess(coverageFieldNames)
+            isCoverageArrayAccess(COVERAGE_LOCAL_VAR_NAMES + COVERAGE_FIELD_NAMES) ||
+            isCoverageLocalVarAccess(COVERAGE_LOCAL_VAR_NAMES) ||
+            isCoverageFieldAccess(COVERAGE_FIELD_NAMES)
         ) return null
 
         return this
