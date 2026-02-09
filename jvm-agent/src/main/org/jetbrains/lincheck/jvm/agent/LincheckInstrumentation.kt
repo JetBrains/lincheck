@@ -350,7 +350,7 @@ object LincheckInstrumentation {
         try {
             instrumentation.retransformClasses(clazz)
         } catch (t: Throwable) {
-            Logger.error(t) { "Failed to retransform class ${clazz.name}" }
+            Logger.warn(t) { "Failed to retransform class ${clazz.name}" }
         }
     }
 
