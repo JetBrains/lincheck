@@ -68,7 +68,7 @@ data class SnapshotBreakpoint(
                 conditionClassName = conditionClassName,
                 conditionMethodName = conditionMethodName,
                 conditionArgs = conditionArgs
-            ).also { println("Read breakpoint: $it") }
+            )
         }
     }
 
