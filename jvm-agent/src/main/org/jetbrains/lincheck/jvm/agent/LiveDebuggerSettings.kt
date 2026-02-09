@@ -15,12 +15,14 @@ data class LiveDebuggerSettings(
 ) {
     fun addBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
         val breakpoints = list.map { SnapshotBreakpoint.read(it) }
+        val addedBreakpoints = mutableListOf<SnapshotBreakpoint>()
         for (breakpoint in breakpoints) {
             if (!lineBreakPoints.contains(breakpoint)) {
                 lineBreakPoints.add(breakpoint)
+                addedBreakpoints.add(breakpoint)
             }
         }
-        return breakpoints
+        return addedBreakpoints
     }
 
     fun removeBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
