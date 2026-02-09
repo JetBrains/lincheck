@@ -236,6 +236,10 @@ object TraceAgentParameters {
         // if the mode is not passed, fallback to system properties.
         val modeArg = getArg(ARGUMENT_MODE) ?: return
 
+        val isInTraceRecorderMode = (System.getProperty(TRACE_RECORDER_MODE_PROPERTY)?.toBoolean() == true)
+        val isInTraceDebuggerMode = (System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY)?.toBoolean() == true)
+        val isInLiveDebuggerMode = (System.getProperty(LIVE_DEBUGGER_MODE_PROPERTY)?.toBoolean() == true)
+
         // Check system properties for consistency.
         when (modeArg) {
             "traceRecorder" -> {
