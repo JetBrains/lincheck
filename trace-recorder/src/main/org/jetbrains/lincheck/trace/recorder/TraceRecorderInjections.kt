@@ -45,8 +45,8 @@ internal object TraceRecorderInjections {
         try {
             TraceRecorder.startRecording(
                 recordingMode = TraceRecordingMode.parse(
-                    outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-                    outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                    outputMode = TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_FORMAT),
+                    outputOption = TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_FOPTION),
                     outputFilePath = TraceAgentParameters.traceDumpFilePath,
                 ),
                 startMode = TraceRecorderSession.StartMode.FromMethod(
@@ -66,7 +66,7 @@ internal object TraceRecorderInjections {
         // This method should never throw an exception, or tracer state is undetermined
         try {
             val traceDumpPath = TraceAgentParameters.traceDumpFilePath ?: error("Trace dump path is not set")
-            val pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean()
+            val pack = (TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_PACK) ?: "true").toBoolean()
 
             TraceRecorder.stopRecording()
             TraceRecorder.dumpTrace(traceDumpPath, pack)

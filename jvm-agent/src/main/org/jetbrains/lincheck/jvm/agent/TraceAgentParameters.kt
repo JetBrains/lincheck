@@ -12,9 +12,11 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.computeProjectPackages
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import javax.management.remote.JMXServiceURL
+import java.nio.file.Paths
 
 /**
  * Parses and stores arguments passed to Lincheck JVM javaagents (trace-recorder and trace-debugger).
@@ -41,7 +43,7 @@ import javax.management.remote.JMXServiceURL
  *
  * - exclude — semicolon-separated list of exclude patterns (optional).
  *       Example: `exclude="org.example.internal.*;**.generated.*"`
- *       
+ *
  * - lineBreakpoints — semicolon-separated list of line breakpoints to capture snapshots from.
  *       This is functionality for the live debugger project.
  *
@@ -61,6 +63,24 @@ import javax.management.remote.JMXServiceURL
  *       * for `text`: `verbose` --- enables verbose output (disabled by default).
  *       Example: `formatOption=dump`
  *
+ * - projectPath — absolute or relative path to a project root directory. When provided, the agent
+ *   traverses all Kotlin/Java source files under this directory, extracts their package names, and
+ *   builds include patterns from them. Files without a package declaration are ignored. The package
+ *   set is minimized to keep only top-most packages (subpackages are dropped), and each package is
+ *   suffixed with `.*`. These computed patterns are merged with user-provided `include` patterns
+ *   and are calculated during agent initialization.
+ *       Examples:
+ *       - `projectPath=/path/to/your/project`
+ *       - `projectPath=../my-project`
+ *
+ * - excludeDirPaths — semicolon-separated list of directory paths to be excluded from traversal
+ *   when `projectPath` is used. Paths can be absolute or relative to `projectPath`. These excludes
+ *   complement the default skips (hidden directories that start with a dot, and common build/output
+ *   folders like `build`, `out`, `node_modules`, `target`, `dist`, `bin`).
+ *       Examples:
+ *       - `excludeDirPaths="build;out;generated"`
+ *       - `excludeDirPaths="/abs/path/to/tools;some/module/build"`
+ *
  * - jmxServer — boolean that enables JMX server for remote monitoring and management, it is off by default.
  *     The server is available at the URL `service:jmx:rmi:///jndi/rmi://<jmxHost>:<jmxPort>/tracing`.
  *       Example: `jmxServer=on` or `jmxServer=off`
@@ -73,6 +93,7 @@ import javax.management.remote.JMXServiceURL
  *
  * - rmiPort — port number for RMI registry, defaults to 9998.
  *       Example: `rmiPort=9998`
+ *
  *
  * Quotation rules:
  * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).
@@ -111,6 +132,11 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
+    const val ARGUMENT_PACK = "pack"
+    const val ARGUMENT_FORMAT = "format"
+    const val ARGUMENT_FOPTION = "formatOption"
+    const val ARGUMENT_PROJECT_PATH = "projectPath"
+    const val ARGUMENT_EXCLUDE_DIR_PATHS = "excludeDirPaths"
     const val ARGUMENT_LINE_BREAKPOINT = "breakpoints"
     const val ARGUMENT_JMX_SERVER = "jmxServer"
     const val ARGUMENT_JMX_HOST = "jmxHost"
@@ -152,6 +178,10 @@ object TraceAgentParameters {
 
     @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()
+
+    // Cached include patterns computed from projectPath argument, with "*" suffix
+    @JvmStatic
+    private var computedProjectIncludePatterns: List<String>? = null
 
     @JvmStatic
     fun parseArgs(args: String?, validAdditionalArgs: List<String>) {
@@ -240,6 +270,22 @@ object TraceAgentParameters {
         }
     }
 
+    /**
+     * Compute include patterns (consisting of source code packages) from the provided project path argument,
+     * if any, and cache them. This should be invoked during agent initialization.
+     */
+    @JvmStatic
+    fun computeProjectPackagesIfNeeded() {
+        val root = namedArgs[ARGUMENT_PROJECT_PATH]?.takeIf { it.isNotBlank() } ?: return
+        runCatching {
+            val excludeDirs = splitPatterns(namedArgs[ARGUMENT_EXCLUDE_DIR_PATHS]).map { Paths.get(it) }
+            computedProjectIncludePatterns = computeProjectPackages(Paths.get(root), excludeDirs).map { "$it.*" }
+            Logger.warn { "Computed project packages from path '$root': $computedProjectIncludePatterns" }
+        }.onFailure {
+            Logger.warn { "Failed to compute project packages from path '$root': ${it.message}" }
+        }
+    }
+
     private fun setClassUnderTraceDebuggingToMethodOwner(
         startClass: String = classUnderTraceDebugging,
         method: String = methodUnderTraceDebugging,
@@ -270,10 +316,14 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun getIncludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_INCLUDE])
+        .let { userPatterns ->
+            if (computedProjectIncludePatterns == null) userPatterns
+            else (userPatterns + computedProjectIncludePatterns!!).distinct()
+        }
 
     @JvmStatic
     fun getExcludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_EXCLUDE])
-    
+
     @JvmStatic
     fun getLineBreakpoints(): List<String> = splitPatterns(namedArgs[ARGUMENT_LINE_BREAKPOINT])
 
@@ -303,6 +353,7 @@ object TraceAgentParameters {
         methodUnderTraceDebugging = ""
         traceDumpFilePath = null
         namedArgs.clear()
+        computedProjectIncludePatterns = null
     }
 }
 

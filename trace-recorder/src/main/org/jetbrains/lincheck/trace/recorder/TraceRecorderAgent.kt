@@ -16,10 +16,15 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_LINE_BREAKPOINT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE_DIR_PATHS
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_HOST
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_PORT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PROJECT_PATH
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_RMI_PORT
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
@@ -37,10 +42,6 @@ import java.lang.instrument.Instrumentation
  * in order to enable trace debugging plugin, trace recorder functionality, or live debugger functionality accordingly.
  */
 internal object TraceRecorderAgent {
-    const val ARGUMENT_FORMAT = "format"
-    const val ARGUMENT_FOPTION = "formatOption"
-    const val ARGUMENT_PACK = "pack"
-
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
         ARGUMENT_FORMAT,
@@ -48,6 +49,8 @@ internal object TraceRecorderAgent {
         ARGUMENT_INCLUDE,
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
+        ARGUMENT_PROJECT_PATH,
+        ARGUMENT_EXCLUDE_DIR_PATHS,
         ARGUMENT_LINE_BREAKPOINT,
         ARGUMENT_JMX_SERVER,
         ARGUMENT_JMX_HOST,
@@ -60,6 +63,8 @@ internal object TraceRecorderAgent {
     fun premain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
+        computeProjectPackagesIfNeeded()
+
         validateTraceRecorderMode()
         if (!isInLiveDebuggerMode) {
             TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
@@ -81,6 +86,7 @@ internal object TraceRecorderAgent {
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
+        computeProjectPackagesIfNeeded()
 
         val mode =  if (TraceAgentParameters.getLineBreakpoints().isEmpty()) TRACE_RECORDER_MODE_PROPERTY
                     else LIVE_DEBUGGER_MODE_PROPERTY
@@ -102,6 +108,12 @@ internal object TraceRecorderAgent {
     @JvmStatic
     private fun parseArguments(agentArgs: String?) {
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+    }
+
+    @JvmStatic
+    private fun computeProjectPackagesIfNeeded() {
+        // Pre-compute include patterns from project packages if requested
+        TraceAgentParameters.computeProjectPackagesIfNeeded()
     }
 
     @JvmStatic
