@@ -538,8 +538,7 @@ class LazyTraceReader private constructor(
                     error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
                 }
             } catch (t: IOException) {
-                Logger.error { "TraceRecorder: Error reading index for $traceFileName: ${t.message}" }
-                Logger.error(t)
+                Logger.error(t) { "TraceRecorder: Error reading index for $traceFileName: ${t.message}" }
                 return false
             }
         }

@@ -61,8 +61,7 @@ object TraceRecorderJmxServer {
             this.connectorServer.set(connectorServer)
             Logger.info { "JMX server started successfully on $jmxHost:$jmxPort (RMI port: $rmiPort)" }
         } catch (t: Throwable) {
-            Logger.error { "Failed to start JMX server on $jmxHost:$jmxPort (RMI port: $rmiPort)" }
-            Logger.error(t)
+            Logger.error(t) { "Failed to start JMX server on $jmxHost:$jmxPort (RMI port: $rmiPort)" }
         }
 
         installShutdownHook()
@@ -78,8 +77,7 @@ object TraceRecorderJmxServer {
             connectorServer.stop()
             Logger.info { "JMX server stopped successfully" }
         } catch (t: Throwable) {
-            Logger.error { "Failed to stop JMX server" }
-            Logger.error(t)
+            Logger.error(t) { "Failed to stop JMX server" }
         }
     }
 
@@ -90,8 +88,7 @@ object TraceRecorderJmxServer {
             Runtime.getRuntime().addShutdownHook(Thread { stop() })
             Logger.info { "Shutdown hook successfully installed for JMX server" }
         } catch (e: Throwable) {
-            Logger.error { "Failed to register shutdown hook for JMX server" }
-            Logger.error(e)
+            Logger.error(e) { "Failed to register shutdown hook for JMX server" }
         }
     }
 }

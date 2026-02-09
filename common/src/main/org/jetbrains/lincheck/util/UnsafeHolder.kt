@@ -77,15 +77,13 @@ fun readFieldSafely(obj: Any?, field: Field): Result<Any?> =
         readFieldViaUnsafe(obj, field)
     }
     .onFailure { exception ->
-        Logger.debug { "Failed to read field ${field.name} via Unsafe" }
-        Logger.debug(exception)
+        Logger.debug(exception) { "Failed to read field ${field.name} via Unsafe" }
     }
     .recoverCatching {
         field.apply { isAccessible = true }.get(obj)
     }
     .onFailure { exception ->
-        Logger.debug { "Failed to read field ${field.name} via reflection." }
-        Logger.debug(exception)
+        Logger.debug(exception) { "Failed to read field ${field.name} via reflection." }
     }
 
 fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {

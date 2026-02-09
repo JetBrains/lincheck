@@ -81,12 +81,12 @@ internal class LincheckClassVisitor(
         val config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc)
 
         if (isNative) {
-            Logger.debug { "Skipping transformation of the native method $className.$methodName" }
+            Logger.verbose { "Skipping transformation of the native method $className.$methodName" }
             return mv
         } else if (config == TransformationConfiguration.UNTRACKED) {
-            Logger.debug { "Skipping transformation of the untracked method $className.$methodName" }
+            Logger.verbose { "Skipping transformation of the untracked method $className.$methodName" }
         } else {
-            Logger.debug { "Transforming method $className.$methodName" }
+            Logger.verbose { "Transforming method $className.$methodName" }
         }
 
         if (statsTracker != null) {

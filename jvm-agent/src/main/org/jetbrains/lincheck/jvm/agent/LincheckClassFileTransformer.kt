@@ -140,8 +140,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 )
             }
         } catch (e: Throwable) {
-            Logger.error { "Unable to transform $internalClassName" }
-            Logger.error(e)
+            Logger.warn(e) { "Unable to transform $internalClassName, proceeding without instrumentation" }
             classBytes
         }
     }

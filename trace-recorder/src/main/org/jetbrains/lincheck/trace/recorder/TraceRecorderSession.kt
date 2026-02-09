@@ -131,8 +131,7 @@ class TraceRecorderSession(
         try {
             tcpServer?.close()
         } catch (t: Throwable) {
-            Logger.error { "Cannot stop TCP trace server" }
-            Logger.error(t)
+            Logger.error(t) { "Cannot stop TCP trace server" }
         }
     }
 

@@ -197,8 +197,7 @@ object TraceRecorder {
                 )
                 Logger.info { "Started TCP trace streaming server on port $${tcpServer.port}" }
             } catch (t: Throwable) {
-                Logger.error { "Cannot start TCP trace trace server" }
-                Logger.error(t)
+                Logger.error(t) { "Cannot start TCP trace trace server" }
             }
         }
 
