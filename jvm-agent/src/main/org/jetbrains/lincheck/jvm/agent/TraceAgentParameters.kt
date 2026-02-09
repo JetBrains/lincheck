@@ -12,6 +12,12 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
+import org.jetbrains.lincheck.util.TRACE_DEBUGGER_MODE_PROPERTY
+import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
+import org.jetbrains.lincheck.util.isInLiveDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import javax.management.remote.JMXServiceURL
@@ -27,6 +33,14 @@ import javax.management.remote.JMXServiceURL
  * - java -javaagent:path/to/agent.jar=class=org.example.MyTest,method=run,output="/tmp/trace.bin" -jar yourApp.jar
  *
  * Supported arguments:
+ *
+ * - mode — agent mode. Possible options are:
+ *       * `traceRecorder` --- enables trace recorder mode;
+ *       * `liveDebugger` --- enables live debugger mode;
+ *       * `traceDebugger` --- enables trace debugger mode.
+ *       Example: `mode=traceRecorder`
+ *       If not specified, falls back to system properties for backward compatibility.
+ *
  * - class — fully qualified class name to run/transform (required).
  *       Example: `class=org.example.MyTest`
  *
@@ -103,6 +117,7 @@ import javax.management.remote.JMXServiceURL
  *   unknown extra keys are warned in logs, but parsing proceeds.
  */
 object TraceAgentParameters {
+    const val ARGUMENT_MODE = "mode"
     const val ARGUMENT_CLASS = "class"
     const val ARGUMENT_METHOD = "method"
     const val ARGUMENT_OUTPUT = "output"
@@ -201,6 +216,7 @@ object TraceAgentParameters {
             namedArgs.putAll(kvArguments)
         }
 
+        setupMode()
         validateJmxParameters()
     }
 
@@ -211,6 +227,95 @@ object TraceAgentParameters {
         }
         if (methodUnderTraceDebugging.isBlank()) {
             error("Method name was not provided")
+        }
+    }
+
+    @JvmStatic
+    private fun setupMode() {
+        // Parse mode from agent arguments, 
+        // if the mode is not passed, fallback to system properties.
+        val modeArg = getArg(ARGUMENT_MODE) ?: return
+
+        // Check system properties for consistency.
+        when (modeArg) {
+            "traceRecorder" -> {
+                if (isInTraceDebuggerMode) {
+                    error("Mode argument is 'traceRecorder', but inconsistent system property `lincheck.traceDebuggerMode` is set")
+                }
+                if (isInLiveDebuggerMode) {
+                    error("Mode argument is 'traceRecorder', but inconsistent system property `lincheck.liveDebuggerMode` is set")
+                }
+                // Set system property if not already set.
+                if (!isInTraceRecorderMode) {
+                    System.setProperty(TRACE_RECORDER_MODE_PROPERTY, "true")
+                }
+            }
+            
+            "traceDebugger" -> {
+                if (isInTraceRecorderMode) {
+                    error("Mode argument is 'traceDebugger', but inconsistent system property `lincheck.traceRecorderMode` is set")
+                }
+                if (isInLiveDebuggerMode) {
+                    error("Mode argument is 'traceDebugger', but inconsistent system property `lincheck.liveDebuggerMode` is set")
+                }
+                // Set system property if not already set.
+                if (!isInTraceDebuggerMode) {
+                    System.setProperty(TRACE_DEBUGGER_MODE_PROPERTY, "true")
+                }
+            }
+            
+            "liveDebugger" -> {
+                if (isInTraceRecorderMode) {
+                    error("Mode argument is 'liveDebugger', but inconsistent system property `lincheck.traceRecorderMode` is set")
+                }
+                if (isInTraceDebuggerMode) {
+                    error("Mode argument is 'liveDebugger', but inconsistent system property `lincheck.traceDebuggerMode` is set")
+                }
+                // Set system property if not already set.
+                if (!isInLiveDebuggerMode) {
+                    System.setProperty(LIVE_DEBUGGER_MODE_PROPERTY, "true")
+                }
+            }
+            
+            else -> {
+                error("Invalid mode argument: '$modeArg'. Expected one of: traceRecorder, liveDebugger, traceDebugger")
+            }
+        }
+    }
+
+    @JvmStatic
+    fun validateMode() {
+        // Check if one of the required parameters is set.
+        check(isInTraceRecorderMode || isInTraceDebuggerMode || isInLiveDebuggerMode) {
+            """
+            When lincheck agent is attached to process,
+            mode should be selected by agent parameter `mode` or by VM parameter:
+            `lincheck.traceRecorderMode`, `lincheck.traceDebuggerMode`, or `lincheck.liveDebuggerMode`.
+            One of them is expected to be set.
+            
+            Rerun with: 
+            - `-Dlincheck.traceRecorderMode=true` or `mode=traceRecorder` as agent argument;
+            - `-Dlincheck.traceDebuggerMode=true` or `mode=traceDebugger` as agent argument;
+            - `-Dlincheck.liveDebuggerMode=true` or `mode=liveDebugger` as agent argument.
+            """
+            .trimIndent()
+        }
+        
+        // Check that only one parameter is set
+        val modesEnabled = listOf(isInTraceRecorderMode, isInTraceDebuggerMode, isInLiveDebuggerMode).count { it }
+        check(modesEnabled == 1) {
+            """
+            When lincheck agent is attached to process,
+            mode should be selected by one of agent parameter `mode` or VM parameters:
+            `lincheck.traceRecorderMode`, `lincheck.traceDebuggerMode`, or `lincheck.liveDebuggerMode`.
+            Only one of them expected to be set.
+            
+            Rerun with exactly one mode flag set:
+            - `-Dlincheck.traceRecorderMode=true` or `mode=traceRecorder` as agent argument;
+            - `-Dlincheck.traceDebuggerMode=true` or `mode=traceDebugger` as agent argument;
+            - `-Dlincheck.liveDebuggerMode=true` or `mode=liveDebugger` as agent argument.
+            """
+            .trimIndent()
         }
     }
 

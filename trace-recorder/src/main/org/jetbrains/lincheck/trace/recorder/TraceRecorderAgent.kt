@@ -14,18 +14,17 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_HOST
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_RMI_PORT
+import org.jetbrains.lincheck.util.isInLiveDebuggerMode
+import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
-import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
-import org.jetbrains.lincheck.util.isInLiveDebuggerMode
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
-import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
 
 /**
@@ -41,6 +40,7 @@ internal object TraceRecorderAgent {
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
+        ARGUMENT_MODE,
         ARGUMENT_FORMAT,
         ARGUMENT_FOPTION,
         ARGUMENT_INCLUDE,
@@ -57,7 +57,8 @@ internal object TraceRecorderAgent {
     fun premain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
-        validateTraceRecorderMode()
+
+        TraceAgentParameters.validateMode()
         if (!isInLiveDebuggerMode) {
             TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
         }
@@ -79,11 +80,11 @@ internal object TraceRecorderAgent {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
 
-        // TODO: fix me
-        val mode = LIVE_DEBUGGER_MODE_PROPERTY
-
-        System.setProperty(mode, "true")
-        validateTraceRecorderMode()
+        if (TraceAgentParameters.getArg(ARGUMENT_MODE) == null) {
+            // set trace recorder mode system property by default
+            System.setProperty(TRACE_RECORDER_MODE_PROPERTY, "true")
+        }
+        TraceAgentParameters.validateMode()
 
         // attach java agent
         LincheckInstrumentation.attachJavaAgentDynamically(inst)
@@ -99,40 +100,6 @@ internal object TraceRecorderAgent {
     @JvmStatic
     private fun parseArguments(agentArgs: String?) {
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
-    }
-
-    @JvmStatic
-    private fun validateTraceRecorderMode() {
-        /*
-         * Static agent requires one of: Trace Recorder mode, Trace Debugger mode, or Live Debugger mode.
-         * For now, the mode is selected by system property.
-         * If you want to run Trace Recorder, you must set `-Dlincheck.traceRecorderMode=true`.
-         * If you want to run Live Debugger, you must set `-Dlincheck.liveDebuggerMode=true`.
-         *
-         * It is an error not to set any mode.
-         */
-
-        // Check if one of the required parameters is set.
-        check(isInTraceRecorderMode || isInLiveDebuggerMode) {
-            """
-            When lincheck agent is attached to process,
-            mode should be selected by VM parameter: 
-            `lincheck.traceRecorderMode` or `lincheck.liveDebuggerMode`.
-            One of them is expected to be `true`.
-            Rerun with `-Dlincheck.traceRecorderMode=true` or `-Dlincheck.liveDebuggerMode=true`.
-            """.trimIndent()
-        }
-        // Check that only one parameter is set
-        val modesEnabled = listOf(isInTraceDebuggerMode, isInTraceRecorderMode, isInLiveDebuggerMode).count { it }
-        check(modesEnabled == 1) {
-            """
-            When lincheck agent is attached to process,
-            mode should be selected by one of VM parameters: 
-            `lincheck.traceDebuggerMode`, `lincheck.traceRecorderMode`, or `lincheck.liveDebuggerMode`. 
-            Only one of them expected to be `true`. 
-            Rerun with exactly exactly one mode flag set.
-            """.trimIndent()
-        }
     }
 
     @JvmStatic
