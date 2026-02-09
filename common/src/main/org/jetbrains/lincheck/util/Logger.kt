@@ -80,30 +80,37 @@ object Logger {
 
     inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
-            try {
-                logWriter.write("[${logLevel.name}] ${lazyMessage()}$LINE_SEPARATOR")
-                logWriter.flush()
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
+            write("[${Logger.logLevel.name}] ${lazyMessage()}$LINE_SEPARATOR")
         }
     }
 
     inline fun log(logLevel: LoggingLevel, throwable: Throwable, lazyMessage: () -> String = { throwable.message ?: "" }) {
         log(logLevel) {
-            val writer = StringWriter().apply {
-                PrintWriter(this).use { printer ->
-                    throwable.printStackTrace(printer)
-                }
+            createExceptionMessage(lazyMessage(), throwable)
+        }
+    }
+
+    fun write(message: String) {
+        try {
+            logWriter.write(message)
+            logWriter.flush()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+    }
+
+    fun createExceptionMessage(message: String, throwable: Throwable): String {
+        val writer = StringWriter().apply {
+            PrintWriter(this).use { printer ->
+                throwable.printStackTrace(printer)
             }
-            val message = lazyMessage()
-            val stackTrace = writer.toString()
-            if (message.isNotEmpty()) {
-                val paddedStackTrace = stackTrace.lines().joinToString(separator = LINE_SEPARATOR) { TAB + it }
-                "${message}${LINE_SEPARATOR}${paddedStackTrace}"
-            } else {
-                stackTrace
-            }
+        }
+        val stackTrace = writer.toString()
+        if (message.isNotEmpty()) {
+            val paddedStackTrace = stackTrace.lines().joinToString(separator = LINE_SEPARATOR) { TAB + it }
+            return "${message}${LINE_SEPARATOR}${paddedStackTrace}"
+        } else {
+            return stackTrace
         }
     }
 
