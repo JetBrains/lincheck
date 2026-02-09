@@ -228,6 +228,10 @@ class TcpStreamingTraceCollecting(
                 subscriber.outputStream.writeKind(ObjectKind.BLOCK_START)
                 subscriber.outputStream.writeInt(tracePoint.threadId)
 
+                subscriber.outputStream.writeKind(ObjectKind.THREAD_NAME)
+                subscriber.outputStream.writeInt(tracePoint.threadId)
+                subscriber.outputStream.writeUTF(tracePoint.threadName)
+
                 // Write trace point
                 tracePoint.save(subscriber.writer)
 
