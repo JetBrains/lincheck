@@ -15,7 +15,6 @@ import org.jetbrains.lincheck.util.indexOf
 import org.jetbrains.lincheck.util.indexOfLast
 import org.jetbrains.lincheck.util.move
 import org.jetbrains.lincheck.util.subList
-import java.util.Stack
 
 /**
  * Adjusts the positions of `SwitchEventTracePoint` instances within the trace,
@@ -313,39 +312,79 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
             continue
         }
 
-        val pattern = iterationPattern(node)
+        // Calculate the maximum possible period length in iterations
+        // This should handle cases like: A, A, A, A (max period 1), and A, B, C, A, B, C (max period 3)
+        val maxPeriod = (children.size - startIndex) / 2
+        var bestPeriod = 1
+        var bestCount = 1
+        var foundPattern = false
 
-        // While the next nodes match the pattern, extend the range
-        var endIndex = startIndex + 1
-        while (endIndex < children.size && children[endIndex] is IterationNode && iterationPattern(children[endIndex] as IterationNode) == pattern) {
-            endIndex++
+        for (period in 1..maxPeriod) {
+            var currentCount = 1
+            var endIndex = startIndex + period
+
+            // Check how many times the sequence of length 'period' repeats
+            while (endIndex + period <= children.size) {
+                if (structurallyEqual(children, startIndex, endIndex, period)) {
+                    currentCount++
+                    endIndex += period
+                } else {
+                    break
+                }
+            }
+
+            if (currentCount > 1) {
+                bestPeriod = period
+                bestCount = currentCount
+                foundPattern = true
+                break // Stop at the smallest period with the longest repetition
+            }
         }
 
-        // Make sure it makes sense to fold, more than 1 iteration. Otherwise, just add the original node
-        if (endIndex - startIndex >= 2) {
-            val first = children[startIndex] as IterationNode
-            val last = children[endIndex - 1] as IterationNode
+        if (foundPattern) {
+            val firstNode = children[startIndex] as IterationNode
+            val lastNode = children[startIndex + (bestCount * bestPeriod) - 1] as IterationNode
 
-            val from = first.tracePoint.iteration
-            val to = last.tracePoint.iteration
-
-            val range = IterationNode(
-                tracePoint=first.tracePoint,
-                eventNumber = first.eventNumber,
-                from = from,
-                to = to,
+            val rangeNode = IterationNode(
+                tracePoint = firstNode.tracePoint,
+                eventNumber = firstNode.eventNumber,
+                from = firstNode.tracePoint.iteration,
+                to = lastNode.tracePoint.iteration,
             )
 
-            for (bodyChild in first.children) range.addChild(bodyChild)
-            result += range
+            for (i in 0 until bestPeriod) {
+                val nodeInSequence = children[startIndex + i]
+                nodeInSequence.children.forEach { rangeNode.addChild(it) }
+            }
+
+            result += rangeNode
+            startIndex += (bestCount * bestPeriod)
         } else {
             result += node
+            startIndex++
         }
-
-        startIndex = endIndex
     }
 
     return result
+}
+
+/**
+ * Checks if two sequences of nodes are structurally equivalent.
+ */
+private fun structurallyEqual(
+    list: List<TraceNode>,
+    startIndex: Int,
+    endIndex: Int,
+    length: Int
+): Boolean {
+    for (i in 0 until length) {
+        val nodeA = list[startIndex + i]
+        val nodeB = list[endIndex + i]
+
+        if (nodeA !is IterationNode || nodeB !is IterationNode) return false
+        if (nodePattern(nodeA) != nodePattern(nodeB)) return false
+    }
+    return true
 }
 
 private data class NodePattern(
@@ -353,15 +392,39 @@ private data class NodePattern(
     val children: List<NodePattern>
 )
 
-private fun iterationPattern(iter: IterationNode): NodePattern =
-    NodePattern(
-        head = "",
-        children = iter.children.map { nodePattern(it) }
-    )
+private fun normalizeNodeHead(rawString: String): String {
+    // header
+    if (rawString.startsWith("<iteration")) {
+        return "<iteration>"
+    }
+
+    var result = rawString
+
+    // Remove values in assignments (e.g. arr[0] = 5")
+    // We strip everything after the last "=" if it's not inside parentheses.
+    // This allows "arr[0] = 5" and "arr[0] = 0" to match structurally.
+    val lastEqualsIndex = result.lastIndexOf('=')
+    val lastParenIndex = result.lastIndexOf(')')
+
+    if (lastEqualsIndex > lastParenIndex) {
+        result = result.substring(0, lastEqualsIndex).trim()
+    }
+
+    // Remove return values (everything after the last ": " that is outside parentheses)
+    // Matches "method(): result" -> "method()"
+    val lastColonIndex = result.lastIndexOf(':')
+    val currentLastParenIndex = result.lastIndexOf(')')
+
+    if (lastColonIndex > currentLastParenIndex) {
+        result = result.substring(0, lastColonIndex).trim()
+    }
+
+    return result
+}
 
 private fun nodePattern(node: TraceNode): NodePattern =
     NodePattern(
-        head = node.toStringImpl(true),
+        head = normalizeNodeHead(node.toStringImpl(false)),
         children = node.children.map { nodePattern(it) }
     )
 
