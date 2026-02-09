@@ -44,6 +44,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     val transformedClassesCache: MutableMap<String, ByteArray>
         get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
 
+    private val useBytecodeCache: Boolean
+        get() = !isInLiveDebuggerMode // TODO: please refactor me
+
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
     
@@ -80,6 +83,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             return null
         }
 
+        if (!useBytecodeCache) {
+            return transformImpl(loader, internalClassName, classBytes)
+        }
         return transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
             transformImpl(loader, internalClassName, classBytes)
         }
