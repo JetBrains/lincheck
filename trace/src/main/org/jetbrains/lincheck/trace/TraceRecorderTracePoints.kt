@@ -1182,7 +1182,6 @@ internal fun DataOutput.writeTRValue(value: TRValue?) {
                 
                 // Negative for arrays where -1 is empty array
                 val encodedElementsSize = (value.capturedElements.size + 1) * -1
-                println("WRITING ARRAY: $encodedElementsSize ${value.toString()}")
                 writeInt(encodedElementsSize)
                 value.capturedElements.forEach { element -> this@writeTRValue.writeTRValue(element) }
                 writeInt(value.totalSize)
