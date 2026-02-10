@@ -1016,7 +1016,7 @@ internal class EventStructure(
                             isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
-            mutexID = objectRegistry.getOrRegisterObjectID(mutex),
+            mutexID = objectRegistry.registerValueIfAbsent(mutex),
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1033,7 +1033,7 @@ internal class EventStructure(
                        isReentry: Boolean = false, reentrancyDepth: Int = 1,
                        isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = UnlockLabel(
-            mutexID = objectRegistry.getOrRegisterObjectID(mutex),
+            mutexID = objectRegistry.registerValueIfAbsent(mutex),
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1044,7 +1044,7 @@ internal class EventStructure(
     fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): AtomicThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
-            mutexID = objectRegistry.getOrRegisterObjectID(mutex),
+            mutexID = objectRegistry.registerValueIfAbsent(mutex),
         )
         return addRequestEvent(iThread, label)
 
@@ -1062,7 +1062,7 @@ internal class EventStructure(
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
         val label = NotifyLabel(
-            mutexID = objectRegistry.getOrRegisterObjectID(mutex),
+            mutexID = objectRegistry.registerValueIfAbsent(mutex),
             isBroadcast = isBroadcast,
         )
         return addSendEvent(iThread, label)

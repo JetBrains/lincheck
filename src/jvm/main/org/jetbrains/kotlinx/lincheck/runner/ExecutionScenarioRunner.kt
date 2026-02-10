@@ -17,7 +17,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -127,7 +126,7 @@ internal class ExecutionScenarioRunner(
                 }
                 // write function's final result
                 suspensionPointResults[iThread][actorId] = createLincheckResult(result)
-                onResumeCoroutine(iThread, actorId)
+                onCoroutineResumption(iThread, actorId)
             }
         }
 
@@ -161,7 +160,7 @@ internal class ExecutionScenarioRunner(
                                 }
                                 @Suppress("UNCHECKED_CAST")
                                 resWithCont.set(result to continuation as Continuation<Any?>)
-                                onResumeCoroutine(iThread, actorId)
+                                onCoroutineResumption(iThread, actorId)
                             }
                         }
                     }
@@ -538,8 +537,11 @@ internal class ExecutionScenarioRunner(
         (strategy as? ManagedStrategy)?.afterCoroutineResumed(iThread)
     }
 
-    fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) = {
-        (strategy as? ManagedStrategy)?.onResumeCoroutine(iResumedThread, iResumedActor)
+    /**
+     * This method is from a thread that resumes a coroutine.
+     */
+    fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) = {
+        (strategy as? ManagedStrategy)?.onCoroutineResumed(iResumedThread, iResumedActor)
     }
 
     /**
@@ -549,9 +551,8 @@ internal class ExecutionScenarioRunner(
     fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean {
         // We cannot use `completionStatuses` here since
         // they are set _before_ the result is published.
-        //TODO: not sure this is how it should work
         val strategyResumed = (strategy as? ManagedStrategy)?.isCoroutineResumed(iThread, actorId) ?: true
-        return (suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null) && strategyResumed
+        return strategyResumed && (suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null)
     }
 
     /**

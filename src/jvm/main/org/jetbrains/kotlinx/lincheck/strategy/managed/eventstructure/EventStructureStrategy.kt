@@ -282,9 +282,9 @@ internal class EventStructureStrategy(
     override fun shouldSwitch(): Boolean {
         // TODO: this has changed, see what the new semantics are
         // If strategy is in replay phase we first need to execute replaying threads
-//        if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
-//            return ThreadSwitchDecision.MAY
-//        }
+        // if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
+        //     return ThreadSwitchDecision.MAY
+        // }
 
         // If strategy is in replay mode for given thread
         // we should wait until replaying the next event become possible
@@ -449,8 +449,8 @@ internal class EventStructureStrategy(
         eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
     }
 
-    override fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
-        super.onResumeCoroutine(iResumedThread, iResumedActor)
+    override fun onCoroutineResumed(iResumedThread: Int, iResumedActor: Int) {
+        super.onCoroutineResumed(iResumedThread, iResumedActor)
         eventStructure.addCoroutineResumeEvent(threadScheduler.getCurrentThreadId(), iResumedThread, iResumedActor)
     }
 

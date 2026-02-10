@@ -99,7 +99,6 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
         return value.unwrap().hashCode().toLong()
     }
 
-    // TODO: I do not think that this does anything
     override fun reset() {
         super.reset()
         externalIds.forEach {
@@ -110,12 +109,7 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
 
 }
 
-
-// Any -> UniqueStableId
-// if primitive (Int, Long ...) or value type -> something based on (
-// if value (something based on ) ->
-
-internal fun ObjectRegistry.getOrRegisterObjectID(obj: OpaqueValue?): ObjectID =
+internal fun ObjectRegistry.registerValueIfAbsent(obj: OpaqueValue?): ObjectID =
     when {
         obj == null -> NULL_OBJECT_ID
         obj.unwrap().isImmutable -> getOrRegisterPrimitveValue(obj)
@@ -137,25 +131,6 @@ internal fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue
     Types.BOOLEAN_TYPE_BOXED  -> id.toInt().toBoolean().opaque()
     else                -> getObject(id)
 }
-
-//internal fun ObjectRegistry.getValueID(type: Types.Type, value: OpaqueValue?): ValueID {
-//    if (value == null) return NULL_OBJECT_ID
-//    return when (type) {
-//        Types.LONG_TYPE       -> (value.unwrap() as Long)
-//        Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
-//        Types.BYTE_TYPE       -> (value.unwrap() as Byte).toLong()
-//        Types.SHORT_TYPE      -> (value.unwrap() as Short).toLong()
-//        Types.CHAR_TYPE       -> (value.unwrap() as Char).code.toLong()
-//        Types.BOOLEAN_TYPE    -> (value.unwrap() as Boolean).toInt().toLong()
-//        Types.LONG_TYPE_BOXED     -> (value.unwrap() as Long)
-//        Types.INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
-//        Types.BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
-//        Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
-//        Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).code.toLong()
-//        Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
-//        else                -> get(value)?.id ?: NULL_OBJECT_ID
-//    }
-//}
 
 internal fun ObjectRegistry.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
     if (value == null) return NULL_OBJECT_ID
@@ -179,6 +154,6 @@ internal fun ObjectRegistry.getOrRegisterValueID(type: Types.Type, value: Opaque
         Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
         Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).code.toLong()
         Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
-        else                -> getOrRegisterObjectID(value)
+        else                -> registerValueIfAbsent(value)
     }
 }

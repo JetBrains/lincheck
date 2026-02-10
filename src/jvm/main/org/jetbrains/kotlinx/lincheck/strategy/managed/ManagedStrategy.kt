@@ -2262,12 +2262,10 @@ internal abstract class ManagedStrategy(
         isSuspended[iThread] = false
     }
 
-    //TODO: The two methods have been directly brought in from the new-mc. They probably need some more testing
     /**
      * This method is invoked by a test thread that attempts to resume coroutine.
      */
-    internal open fun onResumeCoroutine(iResumedThread: Int, iResumedActor: Int) {
-    }
+    internal open fun onCoroutineResumed(iResumedThread: Int, iResumedActor: Int) {}
 
     /**
      * This method is invoked by a test thread to check if the coroutine was resumed.
