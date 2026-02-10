@@ -34,16 +34,34 @@ internal class SnapshotBreakpointTransformer(
     config: TransformationConfiguration,
     private val liveDebuggerSettings: LiveDebuggerSettings,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
-    
+
     private val traceIdCapturers = TraceIdCapturerRegistry(config)
+
+    // Track which lines have been instrumented in the current basic block.
+    // Reset when we see a new label (which starts a new block).
+    // This avoids duplicate breakpoint hits for multi-line expressions like `foo(y, \n bar())`
+    // where the same line number appears multiple times within a single block,
+    // while still allowing hits in loops (where each iteration is a separate block entry).
+    private val instrumentedLinesInCurrentBlock = mutableSetOf<Int>()
+
+    override fun visitLabel(label: Label) {
+        super.visitLabel(label)
+        // New label = new basic block, reset the tracking
+        instrumentedLinesInCurrentBlock.clear()
+    }
 
     override fun visitLineNumber(line: Int, start: Label) = adapter.run {
         super.visitLineNumber(line, start)
+        // Skip if we've already instrumented this line in the current basic block
+        if (line in instrumentedLinesInCurrentBlock) return@run
 
+        val canonicalClassName = className.toCanonicalClassName()
         val breakpointSettings = liveDebuggerSettings.lineBreakPoints.firstOrNull {
-            it.lineNumber == line && it.className == className.toCanonicalClassName()
-        }
-        if (breakpointSettings == null) return@run
+            it.lineNumber == line && it.className == canonicalClassName
+        } ?: return@run
+
+        // Mark this line as instrumented in the current block
+        instrumentedLinesInCurrentBlock.add(line)
 
         Logger.debug { "Inserting snapshot breakpoint at ${className}:${line}" }
 
