@@ -81,6 +81,34 @@ private object SafeConditions {
     @JvmStatic
     var staticField: Int = 100
 
+    // ============ CALLING METHODS FROM PARENT CLASS (HIERARCHY TESTS) ============
+
+    private val safeChild = SafeChildClass()
+    private val safeGrandchild = SafeGrandchildClass()
+
+    @JvmStatic
+    fun callSafeParentMethod(): Int {
+        return safeChild.callParentMethod()
+    }
+
+    @JvmStatic
+    fun callSafeGrandparentMethod(): Int {
+        return safeGrandchild.callGrandparentMethod()
+    }
+
+    // ============ ALLOWED FUNCTION CALLS ============
+
+    @JvmStatic
+    fun callsCustomAllowedMethod(): Int {
+        return customAllowedHelper(5) + anotherAllowedHelper()
+    }
+
+    @JvmStatic
+    private fun customAllowedHelper(x: Int): Int = x * 2
+
+    @JvmStatic
+    private fun anotherAllowedHelper(): Int = 10
+
     // ============ PURE ARITHMETIC ============
 
     @JvmStatic
@@ -436,4 +464,18 @@ private object SafeConditions {
 
     @JvmStatic
     fun compareStaticField(x: Int): Boolean = x > staticField
+}
+
+// ============ Helper classes for hierarchy tests ============
+
+private open class SafeBaseClass {
+    fun safeBaseMethod(): Int = 42
+}
+
+private open class SafeChildClass : SafeBaseClass() {
+    fun callParentMethod(): Int = safeBaseMethod()
+}
+
+private class SafeGrandchildClass : SafeChildClass() {
+    fun callGrandparentMethod(): Int = safeBaseMethod()
 }

@@ -212,7 +212,7 @@ internal class LincheckClassVisitor(
         // ======== SnapshotBreakpoints ========
         if (filteredLiveDebuggerSettings.lineBreakPoints.isNotEmpty()) {
             chain.addTransformer { adapter, mv ->
-                SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, filteredLiveDebuggerSettings)
+                SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, filteredLiveDebuggerSettings, classVisitor.loader)
             }
         }
 

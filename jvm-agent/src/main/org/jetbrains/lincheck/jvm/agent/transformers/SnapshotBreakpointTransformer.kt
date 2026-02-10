@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.*
@@ -18,7 +19,10 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.*
 import sun.nio.ch.lincheck.*
-import kotlin.collections.forEach
+import sun.nio.ch.lincheck.BreakpointConditionRegistry
+import sun.nio.ch.lincheck.BreakpointConditionRegistry.getClassLoaderId
+import java.util.function.BooleanSupplier
+import java.util.function.Function
 import kotlin.collections.orEmpty
 
 internal class SnapshotBreakpointTransformer(
@@ -33,6 +37,7 @@ internal class SnapshotBreakpointTransformer(
     methodVisitor: MethodVisitor,
     config: TransformationConfiguration,
     private val liveDebuggerSettings: LiveDebuggerSettings,
+    private val classLoader: ClassLoader
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     private val traceIdCapturers = TraceIdCapturerRegistry(config)
@@ -114,30 +119,94 @@ internal class SnapshotBreakpointTransformer(
     }
 
     private fun GeneratorAdapter.injectConditionCall(breakpointSettings: SnapshotBreakpoint) {
-        // Extract argument names and load their values
-        val argNames = breakpointSettings.conditionArgs.orEmpty()
-        val argTypes = mutableListOf<Type>()
+        // === STEP 1: Load the condition class from bytecode (transformation time) ===
+        // The condition code is provided as raw bytecode in conditionCodeFragment.
+        // We dynamically load it into a Class object so we can access its factory method.
+        val conditionClass = loadClassFromBytes(
+            userCodeClassLoader = classLoader,
+            className = breakpointSettings.conditionClassName!!,
+            classBytes = breakpointSettings.conditionCodeFragment!!
+        )
 
-        argNames.forEach { argName ->
-            // Find the local variable by name in the current active locals
-            val localVar = currentActiveLocals.firstOrNull { it.name == argName }
-            if (localVar != null) {
-                // Load the local variable value
-                visitVarInsn(localVar.type.getOpcode(ILOAD), localVar.index)
-                argTypes.add(localVar.type)
-            } else {
-                // If variable not found, handle gracefully by skipping this condition
-                throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpointSettings.lineNumber}")
-            }
+        // === STEP 2: Validate that the condition is safe (transformation time) ===
+        // Check that the condition code doesn't have side effects (no writes, no unsafe calls, etc.)
+        val allowedFunctionCalls = { className: String, methodName: String, methodDescriptor: String ->
+            className == breakpointSettings.conditionClassName.toInternalClassName() && methodName.startsWith("accessToField")
+        }
+        val safetyViolation = ConditionSafetyChecker.checkMethodForSideEffects(
+            className = breakpointSettings.conditionClassName,
+            methodName = "invoke",
+            methodDescriptor = "()Z",
+            classLoader = conditionClass.classLoader,
+            allowedFunctionCalls = allowedFunctionCalls
+        )
+        if (safetyViolation != null) {
+            throw IllegalArgumentException(
+                "Breakpoint condition at ${breakpointSettings.fileName}:${breakpointSettings.lineNumber} is not safe:\n$safetyViolation"
+            )
         }
 
-        // Call the condition function with the loaded arguments
-        invokeStatic(
-            Type.getObjectType(breakpointSettings.conditionClassName!!.toInternalClassName()),
+        // === STEP 3: Register the condition factory (transformation time) ===
+        // Extract a unique identifier for the classloader to handle multi-classloader scenarios.
+        // Different classloaders may load classes with the same name, so we need to distinguish them.
+        val classLoaderId = getClassLoaderId(classLoader)
+        // The condition class has a static "createFactory" method that returns a Function.
+        // This factory takes captured variables as input and produces a BooleanSupplier.
+        val createFactoryMethod = conditionClass.getDeclaredMethod("createFactory")
+        createFactoryMethod.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val factory = createFactoryMethod.invoke(null) as Function<Array<Any?>, BooleanSupplier>
+        // Register this factory in a global registry so it can be retrieved at runtime.
+        // The registry is keyed by (className, lineNumber, classLoaderId).
+        BreakpointConditionRegistry.registerConditionFactory(
+            breakpointSettings.conditionClassName,
+            breakpointSettings.lineNumber,
+            classLoaderId,
+            factory,
+            classLoader
+        )
+
+        // === STEP 4: Inject bytecode to push factory lookup parameters (runtime) ===
+        // The following bytecode will execute at runtime when the breakpoint is hit.
+        // Push the className, lineNumber, and classLoaderId onto the stack.
+        // These will be used to look up the factory in Injections.createConditionInstance.
+        push(breakpointSettings.conditionClassName)  // Stack: [className]
+        push(breakpointSettings.lineNumber)           // Stack: [className, lineNumber]
+        push(classLoaderId)                           // Stack: [className, lineNumber, classLoaderId]
+
+        // === STEP 5: Capture local variables and build Object[] array (runtime) ===
+        // The condition may reference local variables from the breakpoint location.
+        // We need to capture their current values and pass them to the factory.
+        val argNames = breakpointSettings.conditionCapturedVars.orEmpty()
+        val capturedLocals = argNames.map { argName ->
+            // Look up each captured variable name in the current method's active locals.
+            // If a variable isn't found, throw an error (this indicates a bug in condition analysis).
+            currentActiveLocals.firstOrNull { it.name == argName }
+                ?: throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpointSettings.lineNumber}")
+        }
+        pushArray(
+            locals = capturedLocals.map { it.index }.toIntArray(),
+            localTypes = capturedLocals.map { it.type }
+        )
+        // Stack after loop: [...lookup params..., capturedValuesArray]
+
+        // === STEP 6: Create the condition instance and evaluate it (runtime) ===
+        // Call Injections.createConditionInstance(className, lineNumber, classLoaderId, capturedValues).
+        // This looks up the registered factory and creates a BooleanSupplier instance.
+        invokeStatic(Injections::createConditionInstance)
+        // Stack: [BooleanSupplier instance]
+
+        // Cast to BooleanSupplier (for type safety)
+        checkCast(booleanSupplierType)
+        // Stack: [BooleanSupplier instance]
+
+        // Call getAsBoolean() on the BooleanSupplier to evaluate the condition.
+        invokeInterface(
+            booleanSupplierType,
             Method(
-                breakpointSettings.conditionMethodName!!,
+                "getAsBoolean",
                 Type.BOOLEAN_TYPE,
-                argTypes.toTypedArray()
+                emptyArray()
             )
         )
         // Stack: [boolean result] - this will be consumed by the surrounding ifStatement
@@ -217,3 +286,5 @@ internal class SnapshotBreakpointTransformer(
         invokeStatic(Injections::onSnapshotLineBreakpoint)
     }
 }
+
+private val booleanSupplierType = Type.getType(BooleanSupplier::class.java)

@@ -184,7 +184,7 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
 
 /**
  * Executes a try-catch-finally block within the context of the GeneratorAdapter.
- * 
+ *
  * **Attention**:
  * * This method does not insert `finally` blocks before inner return and throw statements.
  * * It is forbidden to jump from the blocks outside and between them.
@@ -264,7 +264,10 @@ internal fun GeneratorAdapter.copyArguments(methodDescriptor: String): IntArray 
  *
  * @param locals Local variables which values are stored in the stack.
  */
-internal fun GeneratorAdapter.pushArray(locals: IntArray) {
+internal fun GeneratorAdapter.pushArray(
+    locals: IntArray,
+    localTypes: List<Type> = locals.map { getLocalType(it) }
+) {
     // STACK: <empty>
     push(locals.size)
     // STACK: arraySize
@@ -278,7 +281,7 @@ internal fun GeneratorAdapter.pushArray(locals: IntArray) {
         // STACK: array, array, index
         loadLocal(locals[i])
         // STACK: array, array, index, value[index]
-        box(getLocalType(locals[i]))
+        box(localTypes[i])
         arrayStore(OBJECT_TYPE)
         // STACK: array
     }
@@ -590,6 +593,27 @@ fun String.toCanonicalClassName() =
  */
 fun String.toInternalClassName() =
     this.replace('.', '/')
+
+internal fun loadClassFromBytes(userCodeClassLoader: ClassLoader, className: String, classBytes: ByteArray): Class<*> {
+    // defineClass expects canonical class name (with dots, not slashes)
+    val canonicalClassName = className.toCanonicalClassName()
+    val customClassLoader = object : ClassLoader(userCodeClassLoader) {
+        override fun loadClass(name: String?): Class<*>? {
+            if (name == canonicalClassName) {
+                return defineClass(name, classBytes, 0, classBytes.size)
+            }
+            return super.loadClass(name)
+        }
+
+        override fun getResourceAsStream(name: String?): InputStream? {
+            if (name == canonicalClassName.toInternalClassName() + ".class") {
+                return classBytes.inputStream()
+            }
+            return super.getResourceAsStream(name)
+        }
+    }
+    return customClassLoader.loadClass(canonicalClassName)!!
+}
 
 const val ASM_API = Opcodes.ASM9
 

@@ -13,6 +13,9 @@ package sun.nio.ch.lincheck;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 
 /**
  * Methods of this object are called from the instrumented code.
@@ -321,6 +324,21 @@ public class Injections {
     public static boolean isNotInsideBreakpointCondition(ThreadDescriptor descriptor) {
         if (descriptor == null) return true;
         return !descriptor.isInsideBreakpointCondition();
+    }
+
+    /**
+     * Creates a BooleanSupplier instance for a breakpoint condition.
+     * Delegates to {@link BreakpointConditionRegistry}.
+     *
+     * @param className the fully qualified name of the condition class
+     * @param lineNumber the line number of the breakpoint
+     * @param classLoaderId identifier for the class loader (e.g., class loader's identity hash code)
+     * @param args the captured local variable values to pass to the condition
+     * @return a BooleanSupplier instance that evaluates the condition
+     * @throws IllegalStateException if no factory has been registered for the given key
+     */
+    public static BooleanSupplier createConditionInstance(String className, int lineNumber, String classLoaderId, Object[] args) {
+        return BreakpointConditionRegistry.createConditionInstance(className, lineNumber, classLoaderId, args);
     }
 
     /**
