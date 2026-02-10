@@ -39,6 +39,7 @@ import org.junit.Test
 import org.junit.Rule
 import org.junit.rules.TestName
 import kotlin.reflect.jvm.javaMethod
+import org.jetbrains.lincheck.util.UnsafeHolder
 
 class PrimitivesTest {
 
@@ -403,9 +404,9 @@ class PrimitivesTest {
                 lookup.findVarHandle(VolatileReferenceVariable::class.java, "variable", String::class.java)
             }
 
-            private val U = Unsafe.getUnsafe()
+            private val U = UnsafeHolder.UNSAFE
 
-            private val offset = U.objectFieldOffset(VolatileReferenceVariable::class.java, "variable")
+            private val offset = U.objectFieldOffset(VolatileReferenceVariable::class.java.getDeclaredField("variable"))
 
         }
 
@@ -422,7 +423,7 @@ class PrimitivesTest {
         }
 
         fun unsafeRead(): String? {
-            return U.getReference(this, offset) as String?
+            return U.getObject(this, offset) as String?
         }
 
         fun write(value: String?) {
@@ -438,7 +439,7 @@ class PrimitivesTest {
         }
 
         fun unsafeWrite(value: String?) {
-            U.putReference(this, offset, value)
+            U.putObject(this, offset, value)
         }
 
         fun afuCompareAndSet(expected: String?, desired: String?): Boolean {
@@ -450,7 +451,7 @@ class PrimitivesTest {
         }
 
         fun unsafeCompareAndSet(expected: String?, desired: String?): Boolean {
-            return U.compareAndSetReference(this, offset, expected, desired)
+            return U.compareAndSwapObject(this, offset, expected, desired)
         }
 
     }
@@ -683,7 +684,7 @@ class PrimitivesTest {
         private var referenceArray: Array<String> = Array<String>(8) { "" }
 
         companion object {
-            private val U = Unsafe.getUnsafe()
+            private val U = UnsafeHolder.UNSAFE
 
             private val byteArrayOffset = U.arrayBaseOffset(ByteArray::class.java)
             private val shortArrayOffset = U.arrayBaseOffset(ShortArray::class.java)
@@ -716,7 +717,7 @@ class PrimitivesTest {
         }
 
         fun writeReference(index: Int, value: String) {
-            U.putReference(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset, value)
+            U.putObject(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset, value)
         }
 
         fun readByte(index: Int): Byte {
@@ -736,7 +737,7 @@ class PrimitivesTest {
         }
 
         fun readReference(index: Int): String {
-            return U.getReference(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset) as String
+            return U.getObject(referenceArray, (index.toLong() * referenceIndexScale) + referenceArrayOffset) as String
         }
 
     }
