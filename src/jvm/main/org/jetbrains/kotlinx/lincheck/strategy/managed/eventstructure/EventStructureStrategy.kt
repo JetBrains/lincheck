@@ -393,8 +393,6 @@ internal class EventStructureStrategy(
         runInsideIgnoredSection {
             if (currentExecutionPart == ExecutionPart.VALIDATION)
                 return@runInsideIgnoredSection
-            // TODO: Suspcious default value (and also this can maybe be null?)
-            // We probably need to add a check for that
             val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
             eventStructure.addActorStartEvent(iThread, actor)
         }
@@ -405,7 +403,6 @@ internal class EventStructureStrategy(
         runInsideIgnoredSection {
             if (currentExecutionPart == ExecutionPart.VALIDATION)
                 return@runInsideIgnoredSection
-            // TODO: Sus default value here as well.
             val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
             eventStructure.addActorEndEvent(iThread, actor)
         }
@@ -418,7 +415,6 @@ internal class EventStructureStrategy(
 
     // NOTE: I guess this should not be final anymore (this has been changed)
     override fun afterCoroutineSuspended(iThread: Int) {
-        // TODO: Sus default value here as well.
         eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId.getOrDefault(iThread, 0))
         super.afterCoroutineSuspended(iThread)
     }
@@ -426,7 +422,6 @@ internal class EventStructureStrategy(
     //NOTE: Same as above
     override fun afterCoroutineResumed(iThread: Int) {
         super.afterCoroutineResumed(iThread)
-        // TODO: Sus default value here as well.
         eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId.getOrDefault(iThread, 0))
     }
 
@@ -436,15 +431,12 @@ internal class EventStructureStrategy(
         if (cancellationResult == CancellationResult.CANCELLATION_FAILED)
             return
 
-        //TODO: we expect this to be not null. Scary! See if we can avoid it
         eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancelatioon)
         eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
     }
 
-    // TODO: Not sure we should also have an override and add a suspend event. It seems that this overload gets called, when the overload above fails
     override fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationException: Throwable) {
         super.afterCoroutineCancellation(iThread, promptCancelatioon, cancellationException)
-        //TODO: we expect this to be not null. Scary! See if we can avoid it
         eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancelatioon)
         eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
     }
@@ -454,7 +446,6 @@ internal class EventStructureStrategy(
         eventStructure.addCoroutineResumeEvent(threadScheduler.getCurrentThreadId(), iResumedThread, iResumedActor)
     }
 
-    //NOTE: I could not find any corresponding method, there is `isTestThreadCoroutineSuspended`, but I do not think it matches
     override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
         if (!super.isCoroutineResumed(iThread, iActor))
             return false
@@ -488,7 +479,6 @@ private class EventStructureMemoryTracker(
     private fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?,
                               rmwWriteDescriptor: ReadModifyWriteDescriptor? = null) {
         // force evaluation of initial value (before possibly overwriting it)
-        // TODO: refactor this!
         eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
         eventStructure.addWriteEvent(iThread, codeLocation, location, getValueID(location, value), rmwWriteDescriptor)
     }
