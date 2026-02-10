@@ -33,6 +33,8 @@ package sun.nio.ch.lincheck;
 public class ResultInterceptor {
     private Object interceptedResult = null;
     private Throwable interceptedException = null;
+    // Sometimes we can intercept the "null" value as a result.
+    // Therefore, we need this extra field that will actually indicate if a result is intercepted or not
     private Boolean isResultIntercepted = false;
 
     private Object eventTrackerData = null;
