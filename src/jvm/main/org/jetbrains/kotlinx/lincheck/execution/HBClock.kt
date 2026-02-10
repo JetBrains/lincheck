@@ -23,6 +23,10 @@ data class HBClock(val clock: IntArray) {
         }
     }
 
+    fun copy(): HBClock {
+        return HBClock(clock.copyOf())
+    }
+
     /**
      * Checks whether the clock contains information for any thread
      * excluding the one this clock is associated with.
