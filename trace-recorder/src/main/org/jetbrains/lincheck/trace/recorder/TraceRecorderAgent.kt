@@ -17,13 +17,9 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_SERVER
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_HOST
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_PORT
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_RMI_PORT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
-import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxServer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
 import java.lang.instrument.Instrumentation
 
@@ -46,10 +42,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_INCLUDE,
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
-        ARGUMENT_JMX_SERVER,
-        ARGUMENT_JMX_HOST,
-        ARGUMENT_JMX_PORT,
-        ARGUMENT_RMI_PORT,
+        ARGUMENT_JMX_MBEAN,
     )
 
     // entry point for a statically attached java agent
@@ -66,8 +59,8 @@ internal object TraceRecorderAgent {
         // attach java agent
         LincheckInstrumentation.attachJavaAgentStatically(inst)
 
-        // start the JMX server if the specified argument was passed
-        setupJmxServerIfRequested()
+        // register JMX MBean if the specified argument was passed
+        registerJmxMBeanIfRequested()
 
         // install trace entry points transformer and instrumentation
         installTraceEntryPointTransformer()
@@ -89,8 +82,8 @@ internal object TraceRecorderAgent {
         // attach java agent
         LincheckInstrumentation.attachJavaAgentDynamically(inst)
 
-        // start the JMX server if the specified argument was passed
-        setupJmxServerIfRequested()
+        // register JMX MBean if the specified argument was passed
+        registerJmxMBeanIfRequested()
 
         // install instrumentation and re-transform already loaded classes
         installInstrumentation()
@@ -103,14 +96,8 @@ internal object TraceRecorderAgent {
     }
 
     @JvmStatic
-    private fun setupJmxServerIfRequested() {
-        val jmxServerArg = TraceAgentParameters.getArg(ARGUMENT_JMX_SERVER)
-        if (jmxServerArg == "on") {
-            TraceRecorderJmxServer.start(
-                jmxHost = TraceAgentParameters.jmxHost,
-                jmxPort = TraceAgentParameters.jmxPort,
-                rmiPort = TraceAgentParameters.rmiPort,
-            )
+    private fun registerJmxMBeanIfRequested() {
+        if (TraceAgentParameters.jmxMBeanEnabled) {
             TraceRecorderJmxController.register()
         }
     }

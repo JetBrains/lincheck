@@ -59,6 +59,9 @@ import javax.management.remote.JMXServiceURL
  * - pack — boolean that enables zipping trace artifact files, it is false by default.
  *       Example: `pack=true`
  *
+ * - jmxMBean — enables registration of JMX MBean for remote monitoring and management.
+ *       Example: `jmxMBean=on` or `jmxMBean=off`, it is off by default.
+ *
  * - format — output format for trace recorder dumps. Possible options are:
  *       * `binary` --- serialized binary format;
  *       * `text` --- text output;
@@ -71,19 +74,6 @@ import javax.management.remote.JMXServiceURL
  *           * `stream` --- writes the trace points incrementally during the execution (default);
  *       * for `text`: `verbose` --- enables verbose output (disabled by default).
  *       Example: `formatOption=dump`
- *
- * - jmxServer — boolean that enables JMX server for remote monitoring and management, it is off by default.
- *     The server is available at the URL `service:jmx:rmi:///jndi/rmi://<jmxHost>:<jmxPort>/tracing`.
- *       Example: `jmxServer=on` or `jmxServer=off`
- *
- * - jmxHost — hostname or IP address for the JMX server, defaults to localhost.
- *       Example: `jmxHost=127.0.0.1`
- *
- * - jmxPort — port number for JMX connections, defaults to 9999.
- *       Example: `jmxPort=9999`
- *
- * - rmiPort — port number for RMI registry, defaults to 9998.
- *       Example: `rmiPort=9998`
  *
  * Quotation rules:
  * - Unquoted values may contain any character; use backslash to escape comma (,) and backslash (\\).
@@ -123,14 +113,8 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
-    const val ARGUMENT_JMX_SERVER = "jmxServer"
-    const val ARGUMENT_JMX_HOST = "jmxHost"
-    const val ARGUMENT_JMX_PORT = "jmxPort"
-    const val ARGUMENT_RMI_PORT = "rmiPort"
+    const val ARGUMENT_JMX_MBEAN = "jmxMBean"
 
-    const val DEFAULT_JMX_HOST = "localhost"
-    const val DEFAULT_JMX_PORT = 9999
-    const val DEFAULT_RMI_PORT = 9998
     const val DEFAULT_TRACE_PORT = 9997
 
     @JvmStatic
@@ -146,20 +130,8 @@ object TraceAgentParameters {
     var traceDumpFilePath: String? = null
 
     @JvmStatic
-    val jmxServerEnabled: Boolean
-        get() = getArg(ARGUMENT_JMX_SERVER)?.lowercase() == "on"
-
-    @JvmStatic
-    val jmxHost: String
-        get() = getArg(ARGUMENT_JMX_HOST) ?: DEFAULT_JMX_HOST
-
-    @JvmStatic
-    val jmxPort: Int
-        get() = getArg(ARGUMENT_JMX_PORT)?.toIntOrNull() ?: DEFAULT_JMX_PORT
-
-    @JvmStatic
-    val rmiPort: Int
-        get() = getArg(ARGUMENT_RMI_PORT)?.toIntOrNull() ?: DEFAULT_RMI_PORT
+    val jmxMBeanEnabled: Boolean
+        get() = (getArg(ARGUMENT_JMX_MBEAN)?.lowercase() == "on")
 
     @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()
@@ -217,7 +189,6 @@ object TraceAgentParameters {
         }
 
         setupMode()
-        validateJmxParameters()
     }
 
     @JvmStatic
@@ -323,28 +294,6 @@ object TraceAgentParameters {
         }
     }
 
-    @JvmStatic
-    private fun validateJmxParameters() {
-        val jmxServerEnabled = getArg(ARGUMENT_JMX_SERVER) == "on"
-
-        if (!jmxServerEnabled) {
-            // JMX server is not enabled, check that JMX-related parameters are not set
-            val jmxHost = getArg(ARGUMENT_JMX_HOST)
-            val jmxPort = getArg(ARGUMENT_JMX_PORT)
-            val rmiPort = getArg(ARGUMENT_RMI_PORT)
-
-            if (jmxHost != null) {
-                Logger.warn { "JMX parameter \"$ARGUMENT_JMX_HOST\" is set but JMX server is not enabled (jmxServer=off)" }
-            }
-            if (jmxPort != null) {
-                Logger.warn { "JMX parameter \"$ARGUMENT_JMX_PORT\" is set but JMX server is not enabled (jmxServer=off)" }
-            }
-            if (rmiPort != null) {
-                Logger.warn { "JMX parameter \"$ARGUMENT_RMI_PORT\" is set but JMX server is not enabled (jmxServer=off)" }
-            }
-        }
-    }
-
     private fun setClassUnderTraceDebuggingToMethodOwner(
         startClass: String = classUnderTraceDebugging,
         method: String = methodUnderTraceDebugging,
@@ -394,10 +343,6 @@ object TraceAgentParameters {
             ?: error("Method \"${methodUnderTraceDebugging}\" was not found in class \"${classUnderTraceDebugging}\". Check that method exists and it is public.")
         return testClass to testMethod
     }
-
-    @JvmStatic
-    fun getJmxServerUrl(jmxHost: String, jmxPort: Int, rmiPort: Int): JMXServiceURL =
-        JMXServiceURL("service:jmx:rmi://$jmxHost:$jmxPort/jndi/rmi://$jmxHost:$rmiPort/tracing")
 
     @TestOnly
     fun reset() {
