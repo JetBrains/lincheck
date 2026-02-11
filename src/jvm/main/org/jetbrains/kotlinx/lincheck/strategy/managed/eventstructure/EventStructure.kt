@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.util.*
@@ -53,7 +52,7 @@ internal class EventStructure(
      * List of the event structure events.
      */
     val events: SortedList<AtomicThreadEvent> = _events
-    val objectRegistry = ObjectRegistry(this)
+    val eventStructureObjectTracker = EventStructureObjectTracker(this)
 
     /**
      * Root event of the whole event structure.
@@ -148,7 +147,7 @@ internal class EventStructure(
         registerThread(initThreadId)
         registerThread(mainThreadId)
         root = addRootEvent()
-        objectRegistry.initialize(root)
+        eventStructureObjectTracker.initialize(root)
     }
 
 
@@ -335,9 +334,9 @@ internal class EventStructure(
         val conflicts = getConflictingEvents(iThread, label, parent, dependencies)
         if (isCausalityViolated(parent, dependencies, conflicts))
             return null
-        val allocation = objectRegistry.getAllocation(label.objectID)
+        val allocation = eventStructureObjectTracker.getAllocation(label.objectID)
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
-            objectRegistry.getAllocation(it)
+            eventStructureObjectTracker.getAllocation(it)
         }
         val event = AtomicThreadEventImpl(
             label = label,
@@ -534,7 +533,7 @@ internal class EventStructure(
     /* ************************************************************************* */
 
     fun allocationEvent(id: StableObjectNumber): AtomicThreadEvent? {
-        return objectRegistry.getAllocation(id)
+        return eventStructureObjectTracker.getAllocation(id)
     }
 
     /* ************************************************************************* */
@@ -748,7 +747,7 @@ internal class EventStructure(
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel(initThreadId, mainThreadId) { location ->
             val value = memoryInitializer(location)
-            objectRegistry.getOrRegisterValueID(location.type, value)
+            eventStructureObjectTracker.getOrRegisterValueID(location.type, value)
         }
         return createEvent(initThreadId, label, parent = null, dependencies = emptyList(), visit = false)!!
             .also { event ->
@@ -958,7 +957,7 @@ internal class EventStructure(
             className = value.unwrap().javaClass.simpleName,
             memoryInitializer = { location ->
                 val initValue = memoryInitializer(location)
-                objectRegistry.getOrRegisterValueID(location.type, initValue)
+                eventStructureObjectTracker.getOrRegisterValueID(location.type, initValue)
             },
         )
         val parent = playedFrontier[iThread]
@@ -1013,7 +1012,7 @@ internal class EventStructure(
                             isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
-            mutexID = objectRegistry.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1030,7 +1029,7 @@ internal class EventStructure(
                        isReentry: Boolean = false, reentrancyDepth: Int = 1,
                        isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = UnlockLabel(
-            mutexID = objectRegistry.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1041,7 +1040,7 @@ internal class EventStructure(
     fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): AtomicThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
-            mutexID = objectRegistry.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
         )
         return addRequestEvent(iThread, label)
 
@@ -1059,7 +1058,7 @@ internal class EventStructure(
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
         val label = NotifyLabel(
-            mutexID = objectRegistry.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
             isBroadcast = isBroadcast,
         )
         return addSendEvent(iThread, label)

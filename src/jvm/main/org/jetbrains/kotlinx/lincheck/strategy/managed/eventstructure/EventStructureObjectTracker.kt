@@ -29,7 +29,7 @@ import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.lincheck.util.*
 
 
-internal class ObjectRegistry(private val eventStructure: EventStructure): BaseObjectTracker() {
+internal class EventStructureObjectTracker(private val eventStructure: EventStructure): BaseObjectTracker() {
 
     var externalIds = mutableSetOf<StableObjectNumber>()
     var allocationMap: MutableMap<StableObjectNumber, AtomicThreadEvent> = mutableMapOf()
@@ -109,14 +109,14 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
 
 }
 
-internal fun ObjectRegistry.registerValueIfAbsent(obj: OpaqueValue?): StableObjectNumber =
+internal fun EventStructureObjectTracker.registerValueIfAbsent(obj: OpaqueValue?): StableObjectNumber =
     when {
         obj == null -> NULL_OBJECT_ID
         obj.unwrap().isImmutable -> getOrRegisterPrimitveValue(obj)
         else -> registerObjectIfAbsent(obj.unwrap()).stableObjectNumber
     }
 
-internal fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {
+internal fun EventStructureObjectTracker.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {
     Types.LONG_TYPE       -> id.opaque()
     Types.INT_TYPE        -> id.toInt().opaque()
     Types.BYTE_TYPE       -> id.toByte().opaque()
@@ -132,7 +132,7 @@ internal fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue
     else                -> getObject(id)
 }
 
-internal fun ObjectRegistry.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
+internal fun EventStructureObjectTracker.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
     if (value == null) return NULL_OBJECT_ID
     return when (type) {
         Types.LONG_TYPE       -> (value.unwrap() as Long)

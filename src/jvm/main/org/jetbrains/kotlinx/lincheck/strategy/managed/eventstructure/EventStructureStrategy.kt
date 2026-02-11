@@ -50,7 +50,7 @@ internal class EventStructureStrategy(
 
     private val memoryInitializer: MemoryInitializer = { location ->
         runInsideIgnoredSection {
-            location.read(eventStructure.objectRegistry::getValue)?.opaque()
+            location.read(eventStructure.eventStructureObjectTracker::getValue)?.opaque()
         }
     }
 
@@ -63,13 +63,13 @@ internal class EventStructureStrategy(
 
     // Tracker of objects.
     override val objectTracker: ObjectTracker =
-        eventStructure.objectRegistry
+        eventStructure.eventStructureObjectTracker
     // Tracker of shared memory accesses.
     override val memoryTracker: MemoryTracker =
         EventStructureMemoryTracker(eventStructure, objectTracker)
     // Tracker of monitors operations.
     override val monitorTracker: MonitorTracker =
-        EventStructureMonitorTracker(eventStructure, eventStructure.objectRegistry)
+        EventStructureMonitorTracker(eventStructure, eventStructure.eventStructureObjectTracker)
     // Tracker of thread parking
     override val parkingTracker: ParkingTracker =
         EventStructureParkingTracker(eventStructure)
@@ -356,7 +356,7 @@ internal class EventStructureStrategy(
         check(!isTestInstanceRegistered)
         val testInstance = (runner as ExecutionScenarioRunner).testInstance
         //NOTE: The threadID may be messed up. See how this can be fixed.
-        (objectTracker as ObjectRegistry).registerTestInstance(testInstance, eventStructure.mainThreadId)
+        (objectTracker as EventStructureObjectTracker).registerTestInstance(testInstance, eventStructure.mainThreadId)
         isTestInstanceRegistered = true
     }
 
@@ -457,17 +457,17 @@ private class EventStructureMemoryTracker(
     private val objectTracker: ObjectTracker,
 ) : MemoryTracker {
 
-    private val objectRegistry: ObjectRegistry
-        get() = eventStructure.objectRegistry
+    private val eventStructureObjectTracker: EventStructureObjectTracker
+        get() = eventStructure.eventStructureObjectTracker
 
     private fun getValueID(location: MemoryLocation, value: OpaqueValue?): ValueID =
-        objectRegistry.getOrRegisterValueID(location.type, value)
+        eventStructureObjectTracker.getOrRegisterValueID(location.type, value)
 
     private fun getValue(location: MemoryLocation, valueID: ValueID) =
-        objectRegistry.getValue(location.type, valueID)
+        eventStructureObjectTracker.getValue(location.type, valueID)
 
     private fun getValue(type: Types.Type, valueID: ValueID) =
-        objectRegistry.getValue(type, valueID)
+        eventStructureObjectTracker.getValue(type, valueID)
 
     private fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?,
                               rmwWriteDescriptor: ReadModifyWriteDescriptor? = null) {
@@ -496,7 +496,7 @@ private class EventStructureMemoryTracker(
                 val newValueID = rmwDescriptor.newValue
                 val newValue = getValue(label.location, newValueID)
                 eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
-                label.location.write(newValue?.unwrap(), objectRegistry::getValue)
+                label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
                 return getValue(label.location, label.value)
             }
 
@@ -505,7 +505,7 @@ private class EventStructureMemoryTracker(
                     val newValueID = rmwDescriptor.newValue
                     val newValue = getValue(label.location, newValueID)
                     eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
-                    label.location.write(newValue?.unwrap(), objectRegistry::getValue)
+                    label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
                     return getValue(Types.BOOLEAN_TYPE, true.toInt().toLong())
                 }
                 return getValue(Types.BOOLEAN_TYPE, false.toInt().toLong())
@@ -516,7 +516,7 @@ private class EventStructureMemoryTracker(
                     val newValueID = rmwDescriptor.newValue
                     val newValue = getValue(label.location, newValueID)
                     eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
-                    label.location.write(newValue?.unwrap(), objectRegistry::getValue)
+                    label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
                 }
                 return getValue(label.location, label.value)
             }
@@ -525,7 +525,7 @@ private class EventStructureMemoryTracker(
                 val newValueID = label.value + rmwDescriptor.delta
                 val newValue = getValue(label.location, newValueID)
                 eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
-                label.location.write(newValue?.unwrap(), objectRegistry::getValue)
+                label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
                 return when (rmwDescriptor.kind) {
                     ReadModifyWriteDescriptor.IncrementKind.Pre  -> getValue(label.location, label.value)
                     ReadModifyWriteDescriptor.IncrementKind.Post -> getValue(label.location, newValueID)
@@ -603,7 +603,7 @@ private class EventStructureMemoryTracker(
                 interceptReadResult(iThread)
             }
             beforeWrite(iThread, codeLocation, writeLocation, value)
-            writeLocation.write(value, objectRegistry::getValue)
+            writeLocation.write(value, eventStructureObjectTracker::getValue)
         }
     }
 
@@ -614,7 +614,7 @@ private class EventStructureMemoryTracker(
 // NOTE: Some issues here as well , there are some missing members
 private class EventStructureMonitorTracker(
     private val eventStructure: EventStructure,
-    private val objectRegistry: ObjectRegistry,
+    private val eventStructureObjectTracker: EventStructureObjectTracker,
 ) : MonitorTracker {
 
     // for each mutex object acquired by some thread,
@@ -632,7 +632,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
-        val mutexID = objectRegistry[monitor]!!.stableObjectNumber
+        val mutexID = eventStructureObjectTracker[monitor]!!.stableObjectNumber
         return canAcquireMonitor(iThread, mutexID)
     }
 
@@ -667,7 +667,7 @@ private class EventStructureMonitorTracker(
 
 
     private fun issueLockRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectRegistry[monitor]!!.stableObjectNumber
+        val mutexID = eventStructureObjectTracker[monitor]!!.stableObjectNumber
         // check if the thread is already blocked on the lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
             ?.ensure { it.label.satisfies<LockLabel> { this.mutexID == mutexID } }
@@ -698,7 +698,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun issueUnlock(iThread: Int, monitor: OpaqueValue): Boolean {
-        val mutexID = objectRegistry[monitor]!!.stableObjectNumber
+        val mutexID = eventStructureObjectTracker[monitor]!!.stableObjectNumber
         // obtain current lock-responses stack, and ensure that
         // the lock is indeed acquired by the releasing thread
         val lockStack = lockStacks[mutexID]!!
@@ -730,7 +730,7 @@ private class EventStructureMonitorTracker(
     }
 
     override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
-        val mutexID = objectRegistry[monitor.opaque()]!!.stableObjectNumber
+        val mutexID = eventStructureObjectTracker[monitor.opaque()]!!.stableObjectNumber
         // check if the thread is already blocked on wait-request or (synthetic) lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.ensure { it.label.satisfies<MutexLabel> { this.mutexID == mutexID } }
@@ -765,7 +765,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun issueWaitRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectRegistry[monitor]!!.stableObjectNumber
+        val mutexID = eventStructureObjectTracker[monitor]!!.stableObjectNumber
         // obtain the current lock-responses stack, and ensure that
         // the lock is indeed acquired by the waiting thread
         val lockStack = lockStacks[mutexID]!!
