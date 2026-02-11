@@ -70,12 +70,6 @@ class InconsistentInvocationResult(
     val inconsistency: Inconsistency
 ) : InvocationResult()
 
-/**
- * Invocation is aborted due to one of the threads reaching
- * the bound on the number of spin-loop iterations.
- */
-class SpinLoopBoundInvocationResult : InvocationResult()
-
 
 /**
  * Indicates that spin-cycle has been found for the first time and replay of current interleaving is required.
@@ -86,7 +80,6 @@ fun InvocationResult.isAbortedInvocation(): Boolean =
     when (this) {
         is ManagedDeadlockInvocationResult,
         is RunnerTimeoutInvocationResult,
-        is SpinLoopBoundInvocationResult,
         is UnexpectedExceptionInvocationResult,
         is ObstructionFreedomViolationInvocationResult,
         is InconsistentInvocationResult

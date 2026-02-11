@@ -129,7 +129,6 @@ internal class EventStructureStrategy(
             }
             inconsistency = when (result) {
                 is InconsistentInvocationResult -> result.inconsistency
-                is SpinLoopBoundInvocationResult -> null
                 else -> eventStructure.checkConsistency()
             }
         }
@@ -186,11 +185,6 @@ internal class EventStructureStrategy(
             get() = consistentInvocations + inconsistentInvocations + blockedInvocations
 
         fun update(result: InvocationResult?, inconsistency: Inconsistency?) {
-            if (result is SpinLoopBoundInvocationResult) {
-                check(inconsistency == null)
-                blockedInvocations++
-                return
-            }
             if (inconsistency == null) {
                 consistentInvocations++
                 return
@@ -880,4 +874,3 @@ private class EventStructureParkingTracker(
 
 }
 
-internal const val SPIN_BOUND = 5

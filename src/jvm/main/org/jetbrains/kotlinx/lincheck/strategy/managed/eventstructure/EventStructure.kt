@@ -1005,9 +1005,6 @@ internal class EventStructure(
         //  Probably not, because in Kotlin variables are always initialized by default?
         //  What about initialization-related issues?
         checkNotNull(responseEvent)
-        if (isSpinLoopBoundReached(responseEvent)) {
-            internalThreadSwitchCallback(responseEvent.threadId, BlockingReason.SpinBound)
-        }
         return responseEvent
     }
 
@@ -1210,34 +1207,6 @@ internal class EventStructure(
         }
     }
 
-    private fun isSpinLoopBoundReached(event: ThreadEvent): Boolean {
-        check(event.label is ReadAccessLabel && event.label.isResponse)
-        val readLabel = (event.label as ReadAccessLabel)
-        val location = readLabel.location
-        val readValue = readLabel.readValue
-        val codeLocation = readLabel.codeLocation
-        // check code locations counter to detect spin-loop
-        val counter = readCodeLocationsCounter.compute(event.threadId to codeLocation) { _, count ->
-            1 + (count ?: 0)
-        }!!
-        // a potential spin-loop occurs when we have visited the same code location more than N times
-        if (counter < SPIN_BOUND)
-            return false
-        // if the last 3 reads with the same code location read the same value,
-        // then we consider this a spin-loop
-        var spinEvent: ThreadEvent = event
-        var spinCounter = SPIN_BOUND
-        while (spinCounter-- > 0) {
-            spinEvent = spinEvent.pred {
-                it.label.isResponse && it.label.satisfies<ReadAccessLabel> {
-                    this.location == location && this.codeLocation == codeLocation
-                }
-            } ?: return false
-            if ((spinEvent.label as ReadAccessLabel).readValue != readValue)
-                return false
-        }
-        return true
-    }
 
     private fun resetReadCodeLocationsCounter(iThread: Int) {
         // reset all code-locations counters of the given thread

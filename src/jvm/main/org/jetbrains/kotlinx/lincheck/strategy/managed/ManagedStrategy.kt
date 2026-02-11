@@ -87,10 +87,6 @@ internal abstract class ManagedStrategy(
     // Which test threads are suspended?
     private val isSuspended = mutableThreadMapOf<Boolean>()
 
-    // Which threads are spin-bound blocked?
-    private val isSpinBoundBlocked = mutableThreadMapOf<Boolean>()
-
-
     // Current actor id for each thread.
     protected val currentActorId = mutableThreadMapOf<Int>()
 
@@ -243,7 +239,6 @@ internal abstract class ManagedStrategy(
         memoryTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()
-        isSpinBoundBlocked.clear()
         currentEventId = -1
         resetThreads()
 
@@ -546,8 +541,7 @@ internal abstract class ManagedStrategy(
      * can continue its execution (i.e., is not blocked/finished).
      */
     protected open fun isActive(iThread: Int): Boolean =
-        //TODO: Not sure if this is where we should check the isSpinBoundBlocked thing
-        threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread) && !isSpinBoundBlocked.getOrDefault(iThread, false)
+        threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread)
 
     /**
      * A regular thread switch to another thread.
@@ -560,10 +554,6 @@ internal abstract class ManagedStrategy(
     ): Boolean {
         val switchReason = blockingReason.toSwitchReason {
             objectTracker.getObjectDisplayNumber(threadScheduler.getThread(it)!!)
-        }
-
-        if (switchReason == SwitchReason.SpinBound) {
-            isSpinBoundBlocked[iThread] = true
         }
 
         // we create switch point on detected live-locks,
@@ -614,14 +604,6 @@ internal abstract class ManagedStrategy(
            return suspendedThread
         }
 
-        // if some threads (but not all of them!) are blocked due to spin-loop bounding,
-        // then finish the execution but do not count it as a deadlock;
-        if (isSpinBoundBlocked.any { entry -> entry.value } && !isSpinBoundBlocked.all { entry -> entry.value }) {
-            suddenInvocationResult = SpinLoopBoundInvocationResult()
-            //TODO: This is a replacement of the `throw ForcibleExecutionFinishError`
-            threadScheduler.abortOtherThreads()
-            threadScheduler.abortCurrentThread()
-        }
 
         // any other situation is considered to be a deadlock
         failDueToDeadlock()
@@ -825,7 +807,6 @@ internal abstract class ManagedStrategy(
     open fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threadScheduler.registerThread(thread, descriptor)
         isSuspended[threadId] = false
-        isSpinBoundBlocked[threadId] = false
         currentActorId[threadId] = if (isScenarioThread(threadId)) -1 else 0
         callStackTrace[threadId] = mutableListOf()
         suspendedFunctionsStack[threadId] = mutableListOf()
@@ -1310,7 +1291,7 @@ internal abstract class ManagedStrategy(
     private fun blockThread(threadId: ThreadId, blockingReason: BlockingReason) {
         failIfObstructionFreedomIsRequired {
             //TODO not sure if we should fail here if obstruction freedom is required
-            // In the case where we have SwitchStrategy and SpinBound
+            // In the case where we have SwitchStrategy
             blockingReason.obstructionFreedomViolationMessage
         }
         threadScheduler.blockThread(threadId, blockingReason)
@@ -2657,7 +2638,6 @@ private val BlockingReason.obstructionFreedomViolationMessage: String get() = wh
     is BlockingReason.Parked       -> OBSTRUCTION_FREEDOM_PARK_VIOLATION_MESSAGE
     is BlockingReason.ThreadJoin   -> OBSTRUCTION_FREEDOM_THREAD_JOIN_VIOLATION_MESSAGE
     is BlockingReason.Suspended    -> OBSTRUCTION_FREEDOM_SUSPEND_VIOLATION_MESSAGE
-    BlockingReason.SpinBound -> TODO()
 }
 
 /**
