@@ -187,12 +187,12 @@ internal class LoopNode(
 }
 
 internal class IterationNode(
-    tracePoint: LoopIterationTracePoint,
+    tracePoint: TracePoint,
     eventNumber: Int,
-    val from: Int = tracePoint.iteration,
-    val to: Int = tracePoint.iteration
+    val from: Int = (tracePoint as? LoopIterationTracePoint)?.iteration ?: 1,
+    val to: Int = (tracePoint as? LoopIterationTracePoint)?.iteration ?: 1
 ) : TraceNode(eventNumber, tracePoint) {
-    override val tracePoint: LoopIterationTracePoint get() = super.tracePoint as LoopIterationTracePoint
+    override val tracePoint: TracePoint get() = super.tracePoint
 
     val count: Int get() = to - from + 1
     val isIterationRange: Boolean get() = count > 1

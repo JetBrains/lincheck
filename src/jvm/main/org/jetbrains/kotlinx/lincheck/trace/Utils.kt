@@ -305,12 +305,7 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
     var startIndex = 0
 
     while (startIndex < children.size) {
-        val node = children[startIndex]
-        if (node !is IterationNode) {
-            result += node
-            startIndex++
-            continue
-        }
+        val startNode = children[startIndex]
 
         // Calculate the maximum possible period length in iterations
         // This should handle cases like: A, A, A, A (max period 1), and A, B, C, A, B, C (max period 3)
@@ -342,30 +337,71 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
         }
 
         if (foundPattern) {
-            val firstNode = children[startIndex] as IterationNode
-            val lastNode = children[startIndex + (bestCount * bestPeriod) - 1] as IterationNode
+            val totalNodesCovered = bestCount * bestPeriod
+            val firstNode = children[startIndex]
+            val lastNode = children[startIndex + totalNodesCovered - 1]
+
+            // Determine range. from/to for IterationNode, otherwise 1..Count.
+            val startIter = if (firstNode is IterationNode) firstNode.from else 1
+            val endIter = if (lastNode is IterationNode) lastNode.to else bestCount
 
             val rangeNode = IterationNode(
                 tracePoint = firstNode.tracePoint,
                 eventNumber = firstNode.eventNumber,
-                from = firstNode.tracePoint.iteration,
-                to = lastNode.tracePoint.iteration,
+                from = startIter,
+                to = endIter
             )
 
-            for (i in 0 until bestPeriod) {
+            // used to gather unique signatures of children
+            val addedSignatures = mutableSetOf<String>()
+
+            for (i in 0 until totalNodesCovered) {
                 val nodeInSequence = children[startIndex + i]
-                nodeInSequence.children.forEach { rangeNode.addChild(it) }
+
+                // Flatten children if needed, otherwise add self.
+                if (nodeInSequence.children.isNotEmpty()) {
+                    nodeInSequence.children.forEach { child ->
+                        addUniqueChild(rangeNode, child, addedSignatures)
+                    }
+                } else {
+                    addUniqueChild(rangeNode, nodeInSequence, addedSignatures)
+                }
             }
 
             result += rangeNode
-            startIndex += (bestCount * bestPeriod)
+            startIndex += totalNodesCovered
         } else {
-            result += node
+            result += startNode
             startIndex++
         }
     }
 
     return result
+}
+
+private fun addUniqueChild(parent: TraceNode, child: TraceNode, signatures: MutableSet<String>) {
+    val rawString = child.toStringImpl(false)
+    val lastColon = rawString.lastIndexOf(':')
+    val lastEquals = rawString.lastIndexOf('=')
+    val lastParen = rawString.lastIndexOf(')')
+
+    val cutOffIndex = if (lastColon > lastParen && lastColon > lastEquals) lastColon
+    else if (lastEquals > lastParen) lastEquals
+    else -1
+
+    val signature = if (cutOffIndex != -1) rawString.substring(0, cutOffIndex).trim() else rawString
+
+    if (signatures.add(signature)) {
+            parent.addChild(deepCopyNode(child))
+    }
+}
+
+private fun deepCopyNode(node: TraceNode): TraceNode {
+    val copy = node.copy()
+    node.children.forEach { child ->
+        copy.addChild(deepCopyNode(child))
+    }
+    return copy
 }
 
 /**
@@ -380,8 +416,6 @@ private fun structurallyEqual(
     for (i in 0 until length) {
         val nodeA = list[startIndex + i]
         val nodeB = list[endIndex + i]
-
-        if (nodeA !is IterationNode || nodeB !is IterationNode) return false
         if (nodePattern(nodeA) != nodePattern(nodeB)) return false
     }
     return true
@@ -393,28 +427,32 @@ private data class NodePattern(
 )
 
 private fun normalizeNodeHead(rawString: String): String {
-    // header
     if (rawString.startsWith("<iteration")) {
         return "<iteration>"
     }
 
     var result = rawString
 
-    // Remove values in assignments (e.g. arr[0] = 5")
-    // We strip everything after the last "=" if it's not inside parentheses.
-    // This allows "arr[0] = 5" and "arr[0] = 0" to match structurally.
+    // Normalize Ranges/Loops
+    if (result.contains("iterations") || result.contains("loop(")) {
+        result = result.replace(Regex("\\d+"), "...")
+    }
+
+    // Normalize Array Indices
+    if (result.contains('[')) {
+        result = result.replace(Regex("\\[.*?\\]"), "[...]")
+    }
+
+    // Remove values in assignments
     val lastEqualsIndex = result.lastIndexOf('=')
     val lastParenIndex = result.lastIndexOf(')')
-
     if (lastEqualsIndex > lastParenIndex) {
         result = result.substring(0, lastEqualsIndex).trim()
     }
 
-    // Remove return values (everything after the last ": " that is outside parentheses)
-    // Matches "method(): result" -> "method()"
+    // Remove return values
     val lastColonIndex = result.lastIndexOf(':')
     val currentLastParenIndex = result.lastIndexOf(')')
-
     if (lastColonIndex > currentLastParenIndex) {
         result = result.substring(0, lastColonIndex).trim()
     }
