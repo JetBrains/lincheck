@@ -279,7 +279,7 @@ internal fun GeneratorAdapter.pushArray(
         // STACK: array, array
         push(i)
         // STACK: array, array, index
-        loadLocal(locals[i])
+        visitVarInsn(localTypes[i].getOpcode(ILOAD), locals[i]);
         // STACK: array, array, index, value[index]
         box(localTypes[i])
         arrayStore(OBJECT_TYPE)
