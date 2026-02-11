@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.lincheck.util.Enumerator
 import org.jetbrains.lincheck.util.ensureNull
-import java.io.File
 
 fun buildEnumerator(events: List<AtomicThreadEvent>) = object : Enumerator<AtomicThreadEvent> {
 
@@ -39,20 +38,4 @@ fun buildEnumerator(events: List<AtomicThreadEvent>) = object : Enumerator<Atomi
 
     override fun get(x: AtomicThreadEvent): Int = index[x]!!
 
-}
-
-object ExecutionPrinter
-{
-    val fileLocal = ThreadLocal<File>()
-
-    fun setup(fileName: String) {
-        val file = File("/home/wdokov/uni/thesis/executions/new/${fileName}.txt")
-        file.createNewFile()
-        file.writeText("")
-        fileLocal.set(file)
-    }
-
-    fun write(data: String) {
-        fileLocal.get()?.appendText(data)
-    }
 }

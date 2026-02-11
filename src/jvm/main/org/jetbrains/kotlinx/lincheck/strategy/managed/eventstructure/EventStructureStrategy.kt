@@ -96,7 +96,6 @@ internal class EventStructureStrategy(
 
     override fun runInvocationImpl(): InvocationResult {
         val (result, inconsistency) = runNextExploration()
-        ExecutionPrinter.write("${eventStructure.execution}\n")
         if (inconsistency != null) {
             return InconsistentInvocationResult(inconsistency)
         }
