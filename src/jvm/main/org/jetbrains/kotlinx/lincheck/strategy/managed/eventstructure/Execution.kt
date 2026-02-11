@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.Covering
 import org.jetbrains.lincheck.util.Enumerator
 import org.jetbrains.lincheck.util.Relation
+import org.jetbrains.lincheck.util.binarySearch
 import org.jetbrains.lincheck.util.SortedArrayList
 import org.jetbrains.lincheck.util.SortedList
 import org.jetbrains.lincheck.util.SortedMutableList
@@ -315,7 +316,7 @@ fun<E : ThreadEvent> Execution<E>.computeBackwardVectorClock(event: E, relation:
     for (i in 0 until capacity) {
         val threadEvents = get(i) ?: continue
         val position = if (respectsProgramOrder) {
-            threadEvents.binarySearch { !relation(it, event) }
+            (threadEvents as List<E>).binarySearch { !relation(it, event) }
         } else {
             threadEvents.indexOfFirst { !relation(it, event) }
         }

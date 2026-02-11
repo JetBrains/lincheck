@@ -41,29 +41,6 @@ fun buildEnumerator(events: List<AtomicThreadEvent>) = object : Enumerator<Atomi
 
 }
 
-// TODO this should use normal binary search
-private fun rangeCheck(size: Int, fromIndex: Int, toIndex: Int) {
-    when {
-        fromIndex > toIndex -> throw IllegalArgumentException("fromIndex ($fromIndex) is greater than toIndex ($toIndex).")
-        fromIndex < 0 -> throw IndexOutOfBoundsException("fromIndex ($fromIndex) is less than zero.")
-        toIndex > size -> throw IndexOutOfBoundsException("toIndex ($toIndex) is greater than size ($size).")
-    }
-}
-
-fun<T> List<T>.binarySearch(fromIndex: Int = 0, toIndex: Int = size, predicate: (T) -> Boolean): Int {
-    rangeCheck(size, fromIndex, toIndex)
-    var low = fromIndex - 1
-    var high = toIndex
-    while (low + 1 < high) {
-        val mid = (low + high).ushr(1) // safe from overflows
-        if (predicate(get(mid)))
-            high = mid
-        else
-            low = mid
-    }
-    return high
-}
-
 object ExecutionPrinter
 {
     val fileLocal = ThreadLocal<File>()
