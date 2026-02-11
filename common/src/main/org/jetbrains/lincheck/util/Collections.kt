@@ -12,6 +12,8 @@ package org.jetbrains.lincheck.util
 
 import java.util.Collections
 import java.util.IdentityHashMap
+import kotlin.collections.component1
+import kotlin.collections.component2
 
 /**
  * Expands the list to the specified size by adding the given value
@@ -412,3 +414,8 @@ fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Uni
     computeIfAbsent(key) { default }.also(apply)
 }
 
+fun <K,V> MutableMap<K,V>.mergeReduce(other: MutableMap<K,V>, reduce: (V, V) -> V) {
+    other.forEach { (key, value) ->
+        put(key, get(key)?.let{reduce(it,value)} ?: value)
+    }
+}

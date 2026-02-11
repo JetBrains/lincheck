@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.max
+import org.jetbrains.lincheck.util.mergeReduce
 import org.jetbrains.lincheck.util.orEqual
 import org.jetbrains.lincheck.util.refine
 import kotlin.to
@@ -66,7 +67,7 @@ fun<E : ThreadEvent> MutableExecutionFrontier<E>.update(event: E) {
 }
 
 fun<E : ThreadEvent> MutableExecutionFrontier<E>.merge(other: ExecutionFrontier<E>) {
-    threadMap.mergeReduce(other.threadMap) { x, y -> when {
+    threadMap.mergeReduce(other.threadMap as MutableMap<ThreadId, E?>) { x, y -> when {
         x == null -> y
         y == null -> x
         else -> programOrder.max(x, y)
