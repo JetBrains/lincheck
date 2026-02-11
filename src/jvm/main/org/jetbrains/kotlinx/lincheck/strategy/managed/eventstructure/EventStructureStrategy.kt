@@ -633,7 +633,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
-        val mutexID = objectRegistry[monitor]!!.objectId
+        val mutexID = objectRegistry[monitor]!!.stableObjectNumber
         return canAcquireMonitor(iThread, mutexID)
     }
 
@@ -668,7 +668,7 @@ private class EventStructureMonitorTracker(
 
 
     private fun issueLockRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectRegistry[monitor]!!.objectId
+        val mutexID = objectRegistry[monitor]!!.stableObjectNumber
         // check if the thread is already blocked on the lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
             ?.ensure { it.label.satisfies<LockLabel> { this.mutexID == mutexID } }
@@ -699,7 +699,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun issueUnlock(iThread: Int, monitor: OpaqueValue): Boolean {
-        val mutexID = objectRegistry[monitor]!!.objectId
+        val mutexID = objectRegistry[monitor]!!.stableObjectNumber
         // obtain current lock-responses stack, and ensure that
         // the lock is indeed acquired by the releasing thread
         val lockStack = lockStacks[mutexID]!!
@@ -731,7 +731,7 @@ private class EventStructureMonitorTracker(
     }
 
     override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
-        val mutexID = objectRegistry[monitor.opaque()]!!.objectId
+        val mutexID = objectRegistry[monitor.opaque()]!!.stableObjectNumber
         // check if the thread is already blocked on wait-request or (synthetic) lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.ensure { it.label.satisfies<MutexLabel> { this.mutexID == mutexID } }
@@ -766,7 +766,7 @@ private class EventStructureMonitorTracker(
     }
 
     private fun issueWaitRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
-        val mutexID = objectRegistry[monitor]!!.objectId
+        val mutexID = objectRegistry[monitor]!!.stableObjectNumber
         // obtain the current lock-responses stack, and ensure that
         // the lock is indeed acquired by the waiting thread
         val lockStack = lockStacks[mutexID]!!

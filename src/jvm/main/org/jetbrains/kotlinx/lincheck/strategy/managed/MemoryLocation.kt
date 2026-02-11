@@ -33,7 +33,7 @@ import kotlin.reflect.KClass
 typealias ValueMapper = (Types.Type, ValueID) -> OpaqueValue?
 
 interface MemoryLocation {
-    val objID: ObjectID
+    val objID: StableObjectNumber
     val type: Types.Type
 
     fun read(valueMapper: ValueMapper): Any?
@@ -56,14 +56,14 @@ fun ObjectTracker.getFieldAccessMemoryLocation(
     }
     val clazz = obj!!.javaClass
     // TODO: If this is null then we are in a phantom static object, which is probably not what we expect
-    val id = get(obj)!!.objectId
+    val id = get(obj)!!.stableObjectNumber
     return ObjectFieldMemoryLocation(clazz, id, clazz.name, fieldName, type)
 }
 
 fun ObjectTracker.getArrayAccessMemoryLocation(array: Any, index: Int, type: Types.Type): MemoryLocation {
     val clazz = array.javaClass
     // TODO: can this be null?
-    val id = get(array)!!.objectId
+    val id = get(array)!!.stableObjectNumber
     return ArrayElementMemoryLocation(clazz, id, index, type)
 }
 
@@ -81,7 +81,7 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
         AtomicApiKind.ATOMIC_OBJECT -> {
             AtomicPrimitiveMemoryLocation(
                 clazz = info.clazz!!,
-                objID = get(info.obj)!!.objectId,
+                objID = get(info.obj)!!.stableObjectNumber,
                 type = getAtomicType(receiver)!!,
             )
         }
@@ -159,7 +159,7 @@ class StaticFieldMemoryLocation(
     override val type: Types.Type,
 ) : MemoryLocation {
 
-    override val objID: ObjectID = STATIC_OBJECT_ID
+    override val objID: StableObjectNumber = STATIC_OBJECT_ID
 
     private val field: Field by lazy {
         val resolvedClass = resolveClass(className = className)
@@ -199,7 +199,7 @@ class StaticFieldMemoryLocation(
 
 class ObjectFieldMemoryLocation(
     clazz: Class<*>,
-    override val objID: ObjectID,
+    override val objID: StableObjectNumber,
     val className: String,
     val fieldName: String,
     override val type: Types.Type,
@@ -252,7 +252,7 @@ class ObjectFieldMemoryLocation(
 
 class ArrayElementMemoryLocation(
     clazz: Class<*>,
-    override val objID: ObjectID,
+    override val objID: StableObjectNumber,
     val index: Int,
     override val type: Types.Type,
 ) : MemoryLocation {
@@ -326,7 +326,7 @@ class ArrayElementMemoryLocation(
 
 class AtomicPrimitiveMemoryLocation(
     clazz: Class<*>,
-    override val objID: ObjectID,
+    override val objID: StableObjectNumber,
     override val type: Types.Type,
 ) : MemoryLocation {
 
@@ -379,7 +379,7 @@ class AtomicPrimitiveMemoryLocation(
 
 }
 
-internal fun objRepr(className: String, objID: ObjectID): String {
+internal fun objRepr(className: String, objID: StableObjectNumber): String {
     return when (objID) {
         NULL_OBJECT_ID -> "null"
         else -> "$className@$objID"

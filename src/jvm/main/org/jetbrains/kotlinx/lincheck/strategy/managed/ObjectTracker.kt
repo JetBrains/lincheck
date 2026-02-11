@@ -169,8 +169,13 @@ open class ObjectEntry(
  * The serial number [ObjectEntry.objectNumber] is stored in the higher 32-bits of the id, while
  * the identity hash code [ObjectEntry.objectHashCode] is stored in the lower 32-bits.
  */
-// TODO : Update text
-val ObjectEntry.objectId: ObjectID get() = (objectNumber.toLong())
+
+val ObjectEntry.objectID: ObjectID get() =
+    (objectNumber.toLong() shl 32) + objectHashCode.toLong()
+
+
+typealias StableObjectNumber = Long
+val ObjectEntry.stableObjectNumber: StableObjectNumber get() = (objectNumber.toLong())
 
 /**
  * Extracts and returns the object number from the given object id.

@@ -71,7 +71,7 @@ class SequentialConsistencyReplayViolation : SequentialConsistencyViolation() {
 internal data class SequentialConsistencyReplayer(
     val memoryView: MutableMap<MemoryLocation, Event> = mutableMapOf(),
     val monitorTracker: ModelCheckingMonitorTracker = ModelCheckingMonitorTracker(),
-    val monitorMapping: MutableMap<ObjectID, Any> = mutableMapOf()
+    val monitorMapping: MutableMap<StableObjectNumber, Any> = mutableMapOf()
 ) {
 
     fun replay(event: AtomicThreadEvent): SequentialConsistencyReplayer? {
@@ -157,7 +157,7 @@ internal data class SequentialConsistencyReplayer(
             monitorMapping = monitorMapping.toMutableMap(),
         )
 
-    private fun getMonitor(objID: ObjectID): Any {
+    private fun getMonitor(objID: StableObjectNumber): Any {
         check(objID != NULL_OBJECT_ID)
         return monitorMapping.computeIfAbsent(objID) { Any() }
     }

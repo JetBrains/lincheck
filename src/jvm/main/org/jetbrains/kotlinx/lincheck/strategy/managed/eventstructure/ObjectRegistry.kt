@@ -31,9 +31,9 @@ import org.jetbrains.lincheck.util.*
 
 internal class ObjectRegistry(private val eventStructure: EventStructure): BaseObjectTracker() {
 
-    var externalIds = mutableSetOf<ObjectID>()
-    var allocationMap: MutableMap<ObjectID, AtomicThreadEvent> = mutableMapOf()
-    var objMap: MutableMap<ObjectID, OpaqueValue> = mutableMapOf()
+    var externalIds = mutableSetOf<StableObjectNumber>()
+    var allocationMap: MutableMap<StableObjectNumber, AtomicThreadEvent> = mutableMapOf()
+    var objMap: MutableMap<StableObjectNumber, OpaqueValue> = mutableMapOf()
 
     var primitiveMap: MutableMap<ValueID, OpaqueValue> = mutableMapOf()
 
@@ -46,7 +46,7 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
 
     override fun registerExternalObject(obj: Any): ObjectEntry {
         return super.registerExternalObject(obj).also {
-            val objectID = it.objectId;
+            val objectID = it.stableObjectNumber;
             check(allocationMap.containsKey(objectID) == objMap.containsKey(objectID))
             if(allocationMap.containsKey(objectID)) {
                 return@also
@@ -61,18 +61,18 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
     }
 
     override fun registerNewObject(obj: Any): ObjectEntry {
-        return super.registerNewObject(obj).also { addEntries(obj, it.objectId) }
+        return super.registerNewObject(obj).also { addEntries(obj, it.stableObjectNumber) }
     }
 
     fun registerTestInstance(obj: Any, threadId: ThreadId): ObjectEntry {
         return super.registerExternalObject(obj).also {
-            val allocationEvent = eventStructure.addObjectAllocationEvent(threadId,obj.opaque(), it.objectId)
-            allocationMap[it.objectId] = allocationEvent
-            objMap[it.objectId] = obj.opaque()
+            val allocationEvent = eventStructure.addObjectAllocationEvent(threadId,obj.opaque(), it.stableObjectNumber)
+            allocationMap[it.stableObjectNumber] = allocationEvent
+            objMap[it.stableObjectNumber] = obj.opaque()
         }
     }
 
-    private fun addEntries(obj: Any, objectID: ObjectID, iThread: ThreadId? = null ) {
+    private fun addEntries(obj: Any, objectID: StableObjectNumber, iThread: ThreadId? = null ) {
         val iThread = iThread ?: (Thread.currentThread() as? TestThread)?.threadId
         if (iThread != null) {
             externalIds.add(objectID)
@@ -82,18 +82,18 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
         }
     }
 
-    fun getAllocation(id: ObjectID) : AtomicThreadEvent? {
+    fun getAllocation(id: StableObjectNumber) : AtomicThreadEvent? {
         if(id == STATIC_OBJECT_ID) return initEvent;
         return allocationMap[id]
     }
 
     // TODO: This is a bit stupid since we have no way to tell from just
     // the ObjectID if we have an immutable value or an object
-    fun getObject(id: ObjectID): OpaqueValue? {
+    fun getObject(id: StableObjectNumber): OpaqueValue? {
         return primitiveMap[id] ?: objMap[id]
     }
 
-    fun getOrRegisterPrimitveValue(value: OpaqueValue): ObjectID {
+    fun getOrRegisterPrimitveValue(value: OpaqueValue): StableObjectNumber {
         check(value.unwrap().isImmutable)
         primitiveMap[value.unwrap().hashCode().toLong()] = value
         return value.unwrap().hashCode().toLong()
@@ -109,11 +109,11 @@ internal class ObjectRegistry(private val eventStructure: EventStructure): BaseO
 
 }
 
-internal fun ObjectRegistry.registerValueIfAbsent(obj: OpaqueValue?): ObjectID =
+internal fun ObjectRegistry.registerValueIfAbsent(obj: OpaqueValue?): StableObjectNumber =
     when {
         obj == null -> NULL_OBJECT_ID
         obj.unwrap().isImmutable -> getOrRegisterPrimitveValue(obj)
-        else -> registerObjectIfAbsent(obj.unwrap()).objectId
+        else -> registerObjectIfAbsent(obj.unwrap()).stableObjectNumber
     }
 
 internal fun ObjectRegistry.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {
