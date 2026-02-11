@@ -80,7 +80,7 @@ internal class SnapshotBreakpointTransformer(
                         // The condition may execute code with an installed breakpoint.
                         // To not make a breakpoint hit, we track when we compute the condition.
                         enterBreakpointCondition(threadDescriptorLocal)
-                        injectConditionCall(breakpointSettings)
+                        injectConditionCallWithTryCatch(breakpointSettings)
                         leaveBreakpointCondition(threadDescriptorLocal)
                     },
                     thenClause = {
@@ -140,6 +140,36 @@ internal class SnapshotBreakpointTransformer(
                 argTypes.toTypedArray()
             )
         )
+        // Stack: [boolean result] - this will be consumed by the surrounding ifStatement
+    }
+
+    /**
+     * Wraps the condition call in a try-catch block.
+     * If the condition evaluation throws an exception, it returns `false`.
+     * This ensures that breakpoint conditions don't crash the application.
+     */
+    private fun GeneratorAdapter.injectConditionCallWithTryCatch(breakpointSettings: SnapshotBreakpoint) {
+        // We need to store the result in a local variable because try-catch blocks
+        // require the stack to be empty at block boundaries.
+        val resultLocal = newLocal(Type.BOOLEAN_TYPE)
+        // Initialize to false (default if exception occurs)
+        push(false)
+        storeLocal(resultLocal)
+
+        tryCatchFinally(
+            tryBlock = {
+                injectConditionCall(breakpointSettings)
+                storeLocal(resultLocal)
+            },
+            exceptionType = Type.getType(Throwable::class.java),
+            catchBlock = {
+                // Exception is on the stack, just pop it and leave resultLocal as false
+                pop()
+            }
+        )
+
+        // Load the result onto the stack
+        loadLocal(resultLocal)
     }
 
     private fun GeneratorAdapter.callIfNotInsideBreakpointCondition(threadDescriptorLocal: Int, block: () -> Unit) {
