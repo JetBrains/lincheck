@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import java.util.*
+
 data class LiveDebuggerSettings(
     val lineBreakPoints: MutableList<SnapshotBreakpoint>
 ) {
@@ -47,27 +49,34 @@ data class SnapshotBreakpoint(
     val fileName: String,
     val lineNumber: Int,
     val conditionClassName: String?,
-    val conditionMethodName: String?,
-    val conditionArgs: List<String>?
+    val conditionFactoryMethodName: String?,
+    val conditionCapturedVars: List<String>?,
+    val conditionCodeFragment: ByteArray?
 ) {
     companion object {
         fun read(rawString: String): SnapshotBreakpoint {
-            val split = rawString.split(":")
+            val parts = rawString.split(":")
 
-            val className = split[0]
+            val className = parts[0]
+            val fileName = parts[1]
+            val lineNumber = parts[2].toInt()
 
-            val condition = split[3].let { if (it == "null") null else it }
-            val conditionClassName = condition?.let { className }
-            val conditionMethodName = condition?.substringBefore("(")
-            val conditionArgs = condition?.substringAfter("(")?.substringBefore(")")?.split(",")?.map { it.trim() }
+            // Condition format: "$className:$factoryMethodName:$capturedVarsStr:$encodedBytecode"
+            val conditionClassName = parts.getOrNull(3)?.let { if (it == "null") null else it }
+            val conditionFactoryMethodName = parts.getOrNull(4)?.let { if (it == "null") null else it }
+            val conditionCapturedVars = parts.getOrNull(5)?.let { if (it == "null") null else it.split(",") }
+            val conditionCodeFragment = parts.getOrNull(6)?.let {
+                if (it == "null") null else Base64.getDecoder().decode(it)
+            }
 
             return SnapshotBreakpoint(
                 className = className,
-                fileName = split[1],
-                lineNumber = split[2].toInt(),
+                fileName = fileName,
+                lineNumber = lineNumber,
                 conditionClassName = conditionClassName,
-                conditionMethodName = conditionMethodName,
-                conditionArgs = conditionArgs
+                conditionFactoryMethodName = conditionFactoryMethodName,
+                conditionCapturedVars = conditionCapturedVars,
+                conditionCodeFragment = conditionCodeFragment
             )
         }
     }

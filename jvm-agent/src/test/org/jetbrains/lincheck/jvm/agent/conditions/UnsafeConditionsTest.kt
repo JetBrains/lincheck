@@ -71,6 +71,27 @@ private object UnsafeConditions {
     @JvmStatic
     var mutableList: MutableList<Int> = mutableListOf()
 
+    // ============ CALLING UNSAFE METHODS FROM PARENT CLASS (HIERARCHY TESTS) ============
+
+    private val unsafeChild = UnsafeChildClass()
+    private val unsafeGrandchild = UnsafeGrandchildClass()
+    private val unsafeChildWithOverride = UnsafeChildWithOverride()
+
+    @JvmStatic
+    fun callUnsafeParentMethod() {
+        unsafeChild.callParentUnsafeMethod()
+    }
+
+    @JvmStatic
+    fun callUnsafeGrandparentMethod() {
+        unsafeGrandchild.callGrandparentUnsafeMethod()
+    }
+
+    @JvmStatic
+    fun callOverriddenUnsafeMethod(): Int {
+        return unsafeChildWithOverride.callOverriddenMethod()
+    }
+
     // ============ STATIC FIELD WRITES ============
 
     @JvmStatic
@@ -538,5 +559,48 @@ private object UnsafeConditions {
     class TestObject {
         @JvmField
         var value: Int = 0
+    }
+}
+
+// ============ Helper classes for hierarchy tests ============
+
+private open class UnsafeBaseClass {
+    companion object {
+        @JvmStatic
+        var baseField: Int = 0
+    }
+
+    fun unsafeBaseMethod() {
+        baseField = 10
+    }
+
+    open fun safeMethod(): Int = 42
+}
+
+private open class UnsafeChildClass : UnsafeBaseClass() {
+    fun callParentUnsafeMethod() {
+        unsafeBaseMethod()
+    }
+}
+
+private class UnsafeGrandchildClass : UnsafeChildClass() {
+    fun callGrandparentUnsafeMethod() {
+        unsafeBaseMethod()
+    }
+}
+
+private class UnsafeChildWithOverride : UnsafeBaseClass() {
+    companion object {
+        @JvmStatic
+        var childField: Int = 0
+    }
+
+    override fun safeMethod(): Int {
+        childField = 99 // Side effect in overridden method
+        return 42
+    }
+
+    fun callOverriddenMethod(): Int {
+        return safeMethod()
     }
 }
