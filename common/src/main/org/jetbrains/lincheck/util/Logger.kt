@@ -80,7 +80,7 @@ object Logger {
 
     inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
-            write("[${Logger.logLevel.name}] ${lazyMessage()}$LINE_SEPARATOR")
+            write("[${logLevel.name}] ${lazyMessage()}$LINE_SEPARATOR")
         }
     }
 
