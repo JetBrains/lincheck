@@ -21,20 +21,27 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.util.toBoolean
 import org.jetbrains.lincheck.util.toInt
-import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.lincheck.util.*
+import sun.nio.ch.lincheck.TestThread
+import java.lang.ref.WeakReference
 
 
 internal class EventStructureObjectTracker(private val eventStructure: EventStructure): BaseObjectTracker() {
 
-    var externalIds = mutableSetOf<StableObjectNumber>()
-    var allocationMap: MutableMap<StableObjectNumber, AtomicThreadEvent> = mutableMapOf()
-    var objMap: MutableMap<StableObjectNumber, OpaqueValue> = mutableMapOf()
+    private class EventStructureObjectEntry(
+        objNumber: Int,
+        objHashCode: Int,
+        objDisplayNumber: Int,
+        objReference: WeakReference<Any>,
+        val allocation: AtomicThreadEvent
+    ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
 
+
+
+    var externalIds = mutableSetOf<StableObjectNumber>()
     var primitiveMap: MutableMap<ValueID, OpaqueValue> = mutableMapOf()
 
     private var initEvent: AtomicThreadEvent? = null
@@ -44,67 +51,51 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         this.initEvent = initEvent
     }
 
-    override fun registerExternalObject(obj: Any): ObjectEntry {
-        return super.registerExternalObject(obj).also {
-            val objectID = it.stableObjectNumber;
-            check(allocationMap.containsKey(objectID) == objMap.containsKey(objectID))
-            if(allocationMap.containsKey(objectID)) {
-                return@also
-            }
-
-            // External object are related to the
-            allocationMap[objectID] = initEvent!!
-            // TODO: See if we need this
-            (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objectID)
-            objMap[objectID] = obj.opaque()
+    override fun createObjectEntry(
+        objNumber: Int,
+        objHashCode: Int,
+        objDisplayNumber: Int,
+        objReference: WeakReference<Any>,
+        kind: ObjectKind
+    ): ObjectEntry {
+        val obj = objReference.get()!!
+        if(kind == ObjectKind.EXTERNAL) {
+            (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objNumber)
+            println("Registered external object: $objNumber $obj")
+            Exception().printStackTrace()
+            return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, initEvent!!)
+        } else {
+            val iThread = (Thread.currentThread() as? TestThread)?.threadId
+            val allocationEvent = eventStructure.addObjectAllocationEvent(iThread!!,obj.opaque(), objNumber)
+            println("Registered internal object: $objNumber $obj")
+            return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocationEvent)
         }
+        unreachable()
     }
 
-    override fun registerNewObject(obj: Any): ObjectEntry {
-        return super.registerNewObject(obj).also { addEntries(obj, it.stableObjectNumber) }
-    }
-
-    fun registerTestInstance(obj: Any, threadId: ThreadId): ObjectEntry {
-        return super.registerExternalObject(obj).also {
-            val allocationEvent = eventStructure.addObjectAllocationEvent(threadId,obj.opaque(), it.stableObjectNumber)
-            allocationMap[it.stableObjectNumber] = allocationEvent
-            objMap[it.stableObjectNumber] = obj.opaque()
-        }
-    }
-
-    private fun addEntries(obj: Any, objectID: StableObjectNumber, iThread: ThreadId? = null ) {
-        val iThread = iThread ?: (Thread.currentThread() as? TestThread)?.threadId
-        if (iThread != null) {
-            externalIds.add(objectID)
-            val allocationEvent = eventStructure.addObjectAllocationEvent(iThread,obj.opaque(), objectID)
-            allocationMap[objectID] = allocationEvent
-            objMap[objectID] = obj.opaque()
-        }
+    private fun getEventStructureEntry(id: StableObjectNumber): EventStructureObjectEntry? {
+        return get(id) as? EventStructureObjectEntry
     }
 
     fun getAllocation(id: StableObjectNumber) : AtomicThreadEvent? {
         if(id == STATIC_OBJECT_ID) return initEvent;
-        return allocationMap[id]
+        return getEventStructureEntry(id)?.allocation
     }
 
-    // TODO: This is a bit stupid since we have no way to tell from just
-    // the ObjectID if we have an immutable value or an object
     fun getObject(id: StableObjectNumber): OpaqueValue? {
-        return primitiveMap[id] ?: objMap[id]
+        println("Getting object: $id")
+        println("${this.numberToHashCode} ${this.objectIndex}")
+        return primitiveMap[id.toLong()] ?: get(id)?.objectReference?.get()?.opaque()
     }
 
     fun getOrRegisterPrimitveValue(value: OpaqueValue): StableObjectNumber {
         check(value.unwrap().isImmutable)
         primitiveMap[value.unwrap().hashCode().toLong()] = value
-        return value.unwrap().hashCode().toLong()
+        return value.unwrap().hashCode()
     }
 
     override fun reset() {
         super.reset()
-        externalIds.forEach {
-            allocationMap.remove(it)
-            objMap.remove(it)
-        }
     }
 
 }
@@ -129,11 +120,11 @@ internal fun EventStructureObjectTracker.getValue(type: Types.Type, id: ValueID)
     Types.SHORT_TYPE_BOXED    -> id.toShort().opaque()
     Types.CHAR_TYPE_BOXED     -> id.toInt().toChar().opaque()
     Types.BOOLEAN_TYPE_BOXED  -> id.toInt().toBoolean().opaque()
-    else                -> getObject(id)
+    else                -> getObject(id.toInt())
 }
 
 internal fun EventStructureObjectTracker.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
-    if (value == null) return NULL_OBJECT_ID
+    if (value == null) return NULL_OBJECT_ID.toLong()
     return when (type) {
         Types.LONG_TYPE       -> (value.unwrap() as Long)
         Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
@@ -154,6 +145,6 @@ internal fun EventStructureObjectTracker.getOrRegisterValueID(type: Types.Type, 
         Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
         Types.CHAR_TYPE_BOXED     -> (value.unwrap() as Char).code.toLong()
         Types.BOOLEAN_TYPE_BOXED  -> (value.unwrap() as Boolean).toInt().toLong()
-        else                -> registerValueIfAbsent(value)
+        else                -> registerValueIfAbsent(value).toLong()
     }
 }

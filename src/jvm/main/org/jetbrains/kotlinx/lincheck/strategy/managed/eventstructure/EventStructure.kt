@@ -336,7 +336,7 @@ internal class EventStructure(
             return null
         val allocation = eventStructureObjectTracker.getAllocation(label.objectID)
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
-            eventStructureObjectTracker.getAllocation(it)
+            eventStructureObjectTracker.getAllocation(it.toInt())
         }
         val event = AtomicThreadEventImpl(
             label = label,
@@ -429,6 +429,7 @@ internal class EventStructure(
     }
 
     private fun addEventToCurrentExecution(event: AtomicThreadEvent) {
+        println("Adding event $event")
         // Check if the added event is replayed event.
         val isReplayedEvent = inReplayPhase(event.threadId)
         // Update current execution and replayed frontier.
@@ -747,8 +748,10 @@ internal class EventStructure(
         // to pick the root event as the next event to explore from.
         val label = InitializationLabel(initThreadId, mainThreadId) { location ->
             val value = memoryInitializer(location)
+            Exception().printStackTrace()
             eventStructureObjectTracker.getOrRegisterValueID(location.type, value)
         }
+        println("NEW INIT LABEL $label")
         return createEvent(initThreadId, label, parent = null, dependencies = emptyList(), visit = false)!!
             .also { event ->
                 val id = STATIC_OBJECT_ID
@@ -762,11 +765,13 @@ internal class EventStructure(
     private fun addEvent(iThread: Int, label: EventLabel, dependencies: List<AtomicThreadEvent>): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
             check(event.label == label)
+            println("Replay")
             addEventToCurrentExecution(event)
             return event
         }
         val parent = playedFrontier[iThread]
         return createEvent(iThread, label, parent, dependencies)!!.also { event ->
+            println("Explore")
             addEventToCurrentExecution(event)
         }
     }
@@ -988,7 +993,7 @@ internal class EventStructure(
         val label = ReadAccessLabel(
             kind = LabelKind.Request,
             location = location,
-            readValue = NULL_OBJECT_ID,
+            readValue = NULL_OBJECT_ID.toLong(),
             readModifyWriteDescriptor = readModifyWriteDescriptor,
             codeLocation = codeLocation,
         )

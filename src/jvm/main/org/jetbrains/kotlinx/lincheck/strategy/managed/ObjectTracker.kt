@@ -51,6 +51,8 @@ interface ObjectTracker {
      */
     fun registerThread(threadId: Int, thread: Thread)
 
+    operator fun get(objNumber: Int): ObjectEntry?
+
     /**
      * Retrieves the registry entry associated with the given object id.
      *
@@ -174,8 +176,8 @@ val ObjectEntry.objectID: ObjectID get() =
     (objectNumber.toLong() shl 32) + objectHashCode.toLong()
 
 
-typealias StableObjectNumber = Long
-val ObjectEntry.stableObjectNumber: StableObjectNumber get() = (objectNumber.toLong())
+typealias StableObjectNumber = Int
+val ObjectEntry.stableObjectNumber: StableObjectNumber get() = (objectNumber)
 
 /**
  * Extracts and returns the object number from the given object id.
@@ -387,7 +389,8 @@ open class BaseObjectTracker : ObjectTracker {
     private var objectCounter = 0
 
     // index of all registered objects
-    private val objectIndex = HashMap<IdentityHashCode, MutableList<ObjectEntry>>()
+    protected val objectIndex = HashMap<IdentityHashCode, MutableList<ObjectEntry>>()
+    protected val numberToHashCode = HashMap<Int, IdentityHashCode>();
 
     // reference queue keeping track of garbage-collected objects
     private val referenceQueue = ReferenceQueue<Any>()
@@ -450,6 +453,7 @@ open class BaseObjectTracker : ObjectTracker {
             cleanup()
             add(entry)
         }
+        numberToHashCode.put(entry.objectNumber, entry.objectHashCode)
         return entry
     }
 
@@ -466,6 +470,12 @@ open class BaseObjectTracker : ObjectTracker {
             return null
         }
         return entries
+    }
+
+    override operator fun get(objNumber: Int): ObjectEntry? {
+        val objHashCode = numberToHashCode[objNumber] ?: return null
+        val entries = getEntries(objHashCode) ?: return null
+        return entries.find { it.objectNumber == objNumber }
     }
 
     override operator fun get(id: ObjectID): ObjectEntry? {
@@ -495,6 +505,7 @@ open class BaseObjectTracker : ObjectTracker {
     override fun reset() {
         objectCounter = 0
         objectIndex.clear()
+        numberToHashCode.clear()
         referenceQueue.clear()
         perClassObjectNumeration.clear()
     }

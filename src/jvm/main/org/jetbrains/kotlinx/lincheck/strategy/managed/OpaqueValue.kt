@@ -115,8 +115,8 @@ internal object StaticObject : Any()
 
 // TODO: override `toString` ?
 internal const val INVALID_OBJECT_ID = -2L
-internal const val STATIC_OBJECT_ID = -1L
-internal const val NULL_OBJECT_ID = 0L
+internal const val STATIC_OBJECT_ID = -1
+internal const val NULL_OBJECT_ID = 0
 
 internal fun Int.convert(type: Types.Type): Number = when (type) {
     Types.LONG_TYPE -> toLong()

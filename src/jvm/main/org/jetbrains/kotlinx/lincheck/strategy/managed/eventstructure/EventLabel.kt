@@ -233,7 +233,8 @@ class InitializationLabel(
         get() = objectsAllocations.keys
 
     fun getInitialValue(location: StaticFieldMemoryLocation): ValueID {
-        return staticMemory.computeIfAbsent(location) { memoryInitializer(it) }
+        println("STATIC MEM: $staticMemory $location")
+        return  memoryInitializer(location)
     }
 
     fun trackExternalObject(className: String, objID: StableObjectNumber) {
@@ -552,13 +553,13 @@ data class ReadAccessLabel(
 
     init {
         require(isRequest || isResponse || isReceive)
-        require(isRequest implies (value == NULL_OBJECT_ID))
+        require(isRequest implies (value == NULL_OBJECT_ID.toLong()))
     }
 
     val value: ValueID
         get() = readValue
 
-    override val writeValue: ValueID = NULL_OBJECT_ID
+    override val writeValue: ValueID = NULL_OBJECT_ID.toLong()
 
     override fun toString(): String =
         super.toString()
@@ -583,7 +584,7 @@ data class WriteAccessLabel(
     val value: ValueID
         get() = writeValue
 
-    override val readValue: ValueID = NULL_OBJECT_ID
+    override val readValue: ValueID = NULL_OBJECT_ID.toLong()
 
     override fun toString(): String =
         super.toString()
@@ -763,11 +764,14 @@ fun ObjectAllocationLabel.asWriteAccessLabel(location: MemoryLocation): WriteAcc
  * @param location The memory location to match.
  * @return The [WriteAccessLabel] if the label can be interpreted as it, null otherwise.
  */
-fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? = when (this) {
-    is WriteAccessLabel         -> this.takeIf { it.location == location }
-    is ObjectAllocationLabel    -> asWriteAccessLabel(location)
-    is InitializationLabel      -> asWriteAccessLabel(location)
-    else -> null
+fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? {
+    println("WRITE ACCESS LABEL: $location")
+    return when (this) {
+        is WriteAccessLabel         -> this.takeIf { it.location == location }
+        is ObjectAllocationLabel    -> asWriteAccessLabel(location)
+        is InitializationLabel      -> asWriteAccessLabel(location)
+        else -> null
+    }
 }
 
 /**
