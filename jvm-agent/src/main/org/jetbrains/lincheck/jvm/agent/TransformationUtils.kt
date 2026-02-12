@@ -264,10 +264,7 @@ internal fun GeneratorAdapter.copyArguments(methodDescriptor: String): IntArray 
  *
  * @param locals Local variables which values are stored in the stack.
  */
-internal fun GeneratorAdapter.pushArray(
-    locals: IntArray,
-    localTypes: List<Type> = locals.map { getLocalType(it) }
-) {
+internal fun GeneratorAdapter.pushArray(locals: IntArray) {
     // STACK: <empty>
     push(locals.size)
     // STACK: arraySize
@@ -279,9 +276,9 @@ internal fun GeneratorAdapter.pushArray(
         // STACK: array, array
         push(i)
         // STACK: array, array, index
-        visitVarInsn(localTypes[i].getOpcode(ILOAD), locals[i]);
+        loadLocal(locals[i])
         // STACK: array, array, index, value[index]
-        box(localTypes[i])
+        box(getLocalType(locals[i]))
         arrayStore(OBJECT_TYPE)
         // STACK: array
     }

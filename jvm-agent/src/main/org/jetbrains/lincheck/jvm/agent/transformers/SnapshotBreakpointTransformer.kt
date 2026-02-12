@@ -184,10 +184,34 @@ internal class SnapshotBreakpointTransformer(
             currentActiveLocals.firstOrNull { it.name == argName }
                 ?: throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpointSettings.lineNumber}")
         }
-        pushArray(
-            locals = capturedLocals.map { it.index }.toIntArray(),
-            localTypes = capturedLocals.map { it.type }
-        )
+
+        // TODO: the fragment below is essentially a copy-paste of `pushArray` method,
+        //   but using given types and `visitVarInsn` instead of `loadLocal`;
+        //   `pushArray` is not used directly because there is some problem with locals numeration;
+        //   probably, we need to somehow take into account locals re-enumeration performed by `GeneratorAdapter`.
+
+        // STACK: <empty>
+        push(capturedLocals.size)
+        // STACK: arraySize
+        visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
+        // STACK: array
+        for (i in capturedLocals.indices) {
+            val idx = capturedLocals[i].index
+            val type = capturedLocals[i].type
+
+            // STACK: array
+            dup()
+            // STACK: array, array
+            push(i)
+            // STACK: array, array, index
+            visitVarInsn(type.getOpcode(ILOAD), idx)
+            // STACK: array, array, index, value[index]
+            box(type)
+            arrayStore(OBJECT_TYPE)
+            // STACK: array
+        }
+        // STACK: array
+
         // Stack after loop: [...lookup params..., capturedValuesArray]
 
         // === STEP 6: Create the condition instance and evaluate it (runtime) ===
