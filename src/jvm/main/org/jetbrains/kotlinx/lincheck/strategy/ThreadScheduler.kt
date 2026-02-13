@@ -15,6 +15,7 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.Spinner
 import org.jetbrains.lincheck.util.ensureNull
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Enumeration representing the various states of a thread.
@@ -91,7 +92,7 @@ fun BlockingReason.throwsInterruptedException(): Boolean =
  */
 open class ThreadScheduler {
 
-    private val threads_ = mutableThreadMapOf<ThreadData>()
+    private val threads_ = ConcurrentHashMap<ThreadId, ThreadData>()
     protected val threads: ThreadMap<ThreadData> get() = threads_
 
     /**
