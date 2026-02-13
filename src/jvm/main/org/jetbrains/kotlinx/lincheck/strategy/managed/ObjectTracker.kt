@@ -287,6 +287,7 @@ fun ObjectTracker.getObjectRepresentation(obj: Any?): String = when {
     obj is String -> "\"$obj\""
 
     // immutable types (including primitive types) have trivial `toString` implementation
+    // TODO: Should we actually register the object if the objet tracker can work with immutable objects? Probably not
     obj.isImmutable -> obj.toString()
 
     // Add specific support for `Symbol` from Kotlin Coroutines,
@@ -391,6 +392,7 @@ open class BaseObjectTracker : ObjectTracker {
 
     // counter of all registered objects
     private var objectCounter = 0
+    protected open val shouldTrackImmutableValues = false;
 
     // index of all registered objects
     protected val objectIndex = HashMap<IdentityHashCode, MutableList<ObjectEntry>>()
@@ -444,7 +446,8 @@ open class BaseObjectTracker : ObjectTracker {
         registerObject(ObjectKind.EXTERNAL, obj)
 
     private fun registerObject(kind: ObjectKind, obj: Any): ObjectEntry {
-        check(!obj.isImmutable)
+        check(!obj.isPrimitive())
+        check(obj.isImmutable implies shouldTrackImmutableValues)
         cleanup()
         val entry = createObjectEntry(
             objNumber = ++objectCounter,

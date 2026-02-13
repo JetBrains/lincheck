@@ -1403,7 +1403,7 @@ internal abstract class ManagedStrategy(
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
-        if(value != null && !value.isImmutable) {
+        if(value != null && !value.isPrimitive()) {
             objectTracker.registerObjectIfAbsent(value)
         }
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
@@ -1438,7 +1438,7 @@ internal abstract class ManagedStrategy(
         index: Int,
         value: Any?
     ) = threadDescriptor.runInsideIgnoredSection {
-        if(value != null && !value.isImmutable) {
+        if(value != null && !value.isPrimitive()) {
             objectTracker.registerObjectIfAbsent(value)
         }
         if (collectTrace) {
@@ -1587,6 +1587,7 @@ internal abstract class ManagedStrategy(
     override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {
         // Fast-check for immutable objects without entering an ignored section.
         // Please note that this check must not produce Lincheck events.
+        //TODO: Should we relax this check if the object tracker wants to track primitive values?
         if (obj.isImmutable) return
         threadDescriptor.runInsideIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)

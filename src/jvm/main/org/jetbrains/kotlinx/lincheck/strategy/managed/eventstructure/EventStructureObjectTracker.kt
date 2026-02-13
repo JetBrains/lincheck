@@ -31,6 +31,8 @@ import java.lang.ref.WeakReference
 
 internal class EventStructureObjectTracker(private val eventStructure: EventStructure): BaseObjectTracker() {
 
+    override val shouldTrackImmutableValues: Boolean = true
+
     private class EventStructureObjectEntry(
         objNumber: Int,
         objHashCode: Int,
@@ -40,8 +42,6 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
 
 
-
-    var externalIds = mutableSetOf<ObjectNumber>()
     var primitiveMap: MutableMap<ValueID, OpaqueValue> = mutableMapOf()
 
     private var initEvent: AtomicThreadEvent? = null
@@ -87,23 +87,11 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         println("${this.objectNumberIndex} ${this.objectIndex}")
         return primitiveMap[id.toLong()] ?: lookupByNumber(id)?.objectReference?.get()?.opaque()
     }
-
-    fun getOrRegisterPrimitveValue(value: OpaqueValue): ObjectNumber {
-        check(value.unwrap().isImmutable)
-        primitiveMap[value.unwrap().hashCode().toLong()] = value
-        return value.unwrap().hashCode()
-    }
-
-    override fun reset() {
-        super.reset()
-    }
-
 }
 
 internal fun EventStructureObjectTracker.registerValueIfAbsent(obj: OpaqueValue?): ObjectNumber =
     when {
         obj == null -> NULL_OBJECT_ID
-        obj.unwrap().isImmutable -> getOrRegisterPrimitveValue(obj)
         else -> registerObjectIfAbsent(obj.unwrap()).objectNumber
     }
 
