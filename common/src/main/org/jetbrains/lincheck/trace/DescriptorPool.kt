@@ -70,7 +70,7 @@ class DescriptorPool<D : Descriptor> {
 
     /** Restores descriptor under a concrete [id]. Used by deserializers. */
     @Synchronized
-    internal fun restore(id: Int, value: D) {
+    fun restore(id: Int, value: D) {
         check(id >= _descriptors.size || _descriptors[id] == null || _descriptors[id] == value) {
             "Item with id $id is already present in pool and differs from $value"
         }
