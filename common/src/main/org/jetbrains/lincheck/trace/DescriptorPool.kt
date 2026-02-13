@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.Descriptor
+import org.jetbrains.lincheck.util.ConcurrentSingleWriterList
 
 /**
  * Pool for interning descriptors and providing id-based and key-based lookups.
@@ -20,8 +21,9 @@ import org.jetbrains.lincheck.descriptors.Descriptor
  * an atomic array later to guarantee thread-safe reads.
  */
 class DescriptorPool<D : Descriptor> {
-    // TODO: make _descriptors threads for direct retrieval
-    private val _descriptors = mutableListOf<D?>()
+    // because `_descriptors` are exposed for reading, we use thread-safe list implementation,
+    // which does not allow read-write races between our write-code and user's read-code
+    private val _descriptors = ConcurrentSingleWriterList<D?>()
     val descriptors: List<D?> get() = _descriptors
     private val byKey = hashMapOf<Descriptor.Key, Int>()
 
