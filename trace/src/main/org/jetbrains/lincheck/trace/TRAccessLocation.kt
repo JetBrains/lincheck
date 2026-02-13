@@ -40,8 +40,8 @@ internal fun AccessLocation.saveReferences(out: TraceWriter, traceContext: Trace
 // Note: since `saveReferences` methods are called first, then, when `save` method is called,
 //       all preceding checks are fulfilled, so no need to write them here
 private fun LocalVariableAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
-    check(traceContext.hasVariableDescriptor(variableDescriptor)) { "Access location references must be saved before-hand, but location $this has unsaved variable $variableDescriptor" }
-    val variableDescriptorId = traceContext.getOrCreateVariableId(variableDescriptor)
+    check(traceContext.variablePool.contains(variableDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved variable $variableDescriptor" }
+    val variableDescriptorId = traceContext.variablePool[variableDescriptor.key]!!.id
     out.writeLocationKind(AccessLocationKind.LOCAL_VARIABLE)
     out.writeInt(variableDescriptorId)
 }
@@ -75,7 +75,7 @@ private fun ArrayElementByNameAccessLocation.save(out: TraceWriter, savingState:
 
 
 private fun LocalVariableAccessLocation.saveReferences(out: TraceWriter, traceContext: TraceContext) {
-    val variableDescriptorId = traceContext.getOrCreateVariableId(variableDescriptor)
+    val variableDescriptorId = traceContext.variablePool.register(variableDescriptor)
     out.writeVariableDescriptor(variableDescriptorId)
 }
 

@@ -55,27 +55,6 @@ class TraceContext {
 
     val variableDescriptors: List<VariableDescriptor?> get() = variablePool.descriptors
 
-    fun hasVariableDescriptor(variable: VariableDescriptor): Boolean {
-        return variablePool.contains(variable.key)
-    }
-
-    fun getOrCreateVariableId(variableName: String, type: Types.Type): Int {
-        return getOrCreateVariableId(VariableDescriptor(variableName, type))
-    }
-
-    fun getOrCreateVariableId(variableDescriptor: VariableDescriptor): Int {
-        return variablePool.register(variableDescriptor)
-    }
-
-    fun getVariableDescriptor(variableName: String, type: Types.Type): VariableDescriptor =
-        getVariableDescriptor(getOrCreateVariableId(variableName, type))
-
-    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variablePool[variableId]
-
-    fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
-        variablePool.restore(id, value)
-    }
-
     val codeLocations: List<CodeLocation?> get() = locations
 
     fun newCodeLocation(

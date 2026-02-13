@@ -220,7 +220,7 @@ class TracePointCloner(
     }
 
     private fun VariableDescriptor.clone(): Int =
-        context.getOrCreateVariableId(this.name, this.type)
+        context.variablePool.register(VariableDescriptor(name, type))
 
     private fun FieldDescriptor.clone(): Int =
         context.fieldPool.register(context.createFieldDescriptor(
@@ -246,7 +246,7 @@ class TracePointCloner(
 
     private fun AccessLocation.clone(): AccessLocation =
         when (this) {
-            is LocalVariableAccessLocation -> LocalVariableAccessLocation(context.getVariableDescriptor(this.variableDescriptor.clone()))
+            is LocalVariableAccessLocation -> LocalVariableAccessLocation(context.variablePool[this.variableDescriptor.clone()])
             is StaticFieldAccessLocation -> StaticFieldAccessLocation(context.fieldPool[this.fieldDescriptor.clone()])
             is ObjectFieldAccessLocation -> ObjectFieldAccessLocation(context.fieldPool[this.fieldDescriptor.clone()])
             is ArrayElementByIndexAccessLocation -> this

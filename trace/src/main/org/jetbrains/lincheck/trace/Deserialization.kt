@@ -194,7 +194,7 @@ internal class CodeLocationsContext {
         val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
             when (shallowLocation) {
                 is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
-                    context.getVariableDescriptor(shallowLocation.variableDescriptorId)
+                    context.variablePool[shallowLocation.variableDescriptorId]
                 )
 
                 is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(

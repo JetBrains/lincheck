@@ -630,7 +630,7 @@ sealed class TRLocalVariableTracePoint(
     internal abstract fun accessSymbol(): String
 
     // TODO Make parametrized
-    val variableDescriptor: VariableDescriptor get() = context.getVariableDescriptor(localVariableId)
+    val variableDescriptor: VariableDescriptor get() = context.variablePool[localVariableId]
     val name: String get() = variableDescriptor.name
 
     override fun save(out: TraceWriter) {
