@@ -226,7 +226,9 @@ class TracePointCloner(
         context.getOrCreateFieldId(this.className, this.fieldName, this.type, this.isStatic, this.isFinal)
 
     private fun MethodDescriptor.clone(): Int =
-        context.getOrCreateMethodId(this.className, this.methodName, this.methodSignature.methodType)
+        context.methodPool.register(context.createMethodDescriptor(
+            className, methodName, methodSignature.methodType
+        ))
 
     private fun List<TRValue?>.clone(): List<TRValue?> {
         val result = mutableListOf<TRValue?>()

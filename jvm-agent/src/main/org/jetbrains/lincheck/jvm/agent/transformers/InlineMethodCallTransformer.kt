@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.invokeIfInAnalyzedCode
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createMethodDescriptor
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes.*
@@ -242,7 +243,7 @@ internal class InlineMethodCallTransformer(
             ?: methodInfo.locals.activeVariables.firstOrNull { it.name == "this_$suffix" }
         val className = this_?.type?.className ?: ""
 
-        val methodId = getInlineMethodId(className.toCanonicalClassName(), inlineMethodName)
+        val methodId = registerInlineMethod(className.toCanonicalClassName(), inlineMethodName)
 
         // Start the `try {}` block around call, create distinct label for its beginning because
         // formally `visitTryCatchBlock()` call doesn't allow usage of visited labels.
@@ -338,12 +339,9 @@ internal class InlineMethodCallTransformer(
         invokeStatic(Injections::onInlineMethodCallReturn)
     }
 
-    private fun getInlineMethodId(possibleClassName: String, inlineMethodName: String): Int =
-        context.getOrCreateMethodId(
-            possibleClassName,
-            inlineMethodName,
-            Types.MethodType(Types.VOID_TYPE)
-        )
+    private fun registerInlineMethod(possibleClassName: String, inlineMethodName: String): Int = context.methodPool.register(
+        context.createMethodDescriptor(possibleClassName, inlineMethodName, Types.MethodType(Types.VOID_TYPE))
+    )
 
     private fun topOfStackEndsBeforeLabel(label: Label): Boolean =
         inlineStack.isNotEmpty() && methodInfo.labels.compare(inlineStack.last().lvar.endLabel, label) < 0

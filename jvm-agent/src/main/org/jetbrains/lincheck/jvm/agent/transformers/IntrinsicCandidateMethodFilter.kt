@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.util.isTrackedIntrinsic
 import org.jetbrains.lincheck.jvm.agent.ASM_API
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createMethodDescriptor
 import org.objectweb.asm.AnnotationVisitor
 import org.objectweb.asm.MethodVisitor
 
@@ -33,9 +34,9 @@ internal class IntrinsicCandidateMethodFilter(
         // here we manually specify intrinsic methods that could lead to error in lincheck analysis.
         // Also, some methods are intrinsified even though they do not have mentioned annotations
         // (such as Arrays.copyOf(...) methods).
-        val methodDescriptor = context.getMethodDescriptor(
-            context.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
-        )
+        val methodDescriptor = context.createMethodDescriptor(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
+        context.methodPool.register(methodDescriptor)
+
         if (methodDescriptor.isTrackedIntrinsic()) {
             methodDescriptor.isIntrinsic = true
             delegate()
@@ -44,9 +45,9 @@ internal class IntrinsicCandidateMethodFilter(
     }
 
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
-        val methodDescriptor = context.getMethodDescriptor(
-            context.getOrCreateMethodId(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
-        )
+        val methodDescriptor = context.createMethodDescriptor(className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc))
+        context.methodPool.register(methodDescriptor)
+
         if (isIntrinsicCandidateAnnotation(desc)) {
             methodDescriptor.isIntrinsic = true
             delegate()

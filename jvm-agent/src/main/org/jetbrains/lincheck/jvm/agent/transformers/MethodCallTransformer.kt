@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.OwnerName
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createMethodDescriptor
 import org.jetbrains.lincheck.trace.isThisAccess
 import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.jetbrains.lincheck.util.isIntellijInstrumentationCoverageAgentClass
@@ -96,7 +97,11 @@ internal class MethodCallTransformer(
             else -> null
         }
         val sanitizedMethodName = sanitizeMethodName(owner, name, InstrumentationMode.TRACE_RECORDING)
-        val methodId = context.getOrCreateMethodId(owner.toCanonicalClassName(), sanitizedMethodName, Types.convertAsmMethodType(desc))
+        val methodId = context.methodPool.register(context.createMethodDescriptor(
+            owner.toCanonicalClassName(),
+            sanitizedMethodName,
+            Types.convertAsmMethodType(desc)
+        ))
 
         val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)

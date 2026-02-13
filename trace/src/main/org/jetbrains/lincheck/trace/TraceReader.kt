@@ -316,7 +316,7 @@ internal fun loadMethodDescriptor(
     val id = input.readInt()
     val descriptor = input.readMethodDescriptor(context)
     if (restore)
-        context.restoreMethodDescriptor(id, descriptor)
+        context.methodPool.restore(id, descriptor)
     return id
 }
 

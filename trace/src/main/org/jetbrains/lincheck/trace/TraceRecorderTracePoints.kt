@@ -272,7 +272,7 @@ class TRMethodCallTracePoint(
     var exceptionClassName: String? = null
 
     // TODO Make parametrized
-    val methodDescriptor: MethodDescriptor get() = context.getMethodDescriptor(methodId)
+    val methodDescriptor: MethodDescriptor get() = context.methodPool[methodId]
     val classDescriptor: ClassDescriptor get() = methodDescriptor.classDescriptor
 
     // Shortcuts

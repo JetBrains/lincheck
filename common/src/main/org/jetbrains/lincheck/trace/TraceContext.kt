@@ -51,28 +51,6 @@ class TraceContext {
 
     val methodDescriptors: List<MethodDescriptor?> get() = methodPool.descriptors
 
-    fun getOrCreateMethodId(className: String, methodName: String, methodType: Types.MethodType): Int {
-        return methodPool.register(
-            MethodDescriptor(
-                context = this,
-                classId = getOrCreateClassId(className),
-                methodSignature = MethodSignature(
-                    name = methodName,
-                    methodType = methodType
-                )
-            )
-        )
-    }
-
-    fun getMethodDescriptor(className: String, methodName: String, methodType: Types.MethodType): MethodDescriptor =
-        getMethodDescriptor(getOrCreateMethodId(className, methodName, methodType))
-
-    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methodPool[methodId]
-
-    fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
-        methodPool.restore(id, value)
-    }
-
     val fieldDescriptors: List<FieldDescriptor?> get() = fieldPool.descriptors
 
     fun hasFieldDescriptor(field: FieldDescriptor): Boolean {
@@ -209,3 +187,14 @@ class TraceContext {
         variablePool.clear()
     }
 }
+
+
+fun TraceContext.createMethodDescriptor(
+    className: String,
+    methodName: String,
+    methodType: Types.MethodType
+) = MethodDescriptor(
+    context = this,
+    classId = classPool.register(ClassDescriptor(className)),
+    methodSignature = MethodSignature(methodName, methodType)
+)

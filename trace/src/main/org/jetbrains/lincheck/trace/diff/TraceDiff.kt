@@ -112,11 +112,9 @@ private fun diffOneThread(
             context = output.context,
             threadId = outputThreadId,
             codeLocationId = UNKNOWN_CODE_LOCATION_ID,
-            methodId = output.context.getOrCreateMethodId(
-                "<diff>",
-                "<root>",
-                Types.MethodType(Types.VOID_TYPE)
-            ),
+            methodId = output.context.methodPool.register(output.context.createMethodDescriptor(
+                "<diff>", "<root>", Types.MethodType(Types.VOID_TYPE)
+            )),
             obj = null,
             parameters = emptyList(),
             eventId = cloner.generateEventId(),

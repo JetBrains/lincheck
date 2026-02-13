@@ -724,11 +724,11 @@ internal abstract class ManagedStrategy(
             className = "java.lang.Thread",
             methodName = "run",
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = context.getOrCreateMethodId(
+            methodId = context.methodPool.register(context.createMethodDescriptor(
                 className = "java.lang.Thread",
                 methodName = "run",
                 methodType = Types.MethodType(Types.VOID_TYPE)
-            ),
+            )),
             methodParams = emptyArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.THREAD_RUN
@@ -992,11 +992,11 @@ internal abstract class ManagedStrategy(
             className = actor.method.declaringClass.name,
             methodName = actor.method.name,
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = context.getOrCreateMethodId(
+            methodId = context.methodPool.register(context.createMethodDescriptor(
                 className = actor.method.declaringClass.name.toCanonicalClassName(),
                 methodName = actor.method.name,
                 methodType = Types.convertAsmMethodType(methodDescriptor)
-            ),
+            )),
             methodParams = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,
@@ -1703,7 +1703,7 @@ internal abstract class ManagedStrategy(
         methodId: Int,
         result: Any?,
     ) {
-        val intrinsicDescriptor = context.getMethodDescriptor(methodId)
+        val intrinsicDescriptor = context.methodPool[methodId]
         check(intrinsicDescriptor.isIntrinsic) { "Processing intrinsic method effect of non-intrinsic call" }
 
         if (
@@ -1779,7 +1779,7 @@ internal abstract class ManagedStrategy(
         params: Array<Any?>,
         interceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
@@ -1925,7 +1925,7 @@ internal abstract class ManagedStrategy(
         result: Any?,
         interceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
 
         // process intrinsic candidate methods
         if (methodDescriptor.isIntrinsic) {
@@ -1987,7 +1987,7 @@ internal abstract class ManagedStrategy(
         throwable: Throwable,
         interceptor: ResultInterceptor?,
     ) = threadDescriptor.runInsideIgnoredSection {
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
         if (deterministicMethodDescriptor != null) {
@@ -2036,7 +2036,7 @@ internal abstract class ManagedStrategy(
         owner: Any?,
     ) = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
