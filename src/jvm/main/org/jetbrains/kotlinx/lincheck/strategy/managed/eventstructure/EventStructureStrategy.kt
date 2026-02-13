@@ -96,7 +96,6 @@ internal class EventStructureStrategy(
 
     override fun runInvocationImpl(): InvocationResult {
         val (result, inconsistency) = runNextExploration()
-        println($"EXECUTION: ${eventStructure.execution}")
         if (inconsistency != null) {
             return InconsistentInvocationResult(inconsistency)
         }
@@ -485,7 +484,6 @@ private class EventStructureMemoryTracker(
     private fun addReadResponse(iThread: Int): OpaqueValue? {
         val event = eventStructure.addReadResponse(iThread)
         val label = (event.label as ReadAccessLabel)
-        println("RESPONSE LABEL: ${label.value} ${label.location}")
         val rmwDescriptor = label.readModifyWriteDescriptor
         // regular non-RMW read - return the read value
         if (rmwDescriptor == null) {
@@ -537,7 +535,6 @@ private class EventStructureMemoryTracker(
     }
 
     override fun beforeWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, value: Any?) {
-        println("beforeWrite")
         addWriteEvent(iThread, codeLocation, location, value?.opaque())
     }
 

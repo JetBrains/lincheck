@@ -1358,10 +1358,7 @@ internal abstract class ManagedStrategy(
                 isFinal = fieldDescriptor.isFinal,
             )
             memoryTracker!!.beforeRead(threadId, codeLocation, location)
-            println("Interceptin memory for $location")
-            Exception().printStackTrace()
             resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
-            println("Intercepted result ${resultInterceptor?.isResultIntercepted} ${resultInterceptor?.interceptedResult}")
         }
         loopDetector.beforeReadField(obj)
         return
@@ -1794,7 +1791,6 @@ internal abstract class ManagedStrategy(
         params: Array<Any?>,
         interceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
-        println("ON METHOD CALL")
         val methodDescriptor = context.getMethodDescriptor(methodId)
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
@@ -1802,7 +1798,6 @@ internal abstract class ManagedStrategy(
         // process method effect on the static memory snapshot
         processMethodEffectOnStaticSnapshot(receiver, params, atomicMethodDescriptor)
         val threadId = threadScheduler.getCurrentThreadId()
-        println("ON METHOD CALL $threadId ${methodDescriptor.methodName} $atomicMethodDescriptor $receiver")
 
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
@@ -1826,7 +1821,6 @@ internal abstract class ManagedStrategy(
                 params,
                 atomicMethodDescriptor,
             )
-            println("Intercept!!!!")
             shouldInterceptAtomicMethod = memoryTracker!!.trackAtomicMethodMemoryAccess(
                 receiver,
                 codeLocation,

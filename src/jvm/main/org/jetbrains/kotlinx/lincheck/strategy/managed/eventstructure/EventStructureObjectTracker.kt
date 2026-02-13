@@ -61,13 +61,10 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         val obj = objReference.get()!!
         if(kind == ObjectKind.EXTERNAL) {
             (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objNumber)
-            println("Registered external object: $objNumber $obj")
-            Exception().printStackTrace()
             return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, initEvent!!)
         } else {
             val iThread = (Thread.currentThread() as? TestThread)?.threadId
             val allocationEvent = eventStructure.addObjectAllocationEvent(iThread!!,obj.opaque(), objNumber)
-            println("Registered internal object: $objNumber $obj")
             return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocationEvent)
         }
         unreachable()
@@ -83,8 +80,6 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 
     fun getObject(id: ObjectNumber): OpaqueValue? {
-        println("Getting object: $id")
-        println("${this.objectNumberIndex} ${this.objectIndex}")
         return primitiveMap[id.toLong()] ?: lookupByNumber(id)?.objectReference?.get()?.opaque()
     }
 }

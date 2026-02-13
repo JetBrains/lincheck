@@ -232,7 +232,6 @@ class InitializationLabel(
         get() = objectsAllocations.keys
 
     fun getInitialValue(location: StaticFieldMemoryLocation): ValueID {
-        println("STATIC MEM: $staticMemory $location")
         return  memoryInitializer(location)
     }
 
@@ -764,7 +763,6 @@ fun ObjectAllocationLabel.asWriteAccessLabel(location: MemoryLocation): WriteAcc
  * @return The [WriteAccessLabel] if the label can be interpreted as it, null otherwise.
  */
 fun EventLabel.asWriteAccessLabel(location: MemoryLocation): WriteAccessLabel? {
-    println("WRITE ACCESS LABEL: $location")
     return when (this) {
         is WriteAccessLabel         -> this.takeIf { it.location == location }
         is ObjectAllocationLabel    -> asWriteAccessLabel(location)
