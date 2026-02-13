@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.util
 
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodHandles.Lookup
 import java.lang.invoke.MethodType
 
 // ========================================================
@@ -47,6 +46,50 @@ fun isAsmClass(className: String): Boolean =
 fun isByteBuddyClass(className: String): Boolean =
     // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
     className.startsWith(listOf("net", "bytebuddy").joinToString("."))
+
+/**
+ * Checks whether the given class name belongs to the Gradle framework.
+ */
+fun isGradleClass(className: String) =
+    className.startsWith("org.gradle.") ||
+    className.startsWith("worker.org.gradle.")
+
+
+// ========================================================
+//   Misc third-party libraries
+// ========================================================
+
+/**
+ * Checks if the given class name corresponds to a recognized testing library class.
+ */
+fun isRecognizedTestingLibraryClass(className: String) =
+    className.startsWith("org.junit.") ||
+    className.startsWith("junit.framework.") ||
+    className.startsWith("io.mockk.")
+
+/**
+ * Checks if the given class name corresponds to a recognized logging library class.
+ */
+fun isRecognizedLoggingLibraryClass(className: String) =
+    className.startsWith("org.slf4j.")
+
+/**
+ * Determines whether a given class name belongs to a recognized Apache library.
+ */
+fun isRecognizedApacheLibraryClass(className: String) =
+    className.startsWith("org.apache.commons.lang.")
+
+/**
+ * Checks if a given class name belongs to a recognized uninstrumented library class.
+ * These are classes from specific third-party libraries that
+ * are used as is and should not be subject to Lincheck instrumentation.
+ */
+fun isRecognizedUninstrumentedLibraryClass(className: String) =
+    // fast-util data structures
+    className.startsWith("it.unimi.dsi.fastutil.") ||
+    // misc
+    className.startsWith("com.esotericsoftware.kryo.") ||
+    className.startsWith("net.rubygrapefruit.platform.")
 
 
 // ========================================================
@@ -83,6 +126,25 @@ fun isJetBrainsCoverageClass(className: String) =
 fun isIntellijRuntimeAgentClass(className: String) =
     isIntellijRuntimeDebuggerAgentClass(className) ||
     isIntellijRuntimeCoverageAgentClass(className)
+
+
+// ========================================================
+//   Kotlinx libraries
+// ========================================================
+
+/**
+ * Checks whether the given class name belongs to the `kotlinx.atomicfu` package.
+ */
+fun isKotlinxAtomicFUClass(className: String) =
+    className.startsWith("kotlinx.atomicfu.")
+
+/**
+ * Checks if the given class name belongs to the `kotlinx.coroutines` debugger support-related classes.
+ */
+fun isKotlinxCoroutinesDebugClass(className: String) =
+    className.startsWith("kotlinx.coroutines.debug.") ||
+    className == "kotlinx.coroutines.DebugKt"
+
 
 // ========================================================
 //   Java: misc

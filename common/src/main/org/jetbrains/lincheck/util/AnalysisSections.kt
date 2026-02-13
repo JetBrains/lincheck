@@ -352,14 +352,16 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
             if (isInTraceDebuggerMode && className.startsWith("kotlin.io.")) return true
             return false
         }
-        // We do not instrument AtomicFU atomics.
-        if (className.startsWith("kotlinx.atomicfu.")) {
+
+        // Instrument AtomicFU classes, except atomics.
+        if (isKotlinxAtomicFUClass(className)) {
             if (className.contains("Atomic")) return false
             return true
         }
+
         // We need to skip the classes related to the debugger support in Kotlin coroutines.
-        if (className.startsWith("kotlinx.coroutines.debug.")) return false
-        if (className == "kotlinx.coroutines.DebugKt") return false
+        if (isKotlinxCoroutinesDebugClass(className)) return false
+
         // We should never transform IntelliJ runtime classes (debugger and coverage agents).
         if (isIntellijRuntimeAgentClass(className)) return false
         // We should never instrument the JetBrains coverage package classes (for instance, relocated ASM library).
@@ -370,16 +372,11 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
         if (isAsmClass(className) || isByteBuddyClass(className)) return false
 
         // We can also safely do not instrument some libraries for performance reasons.
-        if (className.startsWith("com.esotericsoftware.kryo.")) return false
-        if (className.startsWith("net.rubygrapefruit.platform.")) return false
-        if (className.startsWith("io.mockk.")) return false
-        if (className.startsWith("it.unimi.dsi.fastutil.")) return false
-        if (className.startsWith("worker.org.gradle.")) return false
-        if (className.startsWith("org.gradle.")) return false
-        if (className.startsWith("org.slf4j.")) return false
-        if (className.startsWith("org.apache.commons.lang.")) return false
-        if (className.startsWith("org.junit.")) return false
-        if (className.startsWith("junit.framework.")) return false
+        if (isGradleClass(className)) return false
+        if (isRecognizedTestingLibraryClass(className)) return false
+        if (isRecognizedLoggingLibraryClass(className)) return false
+        if (isRecognizedApacheLibraryClass(className)) return false
+        if (isRecognizedUninstrumentedLibraryClass(className)) return false
 
         // All the classes that were not filtered out are eligible for transformation.
         return true
