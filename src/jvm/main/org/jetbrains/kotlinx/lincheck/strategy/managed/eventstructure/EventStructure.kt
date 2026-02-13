@@ -533,7 +533,7 @@ internal class EventStructure(
     /*      Object tracking                                                      */
     /* ************************************************************************* */
 
-    fun allocationEvent(id: StableObjectNumber): AtomicThreadEvent? {
+    fun allocationEvent(id: ObjectNumber): AtomicThreadEvent? {
         return eventStructureObjectTracker.getAllocation(id)
     }
 
@@ -946,7 +946,7 @@ internal class EventStructure(
         return responseEvent
     }
 
-    fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue, objectID: StableObjectNumber): AtomicThreadEvent {
+    fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue, objectID: ObjectNumber): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
             check(event.label is ObjectAllocationLabel)
             // TODO: Is this a reasonable check?

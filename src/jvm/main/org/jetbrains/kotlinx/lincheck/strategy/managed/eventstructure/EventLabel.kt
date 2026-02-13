@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.SpanLabelKind.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.implies
 
@@ -98,7 +97,7 @@ sealed class EventLabel(
      * If a particular subclass of labels does not access any object,
      * then this property is equal to [NULL_OBJECT_ID].
      */
-    open val objectID: StableObjectNumber = NULL_OBJECT_ID
+    open val objectID: ObjectNumber = NULL_OBJECT_ID
 
 }
 
@@ -224,12 +223,12 @@ class InitializationLabel(
         HashMap<StaticFieldMemoryLocation, ValueID>()
 
     private val _objectsAllocations =
-        HashMap<StableObjectNumber, ObjectAllocationLabel>()
+        HashMap<ObjectNumber, ObjectAllocationLabel>()
 
-    val objectsAllocations: Map<StableObjectNumber, ObjectAllocationLabel>
+    val objectsAllocations: Map<ObjectNumber, ObjectAllocationLabel>
         get() = _objectsAllocations
 
-    val externalObjects: Set<StableObjectNumber>
+    val externalObjects: Set<ObjectNumber>
         get() = objectsAllocations.keys
 
     fun getInitialValue(location: StaticFieldMemoryLocation): ValueID {
@@ -237,7 +236,7 @@ class InitializationLabel(
         return  memoryInitializer(location)
     }
 
-    fun trackExternalObject(className: String, objID: StableObjectNumber) {
+    fun trackExternalObject(className: String, objID: ObjectNumber) {
         _objectsAllocations[objID] = ObjectAllocationLabel(className, objID, memoryInitializer)
     }
 
@@ -256,7 +255,7 @@ class InitializationLabel(
  */
 data class ObjectAllocationLabel(
     val className: String,
-    override val objectID: StableObjectNumber,
+    override val objectID: ObjectNumber,
     val memoryInitializer: MemoryIDInitializer,
 ) : EventLabel(kind = LabelKind.Send) {
 
@@ -288,7 +287,7 @@ data class ObjectAllocationLabel(
  * @return The object allocation label associated with the given ObjectID,
  *   or null if there is no external object with given id exists.
  */
-fun InitializationLabel.asObjectAllocationLabel(objID: StableObjectNumber): ObjectAllocationLabel? =
+fun InitializationLabel.asObjectAllocationLabel(objID: ObjectNumber): ObjectAllocationLabel? =
     objectsAllocations[objID]
 
 /**
@@ -297,7 +296,7 @@ fun InitializationLabel.asObjectAllocationLabel(objID: StableObjectNumber): Obje
  * @param objID The ObjectID of the object to match.
  * @return The [ObjectAllocationLabel] if the label can be interpreted as it, null otherwise.
  */
-fun EventLabel.asObjectAllocationLabel(objID: StableObjectNumber): ObjectAllocationLabel? = when (this) {
+fun EventLabel.asObjectAllocationLabel(objID: ObjectNumber): ObjectAllocationLabel? = when (this) {
     is ObjectAllocationLabel -> takeIf { it.objectID == objID }
     is InitializationLabel -> asObjectAllocationLabel(objID)
     else -> null
@@ -486,7 +485,7 @@ sealed class MemoryAccessLabel(
     /**
      * The id of the accessed object.
      */
-    override val objectID: StableObjectNumber
+    override val objectID: ObjectNumber
         get() = location.objID
 
     val isExclusive: Boolean
@@ -818,7 +817,7 @@ fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel?
  */
 sealed class MutexLabel(
     kind: LabelKind,
-    open val mutexID: StableObjectNumber,
+    open val mutexID: ObjectNumber,
     isBlocking: Boolean = false,
     isUnblocked: Boolean = true,
 ): EventLabel(
@@ -830,7 +829,7 @@ sealed class MutexLabel(
     /**
      * The id of the accessed object.
      */
-    override val objectID: StableObjectNumber
+    override val objectID: ObjectNumber
         get() = mutexID
 
     override fun toString(): String {
@@ -874,7 +873,7 @@ val MutexLabel.operationKind: MutexOperationKind
  */
 data class LockLabel(
     override val kind: LabelKind,
-    override val mutexID: StableObjectNumber,
+    override val mutexID: ObjectNumber,
     val isReentry: Boolean = false,
     val reentrancyDepth: Int = 1,
     val isSynthetic: Boolean = false,
@@ -903,7 +902,7 @@ data class LockLabel(
  *   followed by a synthetic lock operation.
  */
 data class UnlockLabel(
-    override val mutexID: StableObjectNumber,
+    override val mutexID: ObjectNumber,
     val isReentry: Boolean = false,
     val reentrancyDepth: Int = 1,
     val isSynthetic: Boolean = false,
@@ -923,7 +922,7 @@ data class UnlockLabel(
  */
 data class WaitLabel(
     override val kind: LabelKind,
-    override val mutexID: StableObjectNumber,
+    override val mutexID: ObjectNumber,
     val isLocking: Boolean = false,
     val isUnlocking: Boolean = false,
 ) : MutexLabel(
@@ -950,7 +949,7 @@ data class WaitLabel(
  *   that is created by a `notifyAll()` method call.
  */
 data class NotifyLabel(
-    override val mutexID: StableObjectNumber,
+    override val mutexID: ObjectNumber,
     val isBroadcast: Boolean
 ) : MutexLabel(LabelKind.Send, mutexID) {
 
@@ -973,7 +972,7 @@ fun EventLabel.isInitializingUnlock(): Boolean =
  * @return The unlock label associated with the given mutex,
  *   or null if there is no external mutex object with given id exists.
  */
-fun InitializationLabel.asUnlockLabel(mutexID: StableObjectNumber) =
+fun InitializationLabel.asUnlockLabel(mutexID: ObjectNumber) =
     asObjectAllocationLabel(mutexID)?.asUnlockLabel(mutexID)
 
 /**
@@ -986,7 +985,7 @@ fun InitializationLabel.asUnlockLabel(mutexID: StableObjectNumber) =
  * @return The unlock label associated with the given mutex,
  *   or null if there is no external mutex object with given id exists.
  */
-fun ObjectAllocationLabel.asUnlockLabel(mutexID: StableObjectNumber) =
+fun ObjectAllocationLabel.asUnlockLabel(mutexID: ObjectNumber) =
     if (mutexID == objectID) UnlockLabel(mutexID = objectID, isSynthetic = true) else null
 
 
@@ -997,7 +996,7 @@ fun ObjectAllocationLabel.asUnlockLabel(mutexID: StableObjectNumber) =
  * @return The [UnlockLabel] if the label can be interpreted as it, null otherwise.
  *
  */
-fun EventLabel.asUnlockLabel(mutexID: StableObjectNumber): UnlockLabel? = when (this) {
+fun EventLabel.asUnlockLabel(mutexID: ObjectNumber): UnlockLabel? = when (this) {
     is UnlockLabel -> this.takeIf { it.mutexID == mutexID }
     is ObjectAllocationLabel -> asUnlockLabel(mutexID)
     is InitializationLabel -> asUnlockLabel(mutexID)
@@ -1011,7 +1010,7 @@ fun EventLabel.asUnlockLabel(mutexID: StableObjectNumber): UnlockLabel? = when (
  * @return The [NotifyLabel] if the label can be interpreted as it, null otherwise.
  *
  */
-fun EventLabel.asNotifyLabel(mutexID: StableObjectNumber): NotifyLabel? = when (this) {
+fun EventLabel.asNotifyLabel(mutexID: ObjectNumber): NotifyLabel? = when (this) {
     is NotifyLabel -> this.takeIf { it.mutexID == mutexID }
     else -> null
 }

@@ -41,7 +41,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
 
 
 
-    var externalIds = mutableSetOf<StableObjectNumber>()
+    var externalIds = mutableSetOf<ObjectNumber>()
     var primitiveMap: MutableMap<ValueID, OpaqueValue> = mutableMapOf()
 
     private var initEvent: AtomicThreadEvent? = null
@@ -73,22 +73,22 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         unreachable()
     }
 
-    private fun getEventStructureEntry(id: StableObjectNumber): EventStructureObjectEntry? {
-        return get(id) as? EventStructureObjectEntry
+    private fun getEventStructureEntry(id: ObjectNumber): EventStructureObjectEntry? {
+        return lookupByNumber(id) as? EventStructureObjectEntry
     }
 
-    fun getAllocation(id: StableObjectNumber) : AtomicThreadEvent? {
+    fun getAllocation(id: ObjectNumber) : AtomicThreadEvent? {
         if(id == STATIC_OBJECT_ID) return initEvent;
         return getEventStructureEntry(id)?.allocation
     }
 
-    fun getObject(id: StableObjectNumber): OpaqueValue? {
+    fun getObject(id: ObjectNumber): OpaqueValue? {
         println("Getting object: $id")
-        println("${this.numberToHashCode} ${this.objectIndex}")
-        return primitiveMap[id.toLong()] ?: get(id)?.objectReference?.get()?.opaque()
+        println("${this.objectNumberIndex} ${this.objectIndex}")
+        return primitiveMap[id.toLong()] ?: lookupByNumber(id)?.objectReference?.get()?.opaque()
     }
 
-    fun getOrRegisterPrimitveValue(value: OpaqueValue): StableObjectNumber {
+    fun getOrRegisterPrimitveValue(value: OpaqueValue): ObjectNumber {
         check(value.unwrap().isImmutable)
         primitiveMap[value.unwrap().hashCode().toLong()] = value
         return value.unwrap().hashCode()
@@ -100,11 +100,11 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
 
 }
 
-internal fun EventStructureObjectTracker.registerValueIfAbsent(obj: OpaqueValue?): StableObjectNumber =
+internal fun EventStructureObjectTracker.registerValueIfAbsent(obj: OpaqueValue?): ObjectNumber =
     when {
         obj == null -> NULL_OBJECT_ID
         obj.unwrap().isImmutable -> getOrRegisterPrimitveValue(obj)
-        else -> registerObjectIfAbsent(obj.unwrap()).stableObjectNumber
+        else -> registerObjectIfAbsent(obj.unwrap()).objectNumber
     }
 
 internal fun EventStructureObjectTracker.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {

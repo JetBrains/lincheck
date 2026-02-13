@@ -25,7 +25,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingMonitorTracker
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.Covering
-import org.jetbrains.lincheck.util.ensure
 import org.jetbrains.lincheck.util.ensureTrue
 import org.jetbrains.lincheck.util.unreachable
 
@@ -71,7 +70,7 @@ class SequentialConsistencyReplayViolation : SequentialConsistencyViolation() {
 internal data class SequentialConsistencyReplayer(
     val memoryView: MutableMap<MemoryLocation, Event> = mutableMapOf(),
     val monitorTracker: ModelCheckingMonitorTracker = ModelCheckingMonitorTracker(),
-    val monitorMapping: MutableMap<StableObjectNumber, Any> = mutableMapOf()
+    val monitorMapping: MutableMap<ObjectNumber, Any> = mutableMapOf()
 ) {
 
     fun replay(event: AtomicThreadEvent): SequentialConsistencyReplayer? {
@@ -157,7 +156,7 @@ internal data class SequentialConsistencyReplayer(
             monitorMapping = monitorMapping.toMutableMap(),
         )
 
-    private fun getMonitor(objID: StableObjectNumber): Any {
+    private fun getMonitor(objID: ObjectNumber): Any {
         check(objID != NULL_OBJECT_ID)
         return monitorMapping.computeIfAbsent(objID) { Any() }
     }
