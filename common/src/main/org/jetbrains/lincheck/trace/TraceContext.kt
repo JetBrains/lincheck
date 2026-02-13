@@ -33,10 +33,11 @@ class TraceContext {
     private val threadNames = ConcurrentHashMap<Int, String>()
     private val accessPaths = ArrayList<AccessPath?>()
     private val locations = ArrayList<CodeLocation?>()
-    private val classes = IndexedPool<ClassDescriptor>()
-    private val methods = IndexedPool<MethodDescriptor>()
-    private val fields = IndexedPool<FieldDescriptor>()
-    private val variables = IndexedPool<VariableDescriptor>()
+    // Descriptor pools
+    val classPool = DescriptorPool<ClassDescriptor>()
+    val methodPool = DescriptorPool<MethodDescriptor>()
+    val fieldPool = DescriptorPool<FieldDescriptor>()
+    val variablePool = DescriptorPool<VariableDescriptor>()
 
     fun setThreadName(id: Int, name: String) { threadNames[id] = name }
 
@@ -46,22 +47,22 @@ class TraceContext {
 
     fun threadNames(): List<String> = threadNames.values.toList()
 
-    val classDescriptors: List<ClassDescriptor?> get() = classes.content
+    val classDescriptors: List<ClassDescriptor?> get() = classPool.descriptors
 
     fun getOrCreateClassId(className: String): Int {
-        return classes.getOrCreateId(ClassDescriptor(className))
+        return classPool.register(ClassDescriptor(className))
     }
 
-    fun getClassDescriptor(classId: Int): ClassDescriptor = classes[classId]
+    fun getClassDescriptor(classId: Int): ClassDescriptor = classPool[classId]
 
     fun restoreClassDescriptor(id: Int, value: ClassDescriptor) {
-        classes.restore(id, value)
+        classPool.restore(id, value)
     }
 
-    val methodDescriptors: List<MethodDescriptor?> get() = methods.content
+    val methodDescriptors: List<MethodDescriptor?> get() = methodPool.descriptors
 
     fun getOrCreateMethodId(className: String, methodName: String, methodType: Types.MethodType): Int {
-        return methods.getOrCreateId(
+        return methodPool.register(
             MethodDescriptor(
                 context = this,
                 classId = getOrCreateClassId(className),
@@ -76,16 +77,16 @@ class TraceContext {
     fun getMethodDescriptor(className: String, methodName: String, methodType: Types.MethodType): MethodDescriptor =
         getMethodDescriptor(getOrCreateMethodId(className, methodName, methodType))
 
-    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
+    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methodPool[methodId]
 
     fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
-        methods.restore(id, value)
+        methodPool.restore(id, value)
     }
 
-    val fieldDescriptors: List<FieldDescriptor?> get() = fields.content
+    val fieldDescriptors: List<FieldDescriptor?> get() = fieldPool.descriptors
 
     fun hasFieldDescriptor(field: FieldDescriptor): Boolean {
-        return fields.contains(field)
+        return fieldPool.contains(field.key)
     }
 
     fun getOrCreateFieldId(className: String, fieldName: String, type: Types.Type, isStatic: Boolean, isFinal: Boolean): Int {
@@ -102,22 +103,22 @@ class TraceContext {
     }
 
     fun getOrCreateFieldId(field: FieldDescriptor): Int {
-        return fields.getOrCreateId(field)
+        return fieldPool.register(field)
     }
 
     fun getFieldDescriptor(className: String, fieldName: String, type: Types.Type, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
         getFieldDescriptor(getOrCreateFieldId(className, fieldName, type, isStatic, isFinal))
 
-    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
+    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fieldPool[fieldId]
 
     fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
-        fields.restore(id, value)
+        fieldPool.restore(id, value)
     }
 
-    val variableDescriptors: List<VariableDescriptor?> get() = variables.content
+    val variableDescriptors: List<VariableDescriptor?> get() = variablePool.descriptors
 
     fun hasVariableDescriptor(variable: VariableDescriptor): Boolean {
-        return variables.contains(variable)
+        return variablePool.contains(variable.key)
     }
 
     fun getOrCreateVariableId(variableName: String, type: Types.Type): Int {
@@ -125,16 +126,16 @@ class TraceContext {
     }
 
     fun getOrCreateVariableId(variableDescriptor: VariableDescriptor): Int {
-        return variables.getOrCreateId(variableDescriptor)
+        return variablePool.register(variableDescriptor)
     }
 
     fun getVariableDescriptor(variableName: String, type: Types.Type): VariableDescriptor =
         getVariableDescriptor(getOrCreateVariableId(variableName, type))
 
-    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
+    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variablePool[variableId]
 
     fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
-        variables.restore(id, value)
+        variablePool.restore(id, value)
     }
 
     val codeLocations: List<CodeLocation?> get() = locations
@@ -212,9 +213,9 @@ class TraceContext {
     fun clear() {
         accessPaths.clear()
         locations.clear()
-        classes.clear()
-        methods.clear()
-        fields.clear()
-        variables.clear()
+        classPool.clear()
+        methodPool.clear()
+        fieldPool.clear()
+        variablePool.clear()
     }
 }

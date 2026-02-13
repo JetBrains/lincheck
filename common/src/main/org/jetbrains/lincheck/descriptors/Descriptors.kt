@@ -15,9 +15,27 @@ import java.lang.reflect.Modifier
 import java.lang.reflect.Field
 
 
+/**
+ * Common descriptor contract used by pools/registries.
+ *
+ * Implementations should expose a stable [key] that uniquely identifies a
+ * descriptor logically, and an [id] that is assigned by a pool upon
+ * registration.
+ */
+interface Descriptor {
+    abstract class Key
+
+    val key: Key
+    var id: Int
+}
+
 data class ClassDescriptor(
     val name: String,
-)
+) : Descriptor {
+    override var id: Int = -1
+    data class Key(val className: String) : Descriptor.Key()
+    override val key: Descriptor.Key get() = Key(name)
+}
 
 data class MethodSignature(val name: String, val methodType: Types.MethodType) {
     override fun toString(): String {
@@ -28,8 +46,9 @@ data class MethodSignature(val name: String, val methodType: Types.MethodType) {
 data class MethodDescriptor(
     private val context: TraceContext,
     val classId: Int,
-    val methodSignature: MethodSignature
-) {
+    val methodSignature: MethodSignature,
+) : Descriptor {
+    override var id: Int = -1
     var isIntrinsic: Boolean = false
 
     val classDescriptor: ClassDescriptor get() = context.getClassDescriptor(classId)
@@ -39,6 +58,14 @@ data class MethodDescriptor(
     val argumentTypes: List<Types.Type> get() = methodSignature.methodType.argumentTypes
 
     override fun toString(): String = "$className.$methodSignature"
+
+    data class Key(
+        val className: String,
+        val methodSignature: MethodSignature,
+    ) : Descriptor.Key()
+
+    override val key: Descriptor.Key
+        get() = Key(className, methodSignature)
 }
 
 data class FieldDescriptor(
@@ -48,9 +75,20 @@ data class FieldDescriptor(
     val type: Types.Type,
     val isStatic: Boolean,
     val isFinal: Boolean,
-) {
+) : Descriptor {
+    override var id: Int = -1
     val classDescriptor: ClassDescriptor get() = context.getClassDescriptor(classId)
     val className: String get() = classDescriptor.name
+
+    data class Key(
+        val className: String,
+        val fieldName: String,
+        val type: Types.Type
+    ) : Descriptor.Key()
+
+    // TODO: jvm bytecode allows static and regular fields of the same name in a class, should the `isStatic` be included in key?
+    override val key: Descriptor.Key
+        get() = Key(className, fieldName, type)
 }
 
 fun Field.toDescriptor(context: TraceContext) = context.getFieldDescriptor(
@@ -63,8 +101,12 @@ fun Field.toDescriptor(context: TraceContext) = context.getFieldDescriptor(
 
 data class VariableDescriptor(
     val name: String,
-    val type: Types.Type
-)
+    val type: Types.Type,
+) : Descriptor {
+    override var id: Int = -1
+    data class Key(val name: String, val type: Types.Type) : Descriptor.Key()
+    override val key: Descriptor.Key get() = Key(name, type)
+}
 
 
 data class ActiveLocal(
