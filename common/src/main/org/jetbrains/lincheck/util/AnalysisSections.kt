@@ -508,7 +508,7 @@ internal class LincheckAnalysisAbortedError : Error() {
  * to control execution of the analyzed code.
  */
 @Suppress("DEPRECATION") // ThreadDeath
-internal fun isInternalException(exception: Throwable): Boolean =
+internal fun isLincheckInternalException(exception: Throwable): Boolean =
     // is used to stop thread in `AbstractActiveThreadPoolRunner` via `thread.stop()`
     exception is ThreadDeath ||
     // is used to abort thread in `ManagedStrategy`

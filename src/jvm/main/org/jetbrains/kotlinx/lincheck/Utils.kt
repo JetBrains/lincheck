@@ -11,16 +11,13 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.annotations.DummySequentialSpecification
-import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.lincheck.util.*
-import sun.nio.ch.lincheck.*
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 
@@ -55,7 +52,7 @@ internal fun executeActor(
             throw invE
         // Exception thrown not during the method invocation should contain underlying exception
         return ExceptionResult.create(
-            invE.cause?.takeIf { !isInternalException(it) }
+            invE.cause?.takeIf { !isLincheckInternalException(it) }
                 ?: throw invE
         )
     } catch (e: Exception) {
