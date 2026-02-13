@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createFieldDescriptor
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
 
@@ -91,13 +92,13 @@ data class FieldDescriptor(
         get() = Key(className, fieldName, type)
 }
 
-fun Field.toDescriptor(context: TraceContext) = context.getFieldDescriptor(
+fun Field.toDescriptor(context: TraceContext) = context.createFieldDescriptor(
     className = this.declaringClass.name,
     fieldName = this.name,
     type = this.type.kotlin.getType(),
     isStatic = Modifier.isStatic(this.modifiers),
     isFinal = Modifier.isFinal(this.modifiers),
-)
+).also { context.fieldPool.register(it) }
 
 data class VariableDescriptor(
     val name: String,

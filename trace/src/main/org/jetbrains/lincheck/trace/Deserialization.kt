@@ -198,11 +198,11 @@ internal class CodeLocationsContext {
                 )
 
                 is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
-                    context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
+                    context.fieldPool[shallowLocation.fieldDescriptorId]
                 )
 
                 is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
-                    context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
+                    context.fieldPool[shallowLocation.fieldDescriptorId]
                 )
 
                 is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)

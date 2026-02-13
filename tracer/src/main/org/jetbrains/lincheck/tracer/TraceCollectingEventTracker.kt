@@ -432,7 +432,7 @@ class TraceCollectingEventTracker(
         value: Any?,
         fieldId: Int,
     ): Unit = threadDescriptor.runInsideInjectedCode {
-        val fieldDescriptor = context.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.fieldPool[fieldId]
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
             return

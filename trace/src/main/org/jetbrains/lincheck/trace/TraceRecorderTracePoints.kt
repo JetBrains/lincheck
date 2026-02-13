@@ -535,7 +535,7 @@ sealed class TRFieldTracePoint(
     internal abstract fun accessSymbol(): String
 
     // TODO Make parametrized
-    val fieldDescriptor: FieldDescriptor get() = context.getFieldDescriptor(fieldId)
+    val fieldDescriptor: FieldDescriptor get() = context.fieldPool[fieldId]
     val classDescriptor: ClassDescriptor get() = fieldDescriptor.classDescriptor
 
     // Shortcuts

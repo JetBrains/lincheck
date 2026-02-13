@@ -53,36 +53,6 @@ class TraceContext {
 
     val fieldDescriptors: List<FieldDescriptor?> get() = fieldPool.descriptors
 
-    fun hasFieldDescriptor(field: FieldDescriptor): Boolean {
-        return fieldPool.contains(field.key)
-    }
-
-    fun getOrCreateFieldId(className: String, fieldName: String, type: Types.Type, isStatic: Boolean, isFinal: Boolean): Int {
-        return getOrCreateFieldId(
-            FieldDescriptor(
-                context = this,
-                classId = classPool.register(ClassDescriptor(className)),
-                fieldName = fieldName,
-                type = type,
-                isStatic = isStatic,
-                isFinal = isFinal
-            )
-        )
-    }
-
-    fun getOrCreateFieldId(field: FieldDescriptor): Int {
-        return fieldPool.register(field)
-    }
-
-    fun getFieldDescriptor(className: String, fieldName: String, type: Types.Type, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
-        getFieldDescriptor(getOrCreateFieldId(className, fieldName, type, isStatic, isFinal))
-
-    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fieldPool[fieldId]
-
-    fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
-        fieldPool.restore(id, value)
-    }
-
     val variableDescriptors: List<VariableDescriptor?> get() = variablePool.descriptors
 
     fun hasVariableDescriptor(variable: VariableDescriptor): Boolean {
@@ -197,4 +167,16 @@ fun TraceContext.createMethodDescriptor(
     context = this,
     classId = classPool.register(ClassDescriptor(className)),
     methodSignature = MethodSignature(methodName, methodType)
+)
+
+fun TraceContext.createFieldDescriptor(
+    className: String,
+    fieldName: String,
+    type: Types.Type,
+    isStatic: Boolean,
+    isFinal: Boolean
+) = FieldDescriptor(
+    context = this,
+    classId = classPool.register(ClassDescriptor(className)),
+    fieldName, type, isStatic, isFinal
 )

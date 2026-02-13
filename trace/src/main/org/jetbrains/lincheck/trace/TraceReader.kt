@@ -327,8 +327,9 @@ internal fun loadFieldDescriptor(
 ): Int {
     val id = input.readInt()
     val descriptor = input.readFieldDescriptor(context)
-    if (restore)
-        context.restoreFieldDescriptor(id, descriptor)
+    if (restore) {
+        context.fieldPool.restore(id, descriptor)
+    }
     return id
 }
 

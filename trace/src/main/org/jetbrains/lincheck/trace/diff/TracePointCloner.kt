@@ -223,7 +223,9 @@ class TracePointCloner(
         context.getOrCreateVariableId(this.name, this.type)
 
     private fun FieldDescriptor.clone(): Int =
-        context.getOrCreateFieldId(this.className, this.fieldName, this.type, this.isStatic, this.isFinal)
+        context.fieldPool.register(context.createFieldDescriptor(
+            className, fieldName, type, isStatic, isFinal
+        ))
 
     private fun MethodDescriptor.clone(): Int =
         context.methodPool.register(context.createMethodDescriptor(
@@ -245,8 +247,8 @@ class TracePointCloner(
     private fun AccessLocation.clone(): AccessLocation =
         when (this) {
             is LocalVariableAccessLocation -> LocalVariableAccessLocation(context.getVariableDescriptor(this.variableDescriptor.clone()))
-            is StaticFieldAccessLocation -> StaticFieldAccessLocation(context.getFieldDescriptor(this.fieldDescriptor.clone()))
-            is ObjectFieldAccessLocation -> ObjectFieldAccessLocation(context.getFieldDescriptor(this.fieldDescriptor.clone()))
+            is StaticFieldAccessLocation -> StaticFieldAccessLocation(context.fieldPool[this.fieldDescriptor.clone()])
+            is ObjectFieldAccessLocation -> ObjectFieldAccessLocation(context.fieldPool[this.fieldDescriptor.clone()])
             is ArrayElementByIndexAccessLocation -> this
             is ArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(cloneAccessPath(this.indexAccessPath)!!)
             else -> throw IllegalArgumentException("Unsupported access location $this")

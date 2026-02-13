@@ -315,7 +315,7 @@ internal sealed class TraceWriterBase(
     override fun writeFieldDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
         if (contextState.isFieldDescriptorSaved(id)) return
-        val descriptor = context.getFieldDescriptor(id)
+        val descriptor = context.fieldPool[id]
         writeClassDescriptor(descriptor.classId)
         // Write field descriptor into data and position into index
         val position = currentDataPosition

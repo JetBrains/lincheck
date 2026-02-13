@@ -1325,7 +1325,7 @@ internal abstract class ManagedStrategy(
         fieldId: Int,
         resultInterceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
-        val fieldDescriptor = context.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.fieldPool[fieldId]
         if (!fieldDescriptor.isStatic && obj == null) {
             return // ignore, `NullPointerException` will be thrown
         }
@@ -1391,7 +1391,7 @@ internal abstract class ManagedStrategy(
     ) = threadDescriptor.runInsideIgnoredSection {
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
-        val fieldDescriptor = context.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.fieldPool[fieldId]
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(value.javaClass)
         }
@@ -1462,7 +1462,7 @@ internal abstract class ManagedStrategy(
         fieldId: Int,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
-        val fieldDescriptor = context.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.fieldPool[fieldId]
         if (!fieldDescriptor.isStatic && obj == null) {
             return // ignore, `NullPointerException` will be thrown
         }
