@@ -152,7 +152,9 @@ inline fun <R> ThreadDescriptor?.runInsideIgnoredSection(block: () -> R): R {
     try {
         return block()
     } catch (t: Throwable) {
-        Logger.error(t)
+        if (!isLincheckInternalException(t)) {
+            Logger.error(t)
+        }
         throw t
     } finally {
         this?.leaveIgnoredSection()
@@ -216,11 +218,13 @@ inline fun <R> ThreadDescriptor?.runInsideInjectedCode(block: () -> R): R? {
     this.enterIgnoredSection()
     try {
         return block()
-    } catch (e: Throwable) {
+    } catch (t: Throwable) {
         // print the exception to see it in logs and hide it, so that methods like
         // `EventTracker::onThreadRunException` only accept exceptions thrown from the
         // user code and not our injections
-        Logger.error(e)
+        if (!isLincheckInternalException(t)) {
+            Logger.error(t)
+        }
         return null
     } finally {
         this.leaveIgnoredSection()
@@ -508,7 +512,7 @@ internal class LincheckAnalysisAbortedError : Error() {
  * to control execution of the analyzed code.
  */
 @Suppress("DEPRECATION") // ThreadDeath
-internal fun isLincheckInternalException(exception: Throwable): Boolean =
+fun isLincheckInternalException(exception: Throwable): Boolean =
     // is used to stop thread in `AbstractActiveThreadPoolRunner` via `thread.stop()`
     exception is ThreadDeath ||
     // is used to abort thread in `ManagedStrategy`
