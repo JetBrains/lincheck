@@ -303,7 +303,7 @@ internal fun loadClassDescriptor(
     val id = input.readInt()
     val descriptor = input.readClassDescriptor()
     if (restore) {
-        context.restoreClassDescriptor(id, descriptor)
+        context.classPool.restore(id, descriptor)
     }
     return id
 }

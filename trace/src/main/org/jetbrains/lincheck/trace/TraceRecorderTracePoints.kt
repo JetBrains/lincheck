@@ -1068,26 +1068,30 @@ private fun classNameWhitelisted(obj: Any): Boolean {
 }
 
 fun TRObjectWithFields(context: TraceContext, obj: Any, fields: Map<String, Any?>): TRObject {
-    val classId = context.getOrCreateClassId(obj.javaClass.name)
+    val cd = ClassDescriptor(obj.javaClass.name)
+    val classId = context.classPool.register(cd)
     val trObjectMap = fields.mapValues { (_, value) -> TRObjectOrNull(context, value) }
-    return TRObject(classId, System.identityHashCode(obj), context.getClassDescriptor(classId), trObjectMap)
+    return TRObject(classId, System.identityHashCode(obj), cd, trObjectMap)
 }
 
 fun TRArrayWithElements(context: TraceContext, arr: Any, size: Int, elements: List<Any?>): TRArray {
-    val classId = context.getOrCreateClassId(arr.javaClass.name)
+    val cd = ClassDescriptor(arr.javaClass.name)
+    val classId = context.classPool.register(cd)
     val elementsAsTRValues = elements.map { value -> TRObjectOrNull(context, value) }
-    return TRArray(classId, System.identityHashCode(arr), context.getClassDescriptor(classId), size, elementsAsTRValues)
+    return TRArray(classId, System.identityHashCode(arr), cd, size, elementsAsTRValues)
 }
 
 fun TRValue(context: TraceContext, obj: Any): TRValue {
     val defaultTRObject = {
-        val classId = context.getOrCreateClassId(obj.javaClass.name)
-        TRObject(classId, System.identityHashCode(obj), context.getClassDescriptor(classId))
+        val cd = ClassDescriptor(obj.javaClass.name)
+        val classId = context.classPool.register(cd)
+        TRObject(classId, System.identityHashCode(obj), cd)
     }
     
     val defaultTRArray = { size: Int ->
-        val classId = context.getOrCreateClassId(obj.javaClass.name)
-        TRArray(classId, System.identityHashCode(obj), context.getClassDescriptor(classId), size)
+        val cd = ClassDescriptor(obj.javaClass.name)
+        val classId = context.classPool.register(cd)
+        TRArray(classId, System.identityHashCode(obj), cd, size)
     }
 
     return when (obj) {
@@ -1227,7 +1231,7 @@ internal fun DataInput.readTRObject(context: TraceContext): TRValue? {
                     }
                 }
                 val totalSize = readInt()
-                TRArray(classNameId, identityHashCode, context.getClassDescriptor(classNameId), totalSize, capturedElements)
+                TRArray(classNameId, identityHashCode, context.classPool[classNameId], totalSize, capturedElements)
             } else {
                 val fields = buildMap {
                     repeat(childrenSize) {
@@ -1236,7 +1240,7 @@ internal fun DataInput.readTRObject(context: TraceContext): TRValue? {
                         put(fieldName, fieldValue)
                     }
                 }
-                TRObject(classNameId, identityHashCode, context.getClassDescriptor(classNameId), fields)
+                TRObject(classNameId, identityHashCode, context.classPool[classNameId], fields)
             }
         }
         else -> error("TRObject: Unknown Class Id $classNameId")

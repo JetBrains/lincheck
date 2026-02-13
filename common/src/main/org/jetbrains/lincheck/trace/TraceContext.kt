@@ -49,16 +49,6 @@ class TraceContext {
 
     val classDescriptors: List<ClassDescriptor?> get() = classPool.descriptors
 
-    fun getOrCreateClassId(className: String): Int {
-        return classPool.register(ClassDescriptor(className))
-    }
-
-    fun getClassDescriptor(classId: Int): ClassDescriptor = classPool[classId]
-
-    fun restoreClassDescriptor(id: Int, value: ClassDescriptor) {
-        classPool.restore(id, value)
-    }
-
     val methodDescriptors: List<MethodDescriptor?> get() = methodPool.descriptors
 
     fun getOrCreateMethodId(className: String, methodName: String, methodType: Types.MethodType): Int {
@@ -93,7 +83,7 @@ class TraceContext {
         return getOrCreateFieldId(
             FieldDescriptor(
                 context = this,
-                classId = getOrCreateClassId(className),
+                classId = classPool.register(ClassDescriptor(className)),
                 fieldName = fieldName,
                 type = type,
                 isStatic = isStatic,

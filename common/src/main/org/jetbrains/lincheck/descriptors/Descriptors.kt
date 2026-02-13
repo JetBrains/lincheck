@@ -51,7 +51,7 @@ data class MethodDescriptor(
     override var id: Int = -1
     var isIntrinsic: Boolean = false
 
-    val classDescriptor: ClassDescriptor get() = context.getClassDescriptor(classId)
+    val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
     val methodName: String get() = methodSignature.name
     val returnType: Types.Type get() = methodSignature.methodType.returnType
@@ -77,7 +77,7 @@ data class FieldDescriptor(
     val isFinal: Boolean,
 ) : Descriptor {
     override var id: Int = -1
-    val classDescriptor: ClassDescriptor get() = context.getClassDescriptor(classId)
+    val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
 
     data class Key(

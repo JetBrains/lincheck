@@ -208,12 +208,14 @@ class TracePointCloner(
     private fun TRValue.clone(): TRValue = when (this) {
         is TRPrimitive -> TRPrimitive(classNameId, identityHashCode, primitiveValue)
         is TRArray -> {
-            val cid = context.getOrCreateClassId(className)
-            TRArray(cid, identityHashCode, context.getClassDescriptor(cid), totalSize, capturedElements.clone())
+            val cd = ClassDescriptor(className)
+            val cid = context.classPool.register(cd)
+            TRArray(cid, identityHashCode, cd, totalSize, capturedElements.clone())
         }
         is TRObject -> {
-            val cid = context.getOrCreateClassId(className)
-            TRObject(cid, identityHashCode, context.getClassDescriptor(cid), fields.clone()) 
+            val cd = ClassDescriptor(className)
+            val cid = context.classPool.register(cd)
+            TRObject(cid, identityHashCode, cd, fields.clone())
         }
     }
 

@@ -290,7 +290,7 @@ internal sealed class TraceWriterBase(
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.CLASS_DESCRIPTOR)
         dataOutput.writeInt(id)
-        dataOutput.writeClassDescriptor(context.getClassDescriptor(id))
+        dataOutput.writeClassDescriptor(context.classPool[id])
         contextState.markClassDescriptorSaved(id)
 
         writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position, -1)
