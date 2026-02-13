@@ -105,7 +105,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
         // descriptor.leaveTestingCode()
 
         // raise the exception
-        throw LincheckAnalysisAbortedError
+        throw LincheckAnalysisAbortedError()
     }
 
 }
@@ -114,9 +114,9 @@ class ManagedThreadScheduler : ThreadScheduler() {
  * This exception is used by a Lincheck analysis to abort the execution of a thread,
  * for instance, in case when a deadlock is detected.
  */
-internal object LincheckAnalysisAbortedError : Error() {
+internal class LincheckAnalysisAbortedError : Error() {
     // do not create a stack trace -- it simply can be unsafe
     override fun fillInStackTrace() = this
 
-    private fun readResolve(): Any = LincheckAnalysisAbortedError
+    private fun readResolve(): Any = LincheckAnalysisAbortedError()
 }
