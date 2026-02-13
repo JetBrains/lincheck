@@ -489,3 +489,27 @@ private fun isJavaExecutorService(className: String) =
     className.startsWith("java.util.concurrent.AbstractExecutorService") ||
     className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
     className.startsWith("java.util.concurrent.ForkJoinPool")
+
+
+/**
+ * This exception is used by a Lincheck analysis to abort the execution of a thread,
+ * for instance, in case when a deadlock is detected.
+ */
+internal class LincheckAnalysisAbortedError : Error() {
+    // do not create a stack trace -- it simply can be unsafe
+    override fun fillInStackTrace() = this
+
+    private fun readResolve(): Any = LincheckAnalysisAbortedError()
+}
+
+/**
+ * Checks if the provided exception is considered an internal exception.
+ * Internal exceptions are those used by the Lincheck itself
+ * to control execution of the analyzed code.
+ */
+@Suppress("DEPRECATION") // ThreadDeath
+internal fun isInternalException(exception: Throwable): Boolean =
+    // is used to stop thread in `AbstractActiveThreadPoolRunner` via `thread.stop()`
+    exception is ThreadDeath ||
+    // is used to abort thread in `ManagedStrategy`
+    exception is LincheckAnalysisAbortedError

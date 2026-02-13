@@ -13,9 +13,9 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import kotlinx.atomicfu.*
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.util.*
 import org.junit.*
 import org.junit.Assert.*
 
@@ -41,7 +41,7 @@ class ThreadAbortErrorInTryBlockTest {
             .threads(2)
         val failure = options.checkImpl(this::class.java)
         check(failure != null) { "the test should fail" }
-        val threadAbortedErrorName = LincheckAnalysisAbortedError()::class.simpleName!!
+        val threadAbortedErrorName = LincheckAnalysisAbortedError::class.simpleName!!
         check(failure is ManagedDeadlockFailure) {
             "$threadAbortedErrorName overrode deadlock because of try-finally"
         }
