@@ -955,6 +955,11 @@ internal abstract class ManagedStrategy(
     override fun onActorStart(iThread: Int) = runInsideIgnoredSection {
         check(runner is ExecutionScenarioRunner)
 
+        if (threadScheduler.isAborted(iThread)) {
+            enableAnalysis()
+            return
+        }
+
         val actorId = 1 + currentActorId[iThread]!!
         currentActorId[iThread] = actorId
         callStackTrace[iThread]!!.clear()
@@ -990,6 +995,12 @@ internal abstract class ManagedStrategy(
 
     override fun onActorFinish(iThread: Int) = runInsideIgnoredSection {
         check(runner is ExecutionScenarioRunner)
+
+        if (threadScheduler.isAborted(iThread)) {
+            disableAnalysis()
+            return
+        }
+
         val actorStartTracePoint = traceCollector?.trace
                 ?.filterIsInstance<MethodCallTracePoint>()
                 ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.iThread == iThread }
