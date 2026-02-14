@@ -434,7 +434,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         
         if (isInLiveDebuggerMode) return isLiveDebuggerBreakpointClass(className)
 
-        return AnalysisProfile.DEFAULT.shouldTransform(className, "")
+        return AnalysisProfile.DEFAULT.shouldTransform(className)
     }
 
 

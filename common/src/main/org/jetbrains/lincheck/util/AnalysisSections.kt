@@ -295,11 +295,10 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
      * Determines whether a given class and method should be transformed (instrumented) for analysis.
      *
      * @param className The fully qualified name of the class to check
-     * @param methodName The name of the method to check
      * @return true if the class/method should be transformed, false otherwise
      */
-    @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future  
-    fun shouldTransform(className: String, methodName: String): Boolean {
+    @Suppress("UNUSED_PARAMETER")
+    fun shouldTransform(className: String): Boolean {
         // We do not need to instrument most standard Java classes.
         // It is fine to inject the Lincheck analysis only into the
         // `java.util.*` ones, ignored the known atomic constructs.
