@@ -320,6 +320,13 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
             }
             return false
         }
+        if (className.startsWith("javax.")) return false
+        if (className.startsWith("jdk.")) {
+            // Transform `ThreadContainer.start` to detect thread forking.
+            if (isThreadContainerClass(className)) return true
+            return false
+        }
+
         if (className.startsWith("com.sun.")) return false
         if (className.startsWith("sun.")) {
             // We should never instrument the Lincheck classes.
@@ -327,12 +334,7 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
             if (isInTraceDebuggerMode && className.startsWith("sun.nio.")) return true
             return false
         }
-        if (className.startsWith("javax.")) return false
-        if (className.startsWith("jdk.")) {
-            // Transform `ThreadContainer.start` to detect thread forking.
-            if (isThreadContainerClass(className)) return true
-            return false
-        }
+
         // Old legacy Java std library for CORBA,
         // for instance, `org/omg/stub/javax/management`;
         // can appear on Java 8 when JMX is used.
