@@ -89,6 +89,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
             "org.objectweb.asm",
             "net.bytebuddy",
             "org.java_websocket",
+            "kotlinx.serialization",
         )
         
         packagesToShade.forEach { packageName ->

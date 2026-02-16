@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("maven-publish")
     id("org.jetbrains.dokka")
+    kotlin("plugin.serialization")
 }
 
 repositories {
