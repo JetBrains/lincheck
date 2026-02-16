@@ -4,6 +4,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("maven-publish")
     id("org.jetbrains.dokka")
+    kotlin("plugin.serialization")
 }
 
 repositories {
@@ -23,6 +24,7 @@ sourceSets {
         // main
         val asmVersion: String by project
         val byteBuddyVersion: String by project
+        val kotlinxSerializationVersion: String by project
 
         compileOnly(project(":bootstrap"))
         implementation(project(":common"))
@@ -32,6 +34,7 @@ sourceSets {
         api("org.ow2.asm:asm-util:${asmVersion}")
         api("net.bytebuddy:byte-buddy:${byteBuddyVersion}")
         api("net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}")
+        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${kotlinxSerializationVersion}")
 
         val junitVersion: String by project
 

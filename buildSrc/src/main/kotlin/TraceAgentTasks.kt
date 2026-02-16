@@ -88,6 +88,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
         val packagesToShade = listOf(
             "org.objectweb.asm",
             "net.bytebuddy",
+            "kotlinx.serialization",
         )
         
         packagesToShade.forEach { packageName ->

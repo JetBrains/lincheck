@@ -41,10 +41,12 @@ import javax.management.remote.JMXServiceURL
  *       Example: `mode=traceRecorder`
  *       If not specified, falls back to system properties for backward compatibility.
  *
- * - class — fully qualified class name to run/transform (required).
+ * - class — fully qualified class name to run/transform (required for traceRecorder/traceDebugger;
+ *       must be omitted for liveDebugger).
  *       Example: `class=org.example.MyTest`
  *
- * - method (required) — name of the public method in that class (required).
+ * - method — name of the public method in that class (required for traceRecorder/traceDebugger;
+ *       must be omitted for liveDebugger).
  *       Example: `method=run`
  *
  * - output — path to a file for trace dump, if supported by the agent (optional).
@@ -61,6 +63,9 @@ import javax.management.remote.JMXServiceURL
  *
  * - jmxMBean — enables registration of JMX MBean for remote monitoring and management.
  *       Example: `jmxMBean=on` or `jmxMBean=off`, it is off by default.
+ *
+ * - breakpointsFile — path to a JSON file with live debugger breakpoints (optional, liveDebugger mode only).
+ *       Example: `breakpointsFile="/tmp/breakpoints.json"`
  *
  * - format — output format for trace recorder dumps. Possible options are:
  *       * `binary` --- serialized binary format;
@@ -114,6 +119,7 @@ object TraceAgentParameters {
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
     const val ARGUMENT_JMX_MBEAN = "jmxMBean"
+    const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
 
     const val DEFAULT_TRACE_PORT = 9997
 
@@ -134,21 +140,24 @@ object TraceAgentParameters {
         get() = (getArg(ARGUMENT_JMX_MBEAN)?.lowercase() == "on")
 
     @JvmStatic
+    val breakpointsFilePath: String?
+        get() = getArg(ARGUMENT_BREAKPOINTS_FILE)
+
+    @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()
 
     @JvmStatic
     fun parseArgs(args: String?, validAdditionalArgs: List<String>) {
-        if (args == null) {
-            error("Please provide class and method names as arguments")
-        }
+        namedArgs.clear()
+        val actualArgs = args ?: ""
         // Store for metainformation
-        rawArgs = args
+        rawArgs = actualArgs
 
         // Try to parse key=value format
-        val kvArguments = parseKVArgs(args)
+        val kvArguments = parseKVArgs(actualArgs)
         if (kvArguments == null) {
             Logger.warn { "Looks like old-style arguments found, consider migrate to key-value arguments" }
-            val actualArguments = splitArgs(args)
+            val actualArguments = splitArgs(actualArgs)
 
             classUnderTraceDebugging = actualArguments.getOrNull(0) ?: ""
             methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: ""
@@ -198,6 +207,13 @@ object TraceAgentParameters {
         }
         if (methodUnderTraceDebugging.isBlank()) {
             error("Method name was not provided")
+        }
+    }
+
+    @JvmStatic
+    fun validateClassAndMethodArgumentsAreNotProvidedInLiveDebuggerMode() {
+        if (classUnderTraceDebugging.isNotBlank() || methodUnderTraceDebugging.isNotBlank()) {
+            error("Class and method arguments are not allowed in live debugger mode")
         }
     }
 
