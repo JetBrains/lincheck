@@ -285,8 +285,19 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
 
         // In the trace recording mode, we do not instrument Java/Kotlin stdlib classes.
-        if (className.startsWith("java.") || className.startsWith("kotlin.") ||
-            className.startsWith("jdk.")
+        if (className.startsWith("java.")       ||
+            className.startsWith("javax.")      ||
+            className.startsWith("kotlin.")
+        ) return false
+
+        // Also do not instrument some internal JDK libraries.
+        if (className.startsWith("jdk.")        ||
+            className.startsWith("sun.")        ||
+            className.startsWith("com.sun.")    ||
+            // Old legacy Java std library for CORBA,
+            // for instance, `org/omg/stub/javax/management`;
+            // can appear on Java 8 when JMX is used.
+            className.startsWith("org.omg.")
         ) return false
 
         // there is a bug with instrumentation of android tools classes,
