@@ -239,19 +239,6 @@ class FilteredTransformationProfile(
     }
 
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
-        // TODO: simplify after complete migration
-
-        // exclude has a higher priority
-        if (excludeRegexes.any { it.matches(className) }) {
-            return TransformationConfiguration.UNTRACKED
-        }
-
-        // if the include list is specified, instrument only included classes
-        if (includeRegexes.isNotEmpty() && !includeRegexes.any { it.matches(className) }) {
-            return TransformationConfiguration.UNTRACKED
-        }
-
-        // otherwise, delegate decision to the base profile
         return baseProfile.getMethodConfiguration(className, methodName, descriptor)
     }
 
