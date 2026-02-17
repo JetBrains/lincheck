@@ -94,7 +94,7 @@ sealed class TestGenerator(
                         extraJvmArgs = listOf(${testCase.jvmArgs.joinToString { it.toLiteral() }}),
                         commands = listOf(${testCase.gradleCommand.toLiteral()}),
                         checkRepresentation = ${testCase.checkRepresentation},
-                        traceShouldContain = listOf(${testCase.traceShouldContain.joinToString { it.toLiteral() }})$breakpointsArg
+                        traceShouldContain = listOf(${testCase.traceShouldContain.joinToString { it.toLiteral() }}),
                         breakpointsJson = $breakpointsArg
                     )
                 }

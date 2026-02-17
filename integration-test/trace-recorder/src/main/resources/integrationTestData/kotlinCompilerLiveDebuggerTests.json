@@ -1,0 +1,270 @@
+[
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testReflectionReference",
+      "testReceiverInEquals"
+    ],
+    "checkRepresentation": false,
+    "breakpoints": [
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 968,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator",
+        "filePath": "CallAndReferenceGenerator.kt",
+        "line": 62,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator",
+        "filePath": "CallAndReferenceGenerator.kt",
+        "line": 481,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 692,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 482,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator",
+        "filePath": "ClassMemberGenerator.kt",
+        "line": 104,
+        "condition": null
+      }
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testCapturedDefaults",
+      "testExtensionReceiverVsDefault"
+    ],
+    "checkRepresentation": false,
+    "breakpoints": [
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 968,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator",
+        "filePath": "CallAndReferenceGenerator.kt",
+        "line": 62,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator",
+        "filePath": "CallAndReferenceGenerator.kt",
+        "line": 481,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 692,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 482,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator",
+        "filePath": "ClassMemberGenerator.kt",
+        "line": 104,
+        "condition": null
+      }
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testSimple",
+      "testSimpleMultiModule"
+    ],
+    "checkRepresentation": false,
+    "breakpoints": [
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 466,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrConverter",
+        "filePath": "Fir2IrConverter.kt",
+        "line": 193,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator",
+        "filePath": "ClassMemberGenerator.kt",
+        "line": 57,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator",
+        "filePath": "ClassMemberGenerator.kt",
+        "line": 104,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 579,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 692,
+        "condition": null
+      }
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testDefaultArgs",
+      "testCrossModuleTypeOf"
+    ],
+    "checkRepresentation": false,
+    "breakpoints": [
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 692,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 482,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator",
+        "filePath": "CallAndReferenceGenerator.kt",
+        "line": 481,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator",
+        "filePath": "ClassMemberGenerator.kt",
+        "line": 104,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrConverter",
+        "filePath": "Fir2IrConverter.kt",
+        "line": 77,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.AnnotationGenerator",
+        "filePath": "AnnotationGenerator.kt",
+        "line": 35,
+        "condition": null
+      }
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Coroutines",
+    "gradleCommand": ":compiler:fir:fir2ir:test",
+    "methods": [
+      "testAsync"
+    ],
+    "checkRepresentation": false,
+    "breakpoints": [
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 692,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 482,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 504,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator",
+        "filePath": "CallAndReferenceGenerator.kt",
+        "line": 481,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator",
+        "filePath": "ClassMemberGenerator.kt",
+        "line": 104,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrConverter",
+        "filePath": "Fir2IrConverter.kt",
+        "line": 193,
+        "condition": null
+      }
+    ]
+  },
+  {
+    "class": "org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$ControlFlowAnalysis",
+    "gradleCommand": ":compiler:fir:analysis-tests:test",
+    "methods": [
+      "testAssignedInFinally"
+    ],
+    "checkRepresentation": false,
+    "breakpoints": [
+      {
+        "className": "org.jetbrains.kotlin.fir.analysis.cfa.FirPropertyInitializationAnalyzer",
+        "filePath": "FirPropertyInitializationAnalyzer.kt",
+        "line": 38,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 1654,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
+        "filePath": "Fir2IrVisitor.kt",
+        "line": 579,
+        "condition": null
+      },
+      {
+        "className": "org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirAnnotationChecker",
+        "filePath": "FirAnnotationChecker.kt",
+        "line": 55,
+        "condition": null
+      }
+    ]
+  }
+]

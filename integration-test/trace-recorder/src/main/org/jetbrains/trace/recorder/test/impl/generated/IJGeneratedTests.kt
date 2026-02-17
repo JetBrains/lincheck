@@ -26,7 +26,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = true,
-                traceShouldContain = listOf()
+                traceShouldContain = listOf(),
+                breakpointsJson = null
             )
         }
     }
@@ -43,7 +44,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("InlinePatternVariableTest.java", "InNestedCondition.java")
+                traceShouldContain = listOf("InlinePatternVariableTest.java", "InNestedCondition.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -60,7 +62,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("JavaVersionBasedScope.java")
+                traceShouldContain = listOf("JavaVersionBasedScope.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -77,7 +80,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("CodeBlockSurrounder.java")
+                traceShouldContain = listOf("CodeBlockSurrounder.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -94,7 +98,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("IgnoreResultOfCallInspectionTest.java")
+                traceShouldContain = listOf("IgnoreResultOfCallInspectionTest.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -111,7 +116,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("AccessCanBeTightenedInspection.java")
+                traceShouldContain = listOf("AccessCanBeTightenedInspection.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -128,7 +134,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("WhileCanBeDoWhileInspection.java")
+                traceShouldContain = listOf("WhileCanBeDoWhileInspection.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -145,7 +152,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("JavaCompletionUtil.java")
+                traceShouldContain = listOf("JavaCompletionUtil.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -162,7 +170,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("ConstantValueInspection.java")
+                traceShouldContain = listOf("ConstantValueInspection.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -179,7 +188,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("JavaUnresolvableLocalCollisionDetector.java")
+                traceShouldContain = listOf("JavaUnresolvableLocalCollisionDetector.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -196,7 +206,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("JavaQuoteHandler.java")
+                traceShouldContain = listOf("JavaQuoteHandler.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -213,7 +224,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("ObsoleteApiUsageInspection.kt")
+                traceShouldContain = listOf("ObsoleteApiUsageInspection.kt"),
+                breakpointsJson = null
             )
         }
     
@@ -227,7 +239,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("ObsoleteApiUsageInspection.kt")
+                traceShouldContain = listOf("ObsoleteApiUsageInspection.kt"),
+                breakpointsJson = null
             )
         }
     }
@@ -244,7 +257,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("HighlightVisitorImpl.java")
+                traceShouldContain = listOf("HighlightVisitorImpl.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -261,7 +275,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("TypesDistinctProver.java")
+                traceShouldContain = listOf("TypesDistinctProver.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -278,7 +293,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("ExternalAnnotationsRepositoryResolver.kt")
+                traceShouldContain = listOf("ExternalAnnotationsRepositoryResolver.kt"),
+                breakpointsJson = null
             )
         }
     }
@@ -295,7 +311,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("GenericsUtil.java")
+                traceShouldContain = listOf("GenericsUtil.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -312,7 +329,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("InheritanceUtil.java")
+                traceShouldContain = listOf("InheritanceUtil.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -329,7 +347,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("ControlFlowAnalyzer.java")
+                traceShouldContain = listOf("ControlFlowAnalyzer.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -346,7 +365,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("JavaDfaValueFactory.java")
+                traceShouldContain = listOf("JavaDfaValueFactory.java"),
+                breakpointsJson = null
             )
         }
     
@@ -360,7 +380,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("FindBugsAnnotationSupport.java")
+                traceShouldContain = listOf("FindBugsAnnotationSupport.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -377,7 +398,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("Registry.kt")
+                traceShouldContain = listOf("Registry.kt"),
+                breakpointsJson = null
             )
         }
     }
@@ -394,7 +416,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("CoreProgressManager.java")
+                traceShouldContain = listOf("CoreProgressManager.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -411,7 +434,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("ReplaceConstructorWithFactoryAction.java")
+                traceShouldContain = listOf("ReplaceConstructorWithFactoryAction.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -428,7 +452,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("PsiMethodReferenceUtil.java")
+                traceShouldContain = listOf("PsiMethodReferenceUtil.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -445,7 +470,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("EnhancedSwitchMigrationInspection.java")
+                traceShouldContain = listOf("EnhancedSwitchMigrationInspection.java"),
+                breakpointsJson = null
             )
         }
     }
@@ -462,7 +488,8 @@ class IJTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(""),
                 checkRepresentation = false,
-                traceShouldContain = listOf("NullableStuffInspectionBase.java")
+                traceShouldContain = listOf("NullableStuffInspectionBase.java"),
+                breakpointsJson = null
             )
         }
     }

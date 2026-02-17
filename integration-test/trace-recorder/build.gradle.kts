@@ -28,7 +28,7 @@ sourceSets {
 }
 
 enum class TraceAgentIntegrationTestSuite {
-    Basic, KotlinCompiler, Ktor, IJ, KtorLiveDebugger, All
+    Basic, KotlinCompiler, Ktor, IJ, KtorLiveDebugger, KotlinxImmutableCollectionsLiveDebugger, KotlinCompilerLiveDebugger, All
 }
 
 tasks {
@@ -47,6 +47,8 @@ tasks {
         "ktor" -> TraceAgentIntegrationTestSuite.Ktor
         "ij" -> TraceAgentIntegrationTestSuite.IJ
         "ktorlivedebugger" -> TraceAgentIntegrationTestSuite.KtorLiveDebugger
+        "kotlinximmutablecollectionslivedebugger" -> TraceAgentIntegrationTestSuite.KotlinxImmutableCollectionsLiveDebugger
+        "kotlincompilerlivedebugger" -> TraceAgentIntegrationTestSuite.KotlinCompilerLiveDebugger
         "all", null -> TraceAgentIntegrationTestSuite.All
         else -> error("Unknown integration test suite type: $integrationTestSuite")
     }
@@ -69,12 +71,16 @@ tasks {
             TraceAgentIntegrationTestSuite.Ktor -> include("**/*KtorTraceRecorderJsonIntegrationTests*")
             TraceAgentIntegrationTestSuite.IJ -> include("**/*IJTraceRecorderJsonIntegrationTests*")
             TraceAgentIntegrationTestSuite.KtorLiveDebugger -> include("**/*KtorLiveDebuggerTraceRecorderJsonIntegrationTests*")
+            TraceAgentIntegrationTestSuite.KotlinxImmutableCollectionsLiveDebugger -> include("**/*KotlinxImmutableCollectionsLiveDebuggerTraceRecorderJsonIntegrationTests*")
+            TraceAgentIntegrationTestSuite.KotlinCompilerLiveDebugger -> include("**/*KotlinCompilerLiveDebuggerTraceRecorderJsonIntegrationTests*")
             TraceAgentIntegrationTestSuite.All -> {}
             TraceAgentIntegrationTestSuite.Basic -> exclude(
                 "**/*KotlinCompilerTraceRecorderJsonIntegrationTests*",
                 "**/*KtorTraceRecorderJsonIntegrationTests*",
                 "**/*IJTraceRecorderJsonIntegrationTests*",
                 "**/*KtorLiveDebuggerTraceRecorderJsonIntegrationTests*",
+                "**/*KotlinxImmutableCollectionsLiveDebuggerTraceRecorderJsonIntegrationTests*",
+                "**/*KotlinCompilerLiveDebuggerTraceRecorderJsonIntegrationTests*",
             )
         }
 
