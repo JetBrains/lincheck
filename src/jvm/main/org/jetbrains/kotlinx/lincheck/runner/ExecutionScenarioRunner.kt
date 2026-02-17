@@ -496,7 +496,7 @@ internal class ExecutionScenarioRunner(
      * Is invoked if an actor execution has thrown an exception.
      *
      * Default implementation checks if the failure
-     * was caused by an internal exception (see [isInternalException]) and re-throw in this case,
+     * was caused by an internal exception (see [isLincheckInternalException]) and re-throw in this case,
      * otherwise it treats the exception as a normal actor result.
      *
      * @param iThread the number of the invoking thread where the failure occurred.
@@ -504,7 +504,7 @@ internal class ExecutionScenarioRunner(
      */
     // used in byte-code generation
     fun onActorFailure(iThread: Int, throwable: Throwable) {
-        if (isInternalException(throwable)) {
+        if (isLincheckInternalException(throwable)) {
             if (strategy is ManagedStrategy) {
                 (strategy as ManagedStrategy).onInternalException(iThread, throwable)
             } else {

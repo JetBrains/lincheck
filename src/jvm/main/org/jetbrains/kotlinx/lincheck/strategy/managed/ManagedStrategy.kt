@@ -761,7 +761,7 @@ internal abstract class ManagedStrategy(
         // scenario threads are handled separately by the runner itself
         if (currentThreadId < nScenarioThreads) return
         // check if the exception is internal
-        if (isInternalException(exception)) {
+        if (isLincheckInternalException(exception)) {
             onInternalException(currentThreadId, exception)
         } else {
             // re-throw any non-internal exception,
@@ -929,13 +929,13 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * This method is executed if an internal exception has been thrown (see [isInternalException]).
+     * This method is executed if an internal exception has been thrown (see [isLincheckInternalException]).
      *
      * @param threadId the thread id of the thread where exception was thrown.
      * @param exception the exception that was thrown.
      */
     open fun onInternalException(threadId: Int, exception: Throwable): Unit = runInsideIgnoredSection {
-        check(isInternalException(exception))
+        check(isLincheckInternalException(exception))
         // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         disableAnalysis()
@@ -954,6 +954,11 @@ internal abstract class ManagedStrategy(
 
     override fun onActorStart(iThread: Int) = runInsideIgnoredSection {
         check(runner is ExecutionScenarioRunner)
+
+        if (threadScheduler.isAborted(iThread)) {
+            enableAnalysis()
+            return
+        }
 
         val actorId = 1 + currentActorId[iThread]!!
         currentActorId[iThread] = actorId
@@ -990,6 +995,12 @@ internal abstract class ManagedStrategy(
 
     override fun onActorFinish(iThread: Int) = runInsideIgnoredSection {
         check(runner is ExecutionScenarioRunner)
+
+        if (threadScheduler.isAborted(iThread)) {
+            disableAnalysis()
+            return
+        }
+
         val actorStartTracePoint = traceCollector?.trace
                 ?.filterIsInstance<MethodCallTracePoint>()
                 ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.iThread == iThread }

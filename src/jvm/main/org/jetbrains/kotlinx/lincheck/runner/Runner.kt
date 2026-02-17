@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.lincheck.util.ensure
 import sun.nio.ch.lincheck.Injections
@@ -104,15 +103,3 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
         executor.close()
     }
 }
-
-/**
- * Checks if the provided exception is considered an internal exception.
- * Internal exceptions are those used by the Lincheck itself
- * to control execution of the analyzed code.
- */
-@Suppress("DEPRECATION") // ThreadDeath
-internal fun isInternalException(exception: Throwable): Boolean =
-    // is used to stop thread in `FixedActiveThreadsExecutor` via `thread.stop()`
-    exception is ThreadDeath ||
-    // is used to abort thread in `ManagedStrategy`
-    exception is LincheckAnalysisAbortedError

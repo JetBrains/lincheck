@@ -12,8 +12,8 @@ package org.jetbrains.kotlinx.lincheck.trace
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import org.jetbrains.kotlinx.lincheck.runner.isInternalException
-import org.jetbrains.kotlinx.lincheck.strategy.managed.LincheckAnalysisAbortedError
+import org.jetbrains.lincheck.util.isLincheckInternalException
+import org.jetbrains.lincheck.util.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.descriptors.CodeLocations
@@ -350,7 +350,7 @@ internal class MethodCallTracePoint(
 
     fun initializeThrownException(exception: Throwable) {
         this.thrownException = exception
-        if (!isInternalException(exception)) {
+        if (!isLincheckInternalException(exception)) {
             this.returnedValue = ReturnedValueResult.ExceptionResult(exception::class.java.simpleName)
         }
     }
