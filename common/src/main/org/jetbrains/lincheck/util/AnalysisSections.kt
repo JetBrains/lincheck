@@ -152,8 +152,14 @@ inline fun <R> ThreadDescriptor?.runInsideIgnoredSection(block: () -> R): R {
     try {
         return block()
     } catch (t: Throwable) {
+        // print the exception to see it in logs and hide it, so that methods like
+        // `EventTracker::onThreadRunException` only accept exceptions thrown from the
+        // user code and not our injections
         if (!isLincheckInternalException(t)) {
             Logger.error(t)
+        } else {
+            // print internal exceptions only in verbose mode
+            Logger.verbose(t)
         }
         throw t
     } finally {
@@ -224,6 +230,9 @@ inline fun <R> ThreadDescriptor?.runInsideInjectedCode(block: () -> R): R? {
         // user code and not our injections
         if (!isLincheckInternalException(t)) {
             Logger.error(t)
+        } else {
+            // print internal exceptions only in verbose mode
+            Logger.verbose(t)
         }
         return null
     } finally {
