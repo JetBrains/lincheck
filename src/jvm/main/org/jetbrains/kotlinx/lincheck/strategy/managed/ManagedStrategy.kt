@@ -939,12 +939,6 @@ internal abstract class ManagedStrategy(
         setCurrentThread(nextThread)
     }
 
-    // TODO: We need to abort all threads if for some reason there is an unexecpected exception when strating threads in lincheck
-    // How we do that execatly is still ot be determined.
-    fun onThreadStartException(exception: Throwable): Unit {
-        threadScheduler.abortAllThreads()
-        throw exception
-    }
 
     /**
      * This method is executed if an internal exception has been thrown (see [isLincheckInternalException]).
@@ -1585,7 +1579,7 @@ internal abstract class ManagedStrategy(
         // Fast-check for immutable objects without entering an ignored section.
         // Please note that this check must not produce Lincheck events.
         //TODO: Should we relax this check if the object tracker wants to track primitive values?
-        if (obj.isImmutable) return
+        if (obj.isPrimitive()) return
         threadDescriptor.runInsideIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker.registerNewObject(obj)

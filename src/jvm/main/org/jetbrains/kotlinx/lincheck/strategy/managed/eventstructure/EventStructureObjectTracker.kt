@@ -42,8 +42,6 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
 
 
-    var primitiveMap: MutableMap<ValueID, OpaqueValue> = mutableMapOf()
-
     private var initEvent: AtomicThreadEvent? = null
 
     fun initialize(initEvent: AtomicThreadEvent) {
@@ -80,7 +78,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 
     fun getObject(id: ObjectNumber): OpaqueValue? {
-        return primitiveMap[id.toLong()] ?: lookupByNumber(id)?.objectReference?.get()?.opaque()
+        return lookupByNumber(id)?.objectReference?.get()?.opaque()
     }
 }
 
