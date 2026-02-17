@@ -257,11 +257,9 @@ object StressDefaultTransformationProfile : TransformationProfile {
     override fun shouldTransform(className: String): Boolean {
         // In the stress testing mode, we can simply skip the standard
         // Java and Kotlin classes -- they do not have coroutine suspension points.
-        if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
-
         if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
-        if (isRecognizedUninstrumentedClass(className)) return false
 
+        if (isRecognizedUninstrumentedClass(className)) return false
         return true
     }
 
@@ -286,13 +284,14 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         if (className == "java.lang.Thread") return true
         if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
 
+        // In the trace recording mode, we do not instrument Java/Kotlin stdlib classes.
+        if (isRecognizedUninstrumentedThirdPartyLibraryClass(className)) return false
+
         // there is a bug with instrumentation of android tools classes,
         // see https://youtrack.jetbrains.com/issue/JBRes-7051
         if (className.startsWith("com.android.tools.")) return false
 
-        if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
         if (isRecognizedUninstrumentedClass(className)) return false
-
         return true
     }
 
