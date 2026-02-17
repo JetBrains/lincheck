@@ -36,6 +36,45 @@ internal const val LINCHECK_RELOCATED_PACKAGE_PREFIX = "org.jetbrains.lincheck.s
 
 
 // ========================================================
+//   Java and Kotlin standard libraries
+// ========================================================
+
+/* Top-level package checks only, see below more specific checks for parts of Java/Kotlin stdlib */
+
+/**
+ * Checks if the given class name belongs to the Java standard library (`java` or `javax` packages).
+ */
+fun isJavaStandardLibraryClass(className: String) =
+    className.startsWith("java.") ||
+    className.startsWith("javax.")
+
+/**
+ * Checks if the given class name belongs to the Java platform library (`jdk` or `sun` packages).
+ */
+fun isJdkLibraryClass(className: String) =
+    className.startsWith("jdk.")        ||
+    className.startsWith("sun.")        ||
+    className.startsWith("com.sun.")    ||
+    // Old legacy Java std library for CORBA, for instance, `org/omg/stub/javax/management`;
+    // can appear on Java 8 when JMX is used.
+    className.startsWith("org.omg.")
+
+/**
+ * Checks if the given class name belongs to the Kotlin standard library (`kotlin` package).
+ */
+fun isKotlinStandardLibraryClass(className: String) =
+    className.startsWith("kotlin.")
+
+/**
+ * Checks if the given class name belongs to a recognized uninstrumented standard library class
+ * (including Java and Kotlin standard libraries, as well as JDK libraries).
+ */
+fun isRecognizedUninstrumentedStandardLibraryClass(className: String) =
+    isJavaStandardLibraryClass(className) ||
+    isJdkLibraryClass(className) ||
+    isKotlinStandardLibraryClass(className)
+
+// ========================================================
 //   Instrumentation libraries
 // ========================================================
 
