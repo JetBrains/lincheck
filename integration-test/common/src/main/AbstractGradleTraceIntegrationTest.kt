@@ -14,6 +14,19 @@ import java.io.File
 import java.nio.file.Paths
 
 abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest() {
+
+    protected open fun buildAgentArgs(
+        testClassName: String,
+        testMethodName: String,
+        pathToOutput: String,
+        extraAgentArgs: Map<String, String>,
+    ): String {
+        return "class=${testClassName.escapeDollar()},method=${testMethodName.escapeDollar()},output=${pathToOutput.escapeDollar()}" +
+                extraAgentArgs.entries
+                    .joinToString(",") { "${it.key}=${it.value.escapeDollar()}" }
+                    .let { if (it.isNotEmpty()) ",$it" else it }
+    }
+
     override fun runTestImpl(
         testClassName: String,
         testMethodName: String,
@@ -45,12 +58,12 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
     /**
      * Creates a new gradle connection to the project from [projectPath].
      */
-    private fun createGradleConnection(): ProjectConnection = GradleConnector
+    protected fun createGradleConnection(): ProjectConnection = GradleConnector
         .newConnector()
         .forProjectDirectory(File(projectPath))
         .connect()
 
-    private fun createInitScriptAsTempFile(content: String): File {
+    protected fun createInitScriptAsTempFile(content: String): File {
         val tempFile = File.createTempFile("initScript", ".gradle.kts")
         tempFile.deleteOnExit()
         tempFile.writeText(content)
@@ -67,11 +80,7 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
     ): String {
         // We need to escape it twice, as our argument parser will de-escape it when split into array
         val pathToOutput = fileToDump.absolutePath.escape().escape()
-        val agentArgs =
-            "class=${testClassName.escapeDollar()},method=${testMethodName.escapeDollar()},output=${pathToOutput.escapeDollar()}" +
-                    extraAgentArgs.entries
-                        .joinToString(",") { "${it.key}=${it.value.escapeDollar()}" }
-                        .let { if (it.isNotEmpty()) ",$it" else it }
+        val agentArgs = buildAgentArgs(testClassName, testMethodName, pathToOutput, extraAgentArgs)
         return """
             gradle.taskGraph.whenReady {
                 val gradleCommands = listOf(${gradleCommands.joinToString(",") { "\"$it\"" }})

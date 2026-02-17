@@ -18,4 +18,5 @@ data class TestCase(
     val checkRepresentation: Boolean,
     val traceShouldContain: List<String> = emptyList(),
     val reasonForMuting: String? = null,
+    val breakpoints: String? = null,
 )

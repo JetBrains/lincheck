@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 
 /**
  * Basic JSON entry describing how to run a single test method.
@@ -29,6 +30,7 @@ data class JsonTestEntry(
     val checkRepresentation: Boolean = false,
     val reasonsForMuting: Map<String, String> = emptyMap(),
     val traceShouldContain: List<String> = emptyList(),
+    val breakpoints: JsonArray? = null,
 )
 
 internal fun loadResourceText(resourcePath: String, loader: Class<*>): String {

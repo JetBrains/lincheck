@@ -42,7 +42,8 @@ sealed class TestGenerator(
                     jvmArgs = jsonEntry.jvmArgs,
                     checkRepresentation = jsonEntry.checkRepresentation,
                     traceShouldContain = jsonEntry.traceShouldContain,
-                    reasonForMuting = jsonEntry.reasonsForMuting[it]
+                    reasonForMuting = jsonEntry.reasonsForMuting[it],
+                    breakpoints = jsonEntry.breakpoints?.toString()
                 )
             }
         }
@@ -80,6 +81,8 @@ sealed class TestGenerator(
 
         val disabledString = testCase.reasonForMuting?.let { "@Disabled(${it.toLiteral()})\n" } ?: ""
 
+        val breakpointsArg = testCase.breakpoints?.let { "\"\"\"$it\"\"\"" } ?: "null"
+
         return disabledString + """
                 @Nested
                 inner class $generatedTestClassName : $abstractTestClass() {
@@ -91,7 +94,8 @@ sealed class TestGenerator(
                         extraJvmArgs = listOf(${testCase.jvmArgs.joinToString { it.toLiteral() }}),
                         commands = listOf(${testCase.gradleCommand.toLiteral()}),
                         checkRepresentation = ${testCase.checkRepresentation},
-                        traceShouldContain = listOf(${testCase.traceShouldContain.joinToString { it.toLiteral() }})
+                        traceShouldContain = listOf(${testCase.traceShouldContain.joinToString { it.toLiteral() }})$breakpointsArg
+                        breakpointsJson = $breakpointsArg
                     )
                 }
                 """.trimIndent()
