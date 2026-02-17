@@ -180,8 +180,14 @@ internal class DirectTraceWriter(
     }
 }
 
-class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingStrategy {
+class MemoryTraceCollecting(
+    private val context: TraceContext, 
+    private val collectFlat: Boolean,
+): TraceCollectingStrategy {
     val points = AtomicLong(0)
+
+    private val _flatListsPerThread = HashMap<Int, MutableList<TRTracePoint>>()
+    val flatListsPerThread: Map<Int, List<TRTracePoint>> get() = _flatListsPerThread
 
     override fun registerCurrentThread(threadId: Int) {
         context.setThreadName(threadId, Thread.currentThread().name)
@@ -195,6 +201,11 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
     ) {
         points.incrementAndGet()
         parent?.addChild(created)
+        if (collectFlat) {
+            _flatListsPerThread
+                .getOrPut(created.threadId) { mutableListOf() }
+                .add(created)
+        }
     }
 
     override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {}
