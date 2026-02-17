@@ -293,6 +293,10 @@ object StressDefaultTransformationProfile : TransformationProfile {
 object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
     override fun shouldTransform(className: String): Boolean {
+        // Instrument thread-related classes to intercept `Thread.run` beginning/end.
+        if (className == "java.lang.Thread") return true
+        if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
+
         // In the trace recording mode, we do not instrument Java/Kotlin stdlib classes.
         if (className.startsWith("java.") || className.startsWith("kotlin.") ||
             className.startsWith("jdk.")
