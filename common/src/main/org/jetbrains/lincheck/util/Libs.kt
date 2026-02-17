@@ -123,7 +123,7 @@ fun isRecognizedApacheLibraryClass(className: String) =
  * These are classes from specific third-party libraries that
  * are used as is and should not be subject to Lincheck instrumentation.
  */
-fun isRecognizedUninstrumentedLibraryClass(className: String) =
+fun isRecognizedUninstrumentedThirdPartyLibraryClass(className: String) =
     // fast-util data structures
     className.startsWith("it.unimi.dsi.fastutil.") ||
     // misc

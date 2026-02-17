@@ -629,7 +629,8 @@ private fun isRecognizedUninstrumentedClass(className: String): Boolean {
     if (isRecognizedTestingLibraryClass(className)) return true
     if (isRecognizedLoggingLibraryClass(className)) return true
     if (isRecognizedApacheLibraryClass(className)) return true
-    if (isRecognizedUninstrumentedLibraryClass(className)) return true
+
+    if (isRecognizedUninstrumentedThirdPartyLibraryClass(className)) return true
 
     // All the classes that were not filtered out are eligible for transformation.
     return false
