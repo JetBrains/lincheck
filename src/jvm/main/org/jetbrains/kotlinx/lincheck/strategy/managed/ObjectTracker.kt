@@ -156,6 +156,11 @@ fun ObjectTracker.registerObjectIfAbsent(obj: Any): ObjectEntry =
 typealias ObjectID = Long
 
 /**
+ * A type alias for representing a unique serial number of registered objects.
+ */
+typealias ObjectNumber = Int
+
+/**
  * Represents an entry for the tracked object.
  *
  * @property objectNumber A unique serial number for the object.
@@ -177,11 +182,8 @@ open class ObjectEntry(
  * The serial number [ObjectEntry.objectNumber] is stored in the higher 32-bits of the id, while
  * the identity hash code [ObjectEntry.objectHashCode] is stored in the lower 32-bits.
  */
-
 val ObjectEntry.objectID: ObjectID get() =
-    (this@objectID.objectNumber.toLong() shl 32) + objectHashCode.toLong()
-
-
+    (objectNumber.toLong() shl 32) + objectHashCode.toLong()
 
 /**
  * Extracts and returns the object number from the given object id.
@@ -287,7 +289,6 @@ fun ObjectTracker.getObjectRepresentation(obj: Any?): String = when {
     obj is String -> "\"$obj\""
 
     // immutable types (including primitive types) have trivial `toString` implementation
-    // TODO: Should we actually register the object if the objet tracker can work with immutable objects? Probably not
     obj.isImmutable -> obj.toString()
 
     // Add specific support for `Symbol` from Kotlin Coroutines,
@@ -390,9 +391,13 @@ private class Lambda
  */
 open class BaseObjectTracker : ObjectTracker {
 
+    /**
+     * Indicates whether the object tracker should track immutable value objects (false by default).
+     */
+    protected open val shouldTrackImmutableValues = false
+
     // counter of all registered objects
     private var objectCounter = 0
-    protected open val shouldTrackImmutableValues = false;
 
     // index of all registered objects
     protected val objectIndex = HashMap<IdentityHashCode, MutableList<ObjectEntry>>()
@@ -552,4 +557,3 @@ private fun ReferenceQueue<Any>.clear() {
 }
 
 private typealias IdentityHashCode = Int
-typealias ObjectNumber = Int

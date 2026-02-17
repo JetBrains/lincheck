@@ -2240,9 +2240,9 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * This method is invoked by a test thread that attempts to resume coroutine.
+     * This method is invoked by a test thread that resumes some coroutine.
      */
-    internal open fun onCoroutineResumed(iResumedThread: Int, iResumedActor: Int) {}
+    internal open fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) {}
 
     /**
      * This method is invoked by a test thread to check if the coroutine was resumed.

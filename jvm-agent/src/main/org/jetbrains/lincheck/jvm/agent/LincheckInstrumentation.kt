@@ -90,6 +90,13 @@ enum class InstrumentationMode {
      * the thread scheduling using injected switch points.
      */
     MODEL_CHECKING,
+
+    /**
+     * Experimental model checking mode.
+     *
+     * Same as [MODEL_CHECKING], but applies an experimental model checking strategy
+     * implementing partial order reduction technique.
+     */
     EXPERIMENTAL_MODEL_CHECKING,
 
     /**

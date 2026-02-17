@@ -434,8 +434,8 @@ internal class EventStructureStrategy(
         eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
     }
 
-    override fun onCoroutineResumed(iResumedThread: Int, iResumedActor: Int) {
-        super.onCoroutineResumed(iResumedThread, iResumedActor)
+    override fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) {
+        super.onCoroutineResumption(iResumedThread, iResumedActor)
         eventStructure.addCoroutineResumeEvent(threadScheduler.getCurrentThreadId(), iResumedThread, iResumedActor)
     }
 

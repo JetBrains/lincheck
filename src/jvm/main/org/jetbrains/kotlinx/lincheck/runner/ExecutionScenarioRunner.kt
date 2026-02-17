@@ -536,8 +536,8 @@ internal class ExecutionScenarioRunner(
     /**
      * This method is from a thread that resumes a coroutine.
      */
-    fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) = {
-        (strategy as? ManagedStrategy)?.onCoroutineResumed(iResumedThread, iResumedActor)
+    fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) {
+        (strategy as? ManagedStrategy)?.onCoroutineResumption(iResumedThread, iResumedActor)
     }
 
     /**
@@ -547,8 +547,11 @@ internal class ExecutionScenarioRunner(
     fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean {
         // We cannot use `completionStatuses` here since
         // they are set _before_ the result is published.
-        val strategyResumed = (strategy as? ManagedStrategy)?.isCoroutineResumed(iThread, actorId) ?: true
-        return strategyResumed && (suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null)
+        val isResumed = (strategy as? ManagedStrategy)?.isCoroutineResumed(iThread, actorId) ?: true
+        return isResumed && (
+            suspensionPointResults[iThread][actorId] != NoResult ||
+            completions[iThread][actorId].resWithCont.get() != null
+        )
     }
 
     /**
