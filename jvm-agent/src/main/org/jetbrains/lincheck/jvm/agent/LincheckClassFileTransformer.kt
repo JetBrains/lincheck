@@ -104,16 +104,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val classNode = ClassNode()
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
-        val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
-            TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
-        } else {
-            emptyList<String>() to emptyList<String>()
-        }
-        val profile = createTransformationProfile(
-            instrumentationMode,
-            includeClasses = includeClasses,
-            excludeClasses = excludeClasses,
-        )
+        val profile = LincheckInstrumentation.transformationProfile
 
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
