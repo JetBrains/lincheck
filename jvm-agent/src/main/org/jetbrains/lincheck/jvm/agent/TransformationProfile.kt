@@ -12,9 +12,12 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.transformers.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
+import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.liveDebuggerSettings
 import org.jetbrains.lincheck.util.*
 
 interface TransformationProfile {
+    fun shouldTransform(className: String): Boolean
+
     fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration
 }
 
@@ -197,7 +200,9 @@ fun createTransformationProfile(
     includeClasses: List<String> = emptyList(),
     excludeClasses: List<String> = emptyList(),
 ): TransformationProfile {
-    if (isInLiveDebuggerMode) return LiveDebuggerTransformationProfile
+    if (isInLiveDebuggerMode) {
+        return LiveDebuggerTransformationProfile(liveDebuggerSettings)
+    }
     val defaultProfile = when (mode) {
         STRESS -> StressDefaultTransformationProfile
         TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
@@ -218,7 +223,24 @@ class FilteredTransformationProfile(
     private val includeRegexes: List<Regex> = includeClasses.map { it.toGlobRegex() }
     private val excludeRegexes: List<Regex> = excludeClasses.map { it.toGlobRegex() }
 
+    override fun shouldTransform(className: String): Boolean {
+        // exclude has a higher priority
+        if (excludeRegexes.any { it.matches(className) }) {
+            return false
+        }
+
+        // if the include list is specified instrument only included classes
+        if (includeRegexes.isNotEmpty() && !includeRegexes.any { it.matches(className) }) {
+            return false
+        }
+
+        // otherwise, delegate decision to the base profile
+        return baseProfile.shouldTransform(className)
+    }
+
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
+        // TODO: simplify after complete migration
+
         // exclude has a higher priority
         if (excludeRegexes.any { it.matches(className) }) {
             return TransformationConfiguration.UNTRACKED
@@ -244,6 +266,16 @@ class FilteredTransformationProfile(
 }
 
 object StressDefaultTransformationProfile : TransformationProfile {
+
+    override fun shouldTransform(className: String): Boolean {
+        // In the stress testing mode, we can simply skip the standard
+        // Java and Kotlin classes -- they do not have coroutine suspension points.
+        if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
+
+        if (isRecognizedUninstrumentedClass(className)) return false
+        return true
+    }
+
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
@@ -259,6 +291,21 @@ object StressDefaultTransformationProfile : TransformationProfile {
 }
 
 object TraceRecorderDefaultTransformationProfile : TransformationProfile {
+
+    override fun shouldTransform(className: String): Boolean {
+        // In the trace recording mode, we do not instrument Java/Kotlin stdlib classes.
+        if (className.startsWith("java.") || className.startsWith("kotlin.") ||
+            className.startsWith("jdk.")
+        ) return false
+
+        // there is a bug with instrumentation of android tools classes,
+        // see https://youtrack.jetbrains.com/issue/JBRes-7051
+        if (className.startsWith("com.android.tools.")) return false
+
+        if (isRecognizedUninstrumentedClass(className)) return false
+        return true
+    }
+
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
@@ -303,6 +350,12 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 }
 
 object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
+
+    override fun shouldTransform(className: String): Boolean {
+        if (isRecognizedUninstrumentedClass(className)) return false
+        return true
+    }
+
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
@@ -361,6 +414,12 @@ object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
 }
 
 object ModelCheckingDefaultTransformationProfile : TransformationProfile {
+
+    override fun shouldTransform(className: String): Boolean {
+        if (isRecognizedUninstrumentedClass(className)) return false
+        return true
+    }
+
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
@@ -425,7 +484,17 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
     }
 }
 
-object LiveDebuggerTransformationProfile : TransformationProfile {
+class LiveDebuggerTransformationProfile(
+    val settings: LiveDebuggerSettings,
+) : TransformationProfile {
+
+    override fun shouldTransform(className: String): Boolean {
+        return isLiveDebuggerBreakpointClass(className)
+    }
+
+    private fun isLiveDebuggerBreakpointClass(className: String): Boolean =
+        settings.lineBreakPoints.any { it.className == className }
+
     override fun getMethodConfiguration(
         className: String,
         methodName: String,
@@ -437,6 +506,36 @@ object LiveDebuggerTransformationProfile : TransformationProfile {
             trackTraceIds = true
         }
     }
+}
+
+// Common rules for all transformation profiles regarding uninstrumented classes;
+// basically handles a shared set of third-party libraries and tools
+// (everything except Java and Kotlin stdlib).
+private fun isRecognizedUninstrumentedClass(className: String): Boolean {
+    // Do not instrument AtomicFU's atomics.
+    if (isKotlinxAtomicFUClass(className) && className.contains("Atomic")) return true
+
+    // We need to skip the classes related to the debugger support in Kotlin coroutines.
+    if (isKotlinxCoroutinesDebugClass(className)) return true
+
+    // We should never transform IntelliJ runtime classes (debugger and coverage agents).
+    if (isIntellijRuntimeAgentClass(className)) return true
+    // We should never instrument the JetBrains coverage package classes (for instance, relocated ASM library).
+    if (isJetBrainsCoverageClass(className)) return true
+
+    // Do not instrument bytecode-manipulation libraries
+    // (special care required to circumvent package shadowing, see `TraceAgentTasks.kt`).
+    if (isAsmClass(className) || isByteBuddyClass(className)) return true
+
+    // We can also safely do not instrument some libraries for performance reasons.
+    if (isGradleClass(className)) return true
+    if (isRecognizedTestingLibraryClass(className)) return true
+    if (isRecognizedLoggingLibraryClass(className)) return true
+    if (isRecognizedApacheLibraryClass(className)) return true
+    if (isRecognizedUninstrumentedLibraryClass(className)) return true
+
+    // All the classes that were not filtered out are eligible for transformation.
+    return false
 }
 
 private fun shouldWrapInIgnoredSection(className: String, methodName: String, descriptor: String): Boolean {
