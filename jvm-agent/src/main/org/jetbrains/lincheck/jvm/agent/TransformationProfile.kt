@@ -285,7 +285,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
 
         // In the trace recording mode, we do not instrument Java/Kotlin stdlib classes.
-        if (isRecognizedUninstrumentedThirdPartyLibraryClass(className)) return false
+        if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
 
         // there is a bug with instrumentation of android tools classes,
         // see https://youtrack.jetbrains.com/issue/JBRes-7051
