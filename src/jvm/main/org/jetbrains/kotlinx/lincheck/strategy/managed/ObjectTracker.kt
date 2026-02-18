@@ -451,7 +451,7 @@ open class BaseObjectTracker : ObjectTracker {
         registerObject(ObjectKind.EXTERNAL, obj)
 
     private fun registerObject(kind: ObjectKind, obj: Any): ObjectEntry {
-        check(!obj.isPrimitive())
+        check(!obj.isPrimitive)
         check(obj.isImmutable implies shouldTrackImmutableValues)
         cleanup()
         val entry = createObjectEntry(

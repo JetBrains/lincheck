@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.lincheck.util.isPrimitive
 import org.jetbrains.lincheck.descriptors.Types
 import kotlin.reflect.KClass
 
@@ -55,7 +56,7 @@ class OpaqueValue private constructor(private val value: Any) {
     fun unwrap(): Any = value
 
     val isPrimitive: Boolean
-        get() = value.isPrimitive()
+        get() = value.isPrimitive
 
     operator fun plus(delta: Number): OpaqueValue = when (value) {
         is Int -> (value + delta as Int).opaque()
@@ -105,9 +106,6 @@ fun Any?.toOpaqueString(): String {
     val objRepr = Integer.toHexString(System.identityHashCode(this))
     return "${className}@${objRepr}"
 }
-
-fun Any.isPrimitive(): Boolean =
-    (this::class.javaPrimitiveType != null)
 
 typealias ValueID = Long
 

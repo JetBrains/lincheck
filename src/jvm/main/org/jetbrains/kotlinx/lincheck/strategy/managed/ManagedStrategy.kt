@@ -1395,7 +1395,7 @@ internal abstract class ManagedStrategy(
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(value.javaClass)
         }
-        if (value !== null && !value.isPrimitive()) {
+        if (value !== null && !value.isPrimitive) {
             objectTracker.registerObjectIfAbsent(value)
         }
         if (collectTrace) {
@@ -1427,7 +1427,7 @@ internal abstract class ManagedStrategy(
         index: Int,
         value: Any?
     ) = threadDescriptor.runInsideIgnoredSection {
-        if(value != null && !value.isPrimitive()) {
+        if (value != null && !value.isPrimitive) {
             objectTracker.registerObjectIfAbsent(value)
         }
         if (collectTrace) {
@@ -1577,7 +1577,7 @@ internal abstract class ManagedStrategy(
         // Fast-check for immutable objects without entering an ignored section.
         // Please note that this check must not produce Lincheck events.
         //TODO: Should we relax this check if the object tracker wants to track primitive values?
-        if (obj.isPrimitive()) return
+        if (obj.isPrimitive) return
         threadDescriptor.runInsideIgnoredSection {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker.registerNewObject(obj)
