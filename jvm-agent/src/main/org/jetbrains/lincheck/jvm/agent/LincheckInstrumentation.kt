@@ -124,8 +124,8 @@ enum class InstrumentationMode {
 }
 
 val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
-    MODEL_CHECKING, TRACE_RECORDING, TRACE_DEBUGGING -> true
-    STRESS -> false
+    MODEL_CHECKING, TRACE_DEBUGGING -> true
+    else -> false
 }
 
 enum class InstrumentationStrategy {
