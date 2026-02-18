@@ -28,13 +28,15 @@ internal object LiveDebugger {
             return
         }
         try {
-            BreakpointsFileParser.loadAndRegisterBreakpoints(
-                breakpointsFilePath,
-                LincheckClassFileTransformer.liveDebuggerSettings
-            )
+            Logger.info { "Loading breakpoints from file: $breakpointsFilePath" }
+
+            val breakpoints = BreakpointsFileParser.parseBreakpointsFile(breakpointsFilePath)
+            val settings = LincheckClassFileTransformer.liveDebuggerSettings
+            val addedBreakpoints = settings.addBreakpoints(breakpoints)
+
+            Logger.info { "Registered ${addedBreakpoints.size} new breakpoints from $breakpointsFilePath" }
         } catch (e: Exception) {
             Logger.error(e) { "Failed to load breakpoints from file: $breakpointsFilePath" }
-            throw e
         }
     }
 

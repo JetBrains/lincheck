@@ -10,9 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.*
 import java.io.File
 import java.util.*
 
@@ -120,133 +118,145 @@ data class SnapshotBreakpoint(
 }
 
 /**
- * JSON representation of a breakpoint condition.
- */
-@Serializable
-data class BreakpointConditionJson(
-    val className: String,
-    val factoryMethodName: String,
-    val capturedVariables: List<String>,
-    val bytecode: String // Base64-encoded bytecode
-)
-
-/**
- * JSON representation of a breakpoint definition.
- */
-@Serializable
-data class BreakpointJson(
-    val className: String,
-    val filePath: String,
-    val line: Int,
-    val condition: BreakpointConditionJson?
-)
-
-/**
- * Parser for breakpoints JSON file passed via the `breakpointsFile` agent argument.
+ * Parses information about breakpoints from an INI configuration file.
+ *
+ * Expected file format:
+ *   ```
+ *   # comments are allowed
+ *   ; this is also a comment
+ *
+ *   [Breakpoint 1]
+ *   className = org.example.MyClass
+ *   fileName = MyClass.java
+ *   lineNumber = 101
+ *
+ *   # breakpoint id in a section header can be an arbitrary number
+ *   [Breakpoint 2]
+ *   className = org.example.MyClass
+ *   fileName = MyClass.java
+ *   lineNumber = 120
+ *   # the following properties are optional
+ *   conditionClassName = org.example.MyCondition
+ *   conditionFactoryMethodName = create
+ *   conditionCapturedVars = var1,var2
+ *   conditionCodeFragment = <base64-encoded bytecode>
+ * ```
  */
 object BreakpointsFileParser {
-    private val json = Json { ignoreUnknownKeys = true }
+
+    private const val KEY_CLASS_NAME = "className"
+    private const val KEY_FILE_NAME = "fileName"
+    private const val KEY_LINE_NUMBER = "lineNumber"
+    private const val KEY_CONDITION_CLASS_NAME = "conditionClassName"
+    private const val KEY_CONDITION_FACTORY_METHOD_NAME = "conditionFactoryMethodName"
+    private const val KEY_CONDITION_CAPTURED_VARS = "conditionCapturedVars"
+    private const val KEY_CONDITION_CODE_FRAGMENT = "conditionCodeFragment"
 
     /**
-     * Parses breakpoints from a JSON file.
+     * Parses breakpoints from an INI file.
      *
-     * @param filePath Path to the JSON file containing breakpoint definitions
-     * @return List of parsed [SnapshotBreakpoint] objects
-     * @throws BreakpointsFileException if the file cannot be read or parsed
+     * @param filePath Path to the INI file containing breakpoint definitions.
+     * @return List of parsed [SnapshotBreakpoint] objects.
      */
     fun parseBreakpointsFile(filePath: String): List<SnapshotBreakpoint> {
         val file = File(filePath)
-        if (!file.exists()) {
-            throw BreakpointsFileException("Breakpoints file not found: $filePath")
-        }
-        if (!file.canRead()) {
-            throw BreakpointsFileException("Cannot read breakpoints file: $filePath")
-        }
+        check(file.exists()) { "Breakpoints file not found: $filePath" }
+        check(file.canRead()) { "Cannot read breakpoints file: $filePath" }
 
-        val jsonContent = try {
-            file.readText()
-        } catch (e: Exception) {
-            throw BreakpointsFileException("Failed to read breakpoints file: $filePath", e)
-        }
+        val content = file.readText()
+        val sections = parseIniSections(content)
 
-        return parseBreakpointsJson(jsonContent)
-    }
-
-    /**
-     * Parses breakpoints from a JSON string.
-     *
-     * @param jsonContent JSON string containing breakpoint definitions
-     * @return List of parsed [SnapshotBreakpoint] objects
-     * @throws BreakpointsFileException if the JSON is malformed or contains invalid data
-     */
-    fun parseBreakpointsJson(jsonContent: String): List<SnapshotBreakpoint> {
-        val breakpointsJson = try {
-            json.decodeFromString<List<BreakpointJson>>(jsonContent)
-        } catch (e: Exception) {
-            throw BreakpointsFileException("Failed to parse breakpoints JSON: ${e.message}", e)
-        }
-
-        return breakpointsJson.mapIndexed { index, bp ->
+        return sections.map { (sectionName, properties) ->
             try {
-                convertToSnapshotBreakpoint(bp)
+                convertToSnapshotBreakpoint(properties)
             } catch (e: Exception) {
-                throw BreakpointsFileException(
-                    "Failed to process breakpoint at index $index (${bp.className}:${bp.line}): ${e.message}",
-                    e
+                throw IllegalArgumentException(
+                    "Failed to process breakpoint in section [$sectionName]: ${e.message}", e
                 )
             }
         }
     }
 
-    private fun convertToSnapshotBreakpoint(bp: BreakpointJson): SnapshotBreakpoint {
-        require(bp.className.isNotBlank()) { "Class name is blank" }
-        require(bp.filePath.isNotBlank()) { "File path is blank" }
-        require(bp.line > 0) { "Line number must be positive" }
+    /**
+     * Parses INI content into a list of (section name, key-value map) pairs.
+     */
+    private fun parseIniSections(content: String): List<Pair<String, Map<String, String>>> {
+        val sections = mutableListOf<Pair<String, MutableMap<String, String>>>()
+        var currentSection: Pair<String, MutableMap<String, String>>? = null
 
-        val condition = bp.condition
-        if (condition != null) {
-            require(condition.className.isNotBlank()) { "Condition class name is blank" }
-            require(condition.factoryMethodName.isNotBlank()) { "Condition factory method name is blank" }
+        for (line in content.lines()) {
+            val trimmed = line.trim()
+
+            // skip empty lines and comments
+            if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith(";")) {
+                continue
+            }
+
+            // section header
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                val sectionName = trimmed.substring(1, trimmed.length - 1).trim()
+                currentSection = sectionName to mutableMapOf()
+                sections.add(currentSection)
+                continue
+            }
+
+            // key = value
+            val eqIndex = trimmed.indexOf('=')
+            require(eqIndex >= 0) { "Invalid line (expected 'key = value'): $trimmed" }
+
+            val key = trimmed.substring(0, eqIndex).trim()
+            val value = trimmed.substring(eqIndex + 1).trim()
+            val section = currentSection
+            checkNotNull(section) { "Property '$key' found outside of any section" }
+
+            section.second[key] = value
         }
-        val conditionBytecode = condition?.let {
+
+        return sections
+    }
+
+    private fun convertToSnapshotBreakpoint(properties: Map<String, String>): SnapshotBreakpoint {
+        val className = properties[KEY_CLASS_NAME]
+        val fileName = properties[KEY_FILE_NAME]
+
+        requireNotNull(className) { "Missing required property '$KEY_CLASS_NAME'" }
+        requireNotNull(fileName) { "Missing required property '$KEY_FILE_NAME'" }
+        require(className.isNotBlank()) { "Class name is blank" }
+        require(fileName.isNotBlank()) { "File name is blank" }
+
+        val lineNumber = properties[KEY_LINE_NUMBER]
+            .ensureNotNull { "Missing required property '$KEY_LINE_NUMBER'" }
+            .toIntOrNull()
+
+        requireNotNull(lineNumber) { "Invalid line number: ${properties[KEY_LINE_NUMBER]}" }
+        require(lineNumber > 0) { "Line number must be positive: $lineNumber" }
+
+        val conditionClassName = properties[KEY_CONDITION_CLASS_NAME]
+        val conditionFactoryMethodName = properties[KEY_CONDITION_FACTORY_METHOD_NAME]
+
+        val conditionCapturedVars = properties[KEY_CONDITION_CAPTURED_VARS]
+            ?.split(",")
+            ?.map { it.trim() }
+
+        val conditionCodeFragment = properties[KEY_CONDITION_CODE_FRAGMENT]?.let {
             try {
-                Base64.getDecoder().decode(it.bytecode)
+                Base64.getDecoder().decode(it)
             } catch (e: IllegalArgumentException) {
-                throw BreakpointsFileException(
-                    "Invalid Base64 bytecode for condition class '${it.className}'",
+                throw IllegalArgumentException(
+                    "Invalid Base64 bytecode for condition class '$conditionClassName'",
                     e
                 )
             }
         }
 
         return SnapshotBreakpoint(
-            className = bp.className,
-            fileName = bp.filePath,
-            lineNumber = bp.line,
-            conditionClassName = condition?.className,
-            conditionFactoryMethodName = condition?.factoryMethodName?.ifBlank { null },
-            conditionCapturedVars = condition?.capturedVariables,
-            conditionCodeFragment = conditionBytecode
+            className = className,
+            fileName = fileName,
+            lineNumber = lineNumber,
+            conditionClassName = conditionClassName,
+            conditionFactoryMethodName = conditionFactoryMethodName,
+            conditionCapturedVars = conditionCapturedVars,
+            conditionCodeFragment = conditionCodeFragment
         )
     }
-
-    /**
-     * Loads and registers breakpoints from a file into the given [LiveDebuggerSettings].
-     *
-     * @param filePath Path to the JSON file containing breakpoint definitions
-     * @param settings The [LiveDebuggerSettings] to register breakpoints with
-     * @return List of successfully added breakpoints
-     */
-    fun loadAndRegisterBreakpoints(filePath: String, settings: LiveDebuggerSettings): List<SnapshotBreakpoint> {
-        Logger.info { "Loading breakpoints from file: $filePath" }
-        val breakpoints = parseBreakpointsFile(filePath)
-        val addedBreakpoints = settings.addBreakpoints(breakpoints)
-        Logger.info { "Registered ${addedBreakpoints.size} new breakpoints from $filePath" }
-        return addedBreakpoints
-    }
 }
-
-/**
- * Exception thrown when there's an error processing the breakpoints file.
- */
-class BreakpointsFileException(message: String, cause: Throwable? = null) : Exception(message, cause)
