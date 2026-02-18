@@ -656,7 +656,7 @@ internal abstract class ManagedStrategy(
     /**
      * Threads to which an execution can be switched from thread [iThread].
      */
-    fun switchableThreads(iThread: Int) =
+    protected fun switchableThreads(iThread: Int) =
         if (currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
         } else {
@@ -1284,8 +1284,6 @@ internal abstract class ManagedStrategy(
 
     private fun blockThread(threadId: ThreadId, blockingReason: BlockingReason) {
         failIfObstructionFreedomIsRequired {
-            //TODO not sure if we should fail here if obstruction freedom is required
-            // In the case where we have SwitchStrategy
             blockingReason.obstructionFreedomViolationMessage
         }
         threadScheduler.blockThread(threadId, blockingReason)
@@ -1394,11 +1392,11 @@ internal abstract class ManagedStrategy(
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
         val fieldDescriptor = context.getFieldDescriptor(fieldId)
-        if(value != null && !value.isPrimitive()) {
-            objectTracker.registerObjectIfAbsent(value)
-        }
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(value.javaClass)
+        }
+        if (value !== null && !value.isPrimitive()) {
+            objectTracker.registerObjectIfAbsent(value)
         }
         if (collectTrace) {
             val valueRepresentation = objectTracker.getObjectRepresentation(value)

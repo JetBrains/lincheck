@@ -250,8 +250,9 @@ internal class EventStructure(
         }
         // check consistency of the whole execution
         _execution.checkConsistency()
+
         // set the replayer state
-        // TODO: Ugly hack, probably need to change this to a computable
+        // TODO: hack, probably need to change this to a computable
         // We replay the events in the order that we added them
         val replayOrdering = _execution.sortedBy { it.id }
         replayer = Replayer(replayOrdering)

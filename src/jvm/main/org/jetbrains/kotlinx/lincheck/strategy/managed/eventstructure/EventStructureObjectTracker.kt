@@ -57,7 +57,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         kind: ObjectKind
     ): ObjectEntry {
         val obj = objReference.get()!!
-        if(kind == ObjectKind.EXTERNAL) {
+        if (kind == ObjectKind.EXTERNAL) {
             (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objNumber)
             return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, initEvent!!)
         } else {
@@ -65,7 +65,6 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
             val allocationEvent = eventStructure.addObjectAllocationEvent(iThread!!,obj.opaque(), objNumber)
             return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocationEvent)
         }
-        unreachable()
     }
 
     private fun getEventStructureEntry(id: ObjectNumber): EventStructureObjectEntry? {

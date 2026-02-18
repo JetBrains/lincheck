@@ -464,8 +464,7 @@ internal class ExecutionScenarioRunner(
         // and should wait for other threads to start
         uninitializedThreads.decrementAndGet()
         spinners[iThread].spinWaitUntil { uninitializedThreads.get() == 0 }
-        val managedStrategy = (strategy as? ManagedStrategy);
-        managedStrategy?.onThreadStart(iThread)
+        (strategy as? ManagedStrategy)?.onThreadStart(iThread)
     }
 
     fun onThreadFinish(iThread: Int) {
