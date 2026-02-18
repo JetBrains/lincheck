@@ -144,6 +144,8 @@ data class SnapshotBreakpoint(
  */
 object BreakpointsFileParser {
 
+    private val SECTION_NAME_REGEX = Regex("Breakpoint \\d+")
+
     private const val KEY_CLASS_NAME = "className"
     private const val KEY_FILE_NAME = "fileName"
     private const val KEY_LINE_NUMBER = "lineNumber"
@@ -195,6 +197,9 @@ object BreakpointsFileParser {
             // section header
             if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
                 val sectionName = trimmed.substring(1, trimmed.length - 1).trim()
+                require(SECTION_NAME_REGEX.matches(sectionName)) {
+                    "Invalid section header: '$sectionName' (expected 'Breakpoint <number>')"
+                }
                 currentSection = sectionName to mutableMapOf()
                 sections.add(currentSection)
                 continue
