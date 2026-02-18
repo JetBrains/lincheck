@@ -24,12 +24,7 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint>) {
     private val _lineBreakPoints: MutableList<SnapshotBreakpoint> =
         Collections.synchronizedList(lineBreakPoints)
 
-    fun addBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
-        val breakpoints = list.map { SnapshotBreakpoint.read(it) }
-        return addBreakpointsFromList(breakpoints)
-    }
-
-    fun addBreakpointsFromList(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
+    fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
         val addedBreakpoints = mutableListOf<SnapshotBreakpoint>()
         for (breakpoint in breakpoints) {
             if (!lineBreakPoints.contains(breakpoint)) {
@@ -40,8 +35,7 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint>) {
         return addedBreakpoints
     }
 
-    fun removeBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
-        val breakpoints = list.map { SnapshotBreakpoint.read(it) }
+    fun removeBreakpoints(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
         val removedBreakpoints = mutableListOf<SnapshotBreakpoint>()
         for (breakpoint in breakpoints) {
             if (lineBreakPoints.contains(breakpoint)) {
@@ -77,7 +71,7 @@ data class SnapshotBreakpoint(
     val conditionCodeFragment: ByteArray?
 ) {
     companion object {
-        fun read(rawString: String): SnapshotBreakpoint {
+        fun parseFromString(rawString: String): SnapshotBreakpoint {
             val parts = rawString.split(":")
 
             val className = parts[0]
@@ -246,7 +240,7 @@ object BreakpointsFileParser {
     fun loadAndRegisterBreakpoints(filePath: String, settings: LiveDebuggerSettings): List<SnapshotBreakpoint> {
         Logger.info { "Loading breakpoints from file: $filePath" }
         val breakpoints = parseBreakpointsFile(filePath)
-        val addedBreakpoints = settings.addBreakpointsFromList(breakpoints)
+        val addedBreakpoints = settings.addBreakpoints(breakpoints)
         Logger.info { "Registered ${addedBreakpoints.size} new breakpoints from $filePath" }
         return addedBreakpoints
     }

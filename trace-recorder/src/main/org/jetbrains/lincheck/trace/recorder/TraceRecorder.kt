@@ -160,7 +160,8 @@ object TraceRecorder {
     fun addBreakpoints(breakpoints: List<String>) {
         Logger.info { "Adding breakpoints: $breakpoints" }
 
-        val addedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings.addBreakpoints(breakpoints)
+        val addedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
+            .addBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
         val classNamesToRetransform = addedBreakpoints.map { it.className }.toSet()
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
             .filter { it.name in classNamesToRetransform }
@@ -171,7 +172,8 @@ object TraceRecorder {
     fun removeBreakpoints(breakpoints: List<String>) {
         Logger.info { "Removing breakpoints: $breakpoints" }
 
-        val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings.removeBreakpoints(breakpoints)
+        val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
+            .removeBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
         val classNamesToRetransform = removedBreakpoints.map { it.className }.toSet()
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
             .filter { it.name in classNamesToRetransform }

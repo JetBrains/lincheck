@@ -41,12 +41,10 @@ import javax.management.remote.JMXServiceURL
  *       Example: `mode=traceRecorder`
  *       If not specified, falls back to system properties for backward compatibility.
  *
- * - class — fully qualified class name to run/transform (required for traceRecorder/traceDebugger;
- *       must be omitted for liveDebugger).
+ * - class — fully qualified class name to run/transform (required).
  *       Example: `class=org.example.MyTest`
  *
- * - method — name of the public method in that class (required for traceRecorder/traceDebugger;
- *       must be omitted for liveDebugger).
+ * - method (required) — name of the public method in that class (required).
  *       Example: `method=run`
  *
  * - output — path to a file for trace dump, if supported by the agent (optional).
