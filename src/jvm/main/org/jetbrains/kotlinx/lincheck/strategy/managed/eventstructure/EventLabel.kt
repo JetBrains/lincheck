@@ -95,9 +95,9 @@ sealed class EventLabel(
      * Object accesses by the operation represented by the label.
      * For example, for object field memory access labels, this is the accessed object.
      * If a particular subclass of labels does not access any object,
-     * then this property is equal to [NULL_OBJECT_ID].
+     * then this property is equal to [NULL_OBJECT_NUMBER].
      */
-    open val objectID: ObjectNumber = NULL_OBJECT_ID
+    open val objectID: ObjectNumber = NULL_OBJECT_NUMBER
 
 }
 
@@ -259,7 +259,7 @@ data class ObjectAllocationLabel(
 ) : EventLabel(kind = LabelKind.Send) {
 
     init {
-        require(objectID != NULL_OBJECT_ID)
+        require(objectID != NULL_OBJECT_NUMBER)
     }
 
     private val initialValues = HashMap<MemoryLocation, ValueID>()
@@ -551,13 +551,13 @@ data class ReadAccessLabel(
 
     init {
         require(isRequest || isResponse || isReceive)
-        require(isRequest implies (value == NULL_OBJECT_ID.toLong()))
+        require(isRequest implies (value == NULL_OBJECT_NUMBER.toLong()))
     }
 
     val value: ValueID
         get() = readValue
 
-    override val writeValue: ValueID = NULL_OBJECT_ID.toLong()
+    override val writeValue: ValueID = NULL_OBJECT_NUMBER.toLong()
 
     override fun toString(): String =
         super.toString()
@@ -582,7 +582,7 @@ data class WriteAccessLabel(
     val value: ValueID
         get() = writeValue
 
-    override val readValue: ValueID = NULL_OBJECT_ID.toLong()
+    override val readValue: ValueID = NULL_OBJECT_NUMBER.toLong()
 
     override fun toString(): String =
         super.toString()

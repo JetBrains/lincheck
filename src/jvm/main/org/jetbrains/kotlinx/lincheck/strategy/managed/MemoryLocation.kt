@@ -159,7 +159,7 @@ class StaticFieldMemoryLocation(
     override val type: Types.Type,
 ) : MemoryLocation {
 
-    override val objID: ObjectNumber = STATIC_OBJECT_ID
+    override val objID: ObjectNumber = STATIC_OBJECT_NUMBER
 
     private val field: Field by lazy {
         val resolvedClass = resolveClass(className = className)
@@ -206,7 +206,7 @@ class ObjectFieldMemoryLocation(
 ) : MemoryLocation {
 
     init {
-        check(objID != NULL_OBJECT_ID)
+        check(objID != NULL_OBJECT_NUMBER)
     }
 
     val simpleClassName: String = clazz.simpleName
@@ -258,7 +258,7 @@ class ArrayElementMemoryLocation(
 ) : MemoryLocation {
 
     init {
-        check(objID != NULL_OBJECT_ID)
+        check(objID != NULL_OBJECT_NUMBER)
     }
 
     val className: String = clazz.simpleName
@@ -331,7 +331,7 @@ class AtomicPrimitiveMemoryLocation(
 ) : MemoryLocation {
 
     init {
-        require(objID != NULL_OBJECT_ID)
+        require(objID != NULL_OBJECT_NUMBER)
     }
 
     val className: String = clazz.simpleName
@@ -373,7 +373,7 @@ class AtomicPrimitiveMemoryLocation(
     }
 
     override fun toString(): String {
-        check(objID != NULL_OBJECT_ID)
+        check(objID != NULL_OBJECT_NUMBER)
         return objRepr(className, objID)
     }
 
@@ -381,7 +381,7 @@ class AtomicPrimitiveMemoryLocation(
 
 internal fun objRepr(className: String, objID: ObjectNumber): String {
     return when (objID) {
-        NULL_OBJECT_ID -> "null"
+        NULL_OBJECT_NUMBER -> "null"
         else -> "$className@$objID"
     }
 }

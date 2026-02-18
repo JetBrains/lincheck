@@ -157,7 +157,7 @@ internal data class SequentialConsistencyReplayer(
         )
 
     private fun getMonitor(objID: ObjectNumber): Any {
-        check(objID != NULL_OBJECT_ID)
+        check(objID != NULL_OBJECT_NUMBER)
         return monitorMapping.computeIfAbsent(objID) { Any() }
     }
 

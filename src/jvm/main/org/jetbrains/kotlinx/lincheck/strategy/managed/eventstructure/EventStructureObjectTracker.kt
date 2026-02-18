@@ -24,7 +24,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.util.toBoolean
 import org.jetbrains.lincheck.util.toInt
-import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.TestThread
 import java.lang.ref.WeakReference
 
@@ -72,7 +71,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 
     fun getAllocation(id: ObjectNumber) : AtomicThreadEvent? {
-        if(id == STATIC_OBJECT_ID) return initEvent;
+        if (id == STATIC_OBJECT_NUMBER) return initEvent
         return getEventStructureEntry(id)?.allocation
     }
 
@@ -83,7 +82,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
 
 internal fun EventStructureObjectTracker.registerValueIfAbsent(obj: OpaqueValue?): ObjectNumber =
     when {
-        obj == null -> NULL_OBJECT_ID
+        obj == null -> NULL_OBJECT_NUMBER
         else -> registerObjectIfAbsent(obj.unwrap()).objectNumber
     }
 
@@ -104,7 +103,7 @@ internal fun EventStructureObjectTracker.getValue(type: Types.Type, id: ValueID)
 }
 
 internal fun EventStructureObjectTracker.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
-    if (value == null) return NULL_OBJECT_ID.toLong()
+    if (value == null) return NULL_OBJECT_NUMBER.toLong()
     return when (type) {
         Types.LONG_TYPE       -> (value.unwrap() as Long)
         Types.INT_TYPE        -> (value.unwrap() as Int).toLong()

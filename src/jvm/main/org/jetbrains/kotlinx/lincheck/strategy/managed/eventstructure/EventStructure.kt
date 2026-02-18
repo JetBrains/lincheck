@@ -754,7 +754,7 @@ internal class EventStructure(
         }
         return createEvent(initThreadId, label, parent = null, dependencies = emptyList(), visit = false)!!
             .also { event ->
-                val id = STATIC_OBJECT_ID
+                val id = STATIC_OBJECT_NUMBER
                 // TODO: Figure out how to load the static object
 //                val entry = RegistryObjectEntry(id, StaticObject.opaque(), event)
 //                objectRegistry.register(entry)
@@ -991,7 +991,7 @@ internal class EventStructure(
         val label = ReadAccessLabel(
             kind = LabelKind.Request,
             location = location,
-            readValue = NULL_OBJECT_ID.toLong(),
+            readValue = NULL_OBJECT_NUMBER.toLong(),
             readModifyWriteDescriptor = readModifyWriteDescriptor,
             codeLocation = codeLocation,
         )
