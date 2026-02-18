@@ -174,6 +174,13 @@ object LincheckInstrumentation {
         // private set
 
     /**
+     * Represents a configuration profile controlling bytecode transformations applied to classes and methods,
+     * see [TransformationProfile] for details.
+     */
+    lateinit var transformationProfile: TransformationProfile
+        private set
+
+    /**
      * Strategy that controls whether classes are transformed lazily (during call time) or eagerly (during load time).
      */
     lateinit var instrumentationStrategy: InstrumentationStrategy
@@ -244,6 +251,8 @@ object LincheckInstrumentation {
     fun install(instrumentationMode: InstrumentationMode) {
         this.instrumentationMode = instrumentationMode
         setInstrumentationStrategy()
+        setTransformationProfile()
+
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
         // classes related to the bytecode injections in a separate JAR (see the
@@ -329,6 +338,22 @@ object LincheckInstrumentation {
                     InstrumentationStrategy.EAGER
             }
         }
+    }
+
+    /**
+     * Configures and sets the transformation profile based on the current instrumentation mode.
+     */
+    private fun setTransformationProfile() {
+        val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
+            TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
+        } else {
+            emptyList<String>() to emptyList<String>()
+        }
+        transformationProfile = createTransformationProfile(
+            instrumentationMode,
+            includeClasses = includeClasses,
+            excludeClasses = excludeClasses,
+        )
     }
 
     fun retransformClasses(classes: List<Class<*>>) {

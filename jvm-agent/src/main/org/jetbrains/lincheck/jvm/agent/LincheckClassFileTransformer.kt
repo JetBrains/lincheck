@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClasses
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.transformationProfile
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.trace.isThisName
@@ -104,16 +105,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val classNode = ClassNode()
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
-        val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
-            TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
-        } else {
-            emptyList<String>() to emptyList<String>()
-        }
-        val profile = createTransformationProfile(
-            instrumentationMode,
-            includeClasses = includeClasses,
-            excludeClasses = excludeClasses,
-        )
+        val profile = LincheckInstrumentation.transformationProfile
 
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
@@ -417,33 +409,19 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // Perform these checks FIRST to avoid potential class loading circularity errors.
         if (isInLincheckPackage(className)) return false
 
-        // In the stress testing mode, we can simply skip the standard
-        // Java and Kotlin classes -- they do not have coroutine suspension points.
-        if (instrumentationMode == STRESS) {
-            if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
-        }
-        if (instrumentationMode == TRACE_RECORDING) {
-            if (className == "java.lang.Thread") return true
-            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
-            if (className.startsWith("java.") || className.startsWith("kotlin.") || className.startsWith("jdk.")) return false
-            // there is a bug with instrumentation of android tools classes,
-            // see https://youtrack.jetbrains.com/issue/JBRes-7051
-            if (className.startsWith("com.android.tools.")) return false
-        }
-        if (isEagerlyInstrumentedClass(className)) return true
-        
-        if (isInLiveDebuggerMode) return isLiveDebuggerBreakpointClass(className)
+        // Under lazy strategy instrument eagerly instrumented classes early-on.
+        if (instrumentationStrategy == InstrumentationStrategy.LAZY && isEagerlyInstrumentedClass(className))
+            return true
 
-        return AnalysisProfile.DEFAULT.shouldTransform(className, "")
+        return transformationProfile.shouldTransform(className)
     }
-
 
     // We should always eagerly transform the following classes.
     internal fun isEagerlyInstrumentedClass(className: String): Boolean =
         // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
-        (instrumentationMode != TRACE_RECORDING && isClassLoaderClassName(className)) ||
+        isClassLoaderClassName(className) ||
         // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
-        (instrumentationMode != TRACE_RECORDING && isMethodHandleRelatedClass(className)) ||
+        isMethodHandleRelatedClass(className) ||
         // `StackTraceElement` class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
         // IntelliJ runtime agents, to wrap all their methods into the ignored section.

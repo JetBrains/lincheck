@@ -538,40 +538,6 @@ internal fun isCoroutineStateMachineClass(className: String): Boolean {
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 
 /**
- * Tests if the provided [className] contains `"ClassLoader"` as a substring.
- */
-internal fun isClassLoaderClassName(className: String): Boolean =
-    className.contains("ClassLoader")
-
-/**
- * Checks if the given method name and descriptor correspond to
- * the `ClassLoader.loadClass(String name)` method.
- */
-internal fun isLoadClassMethod(methodName: String, desc: String) =
-    methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
-
-/**
- * Tests if the provided [className] represents [StackTraceElement] class.
- */
-internal fun isStackTraceElementClass(className: String): Boolean =
-    className == "java.lang.StackTraceElement"
-
-internal fun isJavaUtilArraysClass(className: String): Boolean =
-    className == "java.util.Arrays"
-
-/**
- * Checks if the provided class name matches the [JavaLangAccess] class.
- */
-internal fun isJavaLangAccessClass(className: String): Boolean =
-    className == "jdk.internal.access.JavaLangAccess"
-
-/**
- * Checks whether the given method corresponds to the `toString()` Java method.
- */
-internal fun isToStringMethod(methodName: String, desc: String) =
-    methodName == "toString" && desc == "()Ljava/lang/String;"
-
-/**
  * Extracts the simple class name from a fully qualified canonical class name.
  */
 fun String.toSimpleClassName() =

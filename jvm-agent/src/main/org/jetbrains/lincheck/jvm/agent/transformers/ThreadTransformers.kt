@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Label
