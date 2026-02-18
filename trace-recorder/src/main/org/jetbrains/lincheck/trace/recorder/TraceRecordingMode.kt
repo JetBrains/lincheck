@@ -72,3 +72,11 @@ sealed class TraceRecordingMode {
         }
     }
 }
+
+val TraceRecordingMode.isFileMode: Boolean get() = when (this) {
+    is TraceRecordingMode.BinaryFileDump,
+    is TraceRecordingMode.BinaryFileStream,
+    is TraceRecordingMode.Text
+         -> true
+    else -> false
+}

@@ -21,7 +21,6 @@ import org.jetbrains.lincheck.trace.recorder.jmx.*
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.*
-import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Agent that is set as `premain` entry class for fat trace debugger jar archive.
@@ -45,7 +44,6 @@ internal object TraceRecorderAgent {
         ARGUMENT_JMX_MBEAN,
         ARGUMENT_BREAKPOINTS_FILE,
     )
-    private val liveDebuggerShutdownHookInstalled = AtomicBoolean(false)
 
     // entry point for a statically attached java agent
     @JvmStatic
@@ -63,19 +61,22 @@ internal object TraceRecorderAgent {
         // attach java agent
         LincheckInstrumentation.attachJavaAgentStatically(inst)
 
-        // load breakpoints from file if specified (for live debugger mode)
-        loadBreakpointsFromFileIfSpecified()
-
         // register JMX MBean if the specified argument was passed
         registerJmxMBeanIfRequested()
+
+        // load breakpoints from a file if specified (for live debugger mode)
+        if (isInLiveDebuggerMode) {
+            LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
+        }
 
         // install trace entry points transformer and instrumentation
         if (!isInLiveDebuggerMode) {
             installTraceEntryPointTransformer()
         }
+
         installInstrumentation()
         if (isInLiveDebuggerMode && traceDumpFilePath != null) {
-            startLiveDebuggerTracing()
+            LiveDebugger.startRecording()
         }
     }
 
@@ -97,41 +98,26 @@ internal object TraceRecorderAgent {
         // attach java agent
         LincheckInstrumentation.attachJavaAgentDynamically(inst)
 
-        // load breakpoints from file if specified (for live debugger mode)
-        loadBreakpointsFromFileIfSpecified()
-
         // register JMX MBean if the specified argument was passed
         registerJmxMBeanIfRequested()
+
+        // load breakpoints from a file if specified (for live debugger mode)
+        if (isInLiveDebuggerMode) {
+            LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
+        }
 
         // install instrumentation and re-transform already loaded classes
         installInstrumentation()
         if (isInLiveDebuggerMode && traceDumpFilePath != null) {
-            startLiveDebuggerTracing()
+            LiveDebugger.startRecording()
         }
+
         // TODO: Re-transform already loaded classes if needed
     }
 
     @JvmStatic
     private fun parseArguments(agentArgs: String?) {
         TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
-    }
-
-    @JvmStatic
-    private fun loadBreakpointsFromFileIfSpecified() {
-        val breakpointsFilePath = TraceAgentParameters.breakpointsFilePath ?: return
-        if (!isInLiveDebuggerMode) {
-            Logger.warn { "Ignoring breakpointsFile outside live debugger mode: $breakpointsFilePath" }
-            return
-        }
-        try {
-            BreakpointsFileParser.loadAndRegisterBreakpoints(
-                breakpointsFilePath,
-                LincheckClassFileTransformer.liveDebuggerSettings
-            )
-        } catch (e: Exception) {
-            Logger.error(e) { "Failed to load breakpoints from file: $breakpointsFilePath" }
-            throw e
-        }
     }
 
     @JvmStatic
@@ -163,59 +149,5 @@ internal object TraceRecorderAgent {
             else -> error("Unexpected instrumentation mode")
         }
         LincheckInstrumentation.install(mode)
-    }
-
-    private fun startLiveDebuggerTracing() {
-        val traceDumpFilePath = TraceAgentParameters.traceDumpFilePath
-        val packTrace = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
-        val recordingMode = TraceRecordingMode.parse(
-            outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
-            outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
-            outputFilePath = traceDumpFilePath,
-        )
-        try {
-            val session = TraceRecorder.startRecording(
-                recordingMode = recordingMode,
-                startMode = TraceRecorderSession.StartMode.Dynamic,
-            )
-            if (session == null) {
-                Logger.warn { "Trace recording was not started (recording already in progress)" }
-                return
-            }
-            when (recordingMode) {
-                TraceRecordingMode.Null -> Unit
-                else -> {
-                    if (traceDumpFilePath == null) {
-                        Logger.error { "Trace dump path is not set for live debugger mode" }
-                    } else {
-                        session.installOnFinishHook {
-                            dumpTrace(traceDumpFilePath, packTrace)
-                        }
-                    }
-                }
-            }
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot start trace recording in live debugger mode" }
-            return
-        }
-        registerLiveDebuggerShutdownHook()
-    }
-
-    private fun registerLiveDebuggerShutdownHook() {
-        if (!liveDebuggerShutdownHookInstalled.compareAndSet(false, true)) return
-        try {
-            Runtime.getRuntime().addShutdownHook(Thread(::stopLiveDebuggerTracing))
-        } catch (e: Exception) {
-            Logger.error(e) { "Failed to register shutdown hook for live debugger tracing" }
-        }
-    }
-
-    private fun stopLiveDebuggerTracing() {
-        if (!TraceRecorder.isRecording()) return
-        try {
-            TraceRecorder.stopRecording()
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot stop trace recording in live debugger mode" }
-        }
     }
 }
