@@ -12,15 +12,20 @@ package org.jetbrains.lincheck.jvm.agent
 
 import java.util.*
 
-data class LiveDebuggerSettings(
-    val lineBreakPoints: MutableList<SnapshotBreakpoint>
-) {
+class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint>) {
+
+    val lineBreakPoints: List<SnapshotBreakpoint>
+        get() = synchronized(_lineBreakPoints) { _lineBreakPoints.toList() }
+
+    private val _lineBreakPoints: MutableList<SnapshotBreakpoint> =
+        Collections.synchronizedList(lineBreakPoints)
+
     fun addBreakpoints(list: List<String>): List<SnapshotBreakpoint> {
         val breakpoints = list.map { SnapshotBreakpoint.read(it) }
         val addedBreakpoints = mutableListOf<SnapshotBreakpoint>()
         for (breakpoint in breakpoints) {
             if (!lineBreakPoints.contains(breakpoint)) {
-                lineBreakPoints.add(breakpoint)
+                _lineBreakPoints.add(breakpoint)
                 addedBreakpoints.add(breakpoint)
             }
         }
@@ -32,11 +37,22 @@ data class LiveDebuggerSettings(
         val removedBreakpoints = mutableListOf<SnapshotBreakpoint>()
         for (breakpoint in breakpoints) {
             if (lineBreakPoints.contains(breakpoint)) {
-                lineBreakPoints.remove(breakpoint)
+                _lineBreakPoints.remove(breakpoint)
                 removedBreakpoints.add(breakpoint)
             }
         }
         return removedBreakpoints
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is LiveDebuggerSettings) return false
+
+        return (lineBreakPoints == other.lineBreakPoints)
+    }
+
+    override fun hashCode(): Int {
+        return lineBreakPoints.hashCode()
     }
     
     companion object {

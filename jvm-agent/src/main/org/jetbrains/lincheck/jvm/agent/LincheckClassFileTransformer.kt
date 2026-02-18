@@ -429,10 +429,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         //  we should try to fix lazy class re-transformation logic
         isCoroutineDispatcherInternalClass(className) ||
         isCoroutineConcurrentKtInternalClass(className)
-    
-    private fun isLiveDebuggerBreakpointClass(className: String): Boolean = 
-        liveDebuggerSettings.lineBreakPoints.any { it.className == className }
-        
 
     private fun readUTF(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
         for (offset in 0 ..< utfLength) {
