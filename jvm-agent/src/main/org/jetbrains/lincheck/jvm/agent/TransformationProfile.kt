@@ -200,12 +200,10 @@ fun createTransformationProfile(
     includeClasses: List<String> = emptyList(),
     excludeClasses: List<String> = emptyList(),
 ): TransformationProfile {
-    if (isInLiveDebuggerMode) {
-        return LiveDebuggerTransformationProfile(liveDebuggerSettings)
-    }
     val defaultProfile = when (mode) {
         STRESS -> StressDefaultTransformationProfile
         TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
+        LIVE_DEBUGGING -> LiveDebuggerTransformationProfile(liveDebuggerSettings)
         TRACE_DEBUGGING -> TraceDebuggerDefaultTransformationProfile
         MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
     }

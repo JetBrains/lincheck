@@ -45,9 +45,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     val transformedClassesCache: MutableMap<String, ByteArray>
         get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
 
-    private val useBytecodeCache: Boolean
-        get() = !isInLiveDebuggerMode // TODO: please refactor me
-
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
     
@@ -84,7 +81,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             return null
         }
 
-        if (!useBytecodeCache) {
+        if (!instrumentationMode.useBytecodeCache) {
             return transformImpl(loader, internalClassName, classBytes)
         }
         return transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
@@ -105,7 +102,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val classNode = ClassNode()
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
-        val profile = LincheckInstrumentation.transformationProfile
+        val profile = transformationProfile
 
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
@@ -443,5 +440,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
         return String(buffer, 0, utfLength, Charsets.UTF_8)
     }
+}
 
+private val InstrumentationMode.useBytecodeCache: Boolean get() = when (this) {
+    LIVE_DEBUGGING -> false
+    else -> true
 }

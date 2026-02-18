@@ -111,6 +111,16 @@ enum class InstrumentationMode {
      * This mode does not enforce determinism or perform any analysis.
      */
     TRACE_RECORDING,
+
+    /**
+     * Live debugging mode.
+     *
+     * In this mode, Lincheck injects special non-suspending breakpoints
+     * that capture a snapshot of the current program state at a given code location.
+     *
+     * This mode does not enforce determinism or perform any analysis.
+     */
+    LIVE_DEBUGGING,
 }
 
 val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
@@ -328,6 +338,7 @@ object LincheckInstrumentation {
     private fun setInstrumentationStrategy() {
         instrumentationStrategy = when {
             (instrumentationMode == TRACE_RECORDING) -> InstrumentationStrategy.EAGER
+            (instrumentationMode == LIVE_DEBUGGING) -> InstrumentationStrategy.EAGER
 
             INSTRUMENT_ALL_CLASSES -> InstrumentationStrategy.EAGER
 
