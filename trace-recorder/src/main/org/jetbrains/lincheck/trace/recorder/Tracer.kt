@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.tracer.TraceCollectingEventTracker
 import org.jetbrains.lincheck.tracer.TraceDataLayout
 import org.jetbrains.lincheck.tracer.TracingMode
+import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 

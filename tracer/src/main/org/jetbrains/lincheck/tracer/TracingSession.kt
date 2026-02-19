@@ -8,12 +8,15 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.tracer
 
-import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.tracer.TraceCollectingEventTracker
-import org.jetbrains.lincheck.tracer.TracingMode
+import org.jetbrains.lincheck.trace.INDEX_FILENAME_EXT
+import org.jetbrains.lincheck.trace.PACK_FILENAME_EXT
+import org.jetbrains.lincheck.trace.TcpTraceServer
+import org.jetbrains.lincheck.trace.TraceMetaInfo
+import org.jetbrains.lincheck.trace.printPostProcessedTrace
+import org.jetbrains.lincheck.trace.saveRecorderTrace
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -163,7 +166,7 @@ class TracingSession(
             }
             else -> {}
         }
-        val metaInfo = TraceMetaInfo.create(
+        val metaInfo = TraceMetaInfo.Companion.create(
             agentArgs = TraceAgentParameters.rawArgs,
             className = className ?: "",
             methodName = methodName ?: "",
@@ -212,10 +215,10 @@ class TracingSession(
     }
 
     private fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo) {
-        packRecordedTrace(
+        org.jetbrains.lincheck.trace.packRecordedTrace(
             dataFileName = baseFileName,
-            indexFileName = "$baseFileName.$INDEX_FILENAME_EXT",
-            outputFileName = "$baseFileName.$PACK_FILENAME_EXT",
+            indexFileName = "$baseFileName.${INDEX_FILENAME_EXT}",
+            outputFileName = "$baseFileName.${PACK_FILENAME_EXT}",
             metaInfo = metaInfo,
         )
     }
