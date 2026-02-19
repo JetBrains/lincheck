@@ -24,6 +24,7 @@ class DescriptorPool<D : Descriptor> {
     // which does not allow read-write races between our write-code and user's read-code
     private val _descriptors = ConcurrentSingleWriterList<D?>()
     val descriptors: List<D?> get() = _descriptors
+
     private val byKey = hashMapOf<Descriptor.Key, Int>()
 
     @Synchronized
