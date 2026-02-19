@@ -11,9 +11,9 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.ensureNotNull
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * This object is glue between bytecode injections into a method under tracing and actual trace recording code.
@@ -40,24 +40,33 @@ import org.jetbrains.lincheck.util.Logger
  */
 internal object TraceRecorderInjections {
 
+    private val startCount = AtomicInteger(0)
+
     @JvmStatic
     fun startTraceRecorder(startingCodeLocationId: Int) {
         try {
+            val className = TraceAgentParameters.classUnderTraceDebugging
+            val methodName = TraceAgentParameters.methodUnderTraceDebugging
+            val thread = Thread.currentThread()
+
+            val startCount = startCount.incrementAndGet()
+            Logger.info {
+                "Start recording injection from $className::$methodName in thread ${thread.name} is called (startCount=$startCount)" +
+                if (startCount > 1) ": skipping start as it was already started earlier" else ""
+            }
+            if (startCount > 1) return
+
             TraceRecorder.startRecording(
-                recordingMode = TraceRecordingMode.parse(
+                TraceRecordingMode.parse(
                     outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                     outputFilePath = TraceAgentParameters.traceDumpFilePath,
                 ),
-                startMode = TraceRecorderSession.StartMode.FromMethod(
-                    thread = Thread.currentThread(),
-                    className = TraceAgentParameters.classUnderTraceDebugging,
-                    methodName = TraceAgentParameters.methodUnderTraceDebugging,
-                    startingCodeLocationId = startingCodeLocationId,
-                ),
+                TraceRecorderSession.StartMode.FromMethod(thread, className, methodName, startingCodeLocationId),
             )
+            .ensureNotNull()
         } catch (t: Throwable) {
-            Logger.error { "Cannot start Trace Recorder: $t" }
+            Logger.error(t) { "Cannot start Trace Recorder" }
         }
     }
 
@@ -65,13 +74,28 @@ internal object TraceRecorderInjections {
     fun stopTraceRecorderAndDumpTrace() {
         // This method should never throw an exception, or tracer state is undetermined
         try {
+            val className = TraceAgentParameters.classUnderTraceDebugging
+            val methodName = TraceAgentParameters.methodUnderTraceDebugging
+            val thread = Thread.currentThread()
+
             val traceDumpPath = TraceAgentParameters.traceDumpFilePath ?: error("Trace dump path is not set")
             val pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean()
+
+            val startCount = startCount.decrementAndGet()
+            Logger.info {
+                "Stop recording injection was called from $className::$methodName in thread ${thread.name} is called (startCount=$startCount)" +
+                if (startCount > 0) ": skipping stop as recording is still in progress" else ""
+            }
+            if (startCount < 0) {
+                Logger.error { "Recording has been stopped more times than started" }
+                return
+            }
+            if (startCount > 0) return
 
             TraceRecorder.stopRecording()
             TraceRecorder.dumpTrace(traceDumpPath, pack)
         } catch (t: Throwable) {
-            Logger.error { "Cannot stop Trace Recorder: $t"}
+            Logger.error(t) { "Cannot stop Trace Recorder"}
         }
     }
 }

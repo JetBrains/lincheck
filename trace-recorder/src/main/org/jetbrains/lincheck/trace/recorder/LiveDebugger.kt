@@ -59,10 +59,8 @@ internal object LiveDebugger {
                 recordingMode = recordingMode,
                 startMode = TraceRecorderSession.StartMode.Dynamic,
             )
-            if (session == null) {
-                Logger.warn { "Trace recording was not started" }
-                return
-            }
+            Logger.info { "Live debugging has been started" }
+
             if (recordingMode.isFileMode && traceDumpFilePath != null) {
                 session.installOnFinishHook {
                     dumpTrace(traceDumpFilePath, packTrace)
