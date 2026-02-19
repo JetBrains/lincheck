@@ -49,14 +49,6 @@ class TraceContext {
 
     fun threadNames(): List<String> = threadNames.values.toList()
 
-    val classDescriptors: List<ClassDescriptor?> get() = classPool.descriptors
-
-    val methodDescriptors: List<MethodDescriptor?> get() = methodPool.descriptors
-
-    val fieldDescriptors: List<FieldDescriptor?> get() = fieldPool.descriptors
-
-    val variableDescriptors: List<VariableDescriptor?> get() = variablePool.descriptors
-
     val codeLocations: List<CodeLocation?> get() = locations
 
     fun newCodeLocation(

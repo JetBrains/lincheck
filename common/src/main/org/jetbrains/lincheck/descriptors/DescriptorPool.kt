@@ -10,39 +10,21 @@
 
 package org.jetbrains.lincheck.descriptors
 
-import org.jetbrains.lincheck.util.ConcurrentSingleWriterList
 import org.jetbrains.lincheck.util.ensureNotNull
 import org.jetbrains.lincheck.util.expandTo
-import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Pool for interning descriptors and providing id-based and key-based lookups.
- *
- * Thread-safety note: api methods of the [DescriptorPool] are synchronized on modifications,
- * and non-synchronized on reads. It is correct because internal data structures are thread-safe by themselves
- * and correct behavior of concurrent reads and modifications is guaranteed because if [byKey] contains a value
- * then [descriptors] already contains the corresponding descriptor due to implementation of [register] method
- * where modification of [descriptors] is done before [byKey].
  */
 class DescriptorPool<D : Descriptor> {
-    // because `_descriptors` are exposed for reading, we use thread-safe list implementation,
-    // which does not allow read-write races between our write-code and user's read-code
-    private val _descriptors = ConcurrentSingleWriterList<D?>()
-
-    /**
-     * List of all descriptors in the current pool.
-     */
-    val descriptors: List<D?> get() = _descriptors
-
-    private val byKey = ConcurrentHashMap<Descriptor.Key, Int>()
+    private val descriptors = mutableListOf<D?>()
+    private val byKey = hashMapOf<Descriptor.Key, Int>()
 
     /**
      * @return descriptor by index [id] in the [descriptors] field.
      * @throws IllegalStateException if no descriptor with the specified id is present in the pool.
-     *
-     * This method is not synchronized, because its invocation is only possible after completion of [register]
-     * which returns the descriptor id.
      */
+    @Synchronized
     operator fun get(id: Int): D =
         descriptors[id].ensureNotNull {
             "Element $id is not found in pool"
@@ -50,17 +32,16 @@ class DescriptorPool<D : Descriptor> {
 
     /**
      * @return descriptor by its [key], or null if no descriptor with the specified key is present in the pool.
-     *
-     * This method is not synchronized, because if [byKey] contains the specified key, then
-     * the corresponding descriptor is already added to the [descriptors] list.
      */
+    @Synchronized
     operator fun get(key: Descriptor.Key): D? =
-        byKey[key]?.let { _descriptors[it] }
+        byKey[key]?.let { descriptors[it] }
 
     /**
      * @return id of the descriptor with the specified [key].
      * @throws IllegalStateException if no descriptor with the specified key is present in the pool.
      */
+    @Synchronized
     fun getId(key: Descriptor.Key): Int =
         byKey[key].ensureNotNull {
             "No descriptor with key $key"
@@ -68,10 +49,8 @@ class DescriptorPool<D : Descriptor> {
 
     /**
      * @return true if a descriptor with the specified [key] is present in the pool, false otherwise.
-     *
-     * This method is not synchronized, because its invocation with returned value true
-     * guarantees that [descriptors] already contains the returned descriptor.
      */
+    @Synchronized
     operator fun contains(key: Descriptor.Key): Boolean =
         byKey.containsKey(key)
 
@@ -85,7 +64,7 @@ class DescriptorPool<D : Descriptor> {
         val key = descriptor.key
         val existing = byKey[key]
         if (existing != null) {
-            val current = _descriptors[existing]
+            val current = descriptors[existing]
             check(current != null) {
                 "Invariant violation: id $existing has null item for key $key"
             }
@@ -94,8 +73,8 @@ class DescriptorPool<D : Descriptor> {
             }
             return existing
         }
-        _descriptors.add(descriptor)
-        val id = _descriptors.lastIndex
+        descriptors.add(descriptor)
+        val id = descriptors.lastIndex
         byKey[key] = id
         return id
     }
@@ -105,7 +84,7 @@ class DescriptorPool<D : Descriptor> {
      */
     @Synchronized
     fun clear() {
-        _descriptors.clear()
+        descriptors.clear()
         byKey.clear()
     }
 
@@ -115,11 +94,11 @@ class DescriptorPool<D : Descriptor> {
      */
     @Synchronized
     fun restore(id: Int, value: D) {
-        check(id >= _descriptors.size || _descriptors[id] == null || _descriptors[id] == value) {
+        check(id >= descriptors.size || descriptors[id] == null || descriptors[id] == value) {
             "Item with id $id is already present in pool and differs from $value"
         }
-        _descriptors.expandTo(id + 1, null)
-        _descriptors[id] = value
+        descriptors.expandTo(id + 1, null)
+        descriptors[id] = value
         byKey[value.key] = id
     }
 }
