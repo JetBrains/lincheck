@@ -96,9 +96,7 @@ object TraceRecorderJmxController : TracingJmxController {
     }
 
     private fun shutdownHook() {
-        if (TraceRecorder.isRecording()) {
-            stopTracing()
-        }
+        stopTracing()
     }
 
     override fun addBreakpoints(breakpoints: List<String>) {

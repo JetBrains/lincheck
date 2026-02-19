@@ -74,7 +74,6 @@ internal object LiveDebugger {
     }
 
     fun stopRecording() {
-        if (!TraceRecorder.isRecording()) return
         try {
             TraceRecorder.stopRecording()
         } catch (t: Throwable) {

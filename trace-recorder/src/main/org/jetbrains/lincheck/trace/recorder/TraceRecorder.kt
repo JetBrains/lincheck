@@ -14,27 +14,33 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
-import java.util.concurrent.atomic.*
 
 /**
- * The `TraceRecorder` object manages the trace recording process.
+ * The [TraceRecorder] object manages the trace recording process.
  *
  * The trace recording process involves:
- * - Starting the trace recording using [startRecording].
- * - Stopping the trace recording using [stopRecording].
+ * - Starting a trace recording session via [startRecording].
+ * - Stopping a trace recording session using [stopRecording].
  * - Optionally dumping the recorded trace output to a specified location using [dumpTrace].
- *
- * Proper usage of the [TraceRecorder] involves ensuring that:
- * - the trace recorder is stopped before an attempt to dump the recorded trace to file;
- * - the trace recorder is stopped before the next trace recording sessions start.
  */
 object TraceRecorder {
     @Volatile
     private var session: TraceRecorderSession? = null
 
-    fun isRecording(): Boolean =
-        session?.isRunning() ?: false
-
+    /**
+     * Starts a new trace recording session with the specified recording mode and start mode.
+     *
+     * If some recording session is already running, returns the existing session.
+     * If another session was started earlier and finished, replaces it with a new session.
+     *
+     * @param recordingMode The recording mode that configures the trace collection strategy,
+     *   such as in-memory, file streaming, or network transfer
+     *   (see [TraceRecordingMode] for more details).
+     * @param startMode Specifies how the trace recording session should begin.
+     *   It could start dynamically at an arbitrary point or from a specific method with additional context
+     *   (see [TraceRecorderSession.StartMode] for more details).
+     * @return The newly created or existing trace recording session.
+     */
     @Synchronized
     fun startRecording(
         recordingMode: TraceRecordingMode,
@@ -90,11 +96,11 @@ object TraceRecorder {
                     val className = startMode.className
                     val methodName = startMode.methodName
                     val threadName = Thread.currentThread().name
-                    "Trace recorder has been started from $className::$methodName in thread $threadName"
+                    "Trace recorder session has been started from $className::$methodName in thread $threadName"
                 }
                 is TraceRecorderSession.StartMode.Dynamic -> {
                     val threadName = Thread.currentThread().name
-                    "Trace recorder has been started in thread $threadName"
+                    "Trace recorder session has been started in thread $threadName"
                 }
             }
         }
@@ -103,10 +109,24 @@ object TraceRecorder {
         return session
     }
 
+    /**
+     * Stops the currently running trace recorder session, if any. Returns the finished session.
+     * If there is no running session or a current session was already finished earlier, returns `null`.
+     *
+     * @return The stopped trace recorder session or `null` if no session was running.
+     */
     @Synchronized
-    fun stopRecording() {
-        val session = this.session ?: error("No trace recorder session is running to stop")
-        check(session.isRunning()) { "Trace recorder session was not started" }
+    fun stopRecording(): TraceRecorderSession? {
+        val session = this.session
+        if (session == null) {
+            Logger.warn { "No trace recorder session is running to stop" }
+            return null
+        }
+
+        check(session.hasStarted()) {
+            "Trace recorder session has not started yet"
+        }
+        if (session.isFinished()) return session
 
         val eventTracker = session.eventTracker
 
@@ -130,14 +150,46 @@ object TraceRecorder {
         session.finish()
 
         LincheckInstrumentation.reportStatistics()
+
+        Logger.info {
+            when (val startMode = session.startMode) {
+                is TraceRecorderSession.StartMode.FromMethod -> {
+                    val className = startMode.className
+                    val methodName = startMode.methodName
+                    val threadName = Thread.currentThread().name
+                    "Trace recorder session has been stopped from $className::$methodName in thread $threadName"
+                }
+                is TraceRecorderSession.StartMode.Dynamic -> {
+                    val threadName = Thread.currentThread().name
+                    "Trace recorder session has been stopped in thread $threadName"
+                }
+                else -> unreachable()
+            }
+        }
+
+        return session
     }
 
+    /**
+     * Dumps the trace to the specified file path.
+     * If there is no current session or a current session was not stopped yet, does nothing.
+     *
+     * @return `true` if the trace was successfully dumped, `false` otherwise.
+     */
     @Synchronized
-    fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean) {
-        val session = this.session ?: error("No trace recorder session is running to dump trace")
-        check(session.isFinished()) { "Trace recorder session was not stopped" }
+    fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean): Boolean {
+        val session = this.session
+        if (session == null) {
+            Logger.warn { "No trace recorder session is running to dump trace" }
+            return false
+        }
+        if (!session.isFinished()) {
+            Logger.warn { "Trace recorder session was not stopped" }
+            return false
+        }
 
         session.dumpTrace(traceDumpFilePath, packTrace)
+        return true
     }
 
     fun addBreakpoints(breakpoints: List<String>) {

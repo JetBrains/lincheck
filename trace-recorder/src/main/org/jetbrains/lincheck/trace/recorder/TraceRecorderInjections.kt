@@ -11,8 +11,7 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.util.Logger
-import org.jetbrains.lincheck.util.ensureNotNull
+import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -92,8 +91,8 @@ internal object TraceRecorderInjections {
             }
             if (startCount > 0) return
 
-            TraceRecorder.stopRecording()
-            TraceRecorder.dumpTrace(traceDumpPath, pack)
+            TraceRecorder.stopRecording().ensureNotNull()
+            TraceRecorder.dumpTrace(traceDumpPath, pack).ensureTrue()
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot stop Trace Recorder"}
         }
