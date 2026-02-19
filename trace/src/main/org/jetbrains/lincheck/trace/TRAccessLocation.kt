@@ -41,21 +41,21 @@ internal fun AccessLocation.saveReferences(out: TraceWriter, traceContext: Trace
 //       all preceding checks are fulfilled, so no need to write them here
 private fun LocalVariableAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     check(traceContext.variablePool.contains(variableDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved variable $variableDescriptor" }
-    val variableDescriptorId = traceContext.variablePool[variableDescriptor.key]!!.id
+    val variableDescriptorId = traceContext.variablePool.getId(variableDescriptor.key)
     out.writeLocationKind(AccessLocationKind.LOCAL_VARIABLE)
     out.writeInt(variableDescriptorId)
 }
 
 private fun StaticFieldAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     check(traceContext.fieldPool.contains(fieldDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved field $fieldDescriptor" }
-    val fieldDescriptorId = traceContext.fieldPool[fieldDescriptor.key]!!.id
+    val fieldDescriptorId = traceContext.fieldPool.getId(fieldDescriptor.key)
     out.writeLocationKind(AccessLocationKind.STATIC_FIELD)
     out.writeInt(fieldDescriptorId)
 }
 
 private fun ObjectFieldAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     check(traceContext.fieldPool.contains(fieldDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved field $fieldDescriptor" }
-    val fieldDescriptorId = traceContext.fieldPool[fieldDescriptor.key]!!.id
+    val fieldDescriptorId = traceContext.fieldPool.getId(fieldDescriptor.key)
     out.writeLocationKind(AccessLocationKind.OBJECT_FIELD)
     out.writeInt(fieldDescriptorId)
 }

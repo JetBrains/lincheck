@@ -28,13 +28,11 @@ interface Descriptor {
     abstract class Key
 
     val key: Key
-    var id: Int
 }
 
 data class ClassDescriptor(
     val name: String,
 ) : Descriptor {
-    override var id: Int = -1
     data class Key(val className: String) : Descriptor.Key()
     override val key: Descriptor.Key get() = Key(name)
 }
@@ -46,8 +44,12 @@ data class MethodDescriptor(
     val isIntrinsic: Boolean = false,
     val isInline: Boolean = false
 ) : Descriptor {
-    override var id: Int = -1
 
+    /**
+     * @return id of this descriptor in the method pool.
+     * @throws IllegalStateException if this descriptor is not registered yet.
+     */
+    val id: Int get() = context.methodPool.getId(key)
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
     val methodName: String get() = methodSignature.name
@@ -73,7 +75,12 @@ data class FieldDescriptor(
     val fieldKind: FieldKind,
     val isFinal: Boolean,
 ) : Descriptor {
-    override var id: Int = -1
+
+    /**
+     * @return id of this descriptor in the field pool.
+     * @throws IllegalStateException if this descriptor is not registered yet.
+     */
+    val id: Int get() = context.fieldPool.getId(key)
     val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
@@ -105,7 +112,6 @@ data class VariableDescriptor(
     val name: String,
     val type: Types.Type,
 ) : Descriptor {
-    override var id: Int = -1
     data class Key(val name: String, val type: Types.Type) : Descriptor.Key()
     override val key: Descriptor.Key get() = Key(name, type)
 }

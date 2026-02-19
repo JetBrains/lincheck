@@ -58,6 +58,15 @@ class DescriptorPool<D : Descriptor> {
         byKey[key]?.let { _descriptors[it] }
 
     /**
+     * @return id of the descriptor with the specified [key].
+     * @throws IllegalStateException if no descriptor with the specified key is present in the pool.
+     */
+    fun getId(key: Descriptor.Key): Int =
+        byKey[key].ensureNotNull {
+            "No descriptor with key $key"
+        }
+
+    /**
      * @return true if a descriptor with the specified [key] is present in the pool, false otherwise.
      *
      * This method is not synchronized, because its invocation with returned value true
@@ -87,7 +96,6 @@ class DescriptorPool<D : Descriptor> {
         }
         _descriptors.add(descriptor)
         val id = _descriptors.lastIndex
-        descriptor.id = id
         byKey[key] = id
         return id
     }
@@ -110,7 +118,6 @@ class DescriptorPool<D : Descriptor> {
         check(id >= _descriptors.size || _descriptors[id] == null || _descriptors[id] == value) {
             "Item with id $id is already present in pool and differs from $value"
         }
-        value.id = id
         _descriptors.expandTo(id + 1, null)
         _descriptors[id] = value
         byKey[value.key] = id
