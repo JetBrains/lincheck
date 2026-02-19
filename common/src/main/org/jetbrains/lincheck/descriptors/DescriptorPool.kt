@@ -18,9 +18,11 @@ import java.util.concurrent.ConcurrentHashMap
 /**
  * Pool for interning descriptors and providing id-based and key-based lookups.
  *
- * Thread-safety note: for now it uses a regular mutable list and map.
- * Reads are not guaranteed to be race-free. The array can be replaced with
- * an atomic array later to guarantee thread-safe reads.
+ * Thread-safety note: api methods of the [DescriptorPool] are synchronized on modifications,
+ * and non-synchronized on reads. It is correct because internal data structures are thread-safe by themselves
+ * and correct behavior of concurrent reads and modifications is guaranteed because if [byKey] contains a value
+ * then [descriptors] already contains the corresponding descriptor due to implementation of [register] method
+ * where modification of [descriptors] is done before [byKey].
  */
 class DescriptorPool<D : Descriptor> {
     // because `_descriptors` are exposed for reading, we use thread-safe list implementation,
