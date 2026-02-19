@@ -42,7 +42,8 @@ data class MethodDescriptor(
     private val context: TraceContext,
     val classId: Int,
     val methodSignature: MethodSignature,
-    val isIntrinsic: Boolean = false
+    val isIntrinsic: Boolean = false,
+    val isInline: Boolean = false
 ) : Descriptor {
     override var id: Int = -1
 

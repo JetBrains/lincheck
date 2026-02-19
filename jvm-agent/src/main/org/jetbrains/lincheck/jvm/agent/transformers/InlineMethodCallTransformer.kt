@@ -340,7 +340,10 @@ internal class InlineMethodCallTransformer(
     }
 
     private fun registerInlineMethod(possibleClassName: String, inlineMethodName: String): Int =
-        context.createAndRegisterMethodDescriptor(possibleClassName, inlineMethodName, Types.MethodType(Types.VOID_TYPE)).id
+        context.createAndRegisterMethodDescriptor(
+            possibleClassName, inlineMethodName,
+            Types.MethodType(Types.VOID_TYPE), isInline = true
+        ).id
 
     private fun topOfStackEndsBeforeLabel(label: Label): Boolean =
         inlineStack.isNotEmpty() && methodInfo.labels.compare(inlineStack.last().lvar.endLabel, label) < 0

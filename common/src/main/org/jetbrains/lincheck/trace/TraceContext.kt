@@ -149,7 +149,8 @@ fun TraceContext.createAndRegisterMethodDescriptor(
     className: String,
     methodName: String,
     methodType: Types.MethodType,
-    isIntrinsic: Boolean = false
+    isIntrinsic: Boolean = false,
+    isInline: Boolean = false
 ): MethodDescriptor {
     // If a descriptor with the same key already exists, return the existing instance (with a proper id).
     val signature = MethodSignature(methodName, methodType)
@@ -162,7 +163,8 @@ fun TraceContext.createAndRegisterMethodDescriptor(
         context = this,
         classId = clazzId,
         methodSignature = signature,
-        isIntrinsic = isIntrinsic
+        isIntrinsic = isIntrinsic,
+        isInline = isInline
     )
     methodPool.register(descriptor)
     return descriptor
