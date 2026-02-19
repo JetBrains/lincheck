@@ -21,6 +21,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
+import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.instrument.Instrumentation
 
 /**
@@ -118,6 +119,11 @@ internal object TraceRecorderAgent {
 
     @JvmStatic
     private fun installInstrumentation() {
-        LincheckInstrumentation.install(InstrumentationMode.TRACE_RECORDING)
+        val mode = when {
+            isInTraceRecorderMode -> InstrumentationMode.TRACE_RECORDING
+            isInLiveDebuggerMode -> InstrumentationMode.LIVE_DEBUGGING
+            else -> error("Unexpected instrumentation mode")
+        }
+        LincheckInstrumentation.install(mode)
     }
 }

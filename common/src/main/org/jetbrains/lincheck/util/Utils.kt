@@ -10,11 +10,6 @@
 
 package org.jetbrains.lincheck.util
 
-import java.lang.invoke.MethodHandle
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodHandles.Lookup
-import java.lang.invoke.MethodType
-
 // Trace agent modes
 const val TRACE_DEBUGGER_MODE_PROPERTY = "lincheck.traceDebuggerMode"
 const val TRACE_RECORDER_MODE_PROPERTY = "lincheck.traceRecorderMode"

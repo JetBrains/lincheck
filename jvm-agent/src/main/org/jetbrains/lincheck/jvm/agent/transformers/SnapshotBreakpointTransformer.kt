@@ -36,8 +36,8 @@ internal class SnapshotBreakpointTransformer(
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     config: TransformationConfiguration,
-    private val liveDebuggerSettings: LiveDebuggerSettings,
-    private val classLoader: ClassLoader
+    private val breakpoints: List<SnapshotBreakpoint>,
+    private val classLoader: ClassLoader,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     private val traceIdCapturers = TraceIdCapturerRegistry(config)
@@ -61,7 +61,7 @@ internal class SnapshotBreakpointTransformer(
         if (line in instrumentedLinesInCurrentBlock) return@run
 
         val canonicalClassName = className.toCanonicalClassName()
-        val breakpointSettings = liveDebuggerSettings.lineBreakPoints.firstOrNull {
+        val breakpointSettings = breakpoints.firstOrNull {
             it.lineNumber == line && it.className == canonicalClassName
         } ?: return@run
 
