@@ -81,12 +81,12 @@ data class FieldDescriptor(
     data class Key(
         val className: String,
         val fieldName: String,
-        val type: Types.Type
+        val type: Types.Type,
+        val fieldKind: FieldKind
     ) : Descriptor.Key()
 
-    // TODO: jvm bytecode allows static and regular fields of the same name in a class, should the `isStatic` be included in key?
     override val key: Descriptor.Key
-        get() = Key(className, fieldName, type)
+        get() = Key(className, fieldName, type, fieldKind)
 }
 
 /**

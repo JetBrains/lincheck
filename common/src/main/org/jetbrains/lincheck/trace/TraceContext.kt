@@ -185,7 +185,7 @@ fun TraceContext.createAndRegisterFieldDescriptor(
     isFinal: Boolean
 ): FieldDescriptor {
     // If a descriptor with the same key already exists, return the existing instance (with a proper id).
-    val key = FieldDescriptor.Key(className, fieldName, type)
+    val key = FieldDescriptor.Key(className, fieldName, type, fieldKind)
     fieldPool[key]?.let { return it }
 
     // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
