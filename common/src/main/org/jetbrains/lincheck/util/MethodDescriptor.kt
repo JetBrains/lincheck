@@ -13,20 +13,29 @@ package org.jetbrains.lincheck.util
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.Types
 
-fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
+fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean =
+    isArraysCopyOfIntrinsic(className, methodName, methodSignature.methodType)
+
+fun isArraysCopyOfIntrinsic(className: String, methodName: String, mt: Types.MethodType): Boolean {
+    val returnType = mt.returnType
+    val argumentTypes = mt.argumentTypes
     return (
         className == "java.util.Arrays" &&
         methodName == "copyOf" &&
         (
             returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, Types.INT_TYPE) ||
-            returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE,
-                Types.INT_TYPE, CLASS_TYPE) ||
+            returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, Types.INT_TYPE, CLASS_TYPE) ||
             ARRAY_OF_PRIMITIVE_TYPES.any { returnType == it && argumentTypes == listOf(it, Types.INT_TYPE) }
         )
     )
 }
 
-fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
+fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean =
+    isArraysCopyOfRangeIntrinsic(className, methodName, methodSignature.methodType)
+
+fun isArraysCopyOfRangeIntrinsic(className: String, methodName: String, mt: Types.MethodType): Boolean {
+    val returnType = mt.returnType
+    val argumentTypes = mt.argumentTypes
     return (
         className == "java.util.Arrays" &&
         methodName.contains("copyOfRange") &&
@@ -48,9 +57,9 @@ fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
 
 // TODO: java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations
 //  add all tracked intrinsics here
-fun MethodDescriptor.isTrackedIntrinsic(): Boolean =
-    isArraysCopyOfIntrinsic() ||
-    isArraysCopyOfRangeIntrinsic()
+fun isTrackedIntrinsic(className: String, methodName: String, mt: Types.MethodType): Boolean =
+    isArraysCopyOfIntrinsic(className, methodName, mt) ||
+    isArraysCopyOfRangeIntrinsic(className, methodName, mt)
 
 private val ARRAY_OF_OBJECTS_TYPE = Types.ArrayType(Types.ObjectType("java.lang.Object"))
 private val ARRAY_OF_INT_TYPE = Types.ArrayType(Types.INT_TYPE)

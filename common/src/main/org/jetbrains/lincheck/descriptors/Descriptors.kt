@@ -42,9 +42,9 @@ data class MethodDescriptor(
     private val context: TraceContext,
     val classId: Int,
     val methodSignature: MethodSignature,
+    val isIntrinsic: Boolean = false
 ) : Descriptor {
     override var id: Int = -1
-    var isIntrinsic: Boolean = false
 
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
