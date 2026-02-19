@@ -38,12 +38,6 @@ data class ClassDescriptor(
     override val key: Descriptor.Key get() = Key(name)
 }
 
-data class MethodSignature(val name: String, val methodType: Types.MethodType) {
-    override fun toString(): String {
-        return "$name$methodType"
-    }
-}
-
 data class MethodDescriptor(
     private val context: TraceContext,
     val classId: Int,
