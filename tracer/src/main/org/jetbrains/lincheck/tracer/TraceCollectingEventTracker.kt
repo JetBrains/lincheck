@@ -1,14 +1,14 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.CodeLocations
@@ -16,7 +16,6 @@ import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
-import org.jetbrains.lincheck.tracer.TracingMode
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite

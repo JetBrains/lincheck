@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.tracer.TraceCollectingEventTracker
 import org.jetbrains.lincheck.tracer.TracingMode
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
