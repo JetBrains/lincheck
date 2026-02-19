@@ -26,7 +26,7 @@ import sun.nio.ch.lincheck.*
  */
 object TraceRecorder {
     @Volatile
-    private var session: TraceRecorderSession? = null
+    private var session: TracingSession? = null
 
     /**
      * Starts a new trace recording session with the specified recording mode and start mode.
@@ -39,14 +39,14 @@ object TraceRecorder {
      *   (see [TracingMode] for more details).
      * @param startMode Specifies how the trace recording session should begin.
      *   It could start dynamically at an arbitrary point or from a specific method with additional context
-     *   (see [TraceRecorderSession.StartMode] for more details).
+     *   (see [TracingSession.StartMode] for more details).
      * @return The newly created or existing trace recording session.
      */
     @Synchronized
     fun startRecording(
         recordingMode: TracingMode,
-        startMode: TraceRecorderSession.StartMode,
-    ): TraceRecorderSession {
+        startMode: TracingSession.StartMode,
+    ): TracingSession {
         // Set a signal "void" object from Injections for better text output
         INJECTIONS_VOID_OBJECT = Injections.VOID_RESULT
 
@@ -69,11 +69,11 @@ object TraceRecorder {
 
         var currentThreadDescriptor: ThreadDescriptor? = null
         when (startMode) {
-            is TraceRecorderSession.StartMode.Dynamic -> {
+            is TracingSession.StartMode.Dynamic -> {
                 session.startDynamic()
             }
 
-            is TraceRecorderSession.StartMode.FromMethod -> {
+            is TracingSession.StartMode.FromMethod -> {
                 val className = startMode.className
                 val methodName = startMode.methodName
                 val startingCodeLocationId = startMode.startingCodeLocationId
@@ -93,13 +93,13 @@ object TraceRecorder {
 
         Logger.info {
             when (startMode) {
-                is TraceRecorderSession.StartMode.FromMethod -> {
+                is TracingSession.StartMode.FromMethod -> {
                     val className = startMode.className
                     val methodName = startMode.methodName
                     val threadName = Thread.currentThread().name
                     "Trace recorder session has been started from $className::$methodName in thread $threadName"
                 }
-                is TraceRecorderSession.StartMode.Dynamic -> {
+                is TracingSession.StartMode.Dynamic -> {
                     val threadName = Thread.currentThread().name
                     "Trace recorder session has been started in thread $threadName"
                 }
@@ -117,7 +117,7 @@ object TraceRecorder {
      * @return The stopped trace recorder session or `null` if no session was running.
      */
     @Synchronized
-    fun stopRecording(): TraceRecorderSession? {
+    fun stopRecording(): TracingSession? {
         val session = this.session
         if (session == null) {
             Logger.warn { "No trace recorder session is running to stop" }
@@ -154,13 +154,13 @@ object TraceRecorder {
 
         Logger.info {
             when (val startMode = session.startMode) {
-                is TraceRecorderSession.StartMode.FromMethod -> {
+                is TracingSession.StartMode.FromMethod -> {
                     val className = startMode.className
                     val methodName = startMode.methodName
                     val threadName = Thread.currentThread().name
                     "Trace recorder session has been stopped from $className::$methodName in thread $threadName"
                 }
-                is TraceRecorderSession.StartMode.Dynamic -> {
+                is TracingSession.StartMode.Dynamic -> {
                     val threadName = Thread.currentThread().name
                     "Trace recorder session has been stopped in thread $threadName"
                 }
@@ -222,7 +222,7 @@ object TraceRecorder {
         return LincheckInstrumentation.context
     }
 
-    private fun createSession(recordingMode: TracingMode): TraceRecorderSession {
+    private fun createSession(recordingMode: TracingMode): TracingSession {
         val eventTracker = TraceCollectingEventTracker(
             mode = recordingMode,
             layout = if (isInLiveDebuggerMode) TraceDataLayout.FLAT else TraceDataLayout.TREE,
@@ -243,6 +243,6 @@ object TraceRecorder {
             }
         }
 
-        return TraceRecorderSession(eventTracker, tcpServer)
+        return TracingSession(eventTracker, tcpServer)
     }
 }

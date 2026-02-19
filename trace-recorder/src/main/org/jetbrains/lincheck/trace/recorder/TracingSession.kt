@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
 
-class TraceRecorderSession(
+class TracingSession(
     val eventTracker: TraceCollectingEventTracker,
     val tcpServer: TcpTraceServer? = null
 ) {
@@ -64,7 +64,7 @@ class TraceRecorderSession(
         is State.Finished   -> s.startMode
     }
 
-    private val finishHook = AtomicReference<TraceRecorderSession.() -> Unit>()
+    private val finishHook = AtomicReference<TracingSession.() -> Unit>()
 
     /**
      * Checks if the session has been started.
@@ -135,7 +135,7 @@ class TraceRecorderSession(
         }
     }
 
-    fun installOnFinishHook(hook: TraceRecorderSession.() -> Unit) {
+    fun installOnFinishHook(hook: TracingSession.() -> Unit) {
         val wasAlreadySet = !finishHook.compareAndSet(null, hook)
         if (wasAlreadySet) {
             error("Finish hook was already set for this session")

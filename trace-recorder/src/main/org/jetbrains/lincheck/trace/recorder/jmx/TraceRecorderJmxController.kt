@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
 import org.jetbrains.lincheck.trace.recorder.TraceRecorder
 import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent
-import org.jetbrains.lincheck.trace.recorder.TraceRecorderSession
+import org.jetbrains.lincheck.trace.recorder.TracingSession
 import org.jetbrains.lincheck.trace.recorder.TracingMode
 import org.jetbrains.lincheck.util.Logger
 import java.lang.management.ManagementFactory
@@ -61,7 +61,7 @@ object TraceRecorderJmxController : TracingJmxController {
                     outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                     outputFilePath = traceDumpFilePath,
                 ),
-                startMode = TraceRecorderSession.StartMode.Dynamic,
+                startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "File-based trace session has been started" }
 
@@ -77,7 +77,7 @@ object TraceRecorderJmxController : TracingJmxController {
         try {
             TraceRecorder.startRecording(
                 recordingMode = TracingMode.BinaryTcpStream,
-                startMode = TraceRecorderSession.StartMode.Dynamic,
+                startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "TCP trace streaming session has been started" }
         } catch (t: Throwable) {

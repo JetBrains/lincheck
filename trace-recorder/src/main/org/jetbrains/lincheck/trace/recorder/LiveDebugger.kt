@@ -58,7 +58,7 @@ internal object LiveDebugger {
         try {
             val session = TraceRecorder.startRecording(
                 recordingMode = recordingMode,
-                startMode = TraceRecorderSession.StartMode.Dynamic,
+                startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "Live debugging has been started" }
 
