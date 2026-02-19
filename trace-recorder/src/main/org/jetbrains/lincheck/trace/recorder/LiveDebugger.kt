@@ -44,7 +44,7 @@ internal object LiveDebugger {
     fun startRecording() {
         val traceDumpFilePath = TraceAgentParameters.traceDumpFilePath
         val packTrace = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
-        val recordingMode = TraceRecordingMode.parse(
+        val recordingMode = TracingMode.parse(
             outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
             outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
             outputFilePath = traceDumpFilePath,

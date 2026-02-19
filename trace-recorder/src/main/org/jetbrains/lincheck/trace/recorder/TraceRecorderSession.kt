@@ -174,13 +174,13 @@ class TraceRecorderSession(
         try {
             val roots = eventTracker.getThreadRoots()
             when (mode) {
-                is TraceRecordingMode.BinaryFileDump -> {
+                is TracingMode.BinaryFileDump -> {
                     saveRecorderTrace(traceDumpFilePath, context, roots)
                     if (packTrace) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                is TraceRecordingMode.BinaryFileStream -> {
+                is TracingMode.BinaryFileStream -> {
                     check(traceDumpFilePath == eventTracker.traceStreamingFilePath) {
                         // TODO: it should be easy to support dumping to a different file later: just copy file
                         "Trace dump filename in binary stream mode should match the filename of streaming file"
@@ -189,21 +189,21 @@ class TraceRecorderSession(
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                is TraceRecordingMode.BinaryTcpStream -> {
+                is TracingMode.BinaryTcpStream -> {
                     // TCP streaming - trace already sent over network, nothing to dump to file
                     error("Trace is streamed over TCP, no data stored to save into a file")
                 }
-                is TraceRecordingMode.Text -> {
+                is TracingMode.Text -> {
                     printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)
                 }
-                TraceRecordingMode.Null -> {}
+                TracingMode.Null -> {}
             }
             Logger.info { "Trace was saved to $traceDumpFilePath" }
         } catch (t: Throwable) {
             Logger.error { "TraceRecorder: Cannot write output file $traceDumpFilePath: ${t.message} at ${t.stackTraceToString()}" }
             return
         } finally {
-            if (mode != TraceRecordingMode.Null) {
+            if (mode != TracingMode.Null) {
                 Logger.debug { "Trace written in ${System.currentTimeMillis() - traceWriteStartTime} ms" }
             }
         }

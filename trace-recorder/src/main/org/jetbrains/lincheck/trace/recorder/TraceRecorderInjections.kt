@@ -56,7 +56,7 @@ internal object TraceRecorderInjections {
             if (startCount > 1) return
 
             TraceRecorder.startRecording(
-                TraceRecordingMode.parse(
+                TracingMode.parse(
                     outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                     outputFilePath = TraceAgentParameters.traceDumpFilePath,

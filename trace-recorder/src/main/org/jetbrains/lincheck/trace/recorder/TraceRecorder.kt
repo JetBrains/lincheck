@@ -36,7 +36,7 @@ object TraceRecorder {
      *
      * @param recordingMode The recording mode that configures the trace collection strategy,
      *   such as in-memory, file streaming, or network transfer
-     *   (see [TraceRecordingMode] for more details).
+     *   (see [TracingMode] for more details).
      * @param startMode Specifies how the trace recording session should begin.
      *   It could start dynamically at an arbitrary point or from a specific method with additional context
      *   (see [TraceRecorderSession.StartMode] for more details).
@@ -44,7 +44,7 @@ object TraceRecorder {
      */
     @Synchronized
     fun startRecording(
-        recordingMode: TraceRecordingMode,
+        recordingMode: TracingMode,
         startMode: TraceRecorderSession.StartMode,
     ): TraceRecorderSession {
         // Set a signal "void" object from Injections for better text output
@@ -222,16 +222,16 @@ object TraceRecorder {
         return LincheckInstrumentation.context
     }
 
-    private fun createSession(recordingMode: TraceRecordingMode): TraceRecorderSession {
+    private fun createSession(recordingMode: TracingMode): TraceRecorderSession {
         val eventTracker = TraceCollectingEventTracker(
             mode = recordingMode,
             layout = if (isInLiveDebuggerMode) TraceDataLayout.FLAT else TraceDataLayout.TREE,
             context = createTraceContext(),
-            traceStreamingFilePath = (recordingMode as? TraceRecordingMode.BinaryFileStream)?.streamingFilePath
+            traceStreamingFilePath = (recordingMode as? TracingMode.BinaryFileStream)?.streamingFilePath
         )
 
         var tcpServer: TcpTraceServer? = null
-        if (recordingMode is TraceRecordingMode.BinaryTcpStream) {
+        if (recordingMode is TracingMode.BinaryTcpStream) {
             try {
                 tcpServer = TcpTraceServer(
                     port = TraceAgentParameters.DEFAULT_TRACE_PORT,

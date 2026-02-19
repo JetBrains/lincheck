@@ -11,15 +11,13 @@
 package org.jetbrains.lincheck.trace.recorder.jmx
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.trace.TcpTraceServer
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
 import org.jetbrains.lincheck.trace.recorder.TraceRecorder
 import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent
 import org.jetbrains.lincheck.trace.recorder.TraceRecorderSession
-import org.jetbrains.lincheck.trace.recorder.TraceRecordingMode
+import org.jetbrains.lincheck.trace.recorder.TracingMode
 import org.jetbrains.lincheck.util.Logger
 import java.lang.management.ManagementFactory
-import java.util.IdentityHashMap
 import javax.management.ObjectName
 import javax.management.StandardMBean
 
@@ -58,7 +56,7 @@ object TraceRecorderJmxController : TracingJmxController {
     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
         try {
             val session = TraceRecorder.startRecording(
-                recordingMode = TraceRecordingMode.parse(
+                recordingMode = TracingMode.parse(
                     outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
                     outputFilePath = traceDumpFilePath,
@@ -78,7 +76,7 @@ object TraceRecorderJmxController : TracingJmxController {
     override fun startTcpTracing() {
         try {
             TraceRecorder.startRecording(
-                recordingMode = TraceRecordingMode.BinaryTcpStream,
+                recordingMode = TracingMode.BinaryTcpStream,
                 startMode = TraceRecorderSession.StartMode.Dynamic,
             )
             Logger.info { "TCP trace streaming session has been started" }
