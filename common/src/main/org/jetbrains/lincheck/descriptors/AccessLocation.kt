@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.util.FieldKind
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 
@@ -62,7 +63,7 @@ data class ObjectFieldAccessLocation(
                 className = "java.lang.Array",
                 fieldName = "length",
                 type = Types.INT_TYPE,
-                isStatic = false,
+                fieldKind = FieldKind.INSTANCE,
                 isFinal = true,
             )
         )
@@ -158,10 +159,10 @@ fun Field.toAccessLocation(context: TraceContext): FieldAccessLocation {
     val isFinal = Modifier.isFinal(modifiers)
     val descriptor = context.createAndRegisterFieldDescriptor(className, fieldName,
         type = type.kotlin.getType(),
-        isStatic = isStatic,
+        fieldKind = FieldKind.fromBoolean(isStatic),
         isFinal = isFinal,
     )
-    return if (Modifier.isStatic(modifiers)) {
+    return if (isStatic) {
         StaticFieldAccessLocation(descriptor)
     } else {
         ObjectFieldAccessLocation(descriptor)

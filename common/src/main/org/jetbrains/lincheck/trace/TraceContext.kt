@@ -20,6 +20,7 @@ import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.util.FieldKind
 import java.util.concurrent.ConcurrentHashMap
 
 const val UNKNOWN_CODE_LOCATION_ID = -1
@@ -180,7 +181,7 @@ fun TraceContext.createAndRegisterFieldDescriptor(
     className: String,
     fieldName: String,
     type: Types.Type,
-    isStatic: Boolean,
+    fieldKind: FieldKind,
     isFinal: Boolean
 ): FieldDescriptor {
     // If a descriptor with the same key already exists, return the existing instance (with a proper id).
@@ -194,7 +195,7 @@ fun TraceContext.createAndRegisterFieldDescriptor(
         classId = clazzId,
         fieldName = fieldName,
         type = type,
-        isStatic = isStatic,
+        fieldKind = fieldKind,
         isFinal = isFinal
     )
     fieldPool.register(descriptor)

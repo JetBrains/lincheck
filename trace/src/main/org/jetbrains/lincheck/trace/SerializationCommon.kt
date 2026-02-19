@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.FieldKind
 import org.jetbrains.lincheck.util.Logger
 import java.io.BufferedReader
 import java.io.DataInput
@@ -438,7 +439,7 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
         classId = readInt(),
         fieldName = readUTF(),
         type = readType(),
-        isStatic = readBoolean(),
+        fieldKind = FieldKind.fromBoolean(isStatic = readBoolean()),
         isFinal = readBoolean()
     )
 }

@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
+import org.jetbrains.lincheck.util.FieldKind
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
 
@@ -69,10 +70,11 @@ data class FieldDescriptor(
     val classId: Int,
     val fieldName: String,
     val type: Types.Type,
-    val isStatic: Boolean,
+    val fieldKind: FieldKind,
     val isFinal: Boolean,
 ) : Descriptor {
     override var id: Int = -1
+    val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
 
@@ -95,7 +97,7 @@ fun Field.toDescriptor(context: TraceContext) = context.createAndRegisterFieldDe
     className = this.declaringClass.name,
     fieldName = this.name,
     type = this.type.kotlin.getType(),
-    isStatic = Modifier.isStatic(this.modifiers),
+    fieldKind = FieldKind.fromBoolean(Modifier.isStatic(this.modifiers)),
     isFinal = Modifier.isFinal(this.modifiers),
 )
 

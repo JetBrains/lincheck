@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.descriptors.toType
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
+import org.jetbrains.lincheck.util.FieldKind
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
@@ -75,7 +76,7 @@ internal class SharedMemoryAccessTransformer(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             type = desc.toType(),
-            isStatic = true,
+            fieldKind = FieldKind.STATIC,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         ).id
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
@@ -113,7 +114,7 @@ internal class SharedMemoryAccessTransformer(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             type = desc.toType(),
-            isStatic = false,
+            fieldKind = FieldKind.INSTANCE,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         ).id
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
@@ -160,7 +161,7 @@ internal class SharedMemoryAccessTransformer(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             type = desc.toType(),
-            isStatic = true,
+            fieldKind = FieldKind.STATIC,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         ).id
         val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
@@ -191,7 +192,7 @@ internal class SharedMemoryAccessTransformer(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             type = desc.toType(),
-            isStatic = false,
+            fieldKind = FieldKind.INSTANCE,
             isFinal = FinalFields.isFinalField(owner, fieldName)
         ).id
         val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
