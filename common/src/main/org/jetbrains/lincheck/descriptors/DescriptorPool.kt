@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.util.ConcurrentSingleWriterList
 import org.jetbrains.lincheck.util.ensureNotNull
+import org.jetbrains.lincheck.util.expandTo
 
 /**
  * Pool for interning descriptors and providing id-based and key-based lookups.
@@ -67,7 +68,9 @@ class DescriptorPool<D : Descriptor> {
         val existing = byKey[key]
         if (existing != null) {
             val current = _descriptors[existing]
-            check(current != null) { "Invariant violation: id $existing has null item for key $key" }
+            check(current != null) {
+                "Invariant violation: id $existing has null item for key $key"
+            }
             check(current == descriptor) {
                 "Attempt to register a different descriptor for the same key: old=$current, new=$descriptor"
             }
@@ -89,13 +92,16 @@ class DescriptorPool<D : Descriptor> {
         byKey.clear()
     }
 
-    /** Restores descriptor under a concrete [id]. Used by deserializers. */
+    /**
+     * Restores descriptor under a concrete [id].
+     * Used by deserializers.
+     */
     @Synchronized
     fun restore(id: Int, value: D) {
         check(id >= _descriptors.size || _descriptors[id] == null || _descriptors[id] == value) {
             "Item with id $id is already present in pool and differs from $value"
         }
-        while (_descriptors.size <= id) _descriptors.add(null)
+        _descriptors.expandTo(id + 1, null)
         _descriptors[id] = value
         value.id = id
         byKey[value.key] = id
