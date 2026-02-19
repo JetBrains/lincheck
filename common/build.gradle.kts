@@ -15,6 +15,10 @@ sourceSets {
         java.srcDirs("src/main")
     }
 
+    test {
+        java.srcDir("src/test")
+    }
+
     dependencies {
         // main
         val asmVersion: String by project
@@ -22,8 +26,14 @@ sourceSets {
         compileOnly(project(":bootstrap"))
         api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
+
+        val junitVersion: String by project
+
+        testImplementation("junit:junit:$junitVersion")
     }
 }
+
+setupTestsJDK(project)
 
 tasks {
     named<JavaCompile>("compileTestJava") {
@@ -34,6 +44,11 @@ tasks {
     }
 }
 
+tasks {
+    test {
+        configureJvmTestCommon(project)
+    }
+}
 
 val jar = tasks.jar {
     archiveFileName.set("common.jar")
