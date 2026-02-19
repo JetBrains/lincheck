@@ -24,20 +24,34 @@ class DescriptorPool<D : Descriptor> {
     // because `_descriptors` are exposed for reading, we use thread-safe list implementation,
     // which does not allow read-write races between our write-code and user's read-code
     private val _descriptors = ConcurrentSingleWriterList<D?>()
+
+    /**
+     * List of all descriptors in the current pool.
+     */
     val descriptors: List<D?> get() = _descriptors
 
     private val byKey = hashMapOf<Descriptor.Key, Int>()
 
+    /**
+     * @return descriptor by index [id] in the [descriptors] field.
+     * @throws IllegalStateException if no descriptor with the specified id is present in the pool.
+     */
     @Synchronized
     operator fun get(id: Int): D =
         descriptors[id].ensureNotNull {
             "Element $id is not found in pool"
         }
 
+    /**
+     * @return descriptor by its [key], or null if no descriptor with the specified key is present in the pool.
+     */
     @Synchronized
     operator fun get(key: Descriptor.Key): D? =
         byKey[key]?.let { _descriptors[it] }
 
+    /**
+     * @return true if a descriptor with the specified [key] is present in the pool, false otherwise.
+     */
     @Synchronized
     operator fun contains(key: Descriptor.Key): Boolean =
         byKey.containsKey(key)
@@ -66,6 +80,9 @@ class DescriptorPool<D : Descriptor> {
         return id
     }
 
+    /**
+     * Clears the pool. Used when [org.jetbrains.lincheck.trace.TraceContext] is cleared.
+     */
     @Synchronized
     fun clear() {
         _descriptors.clear()
