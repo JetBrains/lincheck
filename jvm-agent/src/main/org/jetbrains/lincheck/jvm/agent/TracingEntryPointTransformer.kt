@@ -27,7 +27,7 @@ import org.objectweb.asm.tree.LineNumberNode
 import java.lang.instrument.ClassFileTransformer
 import java.security.ProtectionDomain
 
-typealias MethodVisitorProvider = (
+typealias TracingEntryPointMethodVisitorProvider = (
     context: TraceContext,
     className: String,
     fileName: String,
@@ -38,9 +38,9 @@ typealias MethodVisitorProvider = (
     firstLine: Int
 ) -> MethodVisitor
 
-class TraceAgentTransformer(
+class TracingEntryPointTransformer(
     val context: TraceContext,
-    val methodTransformer: MethodVisitorProvider,
+    val methodTransformer: TracingEntryPointMethodVisitorProvider,
     val classUnderTracing: String,
     val methodUnderTracing: String,
 ) : ClassFileTransformer {
@@ -103,7 +103,7 @@ class TraceAgentTransformer(
 private class TraceAgentClassVisitor(
     classVisitor: ClassVisitor,
     val context: TraceContext,
-    val methodTransformer: MethodVisitorProvider,
+    val methodTransformer: TracingEntryPointMethodVisitorProvider,
     val classUnderTracing: String,
     val methodUnderTracing: String,
     val methodToFirstLine: Map<String, Int>

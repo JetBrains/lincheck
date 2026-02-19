@@ -22,7 +22,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
-import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
+import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
 import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
@@ -135,7 +135,7 @@ internal object TraceRecorderAgent {
     private fun installTraceEntryPointTransformer() {
         // This transformer adds tracing turn-on and turn-off at the given method entry/exit.
         LincheckInstrumentation.instrumentation.addTransformer(
-            /* transformer = */ TraceAgentTransformer(
+            /* transformer = */ TracingEntryPointTransformer(
                 LincheckInstrumentation.context,
                 ::TraceRecorderMethodTransformer,
                 classUnderTracing = TraceAgentParameters.classUnderTraceDebugging,
