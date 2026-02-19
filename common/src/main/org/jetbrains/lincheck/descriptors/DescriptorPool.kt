@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.util.ConcurrentSingleWriterList
+import org.jetbrains.lincheck.util.ensureNotNull
 
 /**
  * Pool for interning descriptors and providing id-based and key-based lookups.
@@ -28,17 +29,18 @@ class DescriptorPool<D : Descriptor> {
     private val byKey = hashMapOf<Descriptor.Key, Int>()
 
     @Synchronized
-    operator fun get(id: Int): D {
-        val item = _descriptors[id]
-        check(item != null) { "Element $id is not found in pool" }
-        return item
-    }
+    operator fun get(id: Int): D =
+        descriptors[id].ensureNotNull {
+            "Element $id is not found in pool"
+        }
 
     @Synchronized
-    operator fun get(key: Descriptor.Key): D? = byKey[key]?.let { _descriptors[it] }
+    operator fun get(key: Descriptor.Key): D? =
+        byKey[key]?.let { _descriptors[it] }
 
     @Synchronized
-    operator fun contains(key: Descriptor.Key): Boolean = byKey.containsKey(key)
+    operator fun contains(key: Descriptor.Key): Boolean =
+        byKey.containsKey(key)
 
     /**
      * Registers [descriptor] and assigns a unique id if it is not yet present.
