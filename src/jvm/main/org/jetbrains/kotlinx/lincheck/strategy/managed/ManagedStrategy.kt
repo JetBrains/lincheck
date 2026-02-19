@@ -295,7 +295,7 @@ internal abstract class ManagedStrategy(
         return suddenResult
     }
 
-    // (OLD) TODO: better name?
+    // TODO: better name?
     protected open fun runInvocationImpl(): InvocationResult {
         return runner.runInvocation()
     }
