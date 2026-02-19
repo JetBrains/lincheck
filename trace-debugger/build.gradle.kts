@@ -27,6 +27,7 @@ sourceSets {
         implementation(project(":"))
         implementation(project(":common"))
         implementation(project(":jvm-agent"))
+        implementation(project(":tracer"))
 
         api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
