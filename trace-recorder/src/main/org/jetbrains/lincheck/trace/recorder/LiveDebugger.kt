@@ -56,7 +56,7 @@ internal object LiveDebugger {
         }
 
         try {
-            val session = TraceRecorder.startRecording(
+            val session = Tracer.startTracing(
                 recordingMode = recordingMode,
                 startMode = TracingSession.StartMode.Dynamic,
             )
@@ -76,7 +76,7 @@ internal object LiveDebugger {
 
     fun stopRecording() {
         try {
-            TraceRecorder.stopRecording()
+            Tracer.stopTracing()
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot stop trace recording in live debugger mode" }
         }

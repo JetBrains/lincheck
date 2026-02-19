@@ -58,7 +58,7 @@ internal object TraceRecorderInjections {
             }
             if (startCount > 1) return
 
-            TraceRecorder.startRecording(
+            Tracer.startTracing(
                 TracingMode.parse(
                     outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
@@ -94,8 +94,8 @@ internal object TraceRecorderInjections {
             }
             if (startCount > 0) return
 
-            TraceRecorder.stopRecording().ensureNotNull()
-            TraceRecorder.dumpTrace(traceDumpPath, pack).ensureTrue()
+            Tracer.stopTracing().ensureNotNull()
+            Tracer.dumpTrace(traceDumpPath, pack).ensureTrue()
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot stop Trace Recorder"}
         }

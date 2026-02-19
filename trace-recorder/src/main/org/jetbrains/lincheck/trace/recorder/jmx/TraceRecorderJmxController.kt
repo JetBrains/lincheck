@@ -14,8 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
-import org.jetbrains.lincheck.trace.recorder.TraceRecorder
-import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent
+import org.jetbrains.lincheck.trace.recorder.Tracer
 import org.jetbrains.lincheck.trace.recorder.TracingSession
 import org.jetbrains.lincheck.trace.recorder.TracingMode
 import org.jetbrains.lincheck.util.Logger
@@ -24,7 +23,7 @@ import javax.management.ObjectName
 import javax.management.StandardMBean
 
 /**
- * Provides a JMX controller interface implementation for the [TraceRecorder].
+ * Provides a JMX controller interface implementation for the [Tracer].
  */
 object TraceRecorderJmxController : TracingJmxController {
 
@@ -57,7 +56,7 @@ object TraceRecorderJmxController : TracingJmxController {
 
     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
         try {
-            val session = TraceRecorder.startRecording(
+            val session = Tracer.startTracing(
                 recordingMode = TracingMode.parse(
                     outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
@@ -77,7 +76,7 @@ object TraceRecorderJmxController : TracingJmxController {
 
     override fun startTcpTracing() {
         try {
-            TraceRecorder.startRecording(
+            Tracer.startTracing(
                 recordingMode = TracingMode.BinaryTcpStream,
                 startMode = TracingSession.StartMode.Dynamic,
             )
@@ -89,7 +88,7 @@ object TraceRecorderJmxController : TracingJmxController {
 
     override fun stopTracing() {
         try {
-            TraceRecorder.stopRecording()
+            Tracer.stopTracing()
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot stop trace recording" }
         }
@@ -100,11 +99,11 @@ object TraceRecorderJmxController : TracingJmxController {
     }
 
     override fun addBreakpoints(breakpoints: List<String>) {
-        TraceRecorder.addBreakpoints(breakpoints)
+        Tracer.addBreakpoints(breakpoints)
     }
 
     override fun removeBreakpoints(breakpoints: List<String>) {
-        TraceRecorder.removeBreakpoints(breakpoints)
+        Tracer.removeBreakpoints(breakpoints)
     }
 }
 

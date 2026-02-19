@@ -17,33 +17,33 @@ import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 
 /**
- * The [TraceRecorder] object manages the trace recording process.
+ * The [Tracer] object manages the tracing process.
  *
- * The trace recording process involves:
- * - Starting a trace recording session via [startRecording].
- * - Stopping a trace recording session using [stopRecording].
+ * The tracing process involves:
+ * - Starting a tracing session via [startTracing].
+ * - Stopping a tracing session using [stopTracing].
  * - Optionally dumping the recorded trace output to a specified location using [dumpTrace].
  */
-object TraceRecorder {
+object Tracer {
     @Volatile
     private var session: TracingSession? = null
 
     /**
-     * Starts a new trace recording session with the specified recording mode and start mode.
+     * Starts a new tracing session with the specified recording mode and start mode.
      *
-     * If some recording session is already running, returns the existing session.
+     * If some session is already running, returns the existing session.
      * If another session was started earlier and finished, replaces it with a new session.
      *
      * @param recordingMode The recording mode that configures the trace collection strategy,
      *   such as in-memory, file streaming, or network transfer
      *   (see [TracingMode] for more details).
-     * @param startMode Specifies how the trace recording session should begin.
+     * @param startMode Specifies how the tracing session should begin.
      *   It could start dynamically at an arbitrary point or from a specific method with additional context
      *   (see [TracingSession.StartMode] for more details).
-     * @return The newly created or existing trace recording session.
+     * @return The newly created or existing tracing session.
      */
     @Synchronized
-    fun startRecording(
+    fun startTracing(
         recordingMode: TracingMode,
         startMode: TracingSession.StartMode,
     ): TracingSession {
@@ -111,13 +111,13 @@ object TraceRecorder {
     }
 
     /**
-     * Stops the currently running trace recorder session, if any. Returns the finished session.
+     * Stops the currently running tracing session, if any. Returns the finished session.
      * If there is no running session or a current session was already finished earlier, returns `null`.
      *
-     * @return The stopped trace recorder session or `null` if no session was running.
+     * @return The stopped tracing session or `null` if no session was running.
      */
     @Synchronized
-    fun stopRecording(): TracingSession? {
+    fun stopTracing(): TracingSession? {
         val session = this.session
         if (session == null) {
             Logger.warn { "No trace recorder session is running to stop" }
