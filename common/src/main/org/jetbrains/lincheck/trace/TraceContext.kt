@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ActiveLocal
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocation
+import org.jetbrains.lincheck.descriptors.DescriptorPool
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
