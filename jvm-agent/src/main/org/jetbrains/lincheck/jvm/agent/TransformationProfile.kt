@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent
 import org.jetbrains.lincheck.jvm.agent.transformers.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.liveDebuggerSettings
+import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.util.*
 
 interface TransformationProfile {

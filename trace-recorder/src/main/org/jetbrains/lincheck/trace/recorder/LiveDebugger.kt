@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent.ARGUMENT_PACK
