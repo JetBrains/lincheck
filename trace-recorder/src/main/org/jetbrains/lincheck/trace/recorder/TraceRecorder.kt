@@ -110,12 +110,6 @@ object TraceRecorder {
         }
 
         if (startedCount > 0) {
-            val traceStarterThread = (session?.startMode as? TraceRecorderSession.StartMode.FromMethod)?.thread
-            // Try to deregister itself as the root descriptor if we started tracing
-            if (traceStarterThread == Thread.currentThread()) {
-                val descriptor = ThreadDescriptor.getCurrentThreadDescriptor() ?: return
-                ThreadDescriptor.unsetRootThread().ensure { it == descriptor }
-            }
             return
         }
         if (startedCount < 0) {
