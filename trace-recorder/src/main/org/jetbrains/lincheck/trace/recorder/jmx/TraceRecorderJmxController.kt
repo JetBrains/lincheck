@@ -11,6 +11,8 @@
 package org.jetbrains.lincheck.trace.recorder.jmx
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
 import org.jetbrains.lincheck.trace.recorder.TraceRecorder
 import org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent
@@ -57,8 +59,8 @@ object TraceRecorderJmxController : TracingJmxController {
         try {
             val session = TraceRecorder.startRecording(
                 recordingMode = TracingMode.parse(
-                    outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-                    outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                    outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
+                    outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
                     outputFilePath = traceDumpFilePath,
                 ),
                 startMode = TracingSession.StartMode.Dynamic,

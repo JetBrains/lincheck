@@ -11,6 +11,9 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -57,8 +60,8 @@ internal object TraceRecorderInjections {
 
             TraceRecorder.startRecording(
                 TracingMode.parse(
-                    outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-                    outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+                    outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
+                    outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
                     outputFilePath = TraceAgentParameters.traceDumpFilePath,
                 ),
                 TracingSession.StartMode.FromMethod(thread, className, methodName, startingCodeLocationId),
@@ -78,7 +81,7 @@ internal object TraceRecorderInjections {
             val thread = Thread.currentThread()
 
             val traceDumpPath = TraceAgentParameters.traceDumpFilePath ?: error("Trace dump path is not set")
-            val pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean()
+            val pack = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
 
             val startCount = startCount.decrementAndGet()
             Logger.info {

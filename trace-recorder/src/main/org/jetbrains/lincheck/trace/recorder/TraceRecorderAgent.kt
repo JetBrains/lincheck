@@ -10,17 +10,24 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
-import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINTS_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
-import org.jetbrains.lincheck.trace.recorder.jmx.*
-import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
+import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
+import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
+import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
-import java.lang.instrument.*
+import java.lang.instrument.Instrumentation
 
 /**
  * Agent that is set as `premain` entry class for fat trace debugger jar archive.
@@ -29,9 +36,6 @@ import java.lang.instrument.*
  * in order to enable trace debugging plugin, trace recorder functionality, or live debugger functionality accordingly.
  */
 internal object TraceRecorderAgent {
-    const val ARGUMENT_FORMAT = "format"
-    const val ARGUMENT_FOPTION = "formatOption"
-    const val ARGUMENT_PACK = "pack"
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(

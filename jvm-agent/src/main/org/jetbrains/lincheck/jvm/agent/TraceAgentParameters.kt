@@ -117,6 +117,9 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
+    const val ARGUMENT_FORMAT = "format"
+    const val ARGUMENT_FOPTION = "formatOption"
+    const val ARGUMENT_PACK = "pack"
     const val ARGUMENT_JMX_MBEAN = "jmxMBean"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
 
