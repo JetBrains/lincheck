@@ -46,7 +46,7 @@ fun <T> mutableSublist(from: Int, to: Int, list: MutableList<T>): MutableList<T>
  * @param list The original list from which the sublist is created.
  * @throws IllegalArgumentException If the provided indices [from] or [to] are invalid.
  */
-open class SubList<T>(open val from: Int, open val to: Int, open val list: List<T>) : List<T> {
+open class SubList<T>(from: Int, to: Int, list: List<T>) : List<T> {
 
     init {
         require(from >= 0) {
@@ -59,6 +59,12 @@ open class SubList<T>(open val from: Int, open val to: Int, open val list: List<
             "Invalid sublist indices: from must be less than or equal to to, actual: ($from, $to)."
         }
     }
+
+    // delayed initialization of properties, so subclasses can safely invoke `super.<init>`
+    // (otherwise gonna be hit by `NullPointerException` because properties will not be initialized at this point)
+    open val from: Int = from
+    open val to: Int = to
+    open val list: List<T> = list
 
     override val size: Int
         get() = to - from
@@ -151,13 +157,15 @@ open class SubList<T>(open val from: Int, open val to: Int, open val list: List<
  * @param list The original mutable list from which the sublist is created.
  * @throws IllegalArgumentException If the provided indices [from] or [to] are invalid.
  */
-open class MutableSubList<T>(from: Int, to: Int, override val list: MutableList<T>) : SubList<T>(from, to, list), MutableList<T> {
+open class MutableSubList<T>(from: Int, to: Int, list: MutableList<T>) : SubList<T>(from, to, list), MutableList<T> {
 
     override var from: Int = from
         protected set
 
     override var to: Int = to
         protected set
+
+    override val list = list
 
     override fun set(index: Int, element: T): T {
         checkBounds(index)
