@@ -1,24 +1,28 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.tracer
 
-import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
-import org.jetbrains.lincheck.trace.*
-import org.jetbrains.lincheck.tracer.TraceCollectingEventTracker
-import org.jetbrains.lincheck.tracer.TraceDataLayout
-import org.jetbrains.lincheck.tracer.TracingMode
-import org.jetbrains.lincheck.tracer.TracingSession
-import org.jetbrains.lincheck.util.*
-import sun.nio.ch.lincheck.*
+import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
+import org.jetbrains.lincheck.trace.TcpTraceServer
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.ensure
+import org.jetbrains.lincheck.util.isInLiveDebuggerMode
+import org.jetbrains.lincheck.util.unreachable
+import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.ThreadDescriptor
 
 /**
  * The [Tracer] object manages the tracing process.
@@ -40,7 +44,7 @@ object Tracer {
      *
      * @param recordingMode The recording mode that configures the trace collection strategy,
      *   such as in-memory, file streaming, or network transfer
-     *   (see [org.jetbrains.lincheck.tracer.TracingMode] for more details).
+     *   (see [TracingMode] for more details).
      * @param startMode Specifies how the tracing session should begin.
      *   It could start dynamically at an arbitrary point or from a specific method with additional context
      *   (see [TracingSession.StartMode] for more details).
@@ -201,7 +205,7 @@ object Tracer {
         Logger.info { "Adding breakpoints: $breakpoints" }
 
         val addedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
-            .addBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
+            .addBreakpoints(breakpoints.map { SnapshotBreakpoint.Companion.parseFromString(it) })
         val classNamesToRetransform = addedBreakpoints.map { it.className }.toSet()
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
             .filter { it.name in classNamesToRetransform }
@@ -213,7 +217,7 @@ object Tracer {
         Logger.info { "Removing breakpoints: $breakpoints" }
 
         val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
+            .removeBreakpoints(breakpoints.map { SnapshotBreakpoint.Companion.parseFromString(it) })
         val classNamesToRetransform = removedBreakpoints.map { it.className }.toSet()
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
             .filter { it.name in classNamesToRetransform }

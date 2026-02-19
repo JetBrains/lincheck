@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
+import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TracingMode
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.*

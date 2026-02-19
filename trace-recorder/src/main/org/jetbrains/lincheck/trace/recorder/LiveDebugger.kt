@@ -17,6 +17,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.tracer.TracingMode
 import org.jetbrains.lincheck.tracer.isFileMode
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
+import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.AtomicBoolean
