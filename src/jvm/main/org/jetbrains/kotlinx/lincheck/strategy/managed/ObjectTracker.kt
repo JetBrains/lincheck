@@ -108,6 +108,14 @@ interface ObjectTracker {
     fun registerObjectLink(fromObject: Any?, toObject: Any?)
 
     /**
+      * Determines whether the specified object should be tracked.
+      *
+      * @param obj the object to be checked.
+      * @return true if the object should be tracked, false otherwise.
+      */
+    fun shouldTrackObject(obj: Any): Boolean
+
+    /**
      * Determines whether accesses to the fields of the given object should be tracked.
      *
      * @param obj the object to check for tracking. Null value indicates access to a phantom static object.
@@ -394,7 +402,7 @@ open class BaseObjectTracker : ObjectTracker {
     /**
      * Indicates whether the object tracker should track immutable value objects (false by default).
      */
-    protected open val shouldTrackImmutableValues = false
+    open val shouldTrackImmutableValues: Boolean = false
 
     // counter of all registered objects
     private var objectCounter = 0
@@ -470,6 +478,9 @@ open class BaseObjectTracker : ObjectTracker {
     }
 
     override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
+
+    override fun shouldTrackObject(obj: Any): Boolean =
+        !obj.isPrimitive && (obj.isImmutable implies shouldTrackImmutableValues)
 
     override fun shouldTrackObjectAccess(obj: Any?): Boolean =
         true // track all accesses by default
