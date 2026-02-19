@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.descriptors
 import org.jetbrains.lincheck.util.ConcurrentSingleWriterList
 import org.jetbrains.lincheck.util.ensureNotNull
 import org.jetbrains.lincheck.util.expandTo
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Pool for interning descriptors and providing id-based and key-based lookups.
@@ -31,13 +32,15 @@ class DescriptorPool<D : Descriptor> {
      */
     val descriptors: List<D?> get() = _descriptors
 
-    private val byKey = hashMapOf<Descriptor.Key, Int>()
+    private val byKey = ConcurrentHashMap<Descriptor.Key, Int>()
 
     /**
      * @return descriptor by index [id] in the [descriptors] field.
      * @throws IllegalStateException if no descriptor with the specified id is present in the pool.
+     *
+     * This method is not synchronized, because its invocation is only possible after completion of [register]
+     * which returns the descriptor id.
      */
-    @Synchronized
     operator fun get(id: Int): D =
         descriptors[id].ensureNotNull {
             "Element $id is not found in pool"
@@ -45,15 +48,19 @@ class DescriptorPool<D : Descriptor> {
 
     /**
      * @return descriptor by its [key], or null if no descriptor with the specified key is present in the pool.
+     *
+     * This method is not synchronized, because if [byKey] contains the specified key, then
+     * the corresponding descriptor is already added to the [descriptors] list.
      */
-    @Synchronized
     operator fun get(key: Descriptor.Key): D? =
         byKey[key]?.let { _descriptors[it] }
 
     /**
      * @return true if a descriptor with the specified [key] is present in the pool, false otherwise.
+     *
+     * This method is not synchronized, because its invocation with returned value true
+     * guarantees that [descriptors] already contains the returned descriptor.
      */
-    @Synchronized
     operator fun contains(key: Descriptor.Key): Boolean =
         byKey.containsKey(key)
 
@@ -101,9 +108,9 @@ class DescriptorPool<D : Descriptor> {
         check(id >= _descriptors.size || _descriptors[id] == null || _descriptors[id] == value) {
             "Item with id $id is already present in pool and differs from $value"
         }
+        value.id = id
         _descriptors.expandTo(id + 1, null)
         _descriptors[id] = value
-        value.id = id
         byKey[value.key] = id
     }
 }
