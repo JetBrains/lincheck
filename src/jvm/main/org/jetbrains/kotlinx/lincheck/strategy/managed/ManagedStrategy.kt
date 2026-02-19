@@ -724,11 +724,11 @@ internal abstract class ManagedStrategy(
             className = "java.lang.Thread",
             methodName = "run",
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = context.methodPool.register(context.createMethodDescriptor(
+            methodId = context.createAndRegisterMethodDescriptor(
                 className = "java.lang.Thread",
                 methodName = "run",
                 methodType = Types.MethodType(Types.VOID_TYPE)
-            )),
+            ).id,
             methodParams = emptyArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.THREAD_RUN
@@ -992,11 +992,11 @@ internal abstract class ManagedStrategy(
             className = actor.method.declaringClass.name,
             methodName = actor.method.name,
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = context.methodPool.register(context.createMethodDescriptor(
+            methodId = context.createAndRegisterMethodDescriptor(
                 className = actor.method.declaringClass.name.toCanonicalClassName(),
                 methodName = actor.method.name,
                 methodType = Types.convertAsmMethodType(methodDescriptor)
-            )),
+            ).id,
             methodParams = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,

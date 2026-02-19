@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.invokeIfInAnalyzedCode
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
 import org.jetbrains.lincheck.trace.TraceContext
-import org.jetbrains.lincheck.trace.createMethodDescriptor
+import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes.*
@@ -339,9 +339,8 @@ internal class InlineMethodCallTransformer(
         invokeStatic(Injections::onInlineMethodCallReturn)
     }
 
-    private fun registerInlineMethod(possibleClassName: String, inlineMethodName: String): Int = context.methodPool.register(
-        context.createMethodDescriptor(possibleClassName, inlineMethodName, Types.MethodType(Types.VOID_TYPE))
-    )
+    private fun registerInlineMethod(possibleClassName: String, inlineMethodName: String): Int =
+        context.createAndRegisterMethodDescriptor(possibleClassName, inlineMethodName, Types.MethodType(Types.VOID_TYPE)).id
 
     private fun topOfStackEndsBeforeLabel(label: Label): Boolean =
         inlineStack.isNotEmpty() && methodInfo.labels.compare(inlineStack.last().lvar.endLabel, label) < 0

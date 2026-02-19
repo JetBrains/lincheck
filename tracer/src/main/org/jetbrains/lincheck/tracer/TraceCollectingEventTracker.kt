@@ -261,9 +261,9 @@ class TraceCollectingEventTracker(
                     context = context,
                     threadId = threadData.threadId,
                     codeLocationId = -1,
-                    methodId = context.methodPool.register(context.createMethodDescriptor(
+                    methodId = context.createAndRegisterMethodDescriptor(
                         "Thread", "run", Types.MethodType(Types.VOID_TYPE)
-                    )),
+                    ).id,
                     obj = TRValue(context, thread),
                     parameters = emptyList()
                 )
@@ -895,9 +895,9 @@ class TraceCollectingEventTracker(
                 context = context,
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
-                methodId = context.methodPool.register(context.createMethodDescriptor(
+                methodId = context.createAndRegisterMethodDescriptor(
                     className, methodName, Types.MethodType(Types.VOID_TYPE)
-                )),
+                ).id,
                 obj = null,
                 parameters = emptyList()
             )
@@ -923,9 +923,9 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocationId,
-            methodId = context.methodPool.register(context.createMethodDescriptor(
+            methodId = context.createAndRegisterMethodDescriptor(
                 className, methodName, methodType
-            )),
+            ).id,
             obj = obj,
             parameters = params,
             flags = INCOMPLETE_METHOD_FLAG.toShort(),

@@ -139,24 +139,60 @@ class TraceContext {
 }
 
 
-fun TraceContext.createMethodDescriptor(
+/**
+ * Creates a method descriptor and registers it in the context receiver.
+ * As side effect this function also registers class descriptor for provided [className].
+ *
+ * @return created method descriptor.
+ */
+fun TraceContext.createAndRegisterMethodDescriptor(
     className: String,
     methodName: String,
     methodType: Types.MethodType
-) = MethodDescriptor(
-    context = this,
-    classId = classPool.register(ClassDescriptor(className)),
-    methodSignature = MethodSignature(methodName, methodType)
-)
+): MethodDescriptor {
+    // If a descriptor with the same key already exists, return the existing instance (with a proper id).
+    val signature = MethodSignature(methodName, methodType)
+    val key = MethodDescriptor.Key(className, signature)
+    methodPool[key]?.let { return it }
 
-fun TraceContext.createFieldDescriptor(
+    // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
+    val clazzId = classPool.register(ClassDescriptor(className))
+    val descriptor = MethodDescriptor(
+        context = this,
+        classId = clazzId,
+        methodSignature = signature
+    )
+    methodPool.register(descriptor)
+    return descriptor
+}
+
+/**
+ * Creates a field descriptor and registers it in the context receiver.
+ * As side effect this function also registers class descriptor for provided [className].
+ *
+ * @return created field descriptor.
+ */
+fun TraceContext.createAndRegisterFieldDescriptor(
     className: String,
     fieldName: String,
     type: Types.Type,
     isStatic: Boolean,
     isFinal: Boolean
-) = FieldDescriptor(
-    context = this,
-    classId = classPool.register(ClassDescriptor(className)),
-    fieldName, type, isStatic, isFinal
-)
+): FieldDescriptor {
+    // If a descriptor with the same key already exists, return the existing instance (with a proper id).
+    val key = FieldDescriptor.Key(className, fieldName, type)
+    fieldPool[key]?.let { return it }
+
+    // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
+    val clazzId = classPool.register(ClassDescriptor(className))
+    val descriptor = FieldDescriptor(
+        context = this,
+        classId = clazzId,
+        fieldName = fieldName,
+        type = type,
+        isStatic = isStatic,
+        isFinal = isFinal
+    )
+    fieldPool.register(descriptor)
+    return descriptor
+}

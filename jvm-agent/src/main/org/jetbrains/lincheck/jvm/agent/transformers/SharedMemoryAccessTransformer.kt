@@ -18,7 +18,7 @@ import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.descriptors.toType
 import org.jetbrains.lincheck.trace.TraceContext
-import org.jetbrains.lincheck.trace.createFieldDescriptor
+import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
@@ -71,13 +71,13 @@ internal class SharedMemoryAccessTransformer(
     }
 
     private fun GeneratorAdapter.processStaticFieldGet(owner: String, fieldName: String, opcode: Int, desc: String) {
-        val fieldId = context.fieldPool.register(context.createFieldDescriptor(
+        val fieldId = context.createAndRegisterFieldDescriptor(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             type = desc.toType(),
             isStatic = true,
             isFinal = FinalFields.isFinalField(owner, fieldName)
-        ))
+        ).id
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
             pushResultInterceptor()
             storeLocal(it)
@@ -109,13 +109,13 @@ internal class SharedMemoryAccessTransformer(
     }
 
     private fun GeneratorAdapter.processInstanceFieldGet(owner: String, fieldName: String, opcode: Int, desc: String) {
-        val fieldId = context.fieldPool.register(context.createFieldDescriptor(
+        val fieldId = context.createAndRegisterFieldDescriptor(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             type = desc.toType(),
             isStatic = false,
             isFinal = FinalFields.isFinalField(owner, fieldName)
-        ))
+        ).id
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
             pushResultInterceptor()
             storeLocal(it)
@@ -156,13 +156,13 @@ internal class SharedMemoryAccessTransformer(
 
     private fun GeneratorAdapter.processStaticFieldPut(desc: String, owner: String, fieldName: String, opcode: Int) {
         val valueType = getType(desc)
-        val fieldId = context.fieldPool.register(context.createFieldDescriptor(
+        val fieldId = context.createAndRegisterFieldDescriptor(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             type = desc.toType(),
             isStatic = true,
             isFinal = FinalFields.isFinalField(owner, fieldName)
-        ))
+        ).id
         val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
 
         loadLocal(valueLocal)
@@ -187,13 +187,13 @@ internal class SharedMemoryAccessTransformer(
     private fun GeneratorAdapter.processInstanceFieldPut(desc: String, owner: String, fieldName: String, opcode: Int) {
         // STACK: obj, value
         val valueType = getType(desc)
-        val fieldId = context.fieldPool.register(context.createFieldDescriptor(
+        val fieldId = context.createAndRegisterFieldDescriptor(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
             type = desc.toType(),
             isStatic = false,
             isFinal = FinalFields.isFinalField(owner, fieldName)
-        ))
+        ).id
         val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
         val ownerLocal = newLocal(getType("L$owner;")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(valueType.size)

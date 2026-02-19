@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TraceContext
-import org.jetbrains.lincheck.trace.createFieldDescriptor
+import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
@@ -430,14 +430,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Field access instructions */
 
             Opcodes.GETSTATIC -> {
-                val fieldDescriptor = context.createFieldDescriptor(
+                val fieldDescriptor = context.createAndRegisterFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
                     type = descriptor!!.toType(),
                     isStatic = true,
                     isFinal = FinalFields.isFinalField(className, fieldName)
                 )
-                context.fieldPool.register(fieldDescriptor)
                 val fieldAccess = StaticFieldAccessLocation(fieldDescriptor)
                 push(OwnerName(fieldAccess))
                 if (Type.getType(descriptor).size == 2) {
@@ -451,14 +450,13 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.GETFIELD -> {
                 val ownerName = pop()
-                val fieldDescriptor = context.createFieldDescriptor(
+                val fieldDescriptor = context.createAndRegisterFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
                     type = descriptor!!.toType(),
                     isStatic = false,
                     isFinal = FinalFields.isFinalField(className, fieldName)
                 )
-                context.fieldPool.register(fieldDescriptor)
                 val fieldAccess = ObjectFieldAccessLocation(fieldDescriptor)
                 if (ownerName != null) {
                     push(ownerName + fieldAccess)
