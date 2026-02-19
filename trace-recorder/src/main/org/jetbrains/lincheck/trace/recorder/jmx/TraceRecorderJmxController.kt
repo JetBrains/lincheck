@@ -16,7 +16,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
 import org.jetbrains.lincheck.trace.recorder.Tracer
 import org.jetbrains.lincheck.trace.recorder.TracingSession
-import org.jetbrains.lincheck.trace.recorder.TracingMode
+import org.jetbrains.lincheck.tracer.TracingMode
 import org.jetbrains.lincheck.util.Logger
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName

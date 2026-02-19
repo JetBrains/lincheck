@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.trace.recorder
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.tracer.TracingMode
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 
@@ -36,7 +37,7 @@ object Tracer {
      *
      * @param recordingMode The recording mode that configures the trace collection strategy,
      *   such as in-memory, file streaming, or network transfer
-     *   (see [TracingMode] for more details).
+     *   (see [org.jetbrains.lincheck.tracer.TracingMode] for more details).
      * @param startMode Specifies how the tracing session should begin.
      *   It could start dynamically at an arbitrary point or from a specific method with additional context
      *   (see [TracingSession.StartMode] for more details).

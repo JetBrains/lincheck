@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.tracer
 
 /**
  * Trace recording mode defines trace collection strategy,
