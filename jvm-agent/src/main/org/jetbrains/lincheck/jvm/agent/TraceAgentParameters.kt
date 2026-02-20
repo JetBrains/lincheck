@@ -62,8 +62,9 @@ import javax.management.remote.JMXServiceURL
  * - jmxMBean — enables registration of JMX MBean for remote monitoring and management.
  *       Example: `jmxMBean=on` or `jmxMBean=off`, it is off by default.
  *
- * - breakpointsFile — path to a JSON file with live debugger breakpoints (optional, liveDebugger mode only).
- *       Example: `breakpointsFile="/tmp/breakpoints.json"`
+ * - breakpointsFile — path to an INI file with live debugger breakpoints (optional, liveDebugger mode only);
+ *       see [BreakpointsFileParser] for details on file format.
+ *       Example: `breakpointsFile="/tmp/breakpoints.ini"`
  *
  * - format — output format for trace recorder dumps. Possible options are:
  *       * `binary` --- serialized binary format;
