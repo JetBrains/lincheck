@@ -14,5 +14,6 @@ package org.jetbrains.lincheck.trace.jmx
  * Interface for registering tracing JMX MBean.
  */
 interface TracingJmxRegistrator {
+    val mbeanName: String
     fun register()
 }

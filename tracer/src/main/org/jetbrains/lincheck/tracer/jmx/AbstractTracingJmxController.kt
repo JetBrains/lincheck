@@ -1,67 +1,62 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder.jmx
+package org.jetbrains.lincheck.tracer.jmx
 
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
+import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
 import org.jetbrains.lincheck.tracer.Tracer
-import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.tracer.TracingMode
+import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.Logger
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
 import javax.management.StandardMBean
 
 /**
- * Provides a JMX controller interface implementation for the [Tracer].
+ * A base abstract class for implementing tracing JMX controller interface for the [Tracer].
  */
-object TraceRecorderJmxController : TracingJmxController {
+abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxController {
 
-    fun register() {
+    override fun register() {
         // register JMX MBean
         try {
             val mbs = ManagementFactory.getPlatformMBeanServer()
-            val objectName = ObjectName(MBEAN_OBJECT_NAME)
+            val objectName = ObjectName(mbeanName)
 
             if (mbs.isRegistered(objectName)) {
-                Logger.error { "JMX MBean already registered at $MBEAN_OBJECT_NAME" }
+                Logger.error { "JMX MBean already registered at $mbeanName" }
                 return
             }
 
             val mbean = StandardMBean(this, TracingJmxController::class.java)
             mbs.registerMBean(mbean, objectName)
 
-            Logger.info { "JMX MBean registered successfully at $MBEAN_OBJECT_NAME" }
+            Logger.info { "JMX MBean registered successfully at $mbeanName" }
         } catch (e: Exception) {
-            Logger.error(e) { "Failed to register JMX MBean at $MBEAN_OBJECT_NAME" }
+            Logger.error(e) { "Failed to register JMX MBean at $mbeanName" }
         }
 
         // register shutdown hook
         try {
             Runtime.getRuntime().addShutdownHook(Thread(this::shutdownHook))
         } catch (e: Exception) {
-            Logger.error(e) { "Failed to register shutdown hook for JMX MBean at $MBEAN_OBJECT_NAME" }
+            Logger.error(e) { "Failed to register shutdown hook for JMX MBean at $mbeanName" }
         }
     }
 
     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
         try {
             val session = Tracer.startTracing(
-                recordingMode = TracingMode.parse(
-                    outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
-                    outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
-                    outputFilePath = traceDumpFilePath,
-                ),
+                // TODO: support configuring file mode (text or binary, stream or dump)
+                recordingMode = TracingMode.BinaryFileStream(traceDumpFilePath),
                 startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "File-based trace session has been started" }
@@ -97,14 +92,4 @@ object TraceRecorderJmxController : TracingJmxController {
     private fun shutdownHook() {
         stopTracing()
     }
-
-    override fun addBreakpoints(breakpoints: List<String>) {
-        Tracer.addBreakpoints(breakpoints)
-    }
-
-    override fun removeBreakpoints(breakpoints: List<String>) {
-        Tracer.removeBreakpoints(breakpoints)
-    }
 }
-
-private const val MBEAN_OBJECT_NAME = "org.jetbrains.lincheck:type=TracingController"

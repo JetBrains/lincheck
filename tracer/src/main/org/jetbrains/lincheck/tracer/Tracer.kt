@@ -201,30 +201,6 @@ object Tracer {
         return true
     }
 
-    fun addBreakpoints(breakpoints: List<String>) {
-        Logger.info { "Adding breakpoints: $breakpoints" }
-
-        val addedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
-            .addBreakpoints(breakpoints.map { SnapshotBreakpoint.Companion.parseFromString(it) })
-        val classNamesToRetransform = addedBreakpoints.map { it.className }.toSet()
-        val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
-            .filter { it.name in classNamesToRetransform }
-
-        LincheckInstrumentation.retransformClasses(classesToRetransform)
-    }
-
-    fun removeBreakpoints(breakpoints: List<String>) {
-        Logger.info { "Removing breakpoints: $breakpoints" }
-
-        val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeBreakpoints(breakpoints.map { SnapshotBreakpoint.Companion.parseFromString(it) })
-        val classNamesToRetransform = removedBreakpoints.map { it.className }.toSet()
-        val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
-            .filter { it.name in classNamesToRetransform }
-
-        LincheckInstrumentation.retransformClasses(classesToRetransform)
-    }
-
     private fun createTraceContext(): TraceContext {
         // TODO: currently we always re-use the same global context
         return LincheckInstrumentation.context

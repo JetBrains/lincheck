@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
@@ -25,13 +26,13 @@ import java.lang.instrument.Instrumentation
  * handles initialization procedures, and manages the optional
  * registration of JMX MBeans for monitoring purposes.
  */
-internal abstract class TracerAgent {
+abstract class TracerAgent {
 
     // entry point for a statically attached java agent
     fun premain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
-        validateArguments()
+        validateArguments(JavaAgentAttachType.STATIC)
 
         // attach java agent
         LincheckInstrumentation.attachJavaAgentStatically(inst)
@@ -50,7 +51,7 @@ internal abstract class TracerAgent {
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
-        validateArguments()
+        validateArguments(JavaAgentAttachType.DYNAMIC)
 
         // attach java agent
         LincheckInstrumentation.attachJavaAgentDynamically(inst)
@@ -63,7 +64,7 @@ internal abstract class TracerAgent {
     }
 
     protected abstract fun parseArguments(agentArgs: String?)
-    protected abstract fun validateArguments()
+    protected abstract fun validateArguments(attachType: JavaAgentAttachType)
 
     protected abstract val jmxRegistrator: TracingJmxRegistrator?
 

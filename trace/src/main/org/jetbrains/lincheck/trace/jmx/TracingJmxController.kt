@@ -35,14 +35,4 @@ interface TracingJmxController {
      * Stops the current tracing operation.
      */
     fun stopTracing()
-
-    /**
-     * Adds breakpoints to Live Debugger.
-     */
-    fun addBreakpoints(breakpoints: List<String>)
-
-    /**
-     * Removes breakpoints from Live Debugger.
-     */
-    fun removeBreakpoints(breakpoints: List<String>)
 }

@@ -213,13 +213,6 @@ object TraceAgentParameters {
     }
 
     @JvmStatic
-    fun validateClassAndMethodArgumentsAreNotProvidedInLiveDebuggerMode() {
-        if (classUnderTraceDebugging.isNotBlank() || methodUnderTraceDebugging.isNotBlank()) {
-            error("Class and method arguments are not allowed in live debugger mode")
-        }
-    }
-
-    @JvmStatic
     private fun setupMode() {
         // Parse mode from agent arguments, 
         // if the mode is not passed, fallback to system properties.
