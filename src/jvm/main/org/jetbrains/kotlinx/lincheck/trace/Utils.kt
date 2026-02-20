@@ -345,6 +345,40 @@ fun <T> List<T>.findCycle(
     return null
 }
 
+/*
+    * Folds equivalent loop iterations in the given list of [children] by detecting cycles and applying folding rules.
+    * The folding rules are as follows:
+    * Case (1): fully equal iterations
+     A, A, A, A, ...
+     <iterations 1 - 10>
+       A
+
+    * Case (2): partially equal iterations
+     A(a), A(b), A(c), ...., A(j)
+     <loop(10 iterations)>
+       <iterations 1>
+         A(a)
+       ...
+       <iteration 10>
+         A(j)
+
+    * Case (3): cycle with period > 1 (either fully or partially equal)
+     A, B, C, A, B, C, ...
+     <loop(12 iterations)>
+       <iteration 1>
+         A
+       <iteration 2>
+         B
+       <iteration 3>
+         C
+       ...
+       <iteration 10>
+         A
+       <iteration 11>
+         B
+       <iteration 12>
+         C
+ */
 private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
     val result = mutableListOf<TraceNode>()
     var startIndex = 0
@@ -353,42 +387,60 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
         val startNode = children[startIndex]
 
         val cycle = children.findCycle(startIndex) { nodeA, nodeB ->
-            nodePattern(nodeA) == nodePattern(nodeB)
+            nodePattern(nodeA) == nodePattern(nodeB) // Match structurally first to check for potential cycles
         }
 
-        if (cycle != null) {
+        if (cycle != null && cycle.bestCount > 1) {
             val totalNodesCovered = cycle.bestCount * cycle.bestPeriod
-            val firstNode = children[startIndex]
-            val lastNode = children[startIndex + totalNodesCovered - 1]
 
-            // Determine range. from/to for IterationNode, otherwise 1..Count.
-            val startIter = if (firstNode is IterationNode) firstNode.from else 1
-            val endIter = if (lastNode is IterationNode) lastNode.to else cycle.bestCount
-
-            val rangeNode = IterationNode(
-                tracePoint = firstNode.tracePoint,
-                eventNumber = firstNode.eventNumber,
-                from = startIter,
-                to = endIter
-            )
-
-            // used to gather unique signatures of children
-            val addedSignatures = mutableSetOf<String>()
-
-            for (i in 0 until totalNodesCovered) {
-                val nodeInSequence = children[startIndex + i]
-
-                // Flatten children if needed, otherwise add self.
-                if (nodeInSequence.children.isNotEmpty()) {
-                    nodeInSequence.children.forEach { child ->
-                        addUniqueChild(rangeNode, child, addedSignatures)
-                    }
-                } else {
-                    addUniqueChild(rangeNode, nodeInSequence, addedSignatures)
+            // Check if the cycle is strictly equal across all iterations for Case 1
+            var isStrictlyEqual = true
+            for (i in cycle.bestPeriod until totalNodesCovered) {
+                val baseNode = children[startIndex + (i % cycle.bestPeriod)]
+                val currNode = children[startIndex + i]
+                if (strictNodePattern(baseNode) != strictNodePattern(currNode)) {
+                    isStrictlyEqual = false
+                    break
                 }
             }
 
-            result += rangeNode
+            val firstNode = children[startIndex]
+            val lastNode = children[startIndex + totalNodesCovered - 1]
+
+            val startIter = if (firstNode is IterationNode) firstNode.from else 1
+            val endIter = if (lastNode is IterationNode) lastNode.to else cycle.bestCount
+
+            if (isStrictlyEqual && cycle.bestPeriod == 1) {
+                // Case 1: Fully equal iterations -> Single IterationNode covering the range
+                val rangeNode = IterationNode(
+                    tracePoint = firstNode.tracePoint,
+                    eventNumber = firstNode.eventNumber,
+                    from = startIter,
+                    to = endIter
+                )
+                firstNode.children.forEach { child ->
+                    rangeNode.addChild(deepCopyNode(child))
+                }
+                result += rangeNode
+            } else {
+                // Cases 2 & 3: Partially equal or period > 1
+                // Add the first period of the cycle
+                for (i in 0 until cycle.bestPeriod) {
+                    result += deepCopyNode(children[startIndex + i])
+                }
+
+                if (cycle.bestCount > 2) {
+                    // Add Ellipsis(...) node to indicate the folding
+                    val eventNumber = children[startIndex + cycle.bestPeriod].eventNumber
+                    result += EllipsisNode(firstNode.tracePoint, eventNumber)
+                }
+
+                // Add the last period of the cycle
+                val lastPeriodStart = startIndex + totalNodesCovered - cycle.bestPeriod
+                for (i in 0 until cycle.bestPeriod) {
+                    result += deepCopyNode(children[lastPeriodStart + i])
+                }
+            }
             startIndex += totalNodesCovered
         } else {
             result += startNode
@@ -397,14 +449,6 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
     }
 
     return result
-}
-
-private fun addUniqueChild(parent: TraceNode, child: TraceNode, signatures: MutableSet<String>) {
-    val signature = child.tracePoint.toString(withLocation = false, withValues = false)
-
-    if (signatures.add(signature)) {
-            parent.addChild(deepCopyNode(child))
-    }
 }
 
 private fun deepCopyNode(node: TraceNode): TraceNode {
@@ -421,20 +465,25 @@ private data class NodePattern(
 )
 
 private fun normalizeNodeHead(rawString: String): String {
-    if (rawString.startsWith("<iteration")) {
-        return "<iteration>"
-    }
+    return if (rawString.startsWith("<iteration")) {
+        "<iteration>"
+    } else
+        rawString
 
-    var result = rawString
-
-    // Normalize array indices (since they are part of the fieldName, not the value)
-    if (result.contains('[')) {
-        result = result.replace(Regex("\\[.*?\\]"), "[...]")
-    }
-
-    return result
+// Normalize array indices (since they are part of the fieldName, not the value). Not sure if needed though
+//    if (result.contains('[')) {
+//        result = result.replace(Regex("\\[.*?\\]"), "[...]")
+//    }
 }
 
+// Strict equality check (Case 1)
+private fun strictNodePattern(node: TraceNode): NodePattern =
+    NodePattern(
+        head = normalizeNodeHead(node.tracePoint.toString(withLocation = false, withValues = true)),
+        children = node.children.map { strictNodePattern(it) }
+    )
+
+// Structural equality check (Cases 2 & 3)
 private fun nodePattern(node: TraceNode): NodePattern =
     NodePattern(
         head = normalizeNodeHead(node.tracePoint.toString(withLocation = false, withValues = false)),

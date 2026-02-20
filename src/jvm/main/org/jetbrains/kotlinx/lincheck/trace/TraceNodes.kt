@@ -119,28 +119,7 @@ internal class CallNode(
     }
 
     override fun toString(withLocation: Boolean): String {
-        if (!withLocation)  {
-            if (children.any { it is LoopNode } && !children.any { it.children == children}) {
-                val sb = StringBuilder()
-                sb.append(tracePoint.toString(withLocation = false, withValues = true))
-                if (children.any { it is CallNode && it.tracePoint.methodName == this.tracePoint.methodName }) {
-                    return "${tracePoint.methodName}() [potential infinite recursion detected]"
-                }
-                else {
-                    val loopNodes = children.filterIsInstance<LoopNode>()
-                    if (loopNodes.isNotEmpty()) {
-                        sb.append(" is looping ")
-                    }
-                }
-
-                return sb.toString()
-            }
-            else
-                return tracePoint.toString(withLocation = false, withValues = true)
-        }
-        else {
-            return tracePoint.toString(withLocation = true, withValues = true)
-        }
+        return tracePoint.toString(withLocation, withValues = true)
     }
 
     override fun copy(): TraceNode = CallNode(tracePoint, eventNumber)
@@ -157,14 +136,23 @@ internal class ResultNode(val actorResult: ReturnedValueResult, eventNumber: Int
     override fun copy(): TraceNode = ResultNode(actorResult, eventNumber, tracePoint)
 }
 
+internal class EllipsisNode(
+    tracePoint: TracePoint,
+    eventNumber: Int,
+) : TraceNode(eventNumber, tracePoint) {
+    override fun toString(withLocation: Boolean): String = "..."
+    override fun copy(): TraceNode = EllipsisNode(tracePoint, eventNumber)
+}
+
 internal class LoopNode(
     tracePoint: LoopStartTracePoint,
     eventNumber: Int,
 ) : TraceNode(eventNumber, tracePoint) {
     override val tracePoint: LoopStartTracePoint get() = super.tracePoint as LoopStartTracePoint
+    var foldedTotalIterations: Int? = null
 
     fun totalIterations(): Int =
-        children.sumOf {
+        foldedTotalIterations ?: children.sumOf {
             when (it) {
                 is IterationNode -> it.count
                 else -> 0
@@ -183,7 +171,9 @@ internal class LoopNode(
         }
     }
 
-    override fun copy(): TraceNode = LoopNode(tracePoint, eventNumber)
+    override fun copy(): TraceNode = LoopNode(tracePoint, eventNumber).also {
+        it.foldedTotalIterations = this.totalIterations()
+    }
 }
 
 internal class IterationNode(
