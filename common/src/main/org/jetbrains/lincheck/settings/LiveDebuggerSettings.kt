@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.util.*
 import java.io.File
 import java.util.*
 
-class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint>) {
+class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint> = emptyList()) {
 
     val lineBreakPoints: List<SnapshotBreakpoint>
         get() = synchronized(_lineBreakPoints) { _lineBreakPoints.toList() }
@@ -43,7 +43,8 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint>) {
         }
         return removedBreakpoints
     }
-override fun equals(other: Any?): Boolean {
+
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is LiveDebuggerSettings) return false
 

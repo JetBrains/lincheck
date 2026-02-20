@@ -49,7 +49,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
     
-    val liveDebuggerSettings = LiveDebuggerSettings(mutableListOf())
+    val liveDebuggerSettings = LiveDebuggerSettings()
 
     override fun transform(
         loader: ClassLoader?,
