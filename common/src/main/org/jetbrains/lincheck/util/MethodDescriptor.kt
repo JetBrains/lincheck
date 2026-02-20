@@ -13,12 +13,7 @@ package org.jetbrains.lincheck.util
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.Types
 
-fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean =
-    isArraysCopyOfIntrinsic(className, methodName, methodSignature.methodType)
-
-fun isArraysCopyOfIntrinsic(className: String, methodName: String, mt: Types.MethodType): Boolean {
-    val returnType = mt.returnType
-    val argumentTypes = mt.argumentTypes
+fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
     return (
         className == "java.util.Arrays" &&
         methodName == "copyOf" &&
@@ -30,12 +25,7 @@ fun isArraysCopyOfIntrinsic(className: String, methodName: String, mt: Types.Met
     )
 }
 
-fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean =
-    isArraysCopyOfRangeIntrinsic(className, methodName, methodSignature.methodType)
-
-fun isArraysCopyOfRangeIntrinsic(className: String, methodName: String, mt: Types.MethodType): Boolean {
-    val returnType = mt.returnType
-    val argumentTypes = mt.argumentTypes
+fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
     return (
         className == "java.util.Arrays" &&
         methodName.contains("copyOfRange") &&
@@ -57,9 +47,9 @@ fun isArraysCopyOfRangeIntrinsic(className: String, methodName: String, mt: Type
 
 // TODO: java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations
 //  add all tracked intrinsics here
-fun isTrackedIntrinsic(className: String, methodName: String, mt: Types.MethodType): Boolean =
-    isArraysCopyOfIntrinsic(className, methodName, mt) ||
-    isArraysCopyOfRangeIntrinsic(className, methodName, mt)
+fun MethodDescriptor.isTrackedIntrinsic(): Boolean =
+    isArraysCopyOfIntrinsic() ||
+    isArraysCopyOfRangeIntrinsic()
 
 private val ARRAY_OF_OBJECTS_TYPE = Types.ArrayType(Types.ObjectType("java.lang.Object"))
 private val ARRAY_OF_INT_TYPE = Types.ArrayType(Types.INT_TYPE)

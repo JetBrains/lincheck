@@ -34,12 +34,11 @@ internal class IntrinsicCandidateMethodFilter(
         // here we manually specify intrinsic methods that could lead to error in lincheck analysis.
         // Also, some methods are intrinsified even though they do not have mentioned annotations
         // (such as Arrays.copyOf(...) methods).
-        val methodType = Types.convertAsmMethodType(methodDesc)
         val methodDescriptor = context.createAndRegisterMethodDescriptor(
-            className.toCanonicalClassName(), methodName, methodType,
-            isIntrinsic = isTrackedIntrinsic(className, methodName, methodType)
+            className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc)
         )
-        if (methodDescriptor.isIntrinsic) {
+        if (methodDescriptor.isTrackedIntrinsic()) {
+            methodDescriptor.isIntrinsic = true
             delegate()
         }
         return super.visitCode()
@@ -47,11 +46,10 @@ internal class IntrinsicCandidateMethodFilter(
 
     override fun visitAnnotation(desc: String, visible: Boolean): AnnotationVisitor? {
         val methodDescriptor = context.createAndRegisterMethodDescriptor(
-            className.toCanonicalClassName(), methodName,
-            Types.convertAsmMethodType(methodDesc),
-            isIntrinsic = isIntrinsicCandidateAnnotation(desc)
+            className.toCanonicalClassName(), methodName, Types.convertAsmMethodType(methodDesc)
         )
-        if (methodDescriptor.isIntrinsic) {
+        if (isIntrinsicCandidateAnnotation(desc)) {
+            methodDescriptor.isIntrinsic = true
             delegate()
         }
         return super.visitAnnotation(desc, visible)

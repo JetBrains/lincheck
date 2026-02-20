@@ -41,9 +41,16 @@ data class MethodDescriptor(
     private val context: TraceContext,
     val classId: Int,
     val methodSignature: MethodSignature,
-    val isIntrinsic: Boolean = false,
     val isInline: Boolean = false
 ) : Descriptor {
+
+    // TODO: JBRes-6558 make this field constant and set it in constructor.
+    //  This flag is set manually, because we might detect that some method descriptor is intrinsic
+    //  after it is already registered in the pool, due to how IntrinsicCandidateMethodFilter and MethodTransformer work.
+    //  Foo::foo() { @IntrinsicCandidate Bar.bar() }
+    //  If MethodTransformer is invoked for the body of Foo::foo then it will register descriptor for Bar::bar, but
+    //  Bar class is not yet loaded by the jvm, so Bar::bar is not detected to be intrinsic yet by the IntrinsicCandidateMethodFilter.
+    var isIntrinsic: Boolean = false
 
     /**
      * @return id of this descriptor in the method pool.
