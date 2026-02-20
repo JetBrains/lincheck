@@ -10,19 +10,17 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
-import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
-import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
+import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINTS_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
-import org.jetbrains.lincheck.util.isInLiveDebuggerMode
-import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
-import org.jetbrains.lincheck.trace.recorder.jmx.TraceRecorderJmxController
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
+import org.jetbrains.lincheck.trace.recorder.jmx.*
+import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
-import java.lang.instrument.Instrumentation
+import java.lang.instrument.*
 
 /**
  * Agent that is set as `premain` entry class for fat trace debugger jar archive.
@@ -44,6 +42,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
         ARGUMENT_JMX_MBEAN,
+        ARGUMENT_BREAKPOINTS_FILE,
     )
 
     // entry point for a statically attached java agent
@@ -53,7 +52,9 @@ internal object TraceRecorderAgent {
         parseArguments(agentArgs)
 
         TraceAgentParameters.validateMode()
-        if (!isInLiveDebuggerMode) {
+        if (isInLiveDebuggerMode) {
+            TraceAgentParameters.validateClassAndMethodArgumentsAreNotProvidedInLiveDebuggerMode()
+        } else {
             TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
         }
 
@@ -63,9 +64,20 @@ internal object TraceRecorderAgent {
         // register JMX MBean if the specified argument was passed
         registerJmxMBeanIfRequested()
 
+        // load breakpoints from a file if specified (for live debugger mode)
+        if (isInLiveDebuggerMode) {
+            LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
+        }
+
         // install trace entry points transformer and instrumentation
-        installTraceEntryPointTransformer()
+        if (!isInLiveDebuggerMode) {
+            installTraceEntryPointTransformer()
+        }
+
         installInstrumentation()
+        if (isInLiveDebuggerMode && traceDumpFilePath != null) {
+            LiveDebugger.startRecording()
+        }
     }
 
     // entry point for a dynamically attached java agent
@@ -79,6 +91,9 @@ internal object TraceRecorderAgent {
             System.setProperty(TRACE_RECORDER_MODE_PROPERTY, "true")
         }
         TraceAgentParameters.validateMode()
+        if (isInLiveDebuggerMode) {
+            TraceAgentParameters.validateClassAndMethodArgumentsAreNotProvidedInLiveDebuggerMode()
+        }
 
         // attach java agent
         LincheckInstrumentation.attachJavaAgentDynamically(inst)
@@ -86,8 +101,17 @@ internal object TraceRecorderAgent {
         // register JMX MBean if the specified argument was passed
         registerJmxMBeanIfRequested()
 
+        // load breakpoints from a file if specified (for live debugger mode)
+        if (isInLiveDebuggerMode) {
+            LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
+        }
+
         // install instrumentation and re-transform already loaded classes
         installInstrumentation()
+        if (isInLiveDebuggerMode && traceDumpFilePath != null) {
+            LiveDebugger.startRecording()
+        }
+
         // TODO: Re-transform already loaded classes if needed
     }
 

@@ -23,7 +23,6 @@ sourceSets {
         // main
         val asmVersion: String by project
         val byteBuddyVersion: String by project
-
         compileOnly(project(":bootstrap"))
         implementation(project(":common"))
 
