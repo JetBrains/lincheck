@@ -300,6 +300,51 @@ private fun foldNode(node: TraceNode): TraceNode {
     return nodeCopy
 }
 
+data class Cycle(
+    val bestCount: Int,
+    val bestPeriod: Int
+)
+
+fun <T> List<T>.findCycle(
+    startIndex: Int = 0,
+    comparator: (T, T) -> Boolean = { a, b -> a == b }
+): Cycle? {
+     // Calculate the maximum possible period length in iterations
+     // This should handle cases like: A, A, A, A (max period 1), and A, B, C, A, B, C (max period 3)
+    val maxPeriod = (size - startIndex) / 2
+
+    for (period in 1..maxPeriod) {
+        var currentCount = 1
+        var endIndex = startIndex + period
+
+        // Check how many times the sequence of length 'period' repeats
+        while (endIndex + period <= size) {
+            var isMatch = true
+
+            for (i in 0 until period) {
+                if (!comparator(this[startIndex + i], this[endIndex + i])) {
+                    isMatch = false
+                    break
+                }
+            }
+
+            if (isMatch) {
+                currentCount++
+                endIndex += period
+            } else {
+                break
+            }
+        }
+
+        if (currentCount > 1) {
+            // Stop at the smallest period with the longest repetition
+            return Cycle(bestCount = currentCount, bestPeriod = period)
+        }
+    }
+
+    return null
+}
+
 private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
     val result = mutableListOf<TraceNode>()
     var startIndex = 0
@@ -307,43 +352,18 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
     while (startIndex < children.size) {
         val startNode = children[startIndex]
 
-        // Calculate the maximum possible period length in iterations
-        // This should handle cases like: A, A, A, A (max period 1), and A, B, C, A, B, C (max period 3)
-        val maxPeriod = (children.size - startIndex) / 2
-        var bestPeriod = 1
-        var bestCount = 1
-        var foundPattern = false
-
-        for (period in 1..maxPeriod) {
-            var currentCount = 1
-            var endIndex = startIndex + period
-
-            // Check how many times the sequence of length 'period' repeats
-            while (endIndex + period <= children.size) {
-                if (structurallyEqual(children, startIndex, endIndex, period)) {
-                    currentCount++
-                    endIndex += period
-                } else {
-                    break
-                }
-            }
-
-            if (currentCount > 1) {
-                bestPeriod = period
-                bestCount = currentCount
-                foundPattern = true
-                break // Stop at the smallest period with the longest repetition
-            }
+        val cycle = children.findCycle(startIndex) { nodeA, nodeB ->
+            nodePattern(nodeA) == nodePattern(nodeB)
         }
 
-        if (foundPattern) {
-            val totalNodesCovered = bestCount * bestPeriod
+        if (cycle != null) {
+            val totalNodesCovered = cycle.bestCount * cycle.bestPeriod
             val firstNode = children[startIndex]
             val lastNode = children[startIndex + totalNodesCovered - 1]
 
             // Determine range. from/to for IterationNode, otherwise 1..Count.
             val startIter = if (firstNode is IterationNode) firstNode.from else 1
-            val endIter = if (lastNode is IterationNode) lastNode.to else bestCount
+            val endIter = if (lastNode is IterationNode) lastNode.to else cycle.bestCount
 
             val rangeNode = IterationNode(
                 tracePoint = firstNode.tracePoint,
@@ -402,23 +422,6 @@ private fun deepCopyNode(node: TraceNode): TraceNode {
         copy.addChild(deepCopyNode(child))
     }
     return copy
-}
-
-/**
- * Checks if two sequences of nodes are structurally equivalent.
- */
-private fun structurallyEqual(
-    list: List<TraceNode>,
-    startIndex: Int,
-    endIndex: Int,
-    length: Int
-): Boolean {
-    for (i in 0 until length) {
-        val nodeA = list[startIndex + i]
-        val nodeB = list[endIndex + i]
-        if (nodePattern(nodeA) != nodePattern(nodeB)) return false
-    }
-    return true
 }
 
 private data class NodePattern(
