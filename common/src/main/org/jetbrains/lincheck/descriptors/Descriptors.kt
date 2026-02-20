@@ -53,10 +53,9 @@ data class MethodDescriptor(
     var isIntrinsic: Boolean = false
 
     /**
-     * @return id of this descriptor in the method pool.
-     * @throws IllegalStateException if this descriptor is not registered yet.
+     * @return id of this descriptor in the method pool, or -1 if this descriptor is not registered yet.
      */
-    val id: Int get() = context.methodPool.getId(key)
+    val id: Int get() = if (context.methodPool.contains(key)) context.methodPool.getId(key) else -1
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
     val methodName: String get() = methodSignature.name
@@ -84,10 +83,9 @@ data class FieldDescriptor(
 ) : Descriptor {
 
     /**
-     * @return id of this descriptor in the field pool.
-     * @throws IllegalStateException if this descriptor is not registered yet.
+     * @return id of this descriptor in the field pool, or -1 if this descriptor is not registered yet.
      */
-    val id: Int get() = context.fieldPool.getId(key)
+    val id: Int get() = if (context.fieldPool.contains(key)) context.fieldPool.getId(key) else -1
     val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
