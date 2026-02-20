@@ -213,7 +213,7 @@ private class TraceColumnPrinter(
         updateSpinCycleState(node)
 //        TODO: Iterations with ranges do not show up. In those cases the node is CallNode.
         if ((node is LoopNode || node is CallNode) && !verbose) {
-            val loopLine = node.toStringImpl(withLocation = false)
+            val loopLine = node.toString(withLocation = false)
             var loopTitle = loopLine.substringBefore("::")
             var iterations = loopLine.substringAfter("::").split(";").map { it.trim() }.dropLast(1) // drop last empty element after split
 
@@ -263,7 +263,7 @@ private class TraceColumnPrinter(
         }
 
         else {
-            val nodeLine = getPrefix() + node.toStringImpl(withLocation = verbose)
+            val nodeLine = getPrefix() + node.toString(withLocation = verbose)
 
             val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
             _lines.add(traceLine)

@@ -400,7 +400,7 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
 }
 
 private fun addUniqueChild(parent: TraceNode, child: TraceNode, signatures: MutableSet<String>) {
-    val rawString = child.toStringImpl(false)
+    val rawString = child.toString(false)
     val lastColon = rawString.lastIndexOf(':')
     val lastEquals = rawString.lastIndexOf('=')
     val lastParen = rawString.lastIndexOf(')')
@@ -465,7 +465,7 @@ private fun normalizeNodeHead(rawString: String): String {
 
 private fun nodePattern(node: TraceNode): NodePattern =
     NodePattern(
-        head = normalizeNodeHead(node.toStringImpl(false)),
+        head = normalizeNodeHead(node.toString(false)),
         children = node.children.map { nodePattern(it) }
     )
 
@@ -551,7 +551,7 @@ internal fun computeInterleavingErrorLoops(node: TraceNode): String {
     val sb = StringBuilder()
     node.children.forEach { node ->
         val codeFragmentChildren = node.children.map { child ->
-            child.toStringImpl(false) + "(${child.eventNumber})"
+            child.toString(false) + "(${child.eventNumber})"
         }
         codeFragmentChildren.forEach { child ->
             if (!child.contains("loop(") && !sb.contains(child))

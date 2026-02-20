@@ -45,8 +45,8 @@ internal abstract class TraceNode(val eventNumber: Int, open val tracePoint: Tra
         node.parent = this
     }
 
-    internal abstract fun toStringImpl(withLocation: Boolean): String
-    override fun toString(): String = toStringImpl(withLocation = true)
+    internal abstract fun toString(withLocation: Boolean): String
+    override fun toString(): String = toString(withLocation = true)
 
     fun lastOrNull(predicate: (TraceNode) -> Boolean): TraceNode? {
         val last = children.mapNotNull { it.lastOrNull(predicate) }.lastOrNull()
@@ -97,8 +97,8 @@ internal class EventNode(
     eventNumber: Int,
 ): TraceNode(eventNumber, tracePoint) {
 
-    override fun toStringImpl(withLocation: Boolean): String =
-        tracePoint.toStringImpl(withLocation)
+    override fun toString(withLocation: Boolean): String =
+        tracePoint.toString(withLocation, true)
 
     override fun copy(): TraceNode = EventNode(tracePoint, eventNumber)
 }
@@ -118,11 +118,11 @@ internal class CallNode(
         isActor = true
     }
 
-    override fun toStringImpl(withLocation: Boolean): String {
+    override fun toString(withLocation: Boolean): String {
         if (!withLocation)  {
             if (children.any { it is LoopNode } && !children.any { it.children == children}) {
                 val sb = StringBuilder()
-                sb.append(tracePoint.toStringImpl(false))
+                sb.append(tracePoint.toString(withLocation = false, withValues = true))
                 if (children.any { it is CallNode && it.tracePoint.methodName == this.tracePoint.methodName }) {
                     return "${tracePoint.methodName}() [potential infinite recursion detected]"
                 }
@@ -136,10 +136,10 @@ internal class CallNode(
                 return sb.toString()
             }
             else
-                return tracePoint.toStringImpl(false)
+                return tracePoint.toString(withLocation = false, withValues = true)
         }
         else {
-            return tracePoint.toStringImpl(true)
+            return tracePoint.toString(withLocation = true, withValues = true)
         }
     }
 
@@ -151,7 +151,7 @@ internal class CallNode(
 internal class ResultNode(val actorResult: ReturnedValueResult, eventNumber: Int, tracePoint: TracePoint)
     : TraceNode(eventNumber, tracePoint) {
 
-    override fun toStringImpl(withLocation: Boolean): String =
+    override fun toString(withLocation: Boolean): String =
         "result: ${actorResult.resultRepresentation}"
 
     override fun copy(): TraceNode = ResultNode(actorResult, eventNumber, tracePoint)
@@ -171,10 +171,10 @@ internal class LoopNode(
             }
         }
 
-    override fun toStringImpl(withLocation: Boolean): String {
+    override fun toString(withLocation: Boolean): String {
         val iters = totalIterations()
         val base = "loop($iters iterations)"
-        if (withLocation) return "$base at ${tracePoint.toStringImpl(true).substringAfter(" at ")}"
+        if (withLocation) return "$base at ${tracePoint.toString(withLocation = true, withValues = true).substringAfter(" at ")}"
         else {
             val sb = StringBuilder()
             sb.append("$base::")
@@ -197,12 +197,12 @@ internal class IterationNode(
     val count: Int get() = to - from + 1
     val isIterationRange: Boolean get() = count > 1
 
-    override fun toStringImpl(withLocation: Boolean): String {
+    override fun toString(withLocation: Boolean): String {
         if (isIterationRange) {
-            val loc = if (withLocation) " at ${tracePoint.toStringImpl(true).substringAfter(" at ")}" else ""
+            val loc = if (withLocation) " at ${tracePoint.toString(withLocation = true, withValues = true).substringAfter(" at ")}" else ""
             return "<iterations $from-$to>$loc"
         }
-        return tracePoint.toStringImpl(withLocation)
+        return tracePoint.toString(withLocation, true)
     }
 
     override fun copy(): TraceNode = IterationNode(tracePoint, eventNumber, from, to)
@@ -214,8 +214,8 @@ internal class RecursionNode(
     eventNumber: Int,
 ) : TraceNode(eventNumber, node.tracePoint) {
 
-    override fun toStringImpl(withLocation: Boolean): String {
-        return "${node.toStringImpl(withLocation)} [recursion x $depth]"
+    override fun toString(withLocation: Boolean): String {
+        return "${node.toString(withLocation)} [recursion x $depth]"
     }
 
     override fun copy(): TraceNode = RecursionNode(node, depth, eventNumber)
