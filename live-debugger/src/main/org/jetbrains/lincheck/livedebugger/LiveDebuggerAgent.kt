@@ -26,9 +26,9 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.trace.jmx.LiveDebuggerJmxController
 import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
+import org.jetbrains.lincheck.tracer.TracingMode
 import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
 import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
-import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import java.lang.instrument.Instrumentation
 
 /**
@@ -87,9 +87,14 @@ internal object LiveDebuggerAgent {
     fun premain(agentArgs: String?, inst: Instrumentation) {
         agent.premain(agentArgs, inst)
 
-        if (traceDumpFilePath != null) {
-            LiveDebugger.startRecording()
-        }
+        val mode = TracingMode.parse(
+            outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
+            outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
+            outputFilePath = traceDumpFilePath,
+        )
+        val packTrace = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
+
+        LiveDebugger.startRecording(mode, traceDumpFilePath, packTrace)
     }
 
     // entry point for a dynamically attached java agent
@@ -101,9 +106,5 @@ internal object LiveDebuggerAgent {
         }
 
         agent.agentmain(agentArgs, inst)
-
-        if (traceDumpFilePath != null) {
-            LiveDebugger.startRecording()
-        }
     }
 }

@@ -10,10 +10,8 @@
 
 package org.jetbrains.lincheck.tracer
 
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
 import org.jetbrains.lincheck.trace.TcpTraceServer
 import org.jetbrains.lincheck.trace.TraceContext
@@ -42,7 +40,7 @@ object Tracer {
      * If some session is already running, returns the existing session.
      * If another session was started earlier and finished, replaces it with a new session.
      *
-     * @param recordingMode The recording mode that configures the trace collection strategy,
+     * @param tracingMode The recording mode that configures the trace collection strategy,
      *   such as in-memory, file streaming, or network transfer
      *   (see [TracingMode] for more details).
      * @param startMode Specifies how the tracing session should begin.
@@ -52,7 +50,7 @@ object Tracer {
      */
     @Synchronized
     fun startTracing(
-        recordingMode: TracingMode,
+        tracingMode: TracingMode,
         startMode: TracingSession.StartMode,
     ): TracingSession {
         // Set a signal "void" object from Injections for better text output
@@ -71,7 +69,7 @@ object Tracer {
         }
 
         // this method does not need 'runInsideIgnoredSection' because analysis is not enabled until its completion
-        val session = createSession(recordingMode)
+        val session = createSession(tracingMode)
             .also { this.session = it }
         val eventTracker = session.eventTracker
 
@@ -206,16 +204,16 @@ object Tracer {
         return LincheckInstrumentation.context
     }
 
-    private fun createSession(recordingMode: TracingMode): TracingSession {
+    private fun createSession(mode: TracingMode): TracingSession {
         val eventTracker = TraceCollectingEventTracker(
-            mode = recordingMode,
+            mode = mode,
             layout = if (isInLiveDebuggerMode) TraceDataLayout.FLAT else TraceDataLayout.TREE,
             context = createTraceContext(),
-            traceStreamingFilePath = (recordingMode as? TracingMode.BinaryFileStream)?.streamingFilePath
+            traceStreamingFilePath = (mode as? TracingMode.BinaryFileStream)?.streamingFilePath
         )
 
         var tcpServer: TcpTraceServer? = null
-        if (recordingMode is TracingMode.BinaryTcpStream) {
+        if (mode is TracingMode.BinaryTcpStream) {
             try {
                 tcpServer = TcpTraceServer(
                     port = TraceAgentParameters.DEFAULT_TRACE_PORT,

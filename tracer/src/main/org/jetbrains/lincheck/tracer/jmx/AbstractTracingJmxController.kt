@@ -56,7 +56,7 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
         try {
             val session = Tracer.startTracing(
                 // TODO: support configuring file mode (text or binary, stream or dump)
-                recordingMode = TracingMode.BinaryFileStream(traceDumpFilePath),
+                tracingMode = TracingMode.BinaryFileStream(traceDumpFilePath),
                 startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "File-based trace session has been started" }
@@ -72,7 +72,7 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
     override fun startTcpTracing() {
         try {
             Tracer.startTracing(
-                recordingMode = TracingMode.BinaryTcpStream,
+                tracingMode = TracingMode.BinaryTcpStream,
                 startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "TCP trace streaming session has been started" }

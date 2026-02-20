@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.livedebugger
 
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.tracer.Tracer
@@ -23,32 +22,19 @@ import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicBoolean
 
 internal object LiveDebugger {
-    // TODO: reduce the copy-paste wrt. TraceRecorder class
 
     private val shutdownHookInstalled = AtomicBoolean(false)
 
-    fun startRecording() {
-        val traceDumpFilePath = TraceAgentParameters.traceDumpFilePath
-        val packTrace = (TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_PACK) ?: "true").toBoolean()
-        val recordingMode = TracingMode.parse(
-            outputMode = TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_FORMAT),
-            outputOption = TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_FOPTION),
-            outputFilePath = traceDumpFilePath,
-        )
-        if (recordingMode.isFileMode) {
-            if (traceDumpFilePath == null) {
-                Logger.error { "Trace dump file path has not been set" }
-            }
-        }
-
+    fun startRecording(mode: TracingMode, traceDumpFilePath: String? = null, packTrace: Boolean = true) {
         try {
             val session = Tracer.startTracing(
-                recordingMode = recordingMode,
+                tracingMode = mode,
+                // TODO: introduce `StartMode.Static`
                 startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "Live debugging has been started" }
 
-            if (recordingMode.isFileMode && traceDumpFilePath != null) {
+            if (mode.isFileMode && traceDumpFilePath != null) {
                 session.installOnFinishHook {
                     dumpTrace(traceDumpFilePath, packTrace)
                 }
