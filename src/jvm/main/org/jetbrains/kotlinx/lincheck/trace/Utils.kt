@@ -400,16 +400,7 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
 }
 
 private fun addUniqueChild(parent: TraceNode, child: TraceNode, signatures: MutableSet<String>) {
-    val rawString = child.toString(false)
-    val lastColon = rawString.lastIndexOf(':')
-    val lastEquals = rawString.lastIndexOf('=')
-    val lastParen = rawString.lastIndexOf(')')
-
-    val cutOffIndex = if (lastColon > lastParen && lastColon > lastEquals) lastColon
-    else if (lastEquals > lastParen) lastEquals
-    else -1
-
-    val signature = if (cutOffIndex != -1) rawString.substring(0, cutOffIndex).trim() else rawString
+    val signature = child.tracePoint.toString(withLocation = false, withValues = false)
 
     if (signatures.add(signature)) {
             parent.addChild(deepCopyNode(child))
@@ -436,28 +427,9 @@ private fun normalizeNodeHead(rawString: String): String {
 
     var result = rawString
 
-    // Normalize Ranges/Loops
-    if (result.contains("iterations") || result.contains("loop(")) {
-        result = result.replace(Regex("\\d+"), "...")
-    }
-
-    // Normalize Array Indices
+    // Normalize array indices (since they are part of the fieldName, not the value)
     if (result.contains('[')) {
         result = result.replace(Regex("\\[.*?\\]"), "[...]")
-    }
-
-    // Remove values in assignments
-    val lastEqualsIndex = result.lastIndexOf('=')
-    val lastParenIndex = result.lastIndexOf(')')
-    if (lastEqualsIndex > lastParenIndex) {
-        result = result.substring(0, lastEqualsIndex).trim()
-    }
-
-    // Remove return values
-    val lastColonIndex = result.lastIndexOf(':')
-    val currentLastParenIndex = result.lastIndexOf(')')
-    if (lastColonIndex > currentLastParenIndex) {
-        result = result.substring(0, lastColonIndex).trim()
     }
 
     return result
@@ -465,7 +437,7 @@ private fun normalizeNodeHead(rawString: String): String {
 
 private fun nodePattern(node: TraceNode): NodePattern =
     NodePattern(
-        head = normalizeNodeHead(node.toString(false)),
+        head = normalizeNodeHead(node.tracePoint.toString(withLocation = false, withValues = false)),
         children = node.children.map { nodePattern(it) }
     )
 
