@@ -76,7 +76,7 @@ internal abstract class ManagedStrategy(
         get() = (runner as? ExecutionScenarioRunner)?.testInstance
 
     // Detector of loops or hangs (i.e. active locks). TODO: modify bounds
-    internal val loopDetector: LoopDetector = BoundedLoopDetector(settings.hangingDetectionThreshold,settings.hangingDetectionThreshold, settings.hangingDetectionThreshold)
+    internal val loopDetector: LoopDetector = BoundedLoopDetector(10,100, 50)
 
     // Current execution part, if defined by the runner, `PARALLEL` otherwise
     protected val currentExecutionPart: ExecutionPart
