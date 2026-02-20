@@ -7,33 +7,27 @@
 
 
 The following interleaving leads to the error:
-| ------------------------------------------------- |
-|                     Thread 1                      |
-| ------------------------------------------------- |
-|   actorMethod(): <hung>                           |
-|     b(false)                                      |
-|     /* The following events repeat infinitely: */ |
-| ┌╶> b(true)                                       |
-| |     value.compareAndSet(false, true): false     |
-| |     c(): true                                   |
-| └╶╶╶╶ switch (reason: active lock detected)       |
-| ------------------------------------------------- |
-All unfinished threads are in deadlock
+| -------------------------- |
+|          Thread 1          |
+| -------------------------- |
+| actorMethod(): <hung>      |
+|   b(false)                 |
+|   b(true) [recursion x 51] |
+| -------------------------- |
+All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------- |
-|                                                         Thread 1                                                          |
-| ------------------------------------------------------------------------------------------------------------------------- |
-|   actorMethod(): <hung>                                                                                                   |
-|     b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:292)                        |
-|       value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298)  |
-|       c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
-|         value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                     |
-|     /* The following events repeat infinitely: */                                                                         |
-| ┌╶> b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293)                         |
-| |     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298) |
-| |     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
-| |       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                     |
-| └╶╶╶╶ switch (reason: active lock detected)                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in deadlock
+| ----------------------------------------------------------------------------------------------------------------------- |
+|                                                        Thread 1                                                         |
+| ----------------------------------------------------------------------------------------------------------------------- |
+| actorMethod(): <hung>                                                                                                   |
+|   b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:294)                        |
+|     value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:300)  |
+|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:301)                               |
+|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:307)                     |
+|   b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:295) [recursion x 51]        |
+|     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:300) |
+|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:301)                               |
+|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:307)                     |
+| ----------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in livelock due to non-terminating loops (spinloops)
