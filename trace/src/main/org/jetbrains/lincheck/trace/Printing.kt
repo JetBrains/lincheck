@@ -36,7 +36,7 @@ fun printPostProcessedTrace(outputStream: OutputStream, reader: LazyTraceReader,
 
     PrintStream(outputStream.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
         roots.forEachIndexed { i, root ->
-            output.println(getThreadName(i, roots.size, reader.context))
+            output.println(getThreadName(root.threadId, roots.size, reader.context))
             lazyPrintTRPoint(output, reader, root, 0, verbose)
         }
     }
