@@ -25,12 +25,12 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
     val diffStartTime = System.currentTimeMillis()
 
     // Load all left and right roots.
-    val leftRoots = left.readRoots()
-    val rightRoots = right.readRoots()
+    val leftRoots = left.readRootsForNonEmptyThreads()
+    val rightRoots = right.readRootsForNonEmptyThreads()
 
     // Match threads by name for now
     // Try to match same names
-    val threadMap = correlateThreadsByName(left, right)
+    val threadMap = correlateThreadsByName(left, leftRoots, right, rightRoots)
     // Save thread map to temporary file.
     val threadMapFile = saveThreadMap(threadMap)
 
@@ -58,9 +58,9 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                     outputThreadId = outputThreadId,
                     name = name,
                     left = left,
-                    leftRoot = leftRoots[leftThreadId],
+                    leftRoot = leftRoots[leftThreadId]!!,
                     right = right,
-                    rightRoot = rightRoots[rightThreadId],
+                    rightRoot = rightRoots[rightThreadId]!!,
                 )
             } else if (leftThreadId >= 0) {
                 // Only in left -> whole thread is removed
@@ -69,7 +69,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                     output = output,
                     cloner = { cloner.cloneLeftTracePoint(it,-1) },
                     reader = left,
-                    point = leftRoots[leftThreadId],
+                    point = leftRoots[leftThreadId]!!,
                     diffStatus = DiffStatus.REMOVED
                 )
             } else if (rightThreadId >= 0) {
@@ -79,7 +79,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                     output = output,
                     cloner = { cloner.cloneRightTracePoint(it,-1) },
                     reader = right,
-                    point = rightRoots[rightThreadId],
+                    point = rightRoots[rightThreadId]!!,
                     diffStatus = DiffStatus.ADDED
                 )
             }
@@ -140,19 +140,23 @@ private fun diffOneThread(
 
 private fun correlateThreadsByName(
     left: LazyTraceReader,
-    right: LazyTraceReader
+    leftRoots: Map<Int, TRTracePoint>,
+    right: LazyTraceReader,
+    rightRoots: Map<Int, TRTracePoint>
 ): Map<String, ThreadIds> {
     val threadMap = mutableMapOf<String, ThreadIds>()
     var diffThreadId = 0
-    left.context.threadNames()
-        .forEach { tn ->
-            threadMap[tn] = ThreadIds(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
-        }
-    right.context.threadNames()
-        .filter { !threadMap.contains(it) }
-        .forEach { tn ->
-            threadMap[tn] = ThreadIds(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
-        }
+
+    leftRoots.keys.forEach { leftId ->
+        val leftName = left.context.getThreadName(leftId)
+        val rightId = right.context.getThreadId(leftName)
+        threadMap[leftName] = ThreadIds(leftId, rightId, diffThreadId++)
+    }
+    rightRoots.keys.forEach { rightId ->
+        val rightName = right.context.getThreadName(rightId)
+        val leftId = left.context.getThreadId(rightName)
+        threadMap.computeIfAbsent(rightName) { ThreadIds(leftId, rightId, diffThreadId++) }
+    }
     return threadMap
 }
 
@@ -190,7 +194,7 @@ private fun copyTracepointSubtree(
         reader.loadAllChildren(point)
         point.events.forEach { p ->
             if (p == null) return@forEach
-            copyTracepointSubtree(output, cloner, reader, p!!, diffStatus, outputPoint)
+            copyTracepointSubtree(output, cloner, reader, p, diffStatus, outputPoint)
         }
         outputPoint.saveFooter(output)
         // Free memory

@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.util.Logger
 import java.nio.file.StandardOpenOption
 import java.nio.file.Files
 import java.io.*
+import java.util.SortedMap
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlin.io.path.Path
@@ -132,7 +133,7 @@ internal data class ShallowArrayElementByNameAccessLocation(val accessPathId: In
  * It is possible, that code location ([StackTraceElement]) can be loaded before
  * its strings are loaded due to data blocks serialization order.
  * The same applies for the access paths
- * (for them [org.jetbrains.lincheck.descriptors.VariableDescriptor] or [org.jetbrains.lincheck.descriptors.FieldDescriptor]
+ * (for them [VariableDescriptor] or [FieldDescriptor]
  * might be yet not loaded when the access path is read).
  *
  */
@@ -338,16 +339,42 @@ class LazyTraceReader private constructor(
             .map { (_, tracepoints) -> tracepoints }
     }
 
+    @Deprecated("Use readRootsForNonEmptyThreads() instead")
     fun readRoots(): List<TRTracePoint> = lock.withLock {
+        val threadTracepoints = readTopLevelTracePoints()
+        return threadTracepoints.mapIndexed { threadId, tracepoints ->
+            if (tracepoints.isEmpty()) {
+                Logger.warn { "Thread $threadId does not contain any tracepoints, fake will be returned" }
+            } else if (tracepoints.size > 1) {
+                Logger.warn { "Thread $threadId has more than one root tracepoints: ${tracepoints.size}" }
+            }
+            // Problem: there could be empty thread. But this API use implicit
+            // threadId: index in the list.
+            // List cannot contain null Tracepoints, so returning null is not an option
+            // Create fake thrace point
+            tracepoints.firstOrNull() ?: TRMethodCallTracePoint(
+                context = context,
+                threadId = threadId,
+                codeLocationId = UNKNOWN_CODE_LOCATION_ID,
+                methodId = context.getOrCreateMethodId("<unknown>", "<unknown>", Types.MethodType(Types.VOID_TYPE)),
+                obj = TR_OBJECT_NULL,
+                parameters = emptyList(),
+                flags = TRMethodCallTracePoint.INCOMPLETE_METHOD_FLAG.toShort()
+            )
+        }
+    }
+
+    fun readRootsForNonEmptyThreads(): Map<Int, TRTracePoint> = lock.withLock {
         val threadTracepoints = readTopLevelTracePoints()
         return threadTracepoints.mapIndexedNotNull { threadId, tracepoints ->
             if (tracepoints.isEmpty()) {
                 Logger.warn { "Thread $threadId does not contain any tracepoints" }
+                return@mapIndexedNotNull null
             } else if (tracepoints.size > 1) {
                 Logger.warn { "Thread $threadId has more than one root tracepoints: ${tracepoints.size}" }
             }
-            tracepoints.firstOrNull()
-        }
+            threadId to tracepoints.first()
+        }.toMap().toSortedMap()
     }
 
     fun loadAllChildren(parent: TRContainerTracePoint) = lock.withLock {

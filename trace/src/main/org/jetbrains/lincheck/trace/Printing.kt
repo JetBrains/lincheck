@@ -32,10 +32,10 @@ fun printPostProcessedTrace(outputFileName: String?, reader: LazyTraceReader, ve
 }
 
 fun printPostProcessedTrace(outputStream: OutputStream, reader: LazyTraceReader, verbose: Boolean) {
-    val roots = reader.readRoots()
+    val roots = reader.readRootsForNonEmptyThreads()
 
     PrintStream(outputStream.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
-        roots.forEachIndexed { i, root ->
+        roots.forEach { (i, root) ->
             output.println(getThreadName(i, roots.size, reader.context))
             lazyPrintTRPoint(output, reader, root, 0, verbose)
         }
