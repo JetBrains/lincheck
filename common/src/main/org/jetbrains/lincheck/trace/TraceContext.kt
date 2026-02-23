@@ -150,7 +150,7 @@ fun TraceContext.createAndRegisterMethodDescriptor(
     methodPool[key]?.let { return it }
 
     // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
-    val clazzId = classPool.register(ClassDescriptor(className))
+    val clazzId = createAndRegisterClassDescriptor(className).id
     val descriptor = MethodDescriptor(
         context = this,
         classId = clazzId,
@@ -179,7 +179,7 @@ fun TraceContext.createAndRegisterFieldDescriptor(
     fieldPool[key]?.let { return it }
 
     // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
-    val clazzId = classPool.register(ClassDescriptor(className))
+    val clazzId = createAndRegisterClassDescriptor(className).id
     val descriptor = FieldDescriptor(
         context = this,
         classId = clazzId,
@@ -189,6 +189,20 @@ fun TraceContext.createAndRegisterFieldDescriptor(
         isFinal = isFinal
     )
     fieldPool.register(descriptor)
+    return descriptor
+}
+
+/**
+ * Creates a class descriptor and registers it in the context receiver.
+ *
+ * @return created class descriptor.
+ */
+fun TraceContext.createAndRegisterClassDescriptor(className: String): ClassDescriptor {
+    val key = ClassDescriptor.Key(className)
+    classPool[key]?.let { return it }
+
+    val descriptor = ClassDescriptor(context = this, name = className)
+    classPool.register(descriptor)
     return descriptor
 }
 

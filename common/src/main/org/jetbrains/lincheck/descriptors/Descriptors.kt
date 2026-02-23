@@ -30,12 +30,17 @@ interface Descriptor {
     val key: Key
 }
 
-data class ClassDescriptor(
-    val name: String,
+open class ClassDescriptor(
+    private val context: TraceContext?,
+    val name: String
 ) : Descriptor {
     data class Key(val className: String) : Descriptor.Key()
+
+    open val id: Int get() = context!!.classPool.getId(key)
     override val key: Descriptor.Key get() = Key(name)
 }
+
+class ClassDescriptorWithNoContext(name: String, override val id: Int) : ClassDescriptor(null, name)
 
 data class MethodDescriptor(
     private val context: TraceContext,

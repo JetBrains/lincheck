@@ -403,8 +403,8 @@ internal fun DataOutput.writeClassDescriptor(value: ClassDescriptor) {
     writeUTF(value.name)
 }
 
-internal fun DataInput.readClassDescriptor(): ClassDescriptor {
-    return ClassDescriptor(readUTF())
+internal fun DataInput.readClassDescriptor(context: TraceContext): ClassDescriptor {
+    return ClassDescriptor(context, readUTF())
 }
 
 internal fun DataOutput.writeMethodDescriptor(value: MethodDescriptor) {

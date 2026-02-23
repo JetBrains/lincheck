@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.trace
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ActiveLocal
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
+import org.jetbrains.lincheck.descriptors.ClassDescriptorWithNoContext
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
@@ -1009,10 +1010,10 @@ data class TRArray private constructor(
 }
 
 const val TR_OBJECT_NULL_CLASSNAME = -1
-val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, ClassDescriptor("null"))
+val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, ClassDescriptorWithNoContext("null", id = TR_OBJECT_NULL_CLASSNAME))
 
 const val TR_OBJECT_VOID_CLASSNAME = -2
-val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, ClassDescriptor("void"))
+val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, ClassDescriptorWithNoContext("void", id = TR_OBJECT_VOID_CLASSNAME))
 
 const val UNFINISHED_METHOD_RESULT_SYMBOL = "<unfinished method>"
 const val UNTRACKED_METHOD_RESULT_SYMBOL = "<untracked result>"
@@ -1068,30 +1069,26 @@ private fun classNameWhitelisted(obj: Any): Boolean {
 }
 
 fun TRObjectWithFields(context: TraceContext, obj: Any, fields: Map<String, Any?>): TRObject {
-    val cd = ClassDescriptor(obj.javaClass.name)
-    val classId = context.classPool.register(cd)
+    val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
     val trObjectMap = fields.mapValues { (_, value) -> TRObjectOrNull(context, value) }
-    return TRObject(classId, System.identityHashCode(obj), cd, trObjectMap)
+    return TRObject(cd.id, System.identityHashCode(obj), cd, trObjectMap)
 }
 
 fun TRArrayWithElements(context: TraceContext, arr: Any, size: Int, elements: List<Any?>): TRArray {
-    val cd = ClassDescriptor(arr.javaClass.name)
-    val classId = context.classPool.register(cd)
+    val cd = context.createAndRegisterClassDescriptor(arr.javaClass.name)
     val elementsAsTRValues = elements.map { value -> TRObjectOrNull(context, value) }
-    return TRArray(classId, System.identityHashCode(arr), cd, size, elementsAsTRValues)
+    return TRArray(cd.id, System.identityHashCode(arr), cd, size, elementsAsTRValues)
 }
 
 fun TRValue(context: TraceContext, obj: Any): TRValue {
     val defaultTRObject = {
-        val cd = ClassDescriptor(obj.javaClass.name)
-        val classId = context.classPool.register(cd)
-        TRObject(classId, System.identityHashCode(obj), cd)
+        val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
+        TRObject(cd.id, System.identityHashCode(obj), cd)
     }
     
     val defaultTRArray = { size: Int ->
-        val cd = ClassDescriptor(obj.javaClass.name)
-        val classId = context.classPool.register(cd)
-        TRArray(classId, System.identityHashCode(obj), cd, size)
+        val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
+        TRArray(cd.id, System.identityHashCode(obj), cd, size)
     }
 
     return when (obj) {
