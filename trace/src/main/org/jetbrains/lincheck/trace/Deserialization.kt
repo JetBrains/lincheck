@@ -378,6 +378,8 @@ class LazyTraceReader private constructor(
     }
 
     fun loadAllChildren(parent: TRContainerTracePoint) = lock.withLock {
+        if (parent.events.isEmpty()) return
+
         val (start, end) = callTracepointChildren[parent.eventId]
             ?: error("TRContainerTracePoint ${parent.eventId} is not found in index")
 
