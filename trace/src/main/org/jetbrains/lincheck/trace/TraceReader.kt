@@ -339,7 +339,7 @@ internal fun loadVariableDescriptor(
     restore: Boolean
 ): Int {
     val id = input.readInt()
-    val descriptor = input.readVariableDescriptor()
+    val descriptor = input.readVariableDescriptor(context)
     if (restore) {
         context.variablePool.restore(id, descriptor)
     }

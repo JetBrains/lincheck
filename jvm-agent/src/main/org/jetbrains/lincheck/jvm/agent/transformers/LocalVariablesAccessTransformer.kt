@@ -119,7 +119,10 @@ internal class LocalVariablesAccessTransformer(
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         loadNewCodeLocationId()
-        val variableId = context.variablePool.register(VariableDescriptor(variableInfo.name, Types.convertAsmTypeName(variableInfo.type)))
+        val variableId = context.createAndRegisterVariableDescriptor(
+            variableInfo.name,
+            Types.convertAsmTypeName(variableInfo.type)
+        ).id
         push(variableId)
         // VerifyError with `loadLocal(..)`, here is a workaround
         visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)

@@ -114,10 +114,13 @@ fun Field.toDescriptor(context: TraceContext) = context.createAndRegisterFieldDe
 )
 
 data class VariableDescriptor(
+    private val context: TraceContext,
     val name: String,
     val type: Types.Type,
 ) : Descriptor {
     data class Key(val name: String, val type: Types.Type) : Descriptor.Key()
+
+    val id: Int get() = context.variablePool.getId(key)
     override val key: Descriptor.Key get() = Key(name, type)
 }
 

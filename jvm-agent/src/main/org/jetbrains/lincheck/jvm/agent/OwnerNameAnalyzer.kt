@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
+import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
@@ -784,8 +785,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
         for (localVar in localVariables) {
             val localVarType = Types.convertAsmTypeName(localVar.type)
-            val localVarDescriptor = VariableDescriptor(localVar.name, localVarType)
-                .also { context.variablePool.register(it) }
+            val localVarDescriptor = context.createAndRegisterVariableDescriptor(localVar.name, localVarType)
             val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
             set(localVar.index, OwnerName(localVarAccess))
         }

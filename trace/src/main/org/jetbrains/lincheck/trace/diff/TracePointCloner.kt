@@ -220,7 +220,7 @@ class TracePointCloner(
     }
 
     private fun VariableDescriptor.clone(): Int =
-        context.variablePool.register(VariableDescriptor(name, type))
+        context.createAndRegisterVariableDescriptor(name, type).id
 
     private fun FieldDescriptor.clone(): Int =
         context.createAndRegisterFieldDescriptor(

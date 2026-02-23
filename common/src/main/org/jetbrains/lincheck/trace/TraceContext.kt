@@ -191,3 +191,20 @@ fun TraceContext.createAndRegisterFieldDescriptor(
     fieldPool.register(descriptor)
     return descriptor
 }
+
+/**
+ * Creates a variable descriptor and registers it in the context receiver.
+ *
+ * @return created variable descriptor.
+ */
+fun TraceContext.createAndRegisterVariableDescriptor(
+    name: String,
+    type: Types.Type
+): VariableDescriptor {
+    val key = VariableDescriptor.Key(name, type)
+    variablePool[key]?.let { return it }
+
+    val descriptor = VariableDescriptor(context = this, name, type)
+    variablePool.register(descriptor)
+    return descriptor
+}
