@@ -97,9 +97,13 @@ object Tracer {
                     val threadName = Thread.currentThread().name
                     "Trace recorder session has been started from $className::$methodName in thread $threadName"
                 }
+                is TracingSession.StartMode.Static -> {
+                    val threadName = Thread.currentThread().name
+                    "Trace recorder session has been started at start-up from thread $threadName"
+                }
                 is TracingSession.StartMode.Dynamic -> {
                     val threadName = Thread.currentThread().name
-                    "Trace recorder session has been started in thread $threadName"
+                    "Trace recorder session has been started dynamically from thread $threadName"
                 }
             }
         }
@@ -158,11 +162,15 @@ object Tracer {
                     val threadName = Thread.currentThread().name
                     "Trace recorder session has been stopped from $className::$methodName in thread $threadName"
                 }
+                is TracingSession.StartMode.Static -> {
+                    val threadName = Thread.currentThread().name
+                    "Trace recorder session has been stopped from thread $threadName"
+                }
                 is TracingSession.StartMode.Dynamic -> {
                     val threadName = Thread.currentThread().name
-                    "Trace recorder session has been stopped in thread $threadName"
+                    "Trace recorder session has been stopped from thread $threadName"
                 }
-                else -> unreachable()
+                null -> unreachable()
             }
         }
 

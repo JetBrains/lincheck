@@ -44,6 +44,7 @@ class TracingSession(
      * This class hierarchy denotes various modes of trace recorder session.
      *
      * - [FromMethod] means that the tracing was started from a specific method.
+     * - [Static] means that the tracing was started from the application startup.
      * - [Dynamic] means that the tracing was started dynamically by external request during application run.
      */
     sealed class StartMode {
@@ -54,6 +55,7 @@ class TracingSession(
             val startingCodeLocationId: Int,
         ) : StartMode()
 
+        object Static : StartMode()
         object Dynamic : StartMode()
     }
 

@@ -29,8 +29,7 @@ internal object LiveDebugger {
         try {
             val session = Tracer.startTracing(
                 tracingMode = mode,
-                // TODO: introduce `StartMode.Static`
-                startMode = TracingSession.StartMode.Dynamic,
+                startMode = TracingSession.StartMode.Static,
             )
             Logger.info { "Live debugging has been started" }
 
