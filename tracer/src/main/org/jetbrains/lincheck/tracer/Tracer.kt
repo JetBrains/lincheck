@@ -219,7 +219,7 @@ object Tracer {
                     port = TraceAgentParameters.DEFAULT_TRACE_PORT,
                     subscriptionService = eventTracker.subscriptionService!!,
                 )
-                Logger.info { "Started TCP trace streaming server on port $${tcpServer.port}" }
+                Logger.info { "Started TCP trace streaming server on port ${tcpServer.port}" }
             } catch (t: Throwable) {
                 Logger.error(t) { "Cannot start TCP trace trace server" }
             }
