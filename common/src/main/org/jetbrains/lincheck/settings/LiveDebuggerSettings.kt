@@ -20,7 +20,7 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint> = emptyList
         get() = synchronized(_lineBreakPoints) { _lineBreakPoints.toList() }
 
     private val _lineBreakPoints: MutableList<SnapshotBreakpoint> =
-        Collections.synchronizedList(lineBreakPoints)
+        Collections.synchronizedList(lineBreakPoints.toMutableList())
 
     fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
         val addedBreakpoints = mutableListOf<SnapshotBreakpoint>()
