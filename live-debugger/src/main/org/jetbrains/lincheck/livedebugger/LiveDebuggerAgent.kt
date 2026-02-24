@@ -95,7 +95,11 @@ internal object LiveDebuggerAgent {
         )
         val packTrace = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
 
-        LiveDebugger.startRecording(mode, traceDumpFilePath, packTrace)
+        // start immediately at premain only if the trace dump file was specified,
+        // otherwise assume tracing will be requested later dynamically via JMX controller
+        if (traceDumpFilePath != null) {
+            LiveDebugger.startRecording(mode, traceDumpFilePath, packTrace)
+        }
     }
 
     // entry point for a dynamically attached java agent
