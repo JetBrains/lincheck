@@ -63,7 +63,7 @@ class TracingSession(
     /**
      * Gets the current mode if the session is running or finished.
      */
-    internal val startMode: StartMode? = when (val s = state) {
+    internal val startMode: StartMode? get() = when (val s = state) {
         is State.NotStarted -> null
         is State.InProgress -> s.startMode
         is State.Finished   -> s.startMode
@@ -159,14 +159,14 @@ class TracingSession(
 
         var className: String? = null
         var methodName: String? = null
-        when (startMode) {
+        when (val mode = startMode) {
             is StartMode.FromMethod -> {
-                className = startMode.className
-                methodName = startMode.methodName
+                className = mode.className
+                methodName = mode.methodName
             }
             else -> {}
         }
-        val metaInfo = TraceMetaInfo.Companion.create(
+        val metaInfo = TraceMetaInfo.create(
             agentArgs = TraceAgentParameters.rawArgs,
             className = className ?: "",
             methodName = methodName ?: "",
