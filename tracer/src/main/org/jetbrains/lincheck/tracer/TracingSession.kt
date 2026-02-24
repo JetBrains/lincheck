@@ -87,30 +87,14 @@ class TracingSession(
      */
     fun isFinished(): Boolean = state is State.Finished
 
-    /**
-     * Starts the tracing session dynamically.
-     */
-    fun startDynamic() {
+    fun start(mode: StartMode) {
         val currentState = state
-        check(currentState is State.NotStarted)
-
-        val startTime = System.currentTimeMillis()
+        check(currentState is State.NotStarted) {
+            "Cannot start tracing session: it is already started"
+        }
         state = State.InProgress(
-            startMode = StartMode.Dynamic,
-            startTime = startTime,
-        )
-    }
-
-    /**
-     * Starts the tracing session from a specific method.
-     */
-    fun startFromMethod(thread: Thread, className: String, methodName: String, startingCodeLocationId: Int) {
-        val currentState = state
-        check(currentState is State.NotStarted)
-
-        state = State.InProgress(
-            startMode = StartMode.FromMethod(thread, className, methodName, startingCodeLocationId),
-            startTime = System.currentTimeMillis(),
+            startMode = mode,
+            startTime = System.currentTimeMillis()
         )
     }
 

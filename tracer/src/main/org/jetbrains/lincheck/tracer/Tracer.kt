@@ -74,27 +74,19 @@ object Tracer {
         val eventTracker = session.eventTracker
 
         var currentThreadDescriptor: ThreadDescriptor? = null
-        when (startMode) {
-            is TracingSession.StartMode.Dynamic -> {
-                session.startDynamic()
-            }
+        if (startMode is TracingSession.StartMode.FromMethod) {
+            val className = startMode.className
+            val methodName = startMode.methodName
+            val startingCodeLocationId = startMode.startingCodeLocationId
+            check(startMode.thread == Thread.currentThread())
 
-            is TracingSession.StartMode.FromMethod -> {
-                val className = startMode.className
-                val methodName = startMode.methodName
-                val startingCodeLocationId = startMode.startingCodeLocationId
-                val traceStarterThread = startMode.thread.ensure {
-                    it == Thread.currentThread()
-                }
+            currentThreadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
+                ?: Injections.registerCurrentThread(eventTracker)
 
-                currentThreadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-                    ?: Injections.registerCurrentThread(eventTracker)
-
-                eventTracker.registerCurrentThread(className, methodName, startingCodeLocationId)
-                session.startFromMethod(traceStarterThread, className, methodName, startingCodeLocationId)
-            }
+            eventTracker.registerCurrentThread(className, methodName, startingCodeLocationId)
         }
 
+        session.start(startMode)
         Injections.enableGlobalEventTracking(eventTracker)
 
         Logger.info {
