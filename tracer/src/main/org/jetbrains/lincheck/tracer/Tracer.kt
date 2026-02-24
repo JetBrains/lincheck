@@ -59,11 +59,11 @@ object Tracer {
         val previousSession = this.session
         if (previousSession != null) {
             if (previousSession.isFinished()) {
-                Logger.info { "Previous trace recorder session was finished, it will be replaced by a new session" }
+                Logger.info { "Previous tracing session was finished, it will be replaced by a new session" }
                 this.session = null
             } else {
                 check(previousSession.isRunning())
-                Logger.info { "A trace recorder session is already running, returning the existing session" }
+                Logger.info { "A tracing session is already running, returning the existing session" }
                 return previousSession
             }
         }
@@ -95,15 +95,15 @@ object Tracer {
                     val className = startMode.className
                     val methodName = startMode.methodName
                     val threadName = Thread.currentThread().name
-                    "Trace recorder session has been started from $className::$methodName in thread $threadName"
+                    "Tracing session has been started from $className::$methodName in thread $threadName"
                 }
                 is TracingSession.StartMode.Static -> {
                     val threadName = Thread.currentThread().name
-                    "Trace recorder session has been started at start-up from thread $threadName"
+                    "Tracing session has been started at start-up from thread $threadName"
                 }
                 is TracingSession.StartMode.Dynamic -> {
                     val threadName = Thread.currentThread().name
-                    "Trace recorder session has been started dynamically from thread $threadName"
+                    "Tracing session has been started dynamically from thread $threadName"
                 }
             }
         }
@@ -122,12 +122,12 @@ object Tracer {
     fun stopTracing(): TracingSession? {
         val session = this.session
         if (session == null) {
-            Logger.warn { "No trace recorder session is running to stop" }
+            Logger.warn { "No tracing session is running to stop" }
             return null
         }
 
         check(session.hasStarted()) {
-            "Trace recorder session has not started yet"
+            "Tracing session has not started yet"
         }
         if (session.isFinished()) return session
 
@@ -139,7 +139,7 @@ object Tracer {
         descriptor?.disableAnalysis()
 
         if (descriptor != null && eventTracker != Injections.getEventTracker(descriptor)) {
-            Logger.warn { "Unexpected event tracker observed during trace recorder session finishing" }
+            Logger.warn { "Unexpected event tracker observed during tracing session finishing" }
         }
 
         val mode = Injections.getEventTrackingMode()
@@ -160,15 +160,15 @@ object Tracer {
                     val className = startMode.className
                     val methodName = startMode.methodName
                     val threadName = Thread.currentThread().name
-                    "Trace recorder session has been stopped from $className::$methodName in thread $threadName"
+                    "Tracing session has been stopped from $className::$methodName in thread $threadName"
                 }
                 is TracingSession.StartMode.Static -> {
                     val threadName = Thread.currentThread().name
-                    "Trace recorder session has been stopped from thread $threadName"
+                    "Tracing session has been stopped from thread $threadName"
                 }
                 is TracingSession.StartMode.Dynamic -> {
                     val threadName = Thread.currentThread().name
-                    "Trace recorder session has been stopped from thread $threadName"
+                    "Tracing session has been stopped from thread $threadName"
                 }
                 null -> unreachable()
             }
@@ -187,11 +187,11 @@ object Tracer {
     fun dumpTrace(traceDumpFilePath: String, packTrace: Boolean): Boolean {
         val session = this.session
         if (session == null) {
-            Logger.warn { "No trace recorder session is running to dump trace" }
+            Logger.warn { "Cannot dump trace: tracing session was not started" }
             return false
         }
         if (!session.isFinished()) {
-            Logger.warn { "Trace recorder session was not stopped" }
+            Logger.warn { "Cannot dump trace: tracing session was not stopped" }
             return false
         }
 
