@@ -25,6 +25,9 @@ import javax.management.StandardMBean
  */
 abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxController {
 
+    protected open val mbeanInterface: Class<out TracingJmxController>
+        get() = TracingJmxController::class.java
+
     override fun register() {
         // register JMX MBean
         try {
@@ -36,7 +39,8 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
                 return
             }
 
-            val mbean = StandardMBean(this, TracingJmxController::class.java)
+            @Suppress("UNCHECKED_CAST")
+            val mbean = StandardMBean(this, mbeanInterface as Class<TracingJmxController>)
             mbs.registerMBean(mbean, objectName)
 
             Logger.info { "JMX MBean registered successfully at $mbeanName" }

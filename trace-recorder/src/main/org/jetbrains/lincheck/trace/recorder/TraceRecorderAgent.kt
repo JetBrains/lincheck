@@ -65,7 +65,7 @@ internal object TraceRecorderAgent {
         override val jmxRegistrator: TracingJmxRegistrator get() = jmxController
 
         private val jmxController = object : AbstractTracingJmxController() {
-            override val mbeanName: String = "org.jetbrains.lincheck:type=TraceRecorder"
+            override val mbeanName = "org.jetbrains.lincheck:type=TraceRecorder"
         }
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider

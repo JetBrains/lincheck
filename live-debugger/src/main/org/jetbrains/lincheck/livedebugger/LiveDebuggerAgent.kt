@@ -68,7 +68,8 @@ internal object LiveDebuggerAgent {
         override val jmxRegistrator: TracingJmxRegistrator get() = jmxController
 
         private val jmxController = object : AbstractTracingJmxController(), LiveDebuggerJmxController {
-            override val mbeanName: String = "org.jetbrains.lincheck:type=LiveDebugger"
+            override val mbeanName = "org.jetbrains.lincheck:type=LiveDebugger"
+            override val mbeanInterface = LiveDebuggerJmxController::class.java
 
             override fun addBreakpoints(breakpoints: List<String>) {
                 LiveDebugger.addBreakpoints(breakpoints)
