@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.trace.PACK_FILENAME_EXT
 import org.jetbrains.lincheck.trace.TcpTraceServer
 import org.jetbrains.lincheck.trace.TraceMetaInfo
 import org.jetbrains.lincheck.trace.printPostProcessedTrace
+import org.jetbrains.lincheck.trace.packRecordedTrace
 import org.jetbrains.lincheck.trace.saveRecorderTrace
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
@@ -215,7 +216,7 @@ class TracingSession(
     }
 
     private fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo) {
-        org.jetbrains.lincheck.trace.packRecordedTrace(
+        packRecordedTrace(
             dataFileName = baseFileName,
             indexFileName = "$baseFileName.${INDEX_FILENAME_EXT}",
             outputFileName = "$baseFileName.${PACK_FILENAME_EXT}",
