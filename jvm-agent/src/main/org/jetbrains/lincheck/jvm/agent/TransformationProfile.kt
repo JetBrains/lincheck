@@ -584,6 +584,10 @@ class LiveDebuggerTransformationProfile(
 ) : TransformationProfile {
 
     override fun shouldTransform(className: String): Boolean {
+        // In the live debugging mode, we do not instrument Java/Kotlin stdlib classes
+        // to avoid potential `ClassCircularityError` issues
+        if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
+
         return isLiveDebuggerBreakpointClass(className)
     }
 
