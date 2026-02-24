@@ -19,7 +19,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
@@ -37,7 +36,6 @@ internal object TraceRecorderAgent {
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
-        ARGUMENT_MODE,
         ARGUMENT_FORMAT,
         ARGUMENT_FOPTION,
         ARGUMENT_INCLUDE,
@@ -48,6 +46,8 @@ internal object TraceRecorderAgent {
     )
 
     private val agent = object : TracerAgent() {
+        override val modeSystemPropertyName: String = TRACE_RECORDER_MODE_PROPERTY
+
         override val instrumentationMode: InstrumentationMode = InstrumentationMode.TRACE_RECORDING
 
         override fun parseArguments(agentArgs: String?) {
@@ -81,11 +81,6 @@ internal object TraceRecorderAgent {
     // entry point for a dynamically attached java agent
     @JvmStatic
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
-        if (TraceAgentParameters.getArg(ARGUMENT_MODE) == null) {
-            // set trace recorder mode system property by default
-            System.setProperty(TRACE_RECORDER_MODE_PROPERTY, "true")
-        }
-
         agent.agentmain(agentArgs, inst)
     }
 }

@@ -34,13 +34,6 @@ import javax.management.remote.JMXServiceURL
  *
  * Supported arguments:
  *
- * - mode — agent mode. Possible options are:
- *       * `traceRecorder` --- enables trace recorder mode;
- *       * `liveDebugger` --- enables live debugger mode;
- *       * `traceDebugger` --- enables trace debugger mode.
- *       Example: `mode=traceRecorder`
- *       If not specified, falls back to system properties for backward compatibility.
- *
  * - class — fully qualified class name to run/transform (required).
  *       Example: `class=org.example.MyTest`
  *
@@ -111,7 +104,6 @@ import javax.management.remote.JMXServiceURL
  *   unknown extra keys are warned in logs, but parsing proceeds.
  */
 object TraceAgentParameters {
-    const val ARGUMENT_MODE = "mode"
     const val ARGUMENT_CLASS = "class"
     const val ARGUMENT_METHOD = "method"
     const val ARGUMENT_OUTPUT = "output"
@@ -198,8 +190,6 @@ object TraceAgentParameters {
 
             namedArgs.putAll(kvArguments)
         }
-
-        setupMode()
     }
 
     @JvmStatic
@@ -209,63 +199,6 @@ object TraceAgentParameters {
         }
         if (methodUnderTraceDebugging.isBlank()) {
             error("Method name was not provided")
-        }
-    }
-
-    @JvmStatic
-    private fun setupMode() {
-        // Parse mode from agent arguments, 
-        // if the mode is not passed, fallback to system properties.
-        val modeArg = getArg(ARGUMENT_MODE) ?: return
-
-        val isInTraceRecorderMode = (System.getProperty(TRACE_RECORDER_MODE_PROPERTY)?.toBoolean() == true)
-        val isInTraceDebuggerMode = (System.getProperty(TRACE_DEBUGGER_MODE_PROPERTY)?.toBoolean() == true)
-        val isInLiveDebuggerMode = (System.getProperty(LIVE_DEBUGGER_MODE_PROPERTY)?.toBoolean() == true)
-
-        // Check system properties for consistency.
-        when (modeArg) {
-            "traceRecorder" -> {
-                if (isInTraceDebuggerMode) {
-                    error("Mode argument is 'traceRecorder', but inconsistent system property `lincheck.traceDebuggerMode` is set")
-                }
-                if (isInLiveDebuggerMode) {
-                    error("Mode argument is 'traceRecorder', but inconsistent system property `lincheck.liveDebuggerMode` is set")
-                }
-                // Set system property if not already set.
-                if (!isInTraceRecorderMode) {
-                    System.setProperty(TRACE_RECORDER_MODE_PROPERTY, "true")
-                }
-            }
-            
-            "traceDebugger" -> {
-                if (isInTraceRecorderMode) {
-                    error("Mode argument is 'traceDebugger', but inconsistent system property `lincheck.traceRecorderMode` is set")
-                }
-                if (isInLiveDebuggerMode) {
-                    error("Mode argument is 'traceDebugger', but inconsistent system property `lincheck.liveDebuggerMode` is set")
-                }
-                // Set system property if not already set.
-                if (!isInTraceDebuggerMode) {
-                    System.setProperty(TRACE_DEBUGGER_MODE_PROPERTY, "true")
-                }
-            }
-            
-            "liveDebugger" -> {
-                if (isInTraceRecorderMode) {
-                    error("Mode argument is 'liveDebugger', but inconsistent system property `lincheck.traceRecorderMode` is set")
-                }
-                if (isInTraceDebuggerMode) {
-                    error("Mode argument is 'liveDebugger', but inconsistent system property `lincheck.traceDebuggerMode` is set")
-                }
-                // Set system property if not already set.
-                if (!isInLiveDebuggerMode) {
-                    System.setProperty(LIVE_DEBUGGER_MODE_PROPERTY, "true")
-                }
-            }
-            
-            else -> {
-                error("Invalid mode argument: '$modeArg'. Expected one of: traceRecorder, liveDebugger, traceDebugger")
-            }
         }
     }
 

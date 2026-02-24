@@ -18,7 +18,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTraceDebugging
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTraceDebugging
@@ -41,7 +40,6 @@ internal object LiveDebuggerAgent {
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
-        ARGUMENT_MODE,
         ARGUMENT_FORMAT,
         ARGUMENT_FOPTION,
         ARGUMENT_PACK,
@@ -50,6 +48,8 @@ internal object LiveDebuggerAgent {
     )
 
     private val agent = object : TracerAgent() {
+        override val modeSystemPropertyName: String = LIVE_DEBUGGER_MODE_PROPERTY
+
         override val instrumentationMode: InstrumentationMode = InstrumentationMode.LIVE_DEBUGGING
 
         override fun parseArguments(agentArgs: String?) {
@@ -105,11 +105,6 @@ internal object LiveDebuggerAgent {
     // entry point for a dynamically attached java agent
     @JvmStatic
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
-        if (TraceAgentParameters.getArg(ARGUMENT_MODE) == null) {
-            // set live debugger mode system property by default
-            System.setProperty(LIVE_DEBUGGER_MODE_PROPERTY, "true")
-        }
-
         agent.agentmain(agentArgs, inst)
     }
 }

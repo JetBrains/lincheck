@@ -30,6 +30,8 @@ abstract class TracerAgent {
 
     // entry point for a statically attached java agent
     fun premain(agentArgs: String?, inst: Instrumentation) {
+        setupMode()
+
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
         validateArguments(JavaAgentAttachType.STATIC)
@@ -49,6 +51,8 @@ abstract class TracerAgent {
 
     // entry point for a dynamically attached java agent
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
+        setupMode()
+
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
         validateArguments(JavaAgentAttachType.DYNAMIC)
@@ -61,6 +65,12 @@ abstract class TracerAgent {
 
         // install instrumentation and re-transform already loaded classes
         installInstrumentation()
+    }
+
+    protected abstract val modeSystemPropertyName: String
+
+    private fun setupMode() {
+        System.setProperty(modeSystemPropertyName, "true")
     }
 
     protected abstract fun parseArguments(agentArgs: String?)
