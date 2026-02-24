@@ -65,7 +65,9 @@ object TraceRecorderJmxController : TracingJmxController {
                 ),
                 startMode = TraceRecorderSession.StartMode.Dynamic,
             )
-            session?.installOnFinishHook {
+            Logger.info { "File-based trace session has been started" }
+
+            session.installOnFinishHook {
                 dumpTrace(traceDumpFilePath, packTrace)
             }
         } catch (t: Throwable) {
@@ -75,15 +77,11 @@ object TraceRecorderJmxController : TracingJmxController {
 
     override fun startTcpTracing() {
         try {
-            val session = TraceRecorder.startRecording(
+            TraceRecorder.startRecording(
                 recordingMode = TraceRecordingMode.BinaryTcpStream,
                 startMode = TraceRecorderSession.StartMode.Dynamic,
             )
-
-            if (session == null) {
-                Logger.warn { "TCP trace streaming session was not started (recording already in progress)" }
-                return
-            }
+            Logger.info { "TCP trace streaming session has been started" }
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot start TCP trace streaming" }
         }
@@ -98,9 +96,7 @@ object TraceRecorderJmxController : TracingJmxController {
     }
 
     private fun shutdownHook() {
-        if (TraceRecorder.isRecording()) {
-            stopTracing()
-        }
+        stopTracing()
     }
 
     override fun addBreakpoints(breakpoints: List<String>) {
