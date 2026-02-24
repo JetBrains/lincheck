@@ -386,6 +386,7 @@ class PrimitivesTest {
 
             private val U = UnsafeHolder.UNSAFE
 
+            @Suppress("DEPRECATION")
             private val offset = U.objectFieldOffset(VolatileReferenceVariable::class.java.getDeclaredField("variable"))
 
         }
