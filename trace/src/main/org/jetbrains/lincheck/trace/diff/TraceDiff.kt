@@ -15,7 +15,6 @@ import org.jetbrains.lincheck.trace.*
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.util.concurrent.ThreadLocalRandom
 
 internal data class ThreadIds(val leftId: Int, val rightId: Int, val diffId: Int)
 
@@ -31,7 +30,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
 
     // Match threads by name for now
     // Try to match same names
-    val threadMap = correlateThreadsByName(left, right)
+    val threadMap = correlateThreadsByName(left, leftRoots, right, rightRoots)
     // Save thread map to temporary file.
     val threadMapFile = saveThreadMap(threadMap)
 
@@ -141,19 +140,25 @@ private fun diffOneThread(
 
 private fun correlateThreadsByName(
     left: LazyTraceReader,
-    right: LazyTraceReader
+    leftRoots: List<TRTracePoint>,
+    right: LazyTraceReader,
+    rightRoots: List<TRTracePoint>,
 ): Map<String, ThreadIds> {
     val threadMap = mutableMapOf<String, ThreadIds>()
     var diffThreadId = 0
-    left.context.threadNames()
-        .forEach { tn ->
-            threadMap[tn] = ThreadIds(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
-        }
-    right.context.threadNames()
-        .filter { !threadMap.contains(it) }
-        .forEach { tn ->
-            threadMap[tn] = ThreadIds(left.context.getThreadId(tn), right.context.getThreadId(tn), diffThreadId++)
-        }
+    leftRoots.forEach { lr ->
+        val leftId = lr.threadId
+        val leftName = left.context.getThreadName(leftId)
+        val rightId = right.context.getThreadId(leftName)
+        threadMap[leftName] = ThreadIds(leftId, rightId, diffThreadId++)
+    }
+    rightRoots.forEach { rr ->
+        val rightId = rr.threadId
+        val rightName = right.context.getThreadName(rightId)
+        if (threadMap.containsKey(rightName)) return@forEach
+        val leftId = left.context.getThreadId(rightName)
+        threadMap[rightName] = ThreadIds(leftId, rightId, diffThreadId++)
+    }
     return threadMap
 }
 
@@ -190,6 +195,7 @@ private fun copyTracepointSubtree(
         // TODO: Batching
         reader.loadAllChildren(point)
         point.events.forEach { p ->
+            if (p == null) return@forEach
             copyTracepointSubtree(output, cloner, reader, p!!, diffStatus, outputPoint)
         }
         outputPoint.saveFooter(output)
@@ -283,5 +289,13 @@ private fun diffTracepointSubtree(
     }
 }
 
+private fun <T> calculateNotNullSize(list: List<T?>): Int {
+    val firstNull = list.indexOf(null)
+    return if (firstNull == -1)
+        list.size
+    else
+        firstNull
+}
+
 private fun diffTracePointLists(cmp: TracePointComparator, leftPoints: List<TRTracePoint?>, rightPoints: List<TRTracePoint?>): List<DiffLine> =
-    diffLists(leftPoints, rightPoints) { l, r -> cmp.editIndependentEqual(l!!,r!!) }
+    diffLists(leftPoints, calculateNotNullSize(leftPoints), rightPoints, calculateNotNullSize(rightPoints)) { l, r -> cmp.editIndependentEqual(l!!,r!!) }

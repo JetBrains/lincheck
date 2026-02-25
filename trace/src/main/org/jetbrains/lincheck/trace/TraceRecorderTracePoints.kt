@@ -158,7 +158,15 @@ sealed class TRContainerTracePoint(
         children.add(null)
     }
 
-    internal fun addChild(child: TRTracePoint, address: Long = -1) {
+    // These two methods are left public intentionally to allow external post-processors
+    // to clone traecepoint with children
+    fun copyChildrenAddresses(other: TRContainerTracePoint) {
+        for (i in 0 ..< other.childrenAddresses.size) {
+            addChildAddress(other.childrenAddresses[i])
+        }
+    }
+
+    fun addChild(child: TRTracePoint, address: Long = -1) {
         childrenAddresses.add(address)
         children.add(child)
 
