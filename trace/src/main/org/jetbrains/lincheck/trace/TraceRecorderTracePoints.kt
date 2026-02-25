@@ -158,7 +158,7 @@ sealed class TRContainerTracePoint(
         children.add(null)
     }
 
-    // These two methods is intentionally public to allow external post-processors
+    // These two methods are left public intentionally to allow external post-processors
     // to clone traecepoint with children
     fun copyChildrenAddresses(other: TRContainerTracePoint) {
         for (i in 0 ..< other.childrenAddresses.size) {

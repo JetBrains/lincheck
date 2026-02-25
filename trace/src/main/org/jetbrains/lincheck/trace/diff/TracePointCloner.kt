@@ -255,7 +255,6 @@ class TracePointCloner(
         if (srcId == UNKNOWN_CODE_LOCATION_ID) return UNKNOWN_CODE_LOCATION_ID
         if (srcId < codeLocationMap.size && codeLocationMap[srcId] != UNKNOWN_CODE_LOCATION_ID) return codeLocationMap[srcId]
         val srcLoc = tracePoint.context.codeLocation(srcId)!!
-        // Clone argument names
         val argumentNames = srcLoc.argumentNames?.map { cloneAccessPath(it) }
         val dstId = context.newCodeLocation(srcLoc.stackTraceElement, cloneAccessPath(srcLoc.accessPath), argumentNames, srcLoc.activeLocals)
         addToMap(codeLocationMap, srcId, dstId)

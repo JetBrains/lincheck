@@ -290,16 +290,11 @@ private fun diffTracepointSubtree(
 }
 
 private fun <T> calculateNotNullSize(list: List<T?>): Int {
-    if (list.isEmpty()) return 0
-    var nulls = 0
-    for (i in list.size - 1 downTo  0) {
-        if (list[i] == null) {
-            nulls++
-        } else {
-            break
-        }
-    }
-    return list.size - nulls
+    val firstNull = list.indexOf(null)
+    return if (firstNull == -1)
+        list.size
+    else
+        firstNull
 }
 
 private fun diffTracePointLists(cmp: TracePointComparator, leftPoints: List<TRTracePoint?>, rightPoints: List<TRTracePoint?>): List<DiffLine> =
