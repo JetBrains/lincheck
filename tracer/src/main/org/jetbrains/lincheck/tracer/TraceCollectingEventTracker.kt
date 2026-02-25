@@ -152,7 +152,7 @@ fun TraceDataLayout.isTree(): Boolean =
 
 
 class TraceCollectingEventTracker(
-    internal val mode: TracingMode,
+    internal val mode: TraceOutputMode,
     internal val layout: TraceDataLayout,
     internal val context: TraceContext,
     internal val traceStreamingFilePath: String? = null, // should be non-null for BINARY_STREAM mode
@@ -175,17 +175,17 @@ class TraceCollectingEventTracker(
 
     init {
         when (mode) {
-            is TracingMode.BinaryFileDump -> {
+            is TraceOutputMode.BinaryFileDump -> {
                 strategy = MemoryTraceCollecting(context)
             }
-            is TracingMode.BinaryFileStream -> {
+            is TraceOutputMode.BinaryFileStream -> {
                 check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
                 strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
             }
-            is TracingMode.BinaryTcpStream -> {
+            is TraceOutputMode.BinaryTcpStream -> {
                 strategy = TcpStreamingTraceCollecting(context)
             }
-            is TracingMode.Null -> {
+            is TraceOutputMode.Null -> {
                 strategy = NullTraceCollecting(context)
             }
             else -> {

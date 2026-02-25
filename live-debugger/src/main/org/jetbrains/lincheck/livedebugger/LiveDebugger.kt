@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.tracer.Tracer
-import org.jetbrains.lincheck.tracer.TracingMode
+import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.tracer.isFileMode
 import org.jetbrains.lincheck.util.Logger
@@ -25,10 +25,10 @@ internal object LiveDebugger {
 
     private val shutdownHookInstalled = AtomicBoolean(false)
 
-    fun startRecording(mode: TracingMode, traceDumpFilePath: String? = null, packTrace: Boolean = true) {
+    fun startRecording(mode: TraceOutputMode, traceDumpFilePath: String? = null, packTrace: Boolean = true) {
         try {
             val session = Tracer.startTracing(
-                tracingMode = mode,
+                outputMode = mode,
                 startMode = TracingSession.StartMode.Static,
             )
             Logger.info { "Live debugging has been started" }

@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.tracer.Tracer
-import org.jetbrains.lincheck.tracer.TracingMode
+import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -62,7 +62,7 @@ internal object TraceRecorderInjections {
             if (startCount > 1) return
 
             Tracer.startTracing(
-                TracingMode.parse(
+                TraceOutputMode.parse(
                     outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
                     outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
                     outputFilePath = TraceAgentParameters.traceDumpFilePath,

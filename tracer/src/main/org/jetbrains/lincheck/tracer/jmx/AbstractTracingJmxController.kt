@@ -13,7 +13,7 @@ package org.jetbrains.lincheck.tracer.jmx
 import org.jetbrains.lincheck.trace.jmx.TracingJmxController
 import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
 import org.jetbrains.lincheck.tracer.Tracer
-import org.jetbrains.lincheck.tracer.TracingMode
+import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.Logger
 import java.lang.management.ManagementFactory
@@ -60,7 +60,7 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
         try {
             val session = Tracer.startTracing(
                 // TODO: support configuring file mode (text or binary, stream or dump)
-                tracingMode = TracingMode.BinaryFileStream(traceDumpFilePath),
+                outputMode = TraceOutputMode.BinaryFileStream(traceDumpFilePath),
                 startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "File-based trace session has been started" }
@@ -76,7 +76,7 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
     override fun startTcpTracing() {
         try {
             Tracer.startTracing(
-                tracingMode = TracingMode.BinaryTcpStream,
+                outputMode = TraceOutputMode.BinaryTcpStream,
                 startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "TCP trace streaming session has been started" }

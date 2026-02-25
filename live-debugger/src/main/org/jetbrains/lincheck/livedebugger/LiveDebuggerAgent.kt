@@ -25,7 +25,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.trace.jmx.LiveDebuggerJmxController
 import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
-import org.jetbrains.lincheck.tracer.TracingMode
+import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
 import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import java.lang.instrument.Instrumentation
@@ -88,7 +88,7 @@ internal object LiveDebuggerAgent {
     fun premain(agentArgs: String?, inst: Instrumentation) {
         agent.premain(agentArgs, inst)
 
-        val mode = TracingMode.parse(
+        val mode = TraceOutputMode.parse(
             outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
             outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
             outputFilePath = traceDumpFilePath,

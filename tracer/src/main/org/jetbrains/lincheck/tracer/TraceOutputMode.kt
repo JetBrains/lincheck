@@ -11,29 +11,29 @@
 package org.jetbrains.lincheck.tracer
 
 /**
- * Trace recording mode defines trace collection strategy,
+ * Trace output mode defines trace collecting and output strategy,
  * for instance, whether to keep the trace in-memory or streaming incrementally,
  * whether to save it to file or transfer over the network, etc.
  */
-sealed class TracingMode {
+sealed class TraceOutputMode {
     /**
      * Write a binary format directly to the output file, without collecting it in memory.
      *
      * @param streamingFilePath if specified, writes the trace to the specified file in binary format.
      */
-    class BinaryFileStream(val streamingFilePath: String? = null) : TracingMode()
+    class BinaryFileStream(val streamingFilePath: String? = null) : TraceOutputMode()
 
     /**
      * Collect full trace in the memory and dump to the output file at the end of the run.
      */
-    class BinaryFileDump : TracingMode()
+    class BinaryFileDump : TraceOutputMode()
 
     /**
      * Collect the full trace in memory and print it as text to the output file.
      *
      * @param verbose if true, prints code locations along each trace line.
      */
-    class Text(val verbose: Boolean = false) : TracingMode()
+    class Text(val verbose: Boolean = false) : TraceOutputMode()
 
     /**
      * Stream binary trace data over TCP to connected readers.
@@ -42,16 +42,16 @@ sealed class TracingMode {
      * listening for incoming reader connections on an assigned port.
      * Multiple readers can connect and receive the trace data simultaneously.
      */
-    object BinaryTcpStream : TracingMode()
+    object BinaryTcpStream : TraceOutputMode()
 
     /**
      * Throws away all recorded trace data.
      * Used primarily for testing and benchmarking purposes.
      */
-    object Null : TracingMode()
+    object Null : TraceOutputMode()
 
     companion object {
-        fun parse(outputMode: String?, outputOption: String?, outputFilePath: String?): TracingMode {
+        fun parse(outputMode: String?, outputOption: String?, outputFilePath: String?): TraceOutputMode {
             return when {
                 outputMode.equals("binary", ignoreCase = true) -> {
                     if (outputOption.equals("dump", ignoreCase = true)) {
@@ -73,10 +73,10 @@ sealed class TracingMode {
     }
 }
 
-val TracingMode.isFileMode: Boolean get() = when (this) {
-    is TracingMode.BinaryFileDump,
-    is TracingMode.BinaryFileStream,
-    is TracingMode.Text
+val TraceOutputMode.isFileMode: Boolean get() = when (this) {
+    is TraceOutputMode.BinaryFileDump,
+    is TraceOutputMode.BinaryFileStream,
+    is TraceOutputMode.Text
          -> true
     else -> false
 }
