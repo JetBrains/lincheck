@@ -560,22 +560,78 @@ fun String.toInternalClassName() =
 internal fun loadClassFromBytes(userCodeClassLoader: ClassLoader, className: String, classBytes: ByteArray): Class<*> {
     // defineClass expects canonical class name (with dots, not slashes)
     val canonicalClassName = className.toCanonicalClassName()
+    // Downgrade the class file version if needed to match the current JVM version.
+    // This is necessary because the IDE may compile condition classes with a newer Java version
+    // than the target application's JVM.
+    val adjustedClassBytes = downgradeClassVersionIfNeeded(classBytes)
     val customClassLoader = object : ClassLoader(userCodeClassLoader) {
         override fun loadClass(name: String?): Class<*>? {
             if (name == canonicalClassName) {
-                return defineClass(name, classBytes, 0, classBytes.size)
+                return defineClass(name, adjustedClassBytes, 0, adjustedClassBytes.size)
             }
             return super.loadClass(name)
         }
 
         override fun getResourceAsStream(name: String?): InputStream? {
             if (name == canonicalClassName.toInternalClassName() + ".class") {
-                return classBytes.inputStream()
+                return adjustedClassBytes.inputStream()
             }
             return super.getResourceAsStream(name)
         }
     }
     return customClassLoader.loadClass(canonicalClassName)!!
+}
+
+/**
+ * Downgrades the class file version in the bytecode if it's higher than the current JVM supports.
+ *
+ * Class file format has the version at bytes 6-7 (major version) and 4-5 (minor version).
+ * Major version mapping: Java 8 = 52, Java 11 = 55, Java 17 = 61, Java 21 = 65, Java 22 = 66, Java 25 = 69, etc.
+ *
+ * This is safe for simple condition classes that don't use features from newer Java versions.
+ */
+private fun downgradeClassVersionIfNeeded(classBytes: ByteArray): ByteArray {
+    if (classBytes.size < 8) return classBytes
+
+    // Read major version from bytes 6-7 (big-endian)
+    val classMajorVersion = ((classBytes[6].toInt() and 0xFF) shl 8) or (classBytes[7].toInt() and 0xFF)
+
+    // Get the current JVM's supported class file version
+    val jvmMajorVersion = getJvmClassFileVersion()
+
+    if (classMajorVersion <= jvmMajorVersion) {
+        // Class version is already compatible
+        return classBytes
+    }
+
+    // Create a copy and downgrade the version
+    val adjusted = classBytes.copyOf()
+    // Set major version (bytes 6-7, big-endian)
+    adjusted[6] = ((jvmMajorVersion shr 8) and 0xFF).toByte()
+    adjusted[7] = (jvmMajorVersion and 0xFF).toByte()
+    // Set minor version to 0 (bytes 4-5)
+    adjusted[4] = 0
+    adjusted[5] = 0
+
+    return adjusted
+}
+
+/**
+ * Returns the maximum class file version supported by the current JVM.
+ * Java version N supports class file major version 44 + N (e.g., Java 8 = 52, Java 17 = 61).
+ */
+private fun getJvmClassFileVersion(): Int {
+    val javaVersion = System.getProperty("java.specification.version")
+    val majorVersion = javaVersion.toIntOrNull() ?: run {
+        // For older format like "1.8", extract the minor part
+        if (javaVersion.startsWith("1.")) {
+            javaVersion.substring(2).toIntOrNull() ?: 8
+        } else {
+            8
+        }
+    }
+    // Class file major version = 44 + Java version
+    return 44 + majorVersion
 }
 
 const val ASM_API = Opcodes.ASM9
