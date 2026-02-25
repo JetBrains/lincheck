@@ -52,6 +52,14 @@ interface ObjectTracker {
     fun registerThread(threadId: Int, thread: Thread)
 
     /**
+     * Retrieves the registry entry associated with the given unique object number.
+     *
+     * @param objNumber the object number to retrieve the corresponding entry for.
+     * @return the corresponding [ObjectEntry], or null if no entry is associated with the given object number.
+     */
+    fun lookupByNumber(objNumber: Int): ObjectEntry?
+
+    /**
      * Retrieves the registry entry associated with the given object id.
      *
      * @param id the object id to retrieve the corresponding entry for.
@@ -98,6 +106,14 @@ interface ObjectTracker {
      * @param toObject the object to which the link points.
      */
     fun registerObjectLink(fromObject: Any?, toObject: Any?)
+
+    /**
+      * Determines whether the specified object should be tracked.
+      *
+      * @param obj the object to be checked.
+      * @return true if the object should be tracked, false otherwise.
+      */
+    fun shouldTrackObject(obj: Any): Boolean
 
     /**
      * Determines whether accesses to the fields of the given object should be tracked.
@@ -148,6 +164,11 @@ fun ObjectTracker.registerObjectIfAbsent(obj: Any): ObjectEntry =
 typealias ObjectID = Long
 
 /**
+ * A type alias for representing a unique serial number of registered objects.
+ */
+typealias ObjectNumber = Int
+
+/**
  * Represents an entry for the tracked object.
  *
  * @property objectNumber A unique serial number for the object.
@@ -169,7 +190,7 @@ open class ObjectEntry(
  * The serial number [ObjectEntry.objectNumber] is stored in the higher 32-bits of the id, while
  * the identity hash code [ObjectEntry.objectHashCode] is stored in the lower 32-bits.
  */
-val ObjectEntry.objectId: ObjectID get() =
+val ObjectEntry.objectID: ObjectID get() =
     (objectNumber.toLong() shl 32) + objectHashCode.toLong()
 
 /**
@@ -378,11 +399,17 @@ private class Lambda
  */
 open class BaseObjectTracker : ObjectTracker {
 
+    /**
+     * Indicates whether the object tracker should track immutable value objects (false by default).
+     */
+    open val shouldTrackImmutableValues: Boolean = false
+
     // counter of all registered objects
     private var objectCounter = 0
 
     // index of all registered objects
-    private val objectIndex = HashMap<IdentityHashCode, MutableList<ObjectEntry>>()
+    protected val objectIndex = HashMap<IdentityHashCode, MutableList<ObjectEntry>>()
+    protected val objectNumberIndex = HashMap<Int, ObjectEntry>();
 
     // reference queue keeping track of garbage-collected objects
     private val referenceQueue = ReferenceQueue<Any>()
@@ -432,7 +459,8 @@ open class BaseObjectTracker : ObjectTracker {
         registerObject(ObjectKind.EXTERNAL, obj)
 
     private fun registerObject(kind: ObjectKind, obj: Any): ObjectEntry {
-        check(!obj.isImmutable)
+        check(!obj.isPrimitive)
+        check(obj.isImmutable implies shouldTrackImmutableValues)
         cleanup()
         val entry = createObjectEntry(
             objNumber = ++objectCounter,
@@ -445,10 +473,14 @@ open class BaseObjectTracker : ObjectTracker {
             cleanup()
             add(entry)
         }
+        objectNumberIndex.put(entry.objectNumber, entry)
         return entry
     }
 
     override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
+
+    override fun shouldTrackObject(obj: Any): Boolean =
+        !obj.isPrimitive && (obj.isImmutable implies shouldTrackImmutableValues)
 
     override fun shouldTrackObjectAccess(obj: Any?): Boolean =
         true // track all accesses by default
@@ -461,6 +493,10 @@ open class BaseObjectTracker : ObjectTracker {
             return null
         }
         return entries
+    }
+
+    override fun lookupByNumber(objNumber: Int): ObjectEntry? {
+        return objectNumberIndex[objNumber]
     }
 
     override operator fun get(id: ObjectID): ObjectEntry? {
@@ -485,11 +521,13 @@ open class BaseObjectTracker : ObjectTracker {
             entries.retainAll(predicate)
             entries.isNotEmpty()
         }
+        objectNumberIndex.values.retainAll(predicate)
     }
 
     override fun reset() {
         objectCounter = 0
         objectIndex.clear()
+        objectNumberIndex.clear()
         referenceQueue.clear()
         perClassObjectNumeration.clear()
     }
@@ -513,7 +551,13 @@ open class BaseObjectTracker : ObjectTracker {
      * Removes entries from the list where the associated object has been garbage collected.
      */
     private fun MutableList<ObjectEntry>.cleanup() {
-        retainAll { it.objectReference.get() != null }
+        retainAll {
+            val isAlive = (it.objectReference.get() != null)
+            if (!isAlive) {
+                objectNumberIndex.remove(it.objectNumber)
+            }
+            return@retainAll isAlive
+        }
     }
 }
 

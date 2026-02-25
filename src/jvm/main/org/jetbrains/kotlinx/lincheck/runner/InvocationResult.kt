@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.Inconsistency
 
 /**
  * Represents results for invocations, see [Runner.runInvocation].
@@ -65,7 +66,23 @@ class ObstructionFreedomViolationInvocationResult(
     val results: ExecutionResult
 ) : InvocationResult()
 
+class InconsistentInvocationResult(
+    val inconsistency: Inconsistency
+) : InvocationResult()
+
+
 /**
  * Indicates that spin-cycle has been found for the first time and replay of current interleaving is required.
  */
 data object SpinCycleFoundAndReplayRequired: InvocationResult()
+
+fun InvocationResult.isAbortedInvocation(): Boolean =
+    when (this) {
+        is ManagedDeadlockInvocationResult,
+        is RunnerTimeoutInvocationResult,
+        is UnexpectedExceptionInvocationResult,
+        is ObstructionFreedomViolationInvocationResult,
+        is InconsistentInvocationResult
+            -> true
+        else -> false
+    }

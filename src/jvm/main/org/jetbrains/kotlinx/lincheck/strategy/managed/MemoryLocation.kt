@@ -25,12 +25,15 @@ import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.*
 import java.lang.reflect.Array as ReflectArray
 import java.lang.reflect.*
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater
+import java.util.concurrent.atomic.AtomicLongFieldUpdater
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater
 import kotlin.reflect.KClass
 
 typealias ValueMapper = (Types.Type, ValueID) -> OpaqueValue?
 
 interface MemoryLocation {
-    val objID: ObjectID
+    val objID: ObjectNumber
     val type: Types.Type
 
     fun read(valueMapper: ValueMapper): Any?
@@ -52,15 +55,15 @@ fun ObjectTracker.getFieldAccessMemoryLocation(
         return StaticFieldMemoryLocation(className, fieldName, type)
     }
     val clazz = obj!!.javaClass
-    // TODO: can this be null?
-    val id = get(obj)!!.objectId
+    // TODO: If this is null then we are in a phantom static object, which is probably not what we expect
+    val id = get(obj)!!.objectNumber
     return ObjectFieldMemoryLocation(clazz, id, clazz.name, fieldName, type)
 }
 
 fun ObjectTracker.getArrayAccessMemoryLocation(array: Any, index: Int, type: Types.Type): MemoryLocation {
     val clazz = array.javaClass
     // TODO: can this be null?
-    val id = get(array)!!.objectId
+    val id = get(array)!!.objectNumber
     return ArrayElementMemoryLocation(clazz, id, index, type)
 }
 
@@ -78,7 +81,7 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
         AtomicApiKind.ATOMIC_OBJECT -> {
             AtomicPrimitiveMemoryLocation(
                 clazz = info.clazz!!,
-                objID = get(info.obj)!!.objectId,
+                objID = get(info.obj)!!.objectNumber,
                 type = getAtomicType(receiver)!!,
             )
         }
@@ -92,11 +95,17 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
         }
         AtomicApiKind.ATOMIC_FIELD_UPDATER -> {
             check(accessLocation is FieldAccessLocation)
+            val type = when {
+                receiver is AtomicReferenceFieldUpdater<*,*> -> Types.OBJECT_TYPE
+                receiver is AtomicLongFieldUpdater<*> -> Types.OBJECT_TYPE
+                receiver is AtomicIntegerFieldUpdater<*> -> Types.OBJECT_TYPE
+                else -> unreachable()
+            }
             getFieldAccessMemoryLocation(
                 obj = info.obj,
                 className = accessLocation.className,
                 fieldName = accessLocation.fieldName,
-                type = Types.INT_TYPE,
+                type = type,
                 isStatic = (accessLocation is StaticFieldAccessLocation),
                 isFinal = false, // TODO: fixme?
             )
@@ -150,7 +159,7 @@ class StaticFieldMemoryLocation(
     override val type: Types.Type,
 ) : MemoryLocation {
 
-    override val objID: ObjectID = STATIC_OBJECT_ID
+    override val objID: ObjectNumber = STATIC_OBJECT_NUMBER
 
     private val field: Field by lazy {
         val resolvedClass = resolveClass(className = className)
@@ -190,14 +199,14 @@ class StaticFieldMemoryLocation(
 
 class ObjectFieldMemoryLocation(
     clazz: Class<*>,
-    override val objID: ObjectID,
+    override val objID: ObjectNumber,
     val className: String,
     val fieldName: String,
     override val type: Types.Type,
 ) : MemoryLocation {
 
     init {
-        check(objID != NULL_OBJECT_ID)
+        check(objID != NULL_OBJECT_NUMBER)
     }
 
     val simpleClassName: String = clazz.simpleName
@@ -210,12 +219,12 @@ class ObjectFieldMemoryLocation(
 
     override fun read(valueMapper: ValueMapper): Any? {
         // return field.get(valueMapper(OBJECT_TYPE, objID)?.unwrap())
-        return readFieldViaUnsafe(valueMapper(Types.OBJECT_TYPE, objID)?.unwrap(), field)
+        return readFieldViaUnsafe(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), field)
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
         // field.set(valueMapper(OBJECT_TYPE, objID)?.unwrap(), value)
-        writeFieldViaUnsafe(valueMapper(Types.OBJECT_TYPE, objID)?.unwrap(), field, value)
+        writeFieldViaUnsafe(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), field, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -243,13 +252,13 @@ class ObjectFieldMemoryLocation(
 
 class ArrayElementMemoryLocation(
     clazz: Class<*>,
-    override val objID: ObjectID,
+    override val objID: ObjectNumber,
     val index: Int,
     override val type: Types.Type,
 ) : MemoryLocation {
 
     init {
-        check(objID != NULL_OBJECT_ID)
+        check(objID != NULL_OBJECT_NUMBER)
     }
 
     val className: String = clazz.simpleName
@@ -281,17 +290,17 @@ class ArrayElementMemoryLocation(
     override fun read(valueMapper: ValueMapper): Any? {
         // TODO: also use unsafe?
         if (isPlainArray) {
-            return ReflectArray.get(valueMapper(Types.OBJECT_TYPE, objID)?.unwrap(), index)
+            return ReflectArray.get(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), index)
         }
-        return getMethod!!.invoke(valueMapper(Types.OBJECT_TYPE, objID)?.unwrap(), index)
+        return getMethod!!.invoke(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), index)
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
         if (isPlainArray) {
-            ReflectArray.set(valueMapper(Types.OBJECT_TYPE, objID)?.unwrap(), index, value)
+            ReflectArray.set(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), index, value)
             return
         }
-        setMethod!!.invoke(valueMapper(Types.OBJECT_TYPE, objID)?.unwrap(), index, value)
+        setMethod!!.invoke(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), index, value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -317,12 +326,12 @@ class ArrayElementMemoryLocation(
 
 class AtomicPrimitiveMemoryLocation(
     clazz: Class<*>,
-    override val objID: ObjectID,
+    override val objID: ObjectNumber,
     override val type: Types.Type,
 ) : MemoryLocation {
 
     init {
-        require(objID != NULL_OBJECT_ID)
+        require(objID != NULL_OBJECT_NUMBER)
     }
 
     val className: String = clazz.simpleName
@@ -343,12 +352,12 @@ class AtomicPrimitiveMemoryLocation(
 
     override fun read(valueMapper: ValueMapper): Any? {
         // TODO: also use unsafe?
-        return getMethod.invoke(valueMapper(Types.OBJECT_TYPE, objID)?.unwrap())
+        return getMethod.invoke(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap())
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
         // TODO: also use unsafe?
-        setMethod.invoke(valueMapper(Types.OBJECT_TYPE, objID)?.unwrap(), value)
+        setMethod.invoke(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), value)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -364,15 +373,15 @@ class AtomicPrimitiveMemoryLocation(
     }
 
     override fun toString(): String {
-        check(objID != NULL_OBJECT_ID)
+        check(objID != NULL_OBJECT_NUMBER)
         return objRepr(className, objID)
     }
 
 }
 
-internal fun objRepr(className: String, objID: ObjectID): String {
+internal fun objRepr(className: String, objID: ObjectNumber): String {
     return when (objID) {
-        NULL_OBJECT_ID -> "null"
+        NULL_OBJECT_NUMBER -> "null"
         else -> "$className@$objID"
     }
 }

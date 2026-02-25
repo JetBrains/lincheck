@@ -59,7 +59,7 @@ internal abstract class ManagedStrategy(
         else -> error("Unexpected runner type: ${runner.javaClass.name}")
     }
 
-    private val scenario: ExecutionScenario?
+    protected val scenario: ExecutionScenario?
         get() = (runner as? ExecutionScenarioRunner)?.scenario
 
     // The number of parallel threads in the scenario (for data structures testing mode).
@@ -134,6 +134,8 @@ internal abstract class ManagedStrategy(
 
     // Whether an additional information requires for the trace construction should be collected.
     protected var collectTrace = false
+
+    protected open val trackFinalFields = false
 
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
@@ -268,7 +270,7 @@ internal abstract class ManagedStrategy(
     override fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result: InvocationResult = try {
-            runner.runInvocation()
+            runInvocationImpl()
         } finally {
             restoreMemorySnapshot()
         }
@@ -291,6 +293,11 @@ internal abstract class ManagedStrategy(
         }
         // Otherwise return the sudden result
         return suddenResult
+    }
+
+    // TODO: better name?
+    protected open fun runInvocationImpl(): InvocationResult {
+        return runner.runInvocation()
     }
 
     protected open fun enableSpinCycleReplay() {}
@@ -533,7 +540,7 @@ internal abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e., is not blocked/finished).
      */
-    private fun isActive(iThread: Int): Boolean =
+    protected open fun isActive(iThread: Int): Boolean =
         threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread)
 
     /**
@@ -541,13 +548,14 @@ internal abstract class ManagedStrategy(
      *
      * @return true if this thread actually switched to another thread, false otherwise.
      */
-    private fun switchCurrentThread(
+    protected fun switchCurrentThread(
         iThread: Int,
         blockingReason: BlockingReason? = null,
     ): Boolean {
         val switchReason = blockingReason.toSwitchReason {
             objectTracker.getObjectDisplayNumber(threadScheduler.getThread(it)!!)
         }
+
         // we create switch point on detected live-locks,
         // but that switch is not mandatory in case if there are no available threads
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
@@ -595,6 +603,8 @@ internal abstract class ManagedStrategy(
         if (suspendedThread != null) {
            return suspendedThread
         }
+
+
         // any other situation is considered to be a deadlock
         failDueToDeadlock()
     }
@@ -637,7 +647,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
+    protected fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
         suddenInvocationResult = invocationResult
         threadScheduler.abortOtherThreads()
         threadScheduler.abortCurrentThread()
@@ -646,7 +656,7 @@ internal abstract class ManagedStrategy(
     /**
      * Threads to which an execution can be switched from thread [iThread].
      */
-    private fun switchableThreads(iThread: Int) =
+    protected fun switchableThreads(iThread: Int) =
         if (currentExecutionPart == PARALLEL) {
             (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
         } else {
@@ -793,7 +803,8 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
+    //TODO: perhaps there is a method of not making this open, but I am not sure.
+    open fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threadScheduler.registerThread(thread, descriptor)
         isSuspended[threadId] = false
         currentActorId[threadId] = if (isScenarioThread(threadId)) -1 else 0
@@ -927,6 +938,7 @@ internal abstract class ManagedStrategy(
         val nextThread = chooseThreadSwitch(threadId, true)
         setCurrentThread(nextThread)
     }
+
 
     /**
      * This method is executed if an internal exception has been thrown (see [isLincheckInternalException]).
@@ -1383,6 +1395,9 @@ internal abstract class ManagedStrategy(
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(value.javaClass)
         }
+        if (value !== null && objectTracker.shouldTrackObject(value)) {
+            objectTracker.registerObjectIfAbsent(value)
+        }
         if (collectTrace) {
             val valueRepresentation = objectTracker.getObjectRepresentation(value)
             val typeRepresentation = objectFqTypeName(value)
@@ -1412,6 +1427,9 @@ internal abstract class ManagedStrategy(
         index: Int,
         value: Any?
     ) = threadDescriptor.runInsideIgnoredSection {
+        if (value != null && objectTracker.shouldTrackObject(value)) {
+            objectTracker.registerObjectIfAbsent(value)
+        }
         if (collectTrace) {
             val eventId = getNextEventId()
             val threadId = threadScheduler.getCurrentThreadId()
@@ -1555,11 +1573,8 @@ internal abstract class ManagedStrategy(
         LincheckInstrumentation.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {
-        // Fast-check for immutable objects without entering an ignored section.
-        // Please note that this check must not produce Lincheck events.
-        if (obj.isImmutable) return
-        threadDescriptor.runInsideIgnoredSection {
+    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit = threadDescriptor.runInsideIgnoredSection {
+        if (objectTracker.shouldTrackObject(obj)) {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker.registerNewObject(obj)
         }
@@ -1568,7 +1583,7 @@ internal abstract class ManagedStrategy(
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldDescriptor: FieldDescriptor): Boolean =
-      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && !fieldDescriptor.isFinal
+      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && (trackFinalFields || !fieldDescriptor.isFinal)
 
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects
@@ -1771,6 +1786,7 @@ internal abstract class ManagedStrategy(
         // process method effect on the static memory snapshot
         processMethodEffectOnStaticSnapshot(receiver, params, atomicMethodDescriptor)
         val threadId = threadScheduler.getCurrentThreadId()
+
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
@@ -2192,7 +2208,7 @@ internal abstract class ManagedStrategy(
      *
      * @param iThread number of invoking thread.
      */
-    internal fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
+    internal open fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(runner is ExecutionScenarioRunner)
         check(isScenarioThread(iThread)) {
@@ -2209,13 +2225,26 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    internal fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
+    internal open fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"
         }
         isSuspended[iThread] = false
     }
+
+    /**
+     * This method is invoked by a test thread that resumes some coroutine.
+     */
+    internal open fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) {}
+
+    /**
+     * This method is invoked by a test thread to check if the coroutine was resumed.
+     */
+    internal open fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        return true
+    }
+
 
     internal fun beforeCoroutineCancellation(iThread: Int) {
         check(threadScheduler.getCurrentThreadId() == iThread)
@@ -2225,7 +2254,7 @@ internal abstract class ManagedStrategy(
         lastCoroutineCancellationTracePoint[iThread] = createAndLogCancellationTracePoint()
     }
 
-    internal fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) = runInsideIgnoredSection {
+    internal open fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationResult: CancellationResult) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"
@@ -2238,7 +2267,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) = runInsideIgnoredSection {
+    open fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationException: Throwable) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"

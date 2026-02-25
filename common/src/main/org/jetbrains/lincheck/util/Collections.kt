@@ -411,3 +411,22 @@ fun <K, V> MutableMap<K, V>.update(key: K, default: V, transform: (V) -> V): V =
 fun <K, V> MutableMap<K, V>.updateInplace(key: K, default: V, apply: V.() -> Unit) {
     computeIfAbsent(key) { default }.also(apply)
 }
+
+/**
+ * Merges the contents of another map into the current map,
+ * applying a reduce function to handle value conflicts.
+ *
+ * For each key in the provided [other] map:
+ * - If the key does not already exist in the current map, the key-value pair from [other] is added.
+ * - If the key already exists, the [reduce] function is applied to values from current and [other] maps
+ *   and the resulting value is put back in the map under the same key.
+ *
+ * @param other The map whose entries will be merged into this map.
+ * @param reduce A function that takes two values and returns
+ *               the value to store for the given key in case of a conflict.
+ */
+fun <K,V> MutableMap<K,V>.mergeReduce(other: MutableMap<K,V>, reduce: (V, V) -> V) {
+    other.forEach { (key, value) ->
+        put(key, get(key)?.let{reduce(it,value)} ?: value)
+    }
+}

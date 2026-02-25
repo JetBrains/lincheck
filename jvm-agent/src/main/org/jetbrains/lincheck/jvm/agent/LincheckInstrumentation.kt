@@ -92,6 +92,14 @@ enum class InstrumentationMode {
     MODEL_CHECKING,
 
     /**
+     * Experimental model checking mode.
+     *
+     * Same as [MODEL_CHECKING], but applies an experimental model checking strategy
+     * implementing partial order reduction technique.
+     */
+    EXPERIMENTAL_MODEL_CHECKING,
+
+    /**
      * Trace debugging mode.
      *
      * This mode is similar to [MODEL_CHECKING] mode: it tracks a similar set of events,
@@ -124,7 +132,7 @@ enum class InstrumentationMode {
 }
 
 val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
-    MODEL_CHECKING, TRACE_DEBUGGING -> true
+    MODEL_CHECKING, EXPERIMENTAL_MODEL_CHECKING, TRACE_DEBUGGING -> true
     else -> false
 }
 

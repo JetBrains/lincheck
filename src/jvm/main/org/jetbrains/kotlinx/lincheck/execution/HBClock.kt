@@ -16,6 +16,17 @@ data class HBClock(val clock: IntArray) {
 
     operator fun get(i: Int) = clock[i]
 
+    fun set(other: HBClock) {
+        check(clock.size == other.clock.size)
+        for (i in clock.indices) {
+            clock[i] = other.clock[i]
+        }
+    }
+
+    fun copy(): HBClock {
+        return HBClock(clock.copyOf())
+    }
+
     /**
      * Checks whether the clock contains information for any thread
      * excluding the one this clock is associated with.

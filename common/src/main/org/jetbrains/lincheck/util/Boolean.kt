@@ -40,3 +40,9 @@ inline fun<reified T> Any?.satisfies(predicate: T.() -> Boolean): Boolean =
 
 inline fun<reified T> Any?.refine(predicate: T.() -> Boolean): T? =
     if (this is T && predicate(this)) this else null
+
+@Suppress("UNCHECKED_CAST")
+inline fun<reified T> List<Any?>.refine(): List<T>? {
+    return if (all { it is T }) (this as List<T>) else null
+}
+

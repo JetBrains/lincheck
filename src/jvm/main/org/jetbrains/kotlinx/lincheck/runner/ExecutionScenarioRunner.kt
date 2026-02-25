@@ -17,7 +17,6 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -127,6 +126,7 @@ internal class ExecutionScenarioRunner(
                 }
                 // write function's final result
                 suspensionPointResults[iThread][actorId] = createLincheckResult(result)
+                onCoroutineResumption(iThread, actorId)
             }
         }
 
@@ -160,6 +160,7 @@ internal class ExecutionScenarioRunner(
                                 }
                                 @Suppress("UNCHECKED_CAST")
                                 resWithCont.set(result to continuation as Continuation<Any?>)
+                                onCoroutineResumption(iThread, actorId)
                             }
                         }
                     }
@@ -195,7 +196,7 @@ internal class ExecutionScenarioRunner(
 
     private fun createTestInstance() {
         testInstance = testClass.newDefaultInstance()
-        if (strategy is ModelCheckingStrategy) {
+        if (strategy is ManagedStrategy) {
             // In the model checking mode, we need to ensure
             // that all the necessary classes and instrumented
             // after creating a test instance.
@@ -532,13 +533,24 @@ internal class ExecutionScenarioRunner(
     }
 
     /**
+     * This method is from a thread that resumes a coroutine.
+     */
+    fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) {
+        (strategy as? ManagedStrategy)?.onCoroutineResumption(iResumedThread, iResumedActor)
+    }
+
+    /**
      * Returns `true` if the coroutine corresponding to
      * the actor `actorId` in the thread `iThread` is resumed.
      */
     fun isCoroutineResumed(iThread: Int, actorId: Int): Boolean {
         // We cannot use `completionStatuses` here since
         // they are set _before_ the result is published.
-        return suspensionPointResults[iThread][actorId] != NoResult || completions[iThread][actorId].resWithCont.get() != null
+        val isResumed = (strategy as? ManagedStrategy)?.isCoroutineResumed(iThread, actorId) ?: true
+        return isResumed && (
+            suspensionPointResults[iThread][actorId] != NoResult ||
+            completions[iThread][actorId].resWithCont.get() != null
+        )
     }
 
     /**
@@ -553,16 +565,16 @@ internal class ExecutionScenarioRunner(
      * This method is invoked by the corresponding test thread
      * after a coroutine cancellation attempt.
      */
-    fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) {
-        (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, cancellationResult)
+    fun afterCoroutineCancellation(iThread: Int, promptCancellation: Boolean, cancellationResult: CancellationResult) {
+        (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, promptCancellation, cancellationResult)
     }
 
     /**
      * This method is invoked by the corresponding test thread
      * after a coroutine cancellation attempt failed with an exception.
      */
-    fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) {
-        (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, cancellationException)
+    fun afterCoroutineCancellation(iThread: Int, promptCancellation: Boolean, cancellationException: Throwable) {
+        (strategy as? ManagedStrategy)?.afterCoroutineCancellation(iThread, promptCancellation, cancellationException)
     }
 
     internal fun <T> cancelByLincheck(
@@ -573,10 +585,10 @@ internal class ExecutionScenarioRunner(
         beforeCouroutineCancellation(iThread)
         try {
             val cancellationResult = cont.cancelByLincheck(promptCancellation)
-            afterCoroutineCancellation(iThread, cancellationResult)
+            afterCoroutineCancellation(iThread, promptCancellation, cancellationResult)
             return cancellationResult
         } catch (throwable: Throwable) {
-            afterCoroutineCancellation(iThread, throwable)
+            afterCoroutineCancellation(iThread, promptCancellation, throwable)
             throw throwable // throw further
         }
 
