@@ -1,0 +1,23 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                          Thread 1                                                                          |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                |
+|   invokeViaMethodHandleInvokeExact(9, 10): 90 at MethodHandleInvokeExactRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:215)            |
+|     targetMethodHandle(9, 10): 90 at MethodHandleInvokeExactRepresentationTest.invokeViaMethodHandleInvokeExact(ReflectionInvokeRepresentationTest.kt:210) |
+|   result: void                                                                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,0 +1,24 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                   Thread 1                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                   |
+|   invokeViaReflection(1, 2): 5 at ReflectionStaticMethodInvokeRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:73)          |
+|     staticTarget(1, 2): 5 at ReflectionStaticMethodInvokeRepresentationTest.invokeViaReflection(ReflectionInvokeRepresentationTest.kt:68)     |
+|       Companion.staticTarget(1, 2): 5 at ReflectionStaticMethodInvokeRepresentationTest.staticTarget(ReflectionInvokeRepresentationTest.kt:0) |
+|   result: void                                                                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------- |

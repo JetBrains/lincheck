@@ -59,6 +59,7 @@ fun findOwnerName(
     codeLocationId: Int,
     shadowStackFrame: ShadowStackFrame,
     objectTracker: ObjectTracker,
+    useParameterAsReceiver: Boolean = false,
     accessPathLookup: () -> AccessPath? = { null },
 ): String? {
     if (obj == null) {
@@ -71,7 +72,7 @@ fun findOwnerName(
     // if the current owner is `this` - no owner needed
     if (shadowStackFrame.isCurrentStackFrameReceiver(obj)) return null
     // lookup for a statically inferred owner name
-    val ownerName = CodeLocations.accessPath(context, codeLocationId) ?: accessPathLookup()
+    val ownerName = CodeLocations.accessPath(context, codeLocationId, useParameterAsReceiver) ?: accessPathLookup()
     if (ownerName != null) {
         return if (isThisName(ownerName.toString())) null else ownerName.toString()
     }

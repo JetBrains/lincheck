@@ -1,0 +1,23 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                   Thread 1                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                   |
+|   invokeViaKotlinReflectionConstructor(16): ReflectionTarget#1 at KotlinReflectionConstructorCallRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:257)                                      |
+|     ReflectionInvokeBase.ReflectionTarget.<init>(16): ReflectionTarget#1 at KotlinReflectionConstructorCallRepresentationTest.invokeViaKotlinReflectionConstructor(ReflectionInvokeRepresentationTest.kt:252) |
+|   result: void                                                                                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

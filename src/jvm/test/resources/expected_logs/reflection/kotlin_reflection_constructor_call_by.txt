@@ -1,0 +1,39 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                       Thread 1                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                           |
+|   invokeViaKotlinReflectionConstructorCallBy(17): ReflectionTarget#1 at KotlinReflectionConstructorCallByRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:275)                                      |
+|     ReflectionTarget.kclass.getConstructors(): ArrayList#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:266)               |
+|     CollectionsKt.single(ArrayList#1): KFunctionImpl#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:266)                   |
+|       CollectionsKt.single(ArrayList#1): KFunctionImpl#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:598)                                                                                       |
+|         $this$single.size(): 1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:615)                                                                                                                 |
+|         $this$single.get(0): KFunctionImpl#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:617)                                                                                                   |
+|     ctor.getParameters(): ArrayList#2 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:267)                                    |
+|     ArrayList#2.get(0): KParameterImpl#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:267)                                 |
+|     TuplesKt.to(KParameterImpl#1, 17): (KParameterImpl#1, 17) at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:268)            |
+|     MapsKt.mapOf((KParameterImpl#1, 17)): SingletonMap#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:268)                 |
+|       pair.getFirst(): KParameterImpl#1 at MapsKt__MapsJVMKt.<unknown method>(MapsJVM.kt:26)                                                                                                                          |
+|       pair.getSecond(): 17 at MapsKt__MapsJVMKt.<unknown method>(MapsJVM.kt:26)                                                                                                                                       |
+|       Collections.singletonMap(KParameterImpl#1, 17): SingletonMap#1 at MapsKt__MapsJVMKt.<unknown method>(MapsJVM.kt:26)                                                                                             |
+|     ReflectionInvokeBase.ReflectionTarget.<init>(17): ReflectionTarget#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:270) |
+|       Collections.eq(KParameterImpl#1, KParameterImpl#1): true at Collections.SingletonMap.containsKey(Collections.java:5026)                                                                                         |
+|         o1.equals(KParameterImpl#1): true at Collections.eq(Collections.java:5474)                                                                                                                                    |
+|       Collections.eq(KParameterImpl#1, KParameterImpl#1): true at Collections.SingletonMap.get(Collections.java:5028)                                                                                                 |
+|         o1.equals(KParameterImpl#1): true at Collections.eq(Collections.java:5474)                                                                                                                                    |
+|   result: void                                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -27,10 +27,16 @@ import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.*
+import java.lang.reflect.Constructor
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
 import java.util.*
 import java.util.concurrent.*
 import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
+import kotlin.reflect.KFunction
+import kotlin.reflect.jvm.javaConstructor
+import kotlin.reflect.jvm.javaMethod
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
 
@@ -2328,6 +2334,11 @@ internal abstract class ManagedStrategy(
             }
             return null
         }
+        val reflectionData = reflectedTraceCallData(owner, className, methodName, methodParams)
+        val owner = if (reflectionData == null) owner else reflectionData.owner
+        val className = reflectionData?.className ?: className
+        val methodName = reflectionData?.methodName ?: methodName
+        val methodParams = reflectionData?.methodParams ?: methodParams
         val callId = callStackTraceElementId++
         // The code location of the new method call is currently the last one
         val tracePoint = createBeforeMethodCallTracePoint(
@@ -2340,6 +2351,7 @@ internal abstract class ManagedStrategy(
             codeLocation = codeLocation,
             atomicMethodDescriptor = atomicMethodDescriptor,
             callType = callType,
+            useParameterAsReceiver = reflectionData != null,
         )
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
@@ -2357,6 +2369,152 @@ internal abstract class ManagedStrategy(
         return tracePoint
     }
 
+    private data class TraceCallData(
+        val owner: Any?,
+        val className: String,
+        val methodName: String,
+        val methodParams: Array<Any?>,
+    )
+
+    private fun reflectedTraceCallData(
+        owner: Any?,
+        className: String,
+        methodName: String,
+        methodParams: Array<Any?>
+    ): TraceCallData? {
+        return when {
+            className == "java.lang.reflect.Method" && methodName == "invoke" && owner is Method ->
+                resolveReflectionMethodInvoke(owner, methodParams)
+            className == "java.lang.reflect.Constructor" && methodName == "newInstance" && owner is Constructor<*> ->
+                resolveReflectionConstructorInvoke(owner, methodParams)
+            className == "java.lang.invoke.MethodHandle" && isMethodHandleInvoke(methodName) && owner is MethodHandle ->
+                resolveMethodHandleInvoke(owner, methodParams)
+            className.startsWith("kotlin.reflect.") && methodName == "call" &&
+                owner is KFunction<*> ->
+                resolveKotlinReflectionInvoke(owner, methodParams,
+                    { _, methodParams -> extractArgsFromKotlinReflectCall(methodParams) })
+            className.startsWith("kotlin.reflect.") && methodName == "callBy" &&
+                owner is KFunction<*> ->
+                resolveKotlinReflectionInvoke(owner, methodParams,
+                    ::extractOrderedArgsFromKotlinReflectCallBy)
+            else -> null
+        }
+    }
+
+    private fun resolveReflectionMethodInvoke(
+        method: Method,
+        methodParams: Array<Any?>
+    ): TraceCallData {
+        val targetOwner = methodParams.getOrNull(0)
+        val targetArgs = unpackVarArgs(methodParams.getOrNull(1))
+        return TraceCallData(
+            owner = targetOwner,
+            className = method.declaringClass.name,
+            methodName = method.name,
+            methodParams = targetArgs,
+        )
+    }
+
+    private fun resolveReflectionConstructorInvoke(
+        constructor: Constructor<*>,
+        methodParams: Array<Any?>
+    ): TraceCallData {
+        val targetArgs = unpackVarArgs(methodParams.getOrNull(0))
+        return TraceCallData(
+            owner = null,
+            className = constructor.declaringClass.name,
+            methodName = "<init>",
+            methodParams = targetArgs
+        )
+    }
+
+    private fun resolveMethodHandleInvoke(
+        handle: MethodHandle,
+        methodParams: Array<Any?>
+    ): TraceCallData? {
+        val info = try {
+            MethodHandles.lookup().revealDirect(handle)
+        } catch (_: Throwable) {
+            return null
+        }
+        val actualParams = methodParams.toList()
+        return when (info.referenceKind) {
+            MethodHandleInfo.REF_invokeVirtual,
+            MethodHandleInfo.REF_invokeInterface,
+            MethodHandleInfo.REF_invokeSpecial -> TraceCallData(
+                owner = actualParams.getOrNull(0),
+                className = info.declaringClass.name,
+                methodName = info.name,
+                methodParams = actualParams.drop(1).toTypedArray()
+            )
+            MethodHandleInfo.REF_invokeStatic -> TraceCallData(
+                owner = null,
+                className = info.declaringClass.name,
+                methodName = info.name,
+                methodParams = actualParams.toTypedArray(),
+            )
+            MethodHandleInfo.REF_newInvokeSpecial -> TraceCallData(
+                owner = null,
+                className = info.declaringClass.name,
+                methodName = "<init>",
+                methodParams = actualParams.toTypedArray()
+            )
+            else -> null
+        }
+    }
+
+    private fun resolveKotlinReflectionInvoke(
+        function: KFunction<*>,
+        methodParams: Array<Any?>,
+        argumentExtractor: (KFunction<*>, Array<Any?>) -> List<Any?>
+    ): TraceCallData? {
+        val javaMethod = function.javaMethod
+        if (javaMethod != null) {
+            val isStatic = Modifier.isStatic(javaMethod.modifiers)
+            val orderedArgs = argumentExtractor(function, methodParams)
+            val (owner, params) = if (isStatic) {
+                null to orderedArgs
+            } else {
+                val receiver = orderedArgs.getOrNull(0) ?: return null
+                receiver to orderedArgs.drop(1)
+            }
+            return TraceCallData(
+                owner = owner,
+                className = javaMethod.declaringClass.name,
+                methodName = javaMethod.name,
+                methodParams = params.toTypedArray(),
+            )
+        }
+        val javaConstructor = function.javaConstructor
+        if (javaConstructor != null) {
+            val orderedArgs = argumentExtractor(function, methodParams)
+            return TraceCallData(
+                owner = null,
+                className = javaConstructor.declaringClass.name,
+                methodName = "<init>",
+                methodParams = orderedArgs.toTypedArray()
+            )
+        }
+        return null
+    }
+
+    private fun extractArgsFromKotlinReflectCall(methodParams: Array<Any?>): List<Any?> =
+        (methodParams.firstOrNull() as? Array<*>)?.toList().orEmpty()
+
+    private fun isMethodHandleInvoke(methodName: String): Boolean =
+        methodName == "invoke" || methodName == "invokeExact"
+
+    private fun extractOrderedArgsFromKotlinReflectCallBy(function: KFunction<*>, methodParams: Array<Any?>): List<Any?> {
+        val argsByParam = methodParams.singleOrNull() as? Map<*, *> ?: return methodParams.toList()
+        return function.parameters.map { argsByParam[it] }
+    }
+
+    private fun unpackVarArgs(argsParam: Any?): Array<Any?> {
+        if (argsParam == null) return emptyArray()
+        @Suppress("UNCHECKED_CAST")
+        return argsParam as Array<Any?>
+    }
+
     private fun createBeforeMethodCallTracePoint(
         eventId: Int,
         threadId: Int,
@@ -2367,9 +2525,10 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         callType: MethodCallTracePoint.CallType,
+        useParameterAsReceiver: Boolean,
     ): MethodCallTracePoint {
         val (ownerName, params) = if (atomicMethodDescriptor == null) {
-            findOwnerName(owner, className, codeLocation) to methodParams.asList()
+            findOwnerName(owner, className, codeLocation, useParameterAsReceiver) to methodParams.asList()
         } else {
             atomicMethodDescriptor.findAtomicOwnerName(owner!!, methodParams, codeLocation)
         }
@@ -2406,10 +2565,10 @@ internal abstract class ManagedStrategy(
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { objectTracker.getObjectRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 
-    private fun findOwnerName(obj: Any?, className: String, codeLocationId: Int): String? {
+    private fun findOwnerName(obj: Any?, className: String, codeLocationId: Int, useParameterAsReceiver: Boolean = false): String? {
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[threadId]!!.last()
-        val ownerName = findOwnerName(context, obj, className, codeLocationId, shadowStackFrame, objectTracker)
+        val ownerName = findOwnerName(context, obj, className, codeLocationId, shadowStackFrame, objectTracker, useParameterAsReceiver)
         return ownerName?.takeIf { it.isNotEmpty() }
     }
 
