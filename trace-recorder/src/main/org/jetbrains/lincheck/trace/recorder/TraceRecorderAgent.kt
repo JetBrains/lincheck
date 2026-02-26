@@ -66,6 +66,7 @@ internal object TraceRecorderAgent {
 
         private val jmxController = object : AbstractTracingJmxController() {
             override val mbeanName = "org.jetbrains.lincheck:type=TraceRecorder"
+            override fun onWebSocketDisconnect() {}
         }
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider
