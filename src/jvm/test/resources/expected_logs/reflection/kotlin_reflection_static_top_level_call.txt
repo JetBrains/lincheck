@@ -13,11 +13,11 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                   Thread 1                                                                                                   |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                                                                                                                                  |
-|   invokeViaKotlinReflectionStatic(18, 19): 55 at KotlinReflectionStaticTopLevelCallRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:287)                                                   |
-|     ReflectionInvokeRepresentationTestKt.staticTopLevelTarget(18, 19): 55 at KotlinReflectionStaticTopLevelCallRepresentationTest.invokeViaKotlinReflectionStatic(ReflectionInvokeRepresentationTest.kt:282) |
-|   result: void                                                                                                                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                                                  Thread 1                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                                                                                                                                |
+|   invokeViaKotlinReflectionStatic(18, 19): 55 at KotlinReflectionStaticTopLevelCallRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:354)                                                                                 |
+|     ReflectionInvokeRepresentationTestKt.staticTopLevelTarget(18, 19) [by fn.call(Array<Object>#1)]: 55 at KotlinReflectionStaticTopLevelCallRepresentationTest.invokeViaKotlinReflectionStatic(ReflectionInvokeRepresentationTest.kt:349) |
+|   result: void                                                                                                                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

@@ -13,11 +13,12 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                Thread 1                                                                 |
-| --------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                             |
-|   invokeViaReflection(1, 2): 3 at ReflectionMethodInvokeRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:51)          |
-|     targetReflection(1, 2): 3 at ReflectionMethodInvokeRepresentationTest.invokeViaReflection(ReflectionInvokeRepresentationTest.kt:46) |
-|   result: void                                                                                                                          |
-| --------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                Thread 1                                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                                             |
+|   invokeViaReflection(1, 2): 3 at ReflectionMethodInvokeRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:95)                                                                                                          |
+|     targetReflection(1, 2) [by targetReflectionMethod.invoke(ReflectionMethodInvokeRepresentationTest#1, Array<Object>#1)]: 3 at ReflectionMethodInvokeRepresentationTest.invokeViaReflection(ReflectionInvokeRepresentationTest.kt:90) |
+|       helper.placeholder() at ReflectionInvokeBase.targetReflection(ReflectionInvokeRepresentationTest.kt:38)                                                                                                                           |
+|   result: void                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

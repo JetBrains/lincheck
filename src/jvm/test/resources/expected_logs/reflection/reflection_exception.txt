@@ -1,0 +1,24 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                               Thread 1                                                                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                                                                           |
+|   invokeViaReflection(1, 2): -1 at ReflectionExceptionRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:432)                                                                                                                                         |
+|     targetThrowsException(1, 2) [by targetReflectionMethod.invoke(ReflectionExceptionRepresentationTest#1, Array<Object>#1)]: threw InvocationTargetException at ReflectionExceptionRepresentationTest.invokeViaReflection(ReflectionInvokeRepresentationTest.kt:424) |
+|       helper.throwException(): threw IllegalStateException at ReflectionInvokeBase.targetThrowsException(ReflectionInvokeRepresentationTest.kt:58)                                                                                                                    |
+|   result: void                                                                                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

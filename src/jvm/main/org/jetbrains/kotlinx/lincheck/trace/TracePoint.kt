@@ -264,6 +264,13 @@ internal class MethodCallTracePoint(
         private set
     fun updateOwnerName(name: String?) { ownerName = name }
 
+    // For reflection-like calls (Method.invoke, MethodHandle.invoke, KFunction.call, etc.)
+    // these fields store information about the target method being invoked
+    var reflectionTargetClassName: String? = null
+    var reflectionTargetMethodName: String? = null
+    var reflectionTargetOwnerName: String? = null
+    var reflectionTargetParameters: List<String>? = null
+
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
     val isThreadStart get() = callType == CallType.THREAD_RUN
@@ -306,12 +313,22 @@ internal class MethodCallTracePoint(
         
     
     private fun StringBuilder.appendDefaultMethodCall() {
-        if (ownerName != null) append("$ownerName.")
-        if (isSuspend) {
-            append("$methodName(${ parameters?.dropLast(1)?.joinToString(", ") ?: "" })")
-            append(" [suspendable: ${parameters?.last()}]")
-        } else {
+        // For reflection-like calls, show target method first, then how it was invoked
+        if (reflectionTargetMethodName != null) {
+            if (reflectionTargetOwnerName != null) append("$reflectionTargetOwnerName.")
+            append("$reflectionTargetMethodName(${reflectionTargetParameters?.joinToString(", ") ?: ""})")
+            append(" [by ")
+            if (ownerName != null) append("$ownerName.")
             append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+            append("]")
+        } else {
+            if (ownerName != null) append("$ownerName.")
+            if (isSuspend) {
+                append("$methodName(${ parameters?.dropLast(1)?.joinToString(", ") ?: "" })")
+                append(" [suspendable: ${parameters?.last()}]")
+            } else {
+                append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+            }
         }
     }
     
@@ -334,6 +351,10 @@ internal class MethodCallTracePoint(
                 it.parameters = parameters
                 it.ownerName = ownerName
                 it.parameterTypes = parameterTypes
+                it.reflectionTargetClassName = reflectionTargetClassName
+                it.reflectionTargetMethodName = reflectionTargetMethodName
+                it.reflectionTargetOwnerName = reflectionTargetOwnerName
+                it.reflectionTargetParameters = reflectionTargetParameters
             }
     }
 

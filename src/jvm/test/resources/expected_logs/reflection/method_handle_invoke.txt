@@ -13,11 +13,12 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                    Thread 1                                                                     |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                     |
-|   invokeViaMethodHandleInvoke(7, 8): 56 at MethodHandleInvokeRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:193)            |
-|     targetMethodHandle(7, 8): 56 at MethodHandleInvokeRepresentationTest.invokeViaMethodHandleInvoke(ReflectionInvokeRepresentationTest.kt:188) |
-|   result: void                                                                                                                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                           Thread 1                                                                                                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                                  |
+|   invokeViaMethodHandleInvoke(7, 8): 56 at MethodHandleInvokeRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:259)                                                                                         |
+|     targetMethodHandle(7, 8) [by targetMethodHandle.invoke(MethodHandleInvokeRepresentationTest#1, 7, 8)]: 56 at MethodHandleInvokeRepresentationTest.invokeViaMethodHandleInvoke(ReflectionInvokeRepresentationTest.kt:254) |
+|       helper.placeholder() at ReflectionInvokeBase.targetMethodHandle(ReflectionInvokeRepresentationTest.kt:43)                                                                                                              |
+|   result: void                                                                                                                                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

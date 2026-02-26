@@ -13,11 +13,12 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                       Thread 1                                                                        |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                           |
-|   invokeViaKotlinReflection(11, 12): -1 at KotlinReflectionCallRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:229)                |
-|     targetKotlinReflection(11, 12): -1 at KotlinReflectionCallRepresentationTest.invokeViaKotlinReflection(ReflectionInvokeRepresentationTest.kt:224) |
-|   result: void                                                                                                                                        |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                               Thread 1                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                           |
+|   invokeViaKotlinReflection(11, 12): -1 at KotlinReflectionCallRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:295)                                                                |
+|     targetKotlinReflection(11, 12) [by targetKotlinFunction.call(Array<Object>#1)]: -1 at KotlinReflectionCallRepresentationTest.invokeViaKotlinReflection(ReflectionInvokeRepresentationTest.kt:290) |
+|       helper.placeholder() at ReflectionInvokeBase.targetKotlinReflection(ReflectionInvokeRepresentationTest.kt:48)                                                                                   |
+|   result: void                                                                                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

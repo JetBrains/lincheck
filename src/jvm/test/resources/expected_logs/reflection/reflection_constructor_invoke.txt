@@ -13,11 +13,11 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                              Thread 1                                                                                               |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                                                                         |
-|   invokeViaReflectionConstructor(15): ReflectionTarget#1 at ReflectionConstructorInvokeRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:330)                                      |
-|     ReflectionInvokeBase.ReflectionTarget.<init>(15): ReflectionTarget#1 at ReflectionConstructorInvokeRepresentationTest.invokeViaReflectionConstructor(ReflectionInvokeRepresentationTest.kt:325) |
-|   result: void                                                                                                                                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                             Thread 1                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                                                                       |
+|   invokeViaReflectionConstructor(15): ReflectionTarget#1 at ReflectionConstructorInvokeRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:394)                                                                                                    |
+|     ReflectionInvokeBase.ReflectionTarget.<init>(15) [by reflectionTargetConstructor.newInstance(Array<Object>#1)]: ReflectionTarget#1 at ReflectionConstructorInvokeRepresentationTest.invokeViaReflectionConstructor(ReflectionInvokeRepresentationTest.kt:389) |
+|   result: void                                                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

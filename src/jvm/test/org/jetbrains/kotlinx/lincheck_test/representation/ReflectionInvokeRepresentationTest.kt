@@ -16,20 +16,66 @@ import java.lang.invoke.MethodType
 import java.util.AbstractMap.SimpleEntry
 import kotlin.reflect.jvm.javaMethod
 
-fun staticTopLevelTarget(a: Int, b: Int): Int = a * 2 + b
+private val topLevelHelper = TopLevelHelper()
+
+fun staticTopLevelTarget(a: Int, b: Int): Int {
+    topLevelHelper.placeholder()
+    return a * 2 + b
+}
+
+class TopLevelHelper {
+    fun placeholder() {
+        // Placeholder for top-level function
+    }
+}
 
 abstract class ReflectionInvokeBase(
     outputFileName: String
 ) : BaseTraceRepresentationTest(outputFileName) {
-    fun targetReflection(a: Int, b: Int): Int = a + b
+    private val helper = Helper()
 
-    fun targetMethodHandle(a: Int, b: Int): Int = a * b
+    fun targetReflection(a: Int, b: Int): Int {
+        helper.placeholder()
+        return a + b
+    }
 
-    fun targetKotlinReflection(a: Int, b: Int): Int = a - b
+    fun targetMethodHandle(a: Int, b: Int): Int {
+        helper.placeholder()
+        return a * b
+    }
 
-    fun targetKotlinReflectionCallBy(a: Int, b: Int): Int = a + b + 1
+    fun targetKotlinReflection(a: Int, b: Int): Int {
+        helper.placeholder()
+        return a - b
+    }
 
-    class ReflectionTarget(val value: Int)
+    fun targetKotlinReflectionCallBy(a: Int, b: Int): Int {
+        helper.placeholder()
+        return a + b + 1
+    }
+
+    fun targetThrowsException(a: Int, b: Int): Int {
+        helper.throwException()
+        return a + b
+    }
+
+    class Helper {
+        fun placeholder() {
+            // Placeholder method to verify nested call tracking
+        }
+
+        fun throwException() {
+            throw IllegalStateException("Test exception from nested call")
+        }
+    }
+
+    class ReflectionTarget(val value: Int) {
+        private val helper = Helper()
+
+        init {
+            helper.placeholder()
+        }
+    }
 }
 
 class ReflectionMethodInvokeRepresentationTest :
@@ -59,9 +105,20 @@ class ReflectionStaticMethodInvokeRepresentationTest :
     )
 
     companion object {
+        private val helper = Helper()
+
         @JvmStatic
         @Suppress("unused")
-        fun staticTarget(a: Int, b: Int): Int = a + b + 2
+        fun staticTarget(a: Int, b: Int): Int {
+            helper.placeholder()
+            return a + b + 2
+        }
+
+        class Helper {
+            fun placeholder() {
+                // Placeholder for static method
+            }
+        }
     }
 
     private fun invokeViaReflection(a: Int, b: Int): Int {
@@ -109,9 +166,20 @@ class MethodHandleInvokeStaticRepresentationTest :
     )
 
     companion object {
+        private val helper = Helper()
+
         @JvmStatic
         @Suppress("unused")
-        fun staticTarget(a: Int, b: Int): Int = a * 3 + b
+        fun staticTarget(a: Int, b: Int): Int {
+            helper.placeholder()
+            return a * 3 + b
+        }
+
+        class Helper {
+            fun placeholder() {
+                // Placeholder for static method
+            }
+        }
     }
 
     private fun invokeViaMethodHandleInvokeExact(a: Int, b: Int): Int {
@@ -260,8 +328,8 @@ class KotlinReflectionConstructorCallRepresentationTest :
 
 class KotlinReflectionConstructorCallByRepresentationTest :
     ReflectionInvokeBase("reflection/kotlin_reflection_constructor_call_by") {
+    val ctor = ReflectionTarget::class.constructors.single()
     private fun invokeViaKotlinReflectionConstructorCallBy(value: Int): ReflectionTarget {
-        val ctor = ReflectionTarget::class.constructors.single()
         val params = ctor.parameters.let { (p1) ->
             mapOf(p1 to value)
         }
@@ -276,8 +344,9 @@ class KotlinReflectionConstructorCallByRepresentationTest :
 
 class KotlinReflectionStaticTopLevelCallRepresentationTest :
     ReflectionInvokeBase("reflection/kotlin_reflection_static_top_level_call") {
+    val fn = ::staticTopLevelTarget
     private fun invokeViaKotlinReflectionStatic(a: Int, b: Int): Int {
-        return ::staticTopLevelTarget.call(a, b)
+        return fn.call(a, b)
     }
 
     @Operation
@@ -340,5 +409,27 @@ class MethodHandleInvokeConstructorRepresentationTest :
     @Operation
     override fun operation() {
         invokeViaMethodHandleConstructor(22)
+    }
+}
+
+class ReflectionExceptionRepresentationTest :
+    ReflectionInvokeBase("reflection/reflection_exception") {
+    private val targetReflectionMethod = javaClass.getMethod(
+        "targetThrowsException",
+        Int::class.javaPrimitiveType!!,
+        Int::class.javaPrimitiveType!!
+    )
+
+    private fun invokeViaReflection(a: Int, b: Int): Int {
+        return try {
+            targetReflectionMethod.invoke(this, a, b) as Int
+        } catch (e: Exception) {
+            -1 // Return -1 on exception
+        }
+    }
+
+    @Operation
+    override fun operation() {
+        invokeViaReflection(1, 2)
     }
 }

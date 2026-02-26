@@ -13,15 +13,16 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                              Thread 1                                                                                              |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                                                                        |
-|   invokeViaMethodHandleVarargs(3, 4): 12 at MethodHandleInvokeWithArgumentsVarargsRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:97)                                           |
-|     targetMethodHandle.invokeWithArguments(Array<Object>#1): 12 at MethodHandleInvokeWithArgumentsVarargsRepresentationTest.invokeViaMethodHandleVarargs(ReflectionInvokeRepresentationTest.kt:92) |
-|       invocationType.invokers(): Invokers#1 at MethodHandle.invokeWithArguments(MethodHandle.java:732)                                                                                             |
-|         invokers ➜ Invokers#1 at MethodType.invokers(MethodType.java:1105)                                                                                                                         |
-|       Invokers#1.spreadInvoker(0): Species_L#1 at MethodHandle.invokeWithArguments(MethodHandle.java:732)                                                                                          |
-|       Species_L#1.invokeExact(BoundMethodHandle$Species_LLLL#1, Array<Object>#1): 12 at MethodHandle.invokeWithArguments(MethodHandle.java:732)                                                    |
-|   result: void                                                                                                                                                                                     |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                             Thread 1                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                                       |
+|   invokeViaMethodHandleVarargs(3, 4): 12 at MethodHandleInvokeWithArgumentsVarargsRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:152)                                                                         |
+|     targetMethodHandle(3, 4) [by targetMethodHandle.invokeWithArguments(Array<Object>#1)]: 12 at MethodHandleInvokeWithArgumentsVarargsRepresentationTest.invokeViaMethodHandleVarargs(ReflectionInvokeRepresentationTest.kt:147) |
+|       invocationType.invokers(): Invokers#1 at MethodHandle.invokeWithArguments(MethodHandle.java:732)                                                                                                                            |
+|         invokers ➜ Invokers#1 at MethodType.invokers(MethodType.java:1105)                                                                                                                                                        |
+|       Invokers#1.spreadInvoker(0): Species_L#1 at MethodHandle.invokeWithArguments(MethodHandle.java:732)                                                                                                                         |
+|       Species_L#1.invokeExact(BoundMethodHandle$Species_LLLL#1, Array<Object>#1): 12 at MethodHandle.invokeWithArguments(MethodHandle.java:732)                                                                                   |
+|         helper.placeholder() at ReflectionInvokeBase.targetMethodHandle(ReflectionInvokeRepresentationTest.kt:43)                                                                                                                 |
+|   result: void                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
