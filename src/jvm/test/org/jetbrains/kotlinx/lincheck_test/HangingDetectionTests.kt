@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.scenario
 
-class HangingInParallelPartIsolatedTest : AbstractLincheckTest(ManagedLivelockFailure::class) {
+class HangingInParallelPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedLivelockFailure::class) {
 
     @Operation
     fun hang() {
@@ -71,7 +71,7 @@ class HangingInInitPartIsolatedTest : AbstractLincheckTest(ManagedLivelockFailur
 
 }
 
-class HangingInPostPartIsolatedTest : AbstractLincheckTest(ManagedLivelockFailure::class) {
+class HangingInPostPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedLivelockFailure::class) {
 
     @Operation
     fun hang() {
