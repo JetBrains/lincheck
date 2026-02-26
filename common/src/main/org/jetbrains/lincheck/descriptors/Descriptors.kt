@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.descriptors
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
 import org.jetbrains.lincheck.util.FieldKind
+import org.jetbrains.lincheck.descriptors.Descriptor.Companion.INVALID_ID
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
 
@@ -29,6 +30,10 @@ interface Descriptor {
 
     val id: Int
     val key: Key
+
+    companion object {
+        const val INVALID_ID = -1
+    }
 }
 
 open class ClassDescriptor(
@@ -59,9 +64,9 @@ data class MethodDescriptor(
     var isIntrinsic: Boolean = false
 
     /**
-     * @return id of this descriptor in the method pool, or -1 if this descriptor is not registered yet.
+     * @return id of this descriptor in the method pool, or INVALID_ID if this descriptor is not registered yet.
      */
-    override val id: Int get() = if (context.methodPool.contains(key)) context.methodPool.getId(key) else -1
+    override val id: Int get() = if (context.methodPool.contains(key)) context.methodPool.getId(key) else INVALID_ID
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
     val methodName: String get() = methodSignature.name
@@ -89,9 +94,9 @@ data class FieldDescriptor(
 ) : Descriptor {
 
     /**
-     * @return id of this descriptor in the field pool, or -1 if this descriptor is not registered yet.
+     * @return id of this descriptor in the field pool, or INVALID_ID if this descriptor is not registered yet.
      */
-    override val id: Int get() = if (context.fieldPool.contains(key)) context.fieldPool.getId(key) else -1
+    override val id: Int get() = if (context.fieldPool.contains(key)) context.fieldPool.getId(key) else INVALID_ID
     val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
