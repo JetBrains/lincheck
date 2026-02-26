@@ -1009,32 +1009,30 @@ data class TRArray private constructor(
     }
 }
 
-const val TR_OBJECT_NULL_CLASSNAME = -1
-val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, ClassDescriptorWithNoContext("null", id = TR_OBJECT_NULL_CLASSNAME))
-
-const val TR_OBJECT_VOID_CLASSNAME = -2
-val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, ClassDescriptorWithNoContext("void", id = TR_OBJECT_VOID_CLASSNAME))
-
 const val UNFINISHED_METHOD_RESULT_SYMBOL = "<unfinished method>"
 const val UNTRACKED_METHOD_RESULT_SYMBOL = "<untracked result>"
 val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRPrimitive(TR_OBJECT_P_STRING, 0, UNFINISHED_METHOD_RESULT_SYMBOL)
 val TR_OBJECT_UNTRACKED_METHOD_RESULT = TRPrimitive(TR_OBJECT_P_STRING, 0, UNTRACKED_METHOD_RESULT_SYMBOL)
 
-const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
-const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1
-const val TR_OBJECT_P_INT = TR_OBJECT_P_SHORT - 1
-const val TR_OBJECT_P_LONG = TR_OBJECT_P_INT - 1
-const val TR_OBJECT_P_FLOAT = TR_OBJECT_P_LONG - 1
-const val TR_OBJECT_P_DOUBLE = TR_OBJECT_P_FLOAT - 1
-const val TR_OBJECT_P_CHAR = TR_OBJECT_P_DOUBLE - 1
-const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
-const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
-const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
-const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
-const val TR_OBJECT_P_JAVA_CLASS = TR_OBJECT_P_BOOLEAN - 1
-const val TR_OBJECT_P_KOTLIN_CLASS = TR_OBJECT_P_JAVA_CLASS - 1
-const val TR_OBJECT_P_STRING_BUILDER = TR_OBJECT_P_KOTLIN_CLASS - 1
+const val TR_OBJECT_NULL_CLASSNAME = -1
+const val TR_OBJECT_VOID_CLASSNAME = -2
+const val TR_OBJECT_P_BYTE = -3
+const val TR_OBJECT_P_SHORT = -4
+const val TR_OBJECT_P_INT = -5
+const val TR_OBJECT_P_LONG = -6
+const val TR_OBJECT_P_FLOAT = -7
+const val TR_OBJECT_P_DOUBLE = -8
+const val TR_OBJECT_P_CHAR = -9
+const val TR_OBJECT_P_STRING = -10
+const val TR_OBJECT_P_UNIT = -11
+const val TR_OBJECT_P_RAW_STRING = -12
+const val TR_OBJECT_P_BOOLEAN = -13
+const val TR_OBJECT_P_JAVA_CLASS = -14
+const val TR_OBJECT_P_KOTLIN_CLASS = -15
+const val TR_OBJECT_P_STRING_BUILDER = -16
 
+val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, ClassDescriptorWithNoContext("null", id = TR_OBJECT_NULL_CLASSNAME))
+val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, ClassDescriptorWithNoContext("void", id = TR_OBJECT_VOID_CLASSNAME))
 
 fun TRObjectOrNull(context: TraceContext, obj: Any?): TRValue? =
     obj?.let { TRValue(context, it) }
