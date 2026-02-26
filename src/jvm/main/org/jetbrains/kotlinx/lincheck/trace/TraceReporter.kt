@@ -122,8 +122,8 @@ private fun MultiThreadedTable<TraceNode>.splitIntoSections(): List<MultiThreade
         check(parts.count { it == ExecutionPart.INIT } <= 1) {
             "Expected at most one INIT section delimiter"
         }
-        check(parts.count { it == ExecutionPart.PARALLEL } == 1) {
-            "Expected exactly one PARALLEL section delimiter"
+        check(parts.count { it == ExecutionPart.PARALLEL } <= 1) {
+            "Expected at most one PARALLEL section delimiter"
         }
         check(parts.count { it == ExecutionPart.POST } <= 1) {
             "Expected at most one POST section delimiter"
