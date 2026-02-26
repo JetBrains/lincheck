@@ -38,14 +38,12 @@ class DescriptorPool<D : Descriptor> {
         byKey[key]?.let { descriptors[it] }
 
     /**
-     * @return id of the descriptor with the specified [key].
-     * @throws IllegalStateException if no descriptor with the specified key is present in the pool.
+     * @return id of the descriptor with the specified [key],
+     *   or [Descriptor.INVALID_ID] if no descriptor with the specified key is present in the pool.
      */
     @Synchronized
     fun getId(key: Descriptor.Key): Int =
-        byKey[key].ensureNotNull {
-            "No descriptor with key $key"
-        }
+        byKey[key] ?: Descriptor.INVALID_ID
 
     /**
      * @return true if a descriptor with the specified [key] is present in the pool, false otherwise.

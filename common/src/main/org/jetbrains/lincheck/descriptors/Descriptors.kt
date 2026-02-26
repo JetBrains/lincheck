@@ -42,7 +42,7 @@ open class ClassDescriptor(
 ) : Descriptor {
     data class Key(val className: String) : Descriptor.Key()
 
-    override val id: Int get() = context!!.classPool.getId(key)
+    override val id: Int get() = context?.classPool?.getId(key) ?: INVALID_ID
     override val key: Descriptor.Key get() = Key(name)
 }
 
@@ -63,7 +63,7 @@ data class MethodDescriptor(
     //  Bar class is not yet loaded by the jvm, so Bar::bar is not detected to be intrinsic yet by the IntrinsicCandidateMethodFilter.
     var isIntrinsic: Boolean = false
 
-    override val id: Int get() = if (context.methodPool.contains(key)) context.methodPool.getId(key) else INVALID_ID
+    override val id: Int get() = context.methodPool.getId(key)
 
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
@@ -91,7 +91,7 @@ data class FieldDescriptor(
     val isFinal: Boolean,
 ) : Descriptor {
 
-    override val id: Int get() = if (context.fieldPool.contains(key)) context.fieldPool.getId(key) else INVALID_ID
+    override val id: Int get() = context.fieldPool.getId(key)
 
     val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
