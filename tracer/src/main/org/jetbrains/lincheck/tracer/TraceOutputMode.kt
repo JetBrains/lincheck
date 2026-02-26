@@ -36,7 +36,7 @@ sealed class TraceOutputMode {
     class Text(val verbose: Boolean = false) : TraceOutputMode()
 
     /**
-     * Stream binary trace data over TCP to connected readers.
+     * Stream binary trace data over WebSocket to connected readers.
      *
      * The trace producer acts as a server,
      * listening for incoming reader connections on an assigned port.

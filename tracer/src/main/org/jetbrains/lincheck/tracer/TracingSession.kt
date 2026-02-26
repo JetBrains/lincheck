@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 class TracingSession(
     val eventTracker: TraceCollectingEventTracker,
-    val tcpServer: TcpTraceServer? = null
+    val wsServer: WebSocketTraceServer? = null
 ) {
     internal sealed class State {
         object NotStarted : State()
@@ -115,15 +115,15 @@ class TracingSession(
         )
         Logger.debug { "Trace collected in ${endTime - currentState.startTime} ms" }
 
-        stopTcpServer()
+        stopWsServer()
         finishHook.get()?.invoke(this)
     }
 
-    private fun stopTcpServer() {
+    private fun stopWsServer() {
         try {
-            tcpServer?.close()
+            wsServer?.close()
         } catch (t: Throwable) {
-            Logger.error(t) { "Cannot stop TCP trace server" }
+            Logger.error(t) { "Cannot stop WebSocket trace server" }
         }
     }
 
@@ -182,8 +182,8 @@ class TracingSession(
                     }
                 }
                 is TraceOutputMode.BinaryTcpStream -> {
-                    // TCP streaming - trace already sent over network, nothing to dump to file
-                    error("Trace is streamed over TCP, no data stored to save into a file")
+                    // WebSocket streaming - trace already sent over network, nothing to dump to file
+                    error("Trace is streamed over WebSocket, no data stored to save into a file")
                 }
                 is TraceOutputMode.Text -> {
                     printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)

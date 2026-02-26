@@ -81,9 +81,9 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
                 outputMode = TraceOutputMode.BinaryTcpStream(onDisconnect = ::onWebSocketDisconnect),
                 startMode = TracingSession.StartMode.Dynamic,
             )
-            Logger.info { "TCP trace streaming session has been started" }
+            Logger.info { "WebSocket trace streaming session has been started" }
         } catch (t: Throwable) {
-            Logger.error(t) { "Cannot start TCP trace streaming" }
+            Logger.error(t) { "Cannot start WebSocket trace streaming" }
         }
     }
 

@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
 import org.jetbrains.lincheck.trace.TcpTraceServer
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.WebSocketTraceServer
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.unreachable
@@ -211,10 +212,10 @@ object Tracer {
             traceStreamingFilePath = (mode as? TraceOutputMode.BinaryFileStream)?.streamingFilePath
         )
 
-        var tcpServer: TcpTraceServer? = null
+        var tcpServer: WebSocketTraceServer? = null
         if (mode is TraceOutputMode.BinaryTcpStream) {
             try {
-                tcpServer = TcpTraceServer(
+                tcpServer = WebSocketTraceServer(
                     port = TraceAgentParameters.DEFAULT_TRACE_PORT,
                     subscriptionService = eventTracker.subscriptionService!!,
                     onDisconnected = { mode.onDisconnect() }

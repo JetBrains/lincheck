@@ -45,10 +45,10 @@ import kotlin.concurrent.withLock
  * @param context the trace context containing descriptors and metadata
  * @param queueCapacity the maximum number of trace points to the buffer.
  */
-class TcpStreamingTraceCollecting(
+class WebSocketStreamingTraceCollecting(
     val context: TraceContext,
     private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
-) : TraceCollectingStrategy, TcpTraceSubscriptionService, Closeable {
+) : TraceCollectingStrategy, WebSocketTraceSubscriptionService, Closeable {
 
     @Volatile
     private var subscriber: TraceSubscriber? = null
@@ -62,7 +62,7 @@ class TcpStreamingTraceCollecting(
     @Volatile
     private var running = true
 
-    private val writerThread: Thread = thread(name = "TcpTraceWriter", isDaemon = true) {
+    private val writerThread: Thread = thread(name = "WebSocketTraceWriter", isDaemon = true) {
         writerThreadLoop()
     }
 
@@ -71,12 +71,12 @@ class TcpStreamingTraceCollecting(
             // Close existing subscriber if any
             subscriber?.close()
 
-            val byteStream = ByteArrayOutputStream(SOCKET_BUFFER_SIZE)
+            val byteStream = ByteArrayOutputStream(MESSAGE_BUFFER_SIZE)
             val outputStream = DataOutputStream(byteStream)
 
             // Create a trace context state for this subscriber (each subscriber gets an independent state)
             val subscriberContextState = SubscriberContextState()
-            val writer = TcpTraceWriter(context, subscriberContextState, outputStream, outputStream)
+            val writer = WebSocketTraceWriter(context, subscriberContextState, outputStream, outputStream)
 
             // Send header as a binary WebSocket message
             outputStream.writeLong(TRACE_MAGIC)
@@ -122,7 +122,7 @@ class TcpStreamingTraceCollecting(
 
     override fun tracePointCreated(parent: TRContainerTracePoint?, created: TRTracePoint) {
         check(created is TRSnapshotLineBreakpointTracePoint) {
-            "Only snapshot line breakpoints are supported by TCP trace collection strategy"
+            "Only snapshot line breakpoints are supported by WebSocket trace collection strategy"
         }
 
         recordedPoints.incrementAndGet()
@@ -155,7 +155,7 @@ class TcpStreamingTraceCollecting(
     }
 
     override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {
-        error("Container trace points are not supported by TCP trace collection strategy")
+        error("Container trace points are not supported by WebSocket trace collection strategy")
     }
 
     override fun traceEnded() {
@@ -169,7 +169,7 @@ class TcpStreamingTraceCollecting(
             Logger.warn { "Interrupted while waiting for writer thread to finish" }
         }
         if (writerThread.isAlive) {
-            Logger.warn { "TCP trace writer thread did not finish in time" }
+            Logger.warn { "WebSocket trace writer thread did not finish in time" }
         }
 
         // Send EOF to subscriber and close
@@ -252,7 +252,7 @@ class TcpStreamingTraceCollecting(
     }
 }
 
-interface TcpTraceSubscriptionService {
+interface WebSocketTraceSubscriptionService {
     fun addSubscriber(conn: WebSocket): TraceSubscriber?
     fun removeSubscriber(subscriber: TraceSubscriber)
     fun hasSubscriber(): Boolean
@@ -271,7 +271,7 @@ class TraceSubscriber internal constructor(
     val conn: WebSocket,
     internal val byteStream: ByteArrayOutputStream,
     val outputStream: DataOutputStream,
-    internal val writer: TcpTraceWriter,
+    internal val writer: WebSocketTraceWriter,
     val connectedAt: Long = System.currentTimeMillis(),
 ) : Closeable {
 
@@ -319,7 +319,7 @@ private class SubscriberContextState : ContextSavingState {
  * Trace writer for trace WebSocket streaming.
  * Performs simple direct writes to a [DataOutputStream] without buffering.
  */
-internal class TcpTraceWriter(
+internal class WebSocketTraceWriter(
     context: TraceContext,
     contextState: ContextSavingState,
     dataOutput: DataOutput,
@@ -351,7 +351,7 @@ internal typealias SnapshotLineBreakpointListener = (TRSnapshotLineBreakpointTra
  * @param serverUri the WebSocket server URI to connect to (e.g., "ws://localhost:5555").
  */
 // TODO refactor/remove state logic (is it needed / worth the added complexity?)
-class TcpTraceReader(private val serverUri: URI) : Closeable {
+class WebSocketTraceReader(private val serverUri: URI) : Closeable {
     
     val context: TraceContext =
         TraceContext()
@@ -433,7 +433,10 @@ class TcpTraceReader(private val serverUri: URI) : Closeable {
     }
 
     init {
-        wsClient.connectBlocking(10, TimeUnit.SECONDS)
+        val connected = wsClient.connectBlocking(10, TimeUnit.SECONDS)
+        if (!connected) {
+            Logger.error { "Failed to connect WebSocket trace reader to $serverUri within 10 seconds" }
+        }
     }
     
     fun registerOnDisconnectListener(onDisconnected: (() -> Unit)) {
@@ -631,20 +634,20 @@ class TcpTraceReader(private val serverUri: URI) : Closeable {
 /**
  * WebSocket server that listens for incoming trace reader connections.
  *
- * The server maintains a [TcpStreamingTraceCollecting] instance
+ * The server maintains a [WebSocketStreamingTraceCollecting] instance
  * and registers incoming connections as subscribers to receive trace data.
  *
  * @param port the port to listen on (0 for any available port)
  * @param subscriptionService the service to register trace data subscribers.
  */
-class TcpTraceServer(
+class WebSocketTraceServer(
     port: Int,
-    val subscriptionService: TcpTraceSubscriptionService,
+    val subscriptionService: WebSocketTraceSubscriptionService,
     private val onDisconnected: (() -> Unit)? = null,
 ) : Closeable {
 
     private val wsServer: WebSocketServer
-    @Volatile
+    private val subscriberLock = ReentrantLock()
     private var currentSubscriber: Pair<WebSocket, TraceSubscriber>? = null
 
     /**
@@ -656,42 +659,46 @@ class TcpTraceServer(
         wsServer = object : WebSocketServer(InetSocketAddress(port)) {
             override fun onOpen(conn: WebSocket, handshake: ClientHandshake?) {
                 Logger.info { "WebSocket trace reader connected from ${conn.remoteSocketAddress}" }
-                // Only one client allowed at a time — close any existing connection
-                currentSubscriber?.let { (existingConn, existingSubscriber) ->
-                    Logger.info { "Closing existing WebSocket connection from ${existingConn.remoteSocketAddress} to allow new client" }
-                    subscriptionService.removeSubscriber(existingSubscriber)
-                    try {
-                        existingConn.close()
-                    } catch (e: Exception) {
-                        Logger.error(e) { "Error closing existing WebSocket connection" }
+                subscriberLock.withLock {
+                    // Only one client allowed at a time — close any existing connection
+                    currentSubscriber?.let { (existingConn, existingSubscriber) ->
+                        Logger.info { "Closing existing WebSocket connection from ${existingConn.remoteSocketAddress} to allow new client" }
+                        subscriptionService.removeSubscriber(existingSubscriber)
+                        try {
+                            existingConn.close()
+                        } catch (e: Exception) {
+                            Logger.error(e) { "Error closing existing WebSocket connection" }
+                        }
                     }
+                    val subscriber = subscriptionService.addSubscriber(conn)
+                    currentSubscriber = if (subscriber != null) conn to subscriber else null
                 }
-                val subscriber = subscriptionService.addSubscriber(conn)
-                currentSubscriber = if (subscriber != null) conn to subscriber else null
             }
 
             override fun onClose(conn: WebSocket, code: Int, reason: String?, remote: Boolean) {
                 Logger.info { "WebSocket trace reader disconnected from ${conn.remoteSocketAddress}" }
-                currentSubscriber?.let { (existingConn, subscriber) ->
-                    if (existingConn === conn) {
-                        subscriptionService.removeSubscriber(subscriber)
-                        currentSubscriber = null
-                        Logger.info { "WebSocket trace subscriber disconnected" }
-                        try {
-                            onDisconnected?.invoke()
-                        } catch (t: Throwable) {
-                            Logger.error(t) { "Error in onDisconnected callback" }
+                subscriberLock.withLock {
+                    currentSubscriber?.let { (existingConn, subscriber) ->
+                        if (existingConn === conn) {
+                            subscriptionService.removeSubscriber(subscriber)
+                            currentSubscriber = null
+                            Logger.info { "WebSocket trace subscriber disconnected" }
+                            try {
+                                onDisconnected?.invoke()
+                            } catch (t: Throwable) {
+                                Logger.error(t) { "Error in onDisconnected callback" }
+                            }
                         }
                     }
                 }
             }
 
             override fun onMessage(conn: WebSocket, message: String) {
-                Logger.warn { "WebSocket trace reader message does not expect any messages" }
+                Logger.warn { "Unexpected message received on WebSocket trace server" }
             }
 
             override fun onMessage(conn: WebSocket, message: ByteBuffer) {
-                Logger.warn { "WebSocket trace reader message does not expect any messages" }
+                Logger.warn { "Unexpected message received on WebSocket trace server" }
             }
 
             override fun onError(conn: WebSocket?, ex: Exception?) {
@@ -716,4 +723,4 @@ class TcpTraceServer(
     }
 }
 
-private const val SOCKET_BUFFER_SIZE = 128 // 128 byte
+private const val MESSAGE_BUFFER_SIZE = 128
