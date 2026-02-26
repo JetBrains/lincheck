@@ -106,7 +106,7 @@ enum class FieldKind {
     STATIC, INSTANCE;
 
     companion object {
-        fun fromBoolean(isStatic: Boolean) = if (isStatic) STATIC else INSTANCE
+        fun fromIsStatic(isStatic: Boolean) = if (isStatic) STATIC else INSTANCE
     }
 }
 
@@ -118,7 +118,7 @@ fun Field.toDescriptor(context: TraceContext) = context.createAndRegisterFieldDe
     className = this.declaringClass.name,
     fieldName = this.name,
     type = this.type.kotlin.getType(),
-    fieldKind = FieldKind.fromBoolean(Modifier.isStatic(this.modifiers)),
+    fieldKind = FieldKind.fromIsStatic(Modifier.isStatic(this.modifiers)),
     isFinal = Modifier.isFinal(this.modifiers),
 )
 

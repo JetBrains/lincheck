@@ -438,7 +438,7 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
         classId = readInt(),
         fieldName = readUTF(),
         type = readType(),
-        fieldKind = FieldKind.fromBoolean(isStatic = readBoolean()),
+        fieldKind = FieldKind.fromIsStatic(isStatic = readBoolean()),
         isFinal = readBoolean()
     )
 }

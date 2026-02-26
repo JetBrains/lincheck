@@ -158,7 +158,7 @@ fun Field.toAccessLocation(context: TraceContext): FieldAccessLocation {
     val isFinal = Modifier.isFinal(modifiers)
     val descriptor = context.createAndRegisterFieldDescriptor(className, fieldName,
         type = type.kotlin.getType(),
-        fieldKind = FieldKind.fromBoolean(isStatic),
+        fieldKind = FieldKind.fromIsStatic(isStatic),
         isFinal = isFinal,
     )
     return if (isStatic) {
