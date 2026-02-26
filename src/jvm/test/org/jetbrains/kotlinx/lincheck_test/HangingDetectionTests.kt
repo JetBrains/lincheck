@@ -41,7 +41,7 @@ class HangingInParallelPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::c
 
 }
 
-class HangingInInitPartIsolatedTest : AbstractLincheckTest(ManagedLivelockFailure::class) {
+class HangingInInitPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedLivelockFailure::class) {
 
     @Operation
     fun hang() {
