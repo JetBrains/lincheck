@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.descriptors
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
 import org.jetbrains.lincheck.util.FieldKind
-import org.jetbrains.lincheck.descriptors.Descriptor.Companion.INVALID_ID
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
 
@@ -52,6 +51,19 @@ data class MethodDescriptor(
     val methodSignature: MethodSignature,
     val isInline: Boolean = false
 ) : Descriptor {
+    data class Key(
+        val className: String,
+        val methodSignature: MethodSignature,
+    ) : Descriptor.Key()
+
+    override val id: Int get() = context.methodPool.getId(key)
+    override val key: Descriptor.Key get() = Key(className, methodSignature)
+
+    val classDescriptor: ClassDescriptor get() = context.classPool[classId]
+    val className: String get() = classDescriptor.name
+    val methodName: String get() = methodSignature.name
+    val returnType: Types.Type get() = methodSignature.methodType.returnType
+    val argumentTypes: List<Types.Type> get() = methodSignature.methodType.argumentTypes
 
     // TODO: JBRes-6558 make this field constant and set it in constructor.
     //  This flag is set manually, because we might detect that some method descriptor is intrinsic
@@ -61,23 +73,7 @@ data class MethodDescriptor(
     //  Bar class is not yet loaded by the jvm, so Bar::bar is not detected to be intrinsic yet by the IntrinsicCandidateMethodFilter.
     var isIntrinsic: Boolean = false
 
-    override val id: Int get() = context.methodPool.getId(key)
-
-    val classDescriptor: ClassDescriptor get() = context.classPool[classId]
-    val className: String get() = classDescriptor.name
-    val methodName: String get() = methodSignature.name
-    val returnType: Types.Type get() = methodSignature.methodType.returnType
-    val argumentTypes: List<Types.Type> get() = methodSignature.methodType.argumentTypes
-
     override fun toString(): String = "$className.$methodSignature"
-
-    data class Key(
-        val className: String,
-        val methodSignature: MethodSignature,
-    ) : Descriptor.Key()
-
-    override val key: Descriptor.Key
-        get() = Key(className, methodSignature)
 }
 
 data class FieldDescriptor(
@@ -88,13 +84,6 @@ data class FieldDescriptor(
     val fieldKind: FieldKind,
     val isFinal: Boolean,
 ) : Descriptor {
-
-    override val id: Int get() = context.fieldPool.getId(key)
-
-    val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
-    val classDescriptor: ClassDescriptor get() = context.classPool[classId]
-    val className: String get() = classDescriptor.name
-
     data class Key(
         val className: String,
         val fieldName: String,
@@ -102,8 +91,13 @@ data class FieldDescriptor(
         val fieldKind: FieldKind
     ) : Descriptor.Key()
 
-    override val key: Descriptor.Key
-        get() = Key(className, fieldName, type, fieldKind)
+    override val id: Int get() = context.fieldPool.getId(key)
+    override val key: Descriptor.Key get() = Key(className, fieldName, type, fieldKind)
+
+    val classDescriptor: ClassDescriptor get() = context.classPool[classId]
+    val className: String get() = classDescriptor.name
+
+    val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
 }
 
 /**
@@ -128,7 +122,6 @@ data class VariableDescriptor(
     override val id: Int get() = context.variablePool.getId(key)
     override val key: Descriptor.Key get() = Key(name, type)
 }
-
 
 data class ActiveLocal(
     val localName: String,
