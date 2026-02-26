@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.*
-import org.jetbrains.lincheck.util.FieldKind
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
 

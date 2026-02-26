@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.util.FieldKind
 import org.jetbrains.lincheck.util.Logger
 import java.io.BufferedReader
 import java.io.DataInput

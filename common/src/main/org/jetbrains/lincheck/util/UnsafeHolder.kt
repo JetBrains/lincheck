@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.util
 
+import org.jetbrains.lincheck.descriptors.FieldKind
 import java.util.concurrent.ConcurrentHashMap
 import java.lang.reflect.Array as ReflectArray
 import java.lang.reflect.Modifier

@@ -16,11 +16,11 @@ import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocation
 import org.jetbrains.lincheck.descriptors.DescriptorPool
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
+import org.jetbrains.lincheck.descriptors.FieldKind
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.util.FieldKind
 import java.util.concurrent.ConcurrentHashMap
 
 const val UNKNOWN_CODE_LOCATION_ID = -1

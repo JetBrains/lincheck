@@ -79,15 +79,3 @@ fun Any.findInstanceFieldReferringTo(obj: Any): Field? {
     }
     return null
 }
-
-/**
- * Represents the kind of class field: either static or instance.
- */
-enum class FieldKind {
-    STATIC, INSTANCE;
-
-    companion object {
-        fun fromBoolean(isStatic: Boolean) = if (isStatic) STATIC else INSTANCE
-    }
-}
-

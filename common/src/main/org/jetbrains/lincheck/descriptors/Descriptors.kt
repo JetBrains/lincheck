@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.descriptors
 
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
-import org.jetbrains.lincheck.util.FieldKind
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
 
@@ -98,6 +97,17 @@ data class FieldDescriptor(
     val className: String get() = classDescriptor.name
 
     val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
+}
+
+/**
+ * Represents the kind of class field: either static or instance.
+ */
+enum class FieldKind {
+    STATIC, INSTANCE;
+
+    companion object {
+        fun fromBoolean(isStatic: Boolean) = if (isStatic) STATIC else INSTANCE
+    }
 }
 
 /**
