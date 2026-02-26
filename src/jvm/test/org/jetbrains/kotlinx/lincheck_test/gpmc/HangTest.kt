@@ -31,7 +31,7 @@ class HangIsolatedTest {
     fun testHang() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::hang,
-        expectedFailure = TimeoutFailure::class,
+        expectedFailure = ManagedLivelockFailure::class,
     )
 
     fun hangWithoutThreadJoin() {
@@ -47,6 +47,6 @@ class HangIsolatedTest {
     fun testHangWithoutThreadJoin() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::hangWithoutThreadJoin,
-        expectedFailure = TimeoutFailure::class,
+        expectedFailure = ManagedLivelockFailure::class,
     )
 }
