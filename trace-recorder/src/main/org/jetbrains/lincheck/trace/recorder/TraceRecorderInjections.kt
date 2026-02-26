@@ -11,6 +11,12 @@
 package org.jetbrains.lincheck.trace.recorder
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
+import org.jetbrains.lincheck.tracer.Tracer
+import org.jetbrains.lincheck.tracer.TraceOutputMode
+import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -55,13 +61,13 @@ internal object TraceRecorderInjections {
             }
             if (startCount > 1) return
 
-            TraceRecorder.startRecording(
-                TraceRecordingMode.parse(
-                    outputMode = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FORMAT),
-                    outputOption = TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_FOPTION),
+            Tracer.startTracing(
+                TraceOutputMode.parse(
+                    outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
+                    outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
                     outputFilePath = TraceAgentParameters.traceDumpFilePath,
                 ),
-                TraceRecorderSession.StartMode.FromMethod(thread, className, methodName, startingCodeLocationId),
+                TracingSession.StartMode.FromMethod(thread, className, methodName, startingCodeLocationId),
             )
             .ensureNotNull()
         } catch (t: Throwable) {
@@ -78,7 +84,7 @@ internal object TraceRecorderInjections {
             val thread = Thread.currentThread()
 
             val traceDumpPath = TraceAgentParameters.traceDumpFilePath ?: error("Trace dump path is not set")
-            val pack = (TraceAgentParameters.getArg(TraceRecorderAgent.ARGUMENT_PACK) ?: "true").toBoolean()
+            val pack = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
 
             val startCount = startCount.decrementAndGet()
             Logger.info {
@@ -91,8 +97,8 @@ internal object TraceRecorderInjections {
             }
             if (startCount > 0) return
 
-            TraceRecorder.stopRecording().ensureNotNull()
-            TraceRecorder.dumpTrace(traceDumpPath, pack).ensureTrue()
+            Tracer.stopTracing().ensureNotNull()
+            Tracer.dumpTrace(traceDumpPath, pack).ensureTrue()
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot stop Trace Recorder"}
         }

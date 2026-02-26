@@ -10,32 +10,32 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
-import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINTS_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_MODE
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
-import org.jetbrains.lincheck.trace.recorder.jmx.*
-import org.jetbrains.lincheck.util.*
-import org.jetbrains.lincheck.util.isInTraceRecorderMode
-import java.lang.instrument.*
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
+import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
+import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
+import org.jetbrains.lincheck.tracer.TracerAgent
+import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
+import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
+import java.lang.instrument.Instrumentation
 
 /**
- * Agent that is set as `premain` entry class for fat trace debugger jar archive.
- * This archive when attached to the jvm process expects also an option
- * `-Dlincheck.traceDebuggerMode=true`, `-Dlincheck.traceRecorderMode=true`, or `-Dlincheck.liveDebuggerMode=true`
- * in order to enable trace debugging plugin, trace recorder functionality, or live debugger functionality accordingly.
+ * Trace recorder JVM agent.
+ *
+ * Trace recorder captures the execution trace of a program and saves it into a file.
  */
 internal object TraceRecorderAgent {
-    const val ARGUMENT_FORMAT = "format"
-    const val ARGUMENT_FOPTION = "formatOption"
-    const val ARGUMENT_PACK = "pack"
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
-        ARGUMENT_MODE,
         ARGUMENT_FORMAT,
         ARGUMENT_FOPTION,
         ARGUMENT_INCLUDE,
@@ -45,109 +45,42 @@ internal object TraceRecorderAgent {
         ARGUMENT_BREAKPOINTS_FILE,
     )
 
+    private val agent = object : TracerAgent() {
+        override val modeSystemPropertyName: String = TRACE_RECORDER_MODE_PROPERTY
+
+        override val instrumentationMode: InstrumentationMode = InstrumentationMode.TRACE_RECORDING
+
+        override fun parseArguments(agentArgs: String?) {
+            TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+        }
+
+        override fun validateArguments(attachType: JavaAgentAttachType) {
+            TraceAgentParameters.validateMode()
+
+            if (attachType == JavaAgentAttachType.STATIC) {
+                TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
+            }
+        }
+
+        override val jmxRegistrator: TracingJmxRegistrator get() = jmxController
+
+        private val jmxController = object : AbstractTracingJmxController() {
+            override val mbeanName = "org.jetbrains.lincheck:type=TraceRecorder"
+        }
+
+        override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider
+            get() = ::TraceRecorderMethodTransformer
+    }
+
     // entry point for a statically attached java agent
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
-        // parse and validate arguments and system properties
-        parseArguments(agentArgs)
-
-        TraceAgentParameters.validateMode()
-        if (isInLiveDebuggerMode) {
-            TraceAgentParameters.validateClassAndMethodArgumentsAreNotProvidedInLiveDebuggerMode()
-        } else {
-            TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
-        }
-
-        // attach java agent
-        LincheckInstrumentation.attachJavaAgentStatically(inst)
-
-        // register JMX MBean if the specified argument was passed
-        registerJmxMBeanIfRequested()
-
-        // load breakpoints from a file if specified (for live debugger mode)
-        if (isInLiveDebuggerMode) {
-            LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
-        }
-
-        // install trace entry points transformer and instrumentation
-        if (!isInLiveDebuggerMode) {
-            installTraceEntryPointTransformer()
-        }
-
-        installInstrumentation()
-        if (isInLiveDebuggerMode && traceDumpFilePath != null) {
-            LiveDebugger.startRecording()
-        }
+        agent.premain(agentArgs, inst)
     }
 
     // entry point for a dynamically attached java agent
     @JvmStatic
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
-        // parse and validate arguments and system properties
-        parseArguments(agentArgs)
-
-        if (TraceAgentParameters.getArg(ARGUMENT_MODE) == null) {
-            // set trace recorder mode system property by default
-            System.setProperty(TRACE_RECORDER_MODE_PROPERTY, "true")
-        }
-        TraceAgentParameters.validateMode()
-        if (isInLiveDebuggerMode) {
-            TraceAgentParameters.validateClassAndMethodArgumentsAreNotProvidedInLiveDebuggerMode()
-        }
-
-        // attach java agent
-        LincheckInstrumentation.attachJavaAgentDynamically(inst)
-
-        // register JMX MBean if the specified argument was passed
-        registerJmxMBeanIfRequested()
-
-        // load breakpoints from a file if specified (for live debugger mode)
-        if (isInLiveDebuggerMode) {
-            LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
-        }
-
-        // install instrumentation and re-transform already loaded classes
-        installInstrumentation()
-        if (isInLiveDebuggerMode && traceDumpFilePath != null) {
-            LiveDebugger.startRecording()
-        }
-
-        // TODO: Re-transform already loaded classes if needed
-    }
-
-    @JvmStatic
-    private fun parseArguments(agentArgs: String?) {
-        TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
-    }
-
-    @JvmStatic
-    private fun registerJmxMBeanIfRequested() {
-        if (TraceAgentParameters.jmxMBeanEnabled) {
-            TraceRecorderJmxController.register()
-        }
-    }
-
-    @JvmStatic
-    private fun installTraceEntryPointTransformer() {
-        // This transformer adds tracing turn-on and turn-off at the given method entry/exit.
-        LincheckInstrumentation.instrumentation.addTransformer(
-            /* transformer = */ TraceAgentTransformer(
-                LincheckInstrumentation.context,
-                ::TraceRecorderMethodTransformer,
-                classUnderTracing = TraceAgentParameters.classUnderTraceDebugging,
-                methodUnderTracing = TraceAgentParameters.methodUnderTraceDebugging,
-            ),
-            /* canRetransform = */ true
-        )
-    }
-
-    @JvmStatic
-    private fun installInstrumentation() {
-        val mode = when {
-            isInTraceRecorderMode -> InstrumentationMode.TRACE_RECORDING
-            isInLiveDebuggerMode -> InstrumentationMode.LIVE_DEBUGGING
-            else -> error("Unexpected instrumentation mode")
-        }
-        LincheckInstrumentation.install(mode)
+        agent.agentmain(agentArgs, inst)
     }
 }

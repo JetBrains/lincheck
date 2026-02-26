@@ -55,7 +55,7 @@ tasks {
 }
 
 registerTraceAgentTasks(
-    fatJarName = "trace-recorder-fat",
-    fatJarTaskName = "traceRecorderFatJar",
-    premainClass = "org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent"
+    fatJarName = "live-debugger-fat",
+    fatJarTaskName = "liveDebuggerFatJar",
+    premainClass = "org.jetbrains.lincheck.livedebugger.LiveDebuggerAgent"
 )

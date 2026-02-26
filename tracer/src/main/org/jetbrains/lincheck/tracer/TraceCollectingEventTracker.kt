@@ -1,18 +1,18 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.CodeLocations
-import org.jetbrains.lincheck.jvm.agent.LiveDebuggerSettings
+import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
@@ -152,7 +152,7 @@ fun TraceDataLayout.isTree(): Boolean =
 
 
 class TraceCollectingEventTracker(
-    internal val mode: TraceRecordingMode,
+    internal val mode: TraceOutputMode,
     internal val layout: TraceDataLayout,
     internal val context: TraceContext,
     internal val traceStreamingFilePath: String? = null, // should be non-null for BINARY_STREAM mode
@@ -175,17 +175,17 @@ class TraceCollectingEventTracker(
 
     init {
         when (mode) {
-            is TraceRecordingMode.BinaryFileDump -> {
+            is TraceOutputMode.BinaryFileDump -> {
                 strategy = MemoryTraceCollecting(context)
             }
-            is TraceRecordingMode.BinaryFileStream -> {
+            is TraceOutputMode.BinaryFileStream -> {
                 check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
                 strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
             }
-            is TraceRecordingMode.BinaryTcpStream -> {
+            is TraceOutputMode.BinaryTcpStream -> {
                 strategy = TcpStreamingTraceCollecting(context)
             }
-            is TraceRecordingMode.Null -> {
+            is TraceOutputMode.Null -> {
                 strategy = NullTraceCollecting(context)
             }
             else -> {

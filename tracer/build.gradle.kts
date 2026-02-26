@@ -1,16 +1,7 @@
-import org.gradle.kotlin.dsl.named
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 repositories {
     mavenCentral()
-}
-
-kotlin {
-    configureKotlin()
-}
-
-java {
-    configureJava()
 }
 
 sourceSets {
@@ -19,7 +10,6 @@ sourceSets {
     }
 
     dependencies {
-        // main
         val asmVersion: String by project
         val byteBuddyVersion: String by project
 
@@ -27,7 +17,6 @@ sourceSets {
         implementation(project(":common"))
         implementation(project(":jvm-agent"))
         implementation(project(":trace"))
-        implementation(project(":tracer"))
 
         api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
@@ -48,14 +37,11 @@ tasks {
     withType<KotlinCompile> {
         getAccessToInternalDefinitionsOf(
             project(":common"),
-            project(":trace"),
-            project(":tracer")
+            project(":trace")
         )
     }
 }
 
-registerTraceAgentTasks(
-    fatJarName = "trace-recorder-fat",
-    fatJarTaskName = "traceRecorderFatJar",
-    premainClass = "org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent"
-)
+val jar = tasks.jar {
+    archiveFileName.set("tracer.jar")
+}

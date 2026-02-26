@@ -8,14 +8,20 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.recorder
+package org.jetbrains.lincheck.tracer
 
-import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.trace.INDEX_FILENAME_EXT
+import org.jetbrains.lincheck.trace.PACK_FILENAME_EXT
+import org.jetbrains.lincheck.trace.TcpTraceServer
+import org.jetbrains.lincheck.trace.TraceMetaInfo
+import org.jetbrains.lincheck.trace.printPostProcessedTrace
+import org.jetbrains.lincheck.trace.packRecordedTrace
+import org.jetbrains.lincheck.trace.saveRecorderTrace
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
 
-class TraceRecorderSession(
+class TracingSession(
     val eventTracker: TraceCollectingEventTracker,
     val tcpServer: TcpTraceServer? = null
 ) {
@@ -38,6 +44,7 @@ class TraceRecorderSession(
      * This class hierarchy denotes various modes of trace recorder session.
      *
      * - [FromMethod] means that the tracing was started from a specific method.
+     * - [Static] means that the tracing was started from the application startup.
      * - [Dynamic] means that the tracing was started dynamically by external request during application run.
      */
     sealed class StartMode {
@@ -48,6 +55,7 @@ class TraceRecorderSession(
             val startingCodeLocationId: Int,
         ) : StartMode()
 
+        object Static : StartMode()
         object Dynamic : StartMode()
     }
 
@@ -58,13 +66,13 @@ class TraceRecorderSession(
     /**
      * Gets the current mode if the session is running or finished.
      */
-    internal val startMode: StartMode? = when (val s = state) {
+    internal val startMode: StartMode? get() = when (val s = state) {
         is State.NotStarted -> null
         is State.InProgress -> s.startMode
         is State.Finished   -> s.startMode
     }
 
-    private val finishHook = AtomicReference<TraceRecorderSession.() -> Unit>()
+    private val finishHook = AtomicReference<TracingSession.() -> Unit>()
 
     /**
      * Checks if the session has been started.
@@ -81,30 +89,14 @@ class TraceRecorderSession(
      */
     fun isFinished(): Boolean = state is State.Finished
 
-    /**
-     * Starts the tracing session dynamically.
-     */
-    fun startDynamic() {
+    fun start(mode: StartMode) {
         val currentState = state
-        check(currentState is State.NotStarted)
-
-        val startTime = System.currentTimeMillis()
+        check(currentState is State.NotStarted) {
+            "Cannot start tracing session: it is already started"
+        }
         state = State.InProgress(
-            startMode = StartMode.Dynamic,
-            startTime = startTime,
-        )
-    }
-
-    /**
-     * Starts the tracing session from a specific method.
-     */
-    fun startFromMethod(thread: Thread, className: String, methodName: String, startingCodeLocationId: Int) {
-        val currentState = state
-        check(currentState is State.NotStarted)
-
-        state = State.InProgress(
-            startMode = StartMode.FromMethod(thread, className, methodName, startingCodeLocationId),
-            startTime = System.currentTimeMillis(),
+            startMode = mode,
+            startTime = System.currentTimeMillis()
         )
     }
 
@@ -135,7 +127,7 @@ class TraceRecorderSession(
         }
     }
 
-    fun installOnFinishHook(hook: TraceRecorderSession.() -> Unit) {
+    fun installOnFinishHook(hook: TracingSession.() -> Unit) {
         val wasAlreadySet = !finishHook.compareAndSet(null, hook)
         if (wasAlreadySet) {
             error("Finish hook was already set for this session")
@@ -154,10 +146,10 @@ class TraceRecorderSession(
 
         var className: String? = null
         var methodName: String? = null
-        when (startMode) {
+        when (val mode = startMode) {
             is StartMode.FromMethod -> {
-                className = startMode.className
-                methodName = startMode.methodName
+                className = mode.className
+                methodName = mode.methodName
             }
             else -> {}
         }
@@ -174,13 +166,13 @@ class TraceRecorderSession(
         try {
             val roots = eventTracker.getThreadRoots()
             when (mode) {
-                is TraceRecordingMode.BinaryFileDump -> {
+                is TraceOutputMode.BinaryFileDump -> {
                     saveRecorderTrace(traceDumpFilePath, context, roots)
                     if (packTrace) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                is TraceRecordingMode.BinaryFileStream -> {
+                is TraceOutputMode.BinaryFileStream -> {
                     check(traceDumpFilePath == eventTracker.traceStreamingFilePath) {
                         // TODO: it should be easy to support dumping to a different file later: just copy file
                         "Trace dump filename in binary stream mode should match the filename of streaming file"
@@ -189,21 +181,21 @@ class TraceRecorderSession(
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                is TraceRecordingMode.BinaryTcpStream -> {
+                is TraceOutputMode.BinaryTcpStream -> {
                     // TCP streaming - trace already sent over network, nothing to dump to file
                     error("Trace is streamed over TCP, no data stored to save into a file")
                 }
-                is TraceRecordingMode.Text -> {
+                is TraceOutputMode.Text -> {
                     printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)
                 }
-                TraceRecordingMode.Null -> {}
+                TraceOutputMode.Null -> {}
             }
             Logger.info { "Trace was saved to $traceDumpFilePath" }
         } catch (t: Throwable) {
             Logger.error { "TraceRecorder: Cannot write output file $traceDumpFilePath: ${t.message} at ${t.stackTraceToString()}" }
             return
         } finally {
-            if (mode != TraceRecordingMode.Null) {
+            if (mode != TraceOutputMode.Null) {
                 Logger.debug { "Trace written in ${System.currentTimeMillis() - traceWriteStartTime} ms" }
             }
         }
@@ -212,8 +204,8 @@ class TraceRecorderSession(
     private fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo) {
         packRecordedTrace(
             dataFileName = baseFileName,
-            indexFileName = "$baseFileName.$INDEX_FILENAME_EXT",
-            outputFileName = "$baseFileName.$PACK_FILENAME_EXT",
+            indexFileName = "$baseFileName.${INDEX_FILENAME_EXT}",
+            outputFileName = "$baseFileName.${PACK_FILENAME_EXT}",
             metaInfo = metaInfo,
         )
     }

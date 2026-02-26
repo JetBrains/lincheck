@@ -8,19 +8,19 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.jvm.agent
+package org.jetbrains.lincheck.settings
 
 import org.jetbrains.lincheck.util.*
 import java.io.File
 import java.util.*
 
-class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint>) {
+class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint> = emptyList()) {
 
     val lineBreakPoints: List<SnapshotBreakpoint>
         get() = synchronized(_lineBreakPoints) { _lineBreakPoints.toList() }
 
     private val _lineBreakPoints: MutableList<SnapshotBreakpoint> =
-        Collections.synchronizedList(lineBreakPoints)
+        Collections.synchronizedList(lineBreakPoints.toMutableList())
 
     fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
         val addedBreakpoints = mutableListOf<SnapshotBreakpoint>()
@@ -43,7 +43,8 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint>) {
         }
         return removedBreakpoints
     }
-override fun equals(other: Any?): Boolean {
+
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is LiveDebuggerSettings) return false
 

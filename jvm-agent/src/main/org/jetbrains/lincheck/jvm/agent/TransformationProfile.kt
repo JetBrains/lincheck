@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent
 import org.jetbrains.lincheck.jvm.agent.transformers.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.liveDebuggerSettings
+import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.util.*
 
 interface TransformationProfile {
@@ -716,6 +717,10 @@ class LiveDebuggerTransformationProfile(
 ) : TransformationProfile {
 
     override fun shouldTransform(className: String): Boolean {
+        // In the live debugging mode, we do not instrument Java/Kotlin stdlib classes
+        // to avoid potential `ClassCircularityError` issues
+        if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
+
         return isLiveDebuggerBreakpointClass(className)
     }
 

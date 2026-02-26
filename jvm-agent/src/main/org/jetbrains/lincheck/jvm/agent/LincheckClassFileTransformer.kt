@@ -18,6 +18,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClas
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.transformationProfile
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
@@ -48,7 +49,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
     
-    val liveDebuggerSettings = LiveDebuggerSettings(mutableListOf())
+    val liveDebuggerSettings = LiveDebuggerSettings()
 
     override fun transform(
         loader: ClassLoader?,

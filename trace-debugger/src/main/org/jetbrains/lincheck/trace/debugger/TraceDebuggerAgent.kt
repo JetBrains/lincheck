@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.trace.debugger
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
+import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
@@ -46,7 +46,7 @@ object TraceDebuggerAgent {
 
         // We are in Trace debugger mode
         LincheckInstrumentation.instrumentation.addTransformer(
-            /* transformer = */ TraceAgentTransformer(
+            /* transformer = */ TracingEntryPointTransformer(
                 LincheckInstrumentation.context,
                 ::TraceDebuggerMethodTransformer,
                 classUnderTracing = TraceAgentParameters.classUnderTraceDebugging,
