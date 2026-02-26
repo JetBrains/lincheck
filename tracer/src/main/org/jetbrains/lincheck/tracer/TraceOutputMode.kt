@@ -42,7 +42,7 @@ sealed class TraceOutputMode {
      * listening for incoming reader connections on an assigned port.
      * Multiple readers can connect and receive the trace data simultaneously.
      */
-    object BinaryTcpStream : TraceOutputMode()
+    class BinaryTcpStream(val onDisconnect: () -> Unit) : TraceOutputMode()
 
     /**
      * Throws away all recorded trace data.

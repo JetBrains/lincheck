@@ -217,6 +217,7 @@ object Tracer {
                 tcpServer = TcpTraceServer(
                     port = TraceAgentParameters.DEFAULT_TRACE_PORT,
                     subscriptionService = eventTracker.subscriptionService!!,
+                    onDisconnected = { mode.onDisconnect() }
                 )
                 Logger.info { "Started TCP trace streaming server on port ${tcpServer.port}" }
             } catch (t: Throwable) {

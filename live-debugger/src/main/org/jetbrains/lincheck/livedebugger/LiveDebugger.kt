@@ -103,4 +103,15 @@ internal object LiveDebugger {
 
         LincheckInstrumentation.retransformClasses(classesToRetransform)
     }
+    
+    fun removeAllBreakpoints() {
+        Logger.info { "Removing all breakpoints" }
+
+        val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings.removeAllBreakpoints()
+        val classNamesToRetransform = removedBreakpoints.map { it.className }.toSet()
+        val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
+            .filter { it.name in classNamesToRetransform }
+
+        LincheckInstrumentation.retransformClasses(classesToRetransform)
+    }
 }
