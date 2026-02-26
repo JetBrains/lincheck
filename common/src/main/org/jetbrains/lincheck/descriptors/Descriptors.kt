@@ -27,6 +27,7 @@ import java.lang.reflect.Field
 interface Descriptor {
     abstract class Key
 
+    val id: Int
     val key: Key
 }
 
@@ -36,7 +37,7 @@ open class ClassDescriptor(
 ) : Descriptor {
     data class Key(val className: String) : Descriptor.Key()
 
-    open val id: Int get() = context!!.classPool.getId(key)
+    override val id: Int get() = context!!.classPool.getId(key)
     override val key: Descriptor.Key get() = Key(name)
 }
 
@@ -60,7 +61,7 @@ data class MethodDescriptor(
     /**
      * @return id of this descriptor in the method pool, or -1 if this descriptor is not registered yet.
      */
-    val id: Int get() = if (context.methodPool.contains(key)) context.methodPool.getId(key) else -1
+    override val id: Int get() = if (context.methodPool.contains(key)) context.methodPool.getId(key) else -1
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
     val methodName: String get() = methodSignature.name
@@ -90,7 +91,7 @@ data class FieldDescriptor(
     /**
      * @return id of this descriptor in the field pool, or -1 if this descriptor is not registered yet.
      */
-    val id: Int get() = if (context.fieldPool.contains(key)) context.fieldPool.getId(key) else -1
+    override val id: Int get() = if (context.fieldPool.contains(key)) context.fieldPool.getId(key) else -1
     val isStatic: Boolean get() = fieldKind == FieldKind.STATIC
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
@@ -125,7 +126,7 @@ data class VariableDescriptor(
 ) : Descriptor {
     data class Key(val name: String, val type: Types.Type) : Descriptor.Key()
 
-    val id: Int get() = context.variablePool.getId(key)
+    override val id: Int get() = context.variablePool.getId(key)
     override val key: Descriptor.Key get() = Key(name, type)
 }
 
