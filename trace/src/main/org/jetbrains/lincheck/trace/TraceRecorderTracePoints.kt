@@ -10,29 +10,21 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.AccessPath
-import org.jetbrains.lincheck.descriptors.ActiveLocal
-import org.jetbrains.lincheck.descriptors.ClassDescriptor
-import org.jetbrains.lincheck.descriptors.ClassDescriptorWithNoContext
-import org.jetbrains.lincheck.descriptors.CodeLocations
-import org.jetbrains.lincheck.descriptors.FieldDescriptor
-import org.jetbrains.lincheck.descriptors.MethodDescriptor
-import org.jetbrains.lincheck.descriptors.VariableDescriptor
-import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRCatchTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLineBreakpointSnapshotTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLoopIterationTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLoopTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
-import org.jetbrains.lincheck.trace.DefaultTRLineBreakpointSnapshotTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRThrowTracePointPrinter.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.util.EnumSet
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
@@ -951,11 +943,11 @@ sealed class TRValue {
 }
 
 @ConsistentCopyVisibility
-data class TRObject private constructor(
+data class TRObject internal constructor(
     override val classNameId: Int,
     override val identityHashCode: Int,
     override val className: String,
-    val fields: Map<String, TRValue?>,
+    val fields: Map<String, TRValue?> = emptyMap(),
 ) : TRValue() {
     internal constructor(classNameId: Int, identityHashCode: Int, cd: ClassDescriptor, fields: Map<String, TRValue?> = emptyMap()):
             this(classNameId, identityHashCode, cd.name, fields)
@@ -1031,8 +1023,8 @@ const val TR_OBJECT_P_JAVA_CLASS = -14
 const val TR_OBJECT_P_KOTLIN_CLASS = -15
 const val TR_OBJECT_P_STRING_BUILDER = -16
 
-val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, ClassDescriptorWithNoContext("null", id = TR_OBJECT_NULL_CLASSNAME))
-val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, ClassDescriptorWithNoContext("void", id = TR_OBJECT_VOID_CLASSNAME))
+val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, "null")
+val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, "void")
 
 fun TRObjectOrNull(context: TraceContext, obj: Any?): TRValue? =
     obj?.let { TRValue(context, it) }
