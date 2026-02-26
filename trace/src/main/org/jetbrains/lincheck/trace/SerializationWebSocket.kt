@@ -108,6 +108,14 @@ class WebSocketStreamingTraceCollecting(
         Logger.info { "Removed WebSocket trace subscriber." }
     }
 
+    override fun clearBuffers() {
+        val cleared = tracePointQueue.size
+        tracePointQueue.clear()
+        if (cleared > 0) {
+            Logger.info { "Cleared $cleared trace points from the queue" }
+        }
+    }
+
     override fun hasSubscriber(): Boolean {
         return subscriber?.conn?.isOpen == true
     }
@@ -256,6 +264,12 @@ interface WebSocketTraceSubscriptionService {
     fun addSubscriber(conn: WebSocket): TraceSubscriber?
     fun removeSubscriber(subscriber: TraceSubscriber)
     fun hasSubscriber(): Boolean
+
+    /**
+     * Clears any buffered trace data (e.g., the trace point queue).
+     * Called when a client disconnects to free resources.
+     */
+    fun clearBuffers()
 }
 
 /**

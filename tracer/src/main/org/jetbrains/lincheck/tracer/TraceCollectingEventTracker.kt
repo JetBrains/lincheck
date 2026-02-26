@@ -182,7 +182,7 @@ class TraceCollectingEventTracker(
                 check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
                 strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
             }
-            is TraceOutputMode.BinaryTcpStream -> {
+            is TraceOutputMode.BinaryWebSocketStream -> {
                 strategy = WebSocketStreamingTraceCollecting(context)
             }
             is TraceOutputMode.Null -> {

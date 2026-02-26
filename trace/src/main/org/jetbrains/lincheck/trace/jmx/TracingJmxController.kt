@@ -29,7 +29,7 @@ interface TracingJmxController {
      * listening for incoming reader connections on an automatically assigned port.
      * Clients should connect to this port using [WebSocketTraceReader] class.
      */
-    fun startTcpTracing()
+    fun startWebSocketTracing()
 
     /**
      * Stops the current tracing operation.

@@ -75,10 +75,10 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
         }
     }
 
-    override fun startTcpTracing() {
+    override fun startWebSocketTracing() {
         try {
             Tracer.startTracing(
-                outputMode = TraceOutputMode.BinaryTcpStream(onDisconnect = ::onWebSocketDisconnect),
+                outputMode = TraceOutputMode.BinaryWebSocketStream(onDisconnect = ::onWebSocketDisconnect),
                 startMode = TracingSession.StartMode.Dynamic,
             )
             Logger.info { "WebSocket trace streaming session has been started" }

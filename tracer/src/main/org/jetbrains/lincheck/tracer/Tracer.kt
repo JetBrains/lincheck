@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.tracer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
-import org.jetbrains.lincheck.trace.TcpTraceServer
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.WebSocketTraceServer
 import org.jetbrains.lincheck.util.Logger
@@ -212,20 +211,23 @@ object Tracer {
             traceStreamingFilePath = (mode as? TraceOutputMode.BinaryFileStream)?.streamingFilePath
         )
 
-        var tcpServer: WebSocketTraceServer? = null
-        if (mode is TraceOutputMode.BinaryTcpStream) {
+        var wsServer: WebSocketTraceServer? = null
+        if (mode is TraceOutputMode.BinaryWebSocketStream) {
             try {
-                tcpServer = WebSocketTraceServer(
+                wsServer = WebSocketTraceServer(
                     port = TraceAgentParameters.DEFAULT_TRACE_PORT,
                     subscriptionService = eventTracker.subscriptionService!!,
-                    onDisconnected = { mode.onDisconnect() }
+                    onDisconnected = { 
+                        mode.onDisconnect() 
+                        eventTracker.subscriptionService.clearBuffers()
+                    }
                 )
-                Logger.info { "Started TCP trace streaming server on port ${tcpServer.port}" }
+                Logger.info { "Started TCP trace streaming server on port ${wsServer.port}" }
             } catch (t: Throwable) {
                 Logger.error(t) { "Cannot start TCP trace trace server" }
             }
         }
 
-        return TracingSession(eventTracker, tcpServer)
+        return TracingSession(eventTracker, wsServer)
     }
 }

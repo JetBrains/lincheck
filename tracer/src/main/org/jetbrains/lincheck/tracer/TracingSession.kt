@@ -181,7 +181,7 @@ class TracingSession(
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                is TraceOutputMode.BinaryTcpStream -> {
+                is TraceOutputMode.BinaryWebSocketStream -> {
                     // WebSocket streaming - trace already sent over network, nothing to dump to file
                     error("Trace is streamed over WebSocket, no data stored to save into a file")
                 }
