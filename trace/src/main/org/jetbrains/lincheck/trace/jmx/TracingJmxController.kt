@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.trace.jmx
 
-import org.jetbrains.lincheck.trace.WebSocketTraceReader
+import org.jetbrains.lincheck.trace.NetworkTraceReader
 
 interface TracingJmxController {
 
@@ -27,9 +27,9 @@ interface TracingJmxController {
      *
      * The trace producer acts as a server,
      * listening for incoming reader connections on an automatically assigned port.
-     * Clients should connect to this port using [WebSocketTraceReader] class.
+     * Clients should connect to this port using [NetworkTraceReader] class.
      */
-    fun startWebSocketTracing()
+    fun startNetworkTracing()
 
     /**
      * Stops the current tracing operation.

@@ -42,7 +42,7 @@ sealed class TraceOutputMode {
      * listening for incoming reader connections on an assigned port.
      * Multiple readers can connect and receive the trace data simultaneously.
      */
-    class BinaryWebSocketStream(val onDisconnect: () -> Unit) : TraceOutputMode()
+    class BinaryNetworkStream(val onDisconnect: () -> Unit) : TraceOutputMode()
 
     /**
      * Throws away all recorded trace data.

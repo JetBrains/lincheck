@@ -31,7 +31,7 @@ import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 
 /**
- * WebSocket-based trace collecting strategy that streams trace data to a single subscriber.
+ * Network-based trace collecting strategy that streams trace data to a single subscriber.
  *
  * This class maintains a single subscriber that receives trace data.
  * Recorded trace points are first written into a bounded queue
@@ -45,10 +45,10 @@ import kotlin.concurrent.withLock
  * @param context the trace context containing descriptors and metadata
  * @param queueCapacity the maximum number of trace points to the buffer.
  */
-class WebSocketStreamingTraceCollecting(
+class NetworkStreamingTraceCollecting(
     val context: TraceContext,
     private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
-) : TraceCollectingStrategy, WebSocketTraceSubscriptionService, Closeable {
+) : TraceCollectingStrategy, NetworkTraceSubscriptionService, Closeable {
 
     @Volatile
     private var subscriber: TraceSubscriber? = null
@@ -62,7 +62,7 @@ class WebSocketStreamingTraceCollecting(
     @Volatile
     private var running = true
 
-    private val writerThread: Thread = thread(name = "WebSocketTraceWriter", isDaemon = true) {
+    private val writerThread: Thread = thread(name = "NetworkTraceWriter", isDaemon = true) {
         writerThreadLoop()
     }
 
@@ -76,7 +76,7 @@ class WebSocketStreamingTraceCollecting(
 
             // Create a trace context state for this subscriber (each subscriber gets an independent state)
             val subscriberContextState = SubscriberContextState()
-            val writer = WebSocketTraceWriter(context, subscriberContextState, outputStream, outputStream)
+            val writer = NetworkTraceWriter(context, subscriberContextState, outputStream, outputStream)
 
             // Send header as a binary WebSocket message
             outputStream.writeLong(TRACE_MAGIC)
@@ -86,7 +86,7 @@ class WebSocketStreamingTraceCollecting(
 
             val newSubscriber = TraceSubscriber(conn, byteStream, outputStream, writer)
             subscriber = newSubscriber
-            Logger.info { "Added WebSocket trace subscriber from ${conn.remoteSocketAddress}." }
+            Logger.info { "Added Network trace subscriber from ${conn.remoteSocketAddress}." }
 
             return newSubscriber
         } catch (e: Exception) {
@@ -260,7 +260,7 @@ class WebSocketStreamingTraceCollecting(
     }
 }
 
-interface WebSocketTraceSubscriptionService {
+interface NetworkTraceSubscriptionService {
     fun addSubscriber(conn: WebSocket): TraceSubscriber?
     fun removeSubscriber(subscriber: TraceSubscriber)
     fun hasSubscriber(): Boolean
@@ -285,7 +285,7 @@ class TraceSubscriber internal constructor(
     val conn: WebSocket,
     internal val byteStream: ByteArrayOutputStream,
     val outputStream: DataOutputStream,
-    internal val writer: WebSocketTraceWriter,
+    internal val writer: NetworkTraceWriter,
     val connectedAt: Long = System.currentTimeMillis(),
 ) : Closeable {
 
@@ -333,7 +333,7 @@ private class SubscriberContextState : ContextSavingState {
  * Trace writer for trace WebSocket streaming.
  * Performs simple direct writes to a [DataOutputStream] without buffering.
  */
-internal class WebSocketTraceWriter(
+internal class NetworkTraceWriter(
     context: TraceContext,
     contextState: ContextSavingState,
     dataOutput: DataOutput,
@@ -365,7 +365,7 @@ internal typealias SnapshotLineBreakpointListener = (TRSnapshotLineBreakpointTra
  * @param serverUri the WebSocket server URI to connect to (e.g., "ws://localhost:5555").
  */
 // TODO refactor/remove state logic (is it needed / worth the added complexity?)
-class WebSocketTraceReader(private val serverUri: URI) : Closeable {
+class NetworkTraceReader(private val serverUri: URI) : Closeable {
     
     val context: TraceContext =
         TraceContext()
@@ -553,9 +553,9 @@ class WebSocketTraceReader(private val serverUri: URI) : Closeable {
 
                 when (kind) {
                     ObjectKind.EOF -> {
-                        _state.getAndUpdate { it.toEof() }
+                        val state = _state.getAndUpdate { it.toEof() }
                         Logger.debug { "WebSocket trace EOF reached. Total trace points read: ${threadTracePoints.values.sumOf { it.size }}" }
-                        _state.get().onDisconnect()
+                        state.onDisconnect()
                         return
                     }
 
@@ -648,15 +648,15 @@ class WebSocketTraceReader(private val serverUri: URI) : Closeable {
 /**
  * WebSocket server that listens for incoming trace reader connections.
  *
- * The server maintains a [WebSocketStreamingTraceCollecting] instance
+ * The server maintains a [NetworkStreamingTraceCollecting] instance
  * and registers incoming connections as subscribers to receive trace data.
  *
  * @param port the port to listen on (0 for any available port)
  * @param subscriptionService the service to register trace data subscribers.
  */
-class WebSocketTraceServer(
+class NetworkTraceServer(
     port: Int,
-    val subscriptionService: WebSocketTraceSubscriptionService,
+    val subscriptionService: NetworkTraceSubscriptionService,
     private val onDisconnected: (() -> Unit)? = null,
 ) : Closeable {
 
@@ -668,6 +668,11 @@ class WebSocketTraceServer(
      * The actual port the server is listening on.
      */
     val port: Int get() = wsServer.port
+
+    /**
+     * The WebSocket URL of this server (e.g., "ws://localhost:5555").
+     */
+    val url: String get() = "ws://${wsServer.address.hostString}:${wsServer.port}"
 
     init {
         wsServer = object : WebSocketServer(InetSocketAddress(port)) {
