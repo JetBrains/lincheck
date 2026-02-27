@@ -86,6 +86,10 @@ fun isByteBuddyClass(className: String): Boolean =
     // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
     className.startsWith(listOf("net", "bytebuddy").joinToString("."))
 
+fun isJavaWebSocketClass(className: String): Boolean =
+    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
+    className.startsWith(listOf("org", "java_websocket").joinToString("."))
+
 /**
  * Checks whether the given class name belongs to the Gradle framework.
  */

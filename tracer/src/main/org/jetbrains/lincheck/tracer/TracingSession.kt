@@ -13,8 +13,8 @@ package org.jetbrains.lincheck.tracer
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.INDEX_FILENAME_EXT
 import org.jetbrains.lincheck.trace.PACK_FILENAME_EXT
-import org.jetbrains.lincheck.trace.TcpTraceServer
 import org.jetbrains.lincheck.trace.TraceMetaInfo
+import org.jetbrains.lincheck.trace.NetworkTraceServer
 import org.jetbrains.lincheck.trace.printPostProcessedTrace
 import org.jetbrains.lincheck.trace.packRecordedTrace
 import org.jetbrains.lincheck.trace.saveRecorderTrace
@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 class TracingSession(
     val eventTracker: TraceCollectingEventTracker,
-    val tcpServer: TcpTraceServer? = null
+    val networkServer: NetworkTraceServer? = null
 ) {
     internal sealed class State {
         object NotStarted : State()
@@ -115,15 +115,15 @@ class TracingSession(
         )
         Logger.debug { "Trace collected in ${endTime - currentState.startTime} ms" }
 
-        stopTcpServer()
+        stopNetworkServer()
         finishHook.get()?.invoke(this)
     }
 
-    private fun stopTcpServer() {
+    private fun stopNetworkServer() {
         try {
-            tcpServer?.close()
+            networkServer?.close()
         } catch (t: Throwable) {
-            Logger.error(t) { "Cannot stop TCP trace server" }
+            Logger.error(t) { "Cannot stop WebSocket trace server" }
         }
     }
 
@@ -181,9 +181,9 @@ class TracingSession(
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
                 }
-                is TraceOutputMode.BinaryTcpStream -> {
-                    // TCP streaming - trace already sent over network, nothing to dump to file
-                    error("Trace is streamed over TCP, no data stored to save into a file")
+                is TraceOutputMode.BinaryNetworkStream -> {
+                    // WebSocket streaming - trace already sent over network, nothing to dump to file
+                    error("Trace is streamed over WebSocket, no data stored to save into a file")
                 }
                 is TraceOutputMode.Text -> {
                     printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)

@@ -20,8 +20,9 @@ sourceSets {
     }
 
     dependencies {
+        val javaWebSocketVersion: String by project
         implementation(project(":common"))
-
+        implementation("org.java-websocket:Java-WebSocket:${javaWebSocketVersion}")
         testImplementation(project(":common"))
     }
 }

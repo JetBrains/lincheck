@@ -13,8 +13,8 @@ package org.jetbrains.lincheck.tracer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
-import org.jetbrains.lincheck.trace.TcpTraceServer
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.NetworkTraceServer
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.unreachable
@@ -211,19 +211,23 @@ object Tracer {
             traceStreamingFilePath = (mode as? TraceOutputMode.BinaryFileStream)?.streamingFilePath
         )
 
-        var tcpServer: TcpTraceServer? = null
-        if (mode is TraceOutputMode.BinaryTcpStream) {
+        var networkServer: NetworkTraceServer? = null
+        if (mode is TraceOutputMode.BinaryNetworkStream) {
             try {
-                tcpServer = TcpTraceServer(
+                networkServer = NetworkTraceServer(
                     port = TraceAgentParameters.DEFAULT_TRACE_PORT,
                     subscriptionService = eventTracker.subscriptionService!!,
+                    onDisconnected = { 
+                        mode.onDisconnect() 
+                        eventTracker.subscriptionService.clearBuffers()
+                    }
                 )
-                Logger.info { "Started TCP trace streaming server on port ${tcpServer.port}" }
+                Logger.info { "Started trace streaming server on at ${networkServer.url}" }
             } catch (t: Throwable) {
-                Logger.error(t) { "Cannot start TCP trace trace server" }
+                Logger.error(t) { "Cannot start trace server" }
             }
         }
 
-        return TracingSession(eventTracker, tcpServer)
+        return TracingSession(eventTracker, networkServer)
     }
 }

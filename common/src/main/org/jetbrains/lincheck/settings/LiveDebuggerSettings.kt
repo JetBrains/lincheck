@@ -44,7 +44,15 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint> = emptyList
         return removedBreakpoints
     }
 
-    override fun equals(other: Any?): Boolean {
+    fun removeAllBreakpoints(): List<SnapshotBreakpoint> {
+        synchronized(_lineBreakPoints) {
+            val removed = _lineBreakPoints.toList()
+            _lineBreakPoints.clear()
+            return removed
+        }
+    }
+    
+override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is LiveDebuggerSettings) return false
 

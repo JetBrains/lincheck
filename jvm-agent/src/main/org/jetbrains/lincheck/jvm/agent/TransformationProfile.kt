@@ -757,7 +757,7 @@ private fun isRecognizedUninstrumentedClass(className: String): Boolean {
 
     // Do not instrument bytecode-manipulation libraries
     // (special care required to circumvent package shadowing, see `TraceAgentTasks.kt`).
-    if (isAsmClass(className) || isByteBuddyClass(className)) return true
+    if (isAsmClass(className) || isByteBuddyClass(className) || isJavaWebSocketClass(className)) return true
 
     // We can also safely do not instrument some libraries for performance reasons.
     if (isGradleClass(className)) return true

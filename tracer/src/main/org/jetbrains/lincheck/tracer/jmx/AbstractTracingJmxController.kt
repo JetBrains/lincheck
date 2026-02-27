@@ -27,6 +27,8 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
 
     protected open val mbeanInterface: Class<out TracingJmxController>
         get() = TracingJmxController::class.java
+    
+    abstract fun onStreamingDisconnect()
 
     override fun register() {
         // register JMX MBean
@@ -73,15 +75,15 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
         }
     }
 
-    override fun startTcpTracing() {
+    override fun startNetworkTracing() {
         try {
             Tracer.startTracing(
-                outputMode = TraceOutputMode.BinaryTcpStream,
+                outputMode = TraceOutputMode.BinaryNetworkStream(onDisconnect = ::onStreamingDisconnect),
                 startMode = TracingSession.StartMode.Dynamic,
             )
-            Logger.info { "TCP trace streaming session has been started" }
+            Logger.info { "WebSocket trace streaming session has been started" }
         } catch (t: Throwable) {
-            Logger.error(t) { "Cannot start TCP trace streaming" }
+            Logger.error(t) { "Cannot start WebSocket trace streaming" }
         }
     }
 
