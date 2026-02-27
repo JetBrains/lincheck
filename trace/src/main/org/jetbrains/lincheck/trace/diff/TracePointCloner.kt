@@ -208,23 +208,27 @@ class TracePointCloner(
     private fun TRValue.clone(): TRValue = when (this) {
         is TRPrimitive -> TRPrimitive(classNameId, identityHashCode, primitiveValue)
         is TRArray -> {
-            val cid = context.getOrCreateClassId(className)
-            TRArray(cid, identityHashCode, context.getClassDescriptor(cid), totalSize, capturedElements.clone())
+            val cd = context.createAndRegisterClassDescriptor(className)
+            TRArray(cd.id, identityHashCode, cd, totalSize, capturedElements.clone())
         }
         is TRObject -> {
-            val cid = context.getOrCreateClassId(className)
-            TRObject(cid, identityHashCode, context.getClassDescriptor(cid), fields.clone()) 
+            val cd = context.createAndRegisterClassDescriptor(className)
+            TRObject(cd.id, identityHashCode, cd, fields.clone())
         }
     }
 
     private fun VariableDescriptor.clone(): Int =
-        context.getOrCreateVariableId(this.name, this.type)
+        context.createAndRegisterVariableDescriptor(name, type).id
 
     private fun FieldDescriptor.clone(): Int =
-        context.getOrCreateFieldId(this.className, this.fieldName, this.type, this.isStatic, this.isFinal)
+        context.createAndRegisterFieldDescriptor(
+            className, fieldName, type, fieldKind, isFinal
+        ).id
 
     private fun MethodDescriptor.clone(): Int =
-        context.getOrCreateMethodId(this.className, this.methodName, this.methodSignature.methodType)
+        context.createAndRegisterMethodDescriptor(
+            className, methodName, methodSignature.methodType
+        ).id
 
     private fun List<TRValue?>.clone(): List<TRValue?> {
         val result = mutableListOf<TRValue?>()
@@ -240,9 +244,9 @@ class TracePointCloner(
 
     private fun AccessLocation.clone(): AccessLocation =
         when (this) {
-            is LocalVariableAccessLocation -> LocalVariableAccessLocation(context.getVariableDescriptor(this.variableDescriptor.clone()))
-            is StaticFieldAccessLocation -> StaticFieldAccessLocation(context.getFieldDescriptor(this.fieldDescriptor.clone()))
-            is ObjectFieldAccessLocation -> ObjectFieldAccessLocation(context.getFieldDescriptor(this.fieldDescriptor.clone()))
+            is LocalVariableAccessLocation -> LocalVariableAccessLocation(context.variablePool[this.variableDescriptor.clone()])
+            is StaticFieldAccessLocation -> StaticFieldAccessLocation(context.fieldPool[this.fieldDescriptor.clone()])
+            is ObjectFieldAccessLocation -> ObjectFieldAccessLocation(context.fieldPool[this.fieldDescriptor.clone()])
             is ArrayElementByIndexAccessLocation -> this
             is ArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(cloneAccessPath(this.indexAccessPath)!!)
             else -> throw IllegalArgumentException("Unsupported access location $this")

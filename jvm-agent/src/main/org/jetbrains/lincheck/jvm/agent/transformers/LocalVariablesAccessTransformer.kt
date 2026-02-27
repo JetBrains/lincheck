@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.Types.convertAsmMethodType
+import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.*
 import org.objectweb.asm.*
@@ -118,7 +119,10 @@ internal class LocalVariablesAccessTransformer(
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         loadNewCodeLocationId()
-        val variableId = context.getOrCreateVariableId(variableInfo.name, Types.convertAsmTypeName(variableInfo.type))
+        val variableId = context.createAndRegisterVariableDescriptor(
+            variableInfo.name,
+            Types.convertAsmTypeName(variableInfo.type)
+        ).id
         push(variableId)
         // VerifyError with `loadLocal(..)`, here is a workaround
         visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)

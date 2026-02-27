@@ -19,8 +19,7 @@ fun MethodDescriptor.isArraysCopyOfIntrinsic(): Boolean {
         methodName == "copyOf" &&
         (
             returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, Types.INT_TYPE) ||
-            returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE,
-                Types.INT_TYPE, CLASS_TYPE) ||
+            returnType == ARRAY_OF_OBJECTS_TYPE && argumentTypes == listOf(ARRAY_OF_OBJECTS_TYPE, Types.INT_TYPE, CLASS_TYPE) ||
             ARRAY_OF_PRIMITIVE_TYPES.any { returnType == it && argumentTypes == listOf(it, Types.INT_TYPE) }
         )
     )

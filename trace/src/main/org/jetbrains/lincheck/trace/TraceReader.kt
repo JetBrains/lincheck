@@ -301,9 +301,9 @@ internal fun loadClassDescriptor(
     restore: Boolean
 ): Int {
     val id = input.readInt()
-    val descriptor = input.readClassDescriptor()
+    val descriptor = input.readClassDescriptor(context)
     if (restore) {
-        context.restoreClassDescriptor(id, descriptor)
+        context.classPool.restore(id, descriptor)
     }
     return id
 }
@@ -316,7 +316,7 @@ internal fun loadMethodDescriptor(
     val id = input.readInt()
     val descriptor = input.readMethodDescriptor(context)
     if (restore)
-        context.restoreMethodDescriptor(id, descriptor)
+        context.methodPool.restore(id, descriptor)
     return id
 }
 
@@ -327,8 +327,9 @@ internal fun loadFieldDescriptor(
 ): Int {
     val id = input.readInt()
     val descriptor = input.readFieldDescriptor(context)
-    if (restore)
-        context.restoreFieldDescriptor(id, descriptor)
+    if (restore) {
+        context.fieldPool.restore(id, descriptor)
+    }
     return id
 }
 
@@ -338,9 +339,10 @@ internal fun loadVariableDescriptor(
     restore: Boolean
 ): Int {
     val id = input.readInt()
-    val descriptor = input.readVariableDescriptor()
-    if (restore)
-        context.restoreVariableDescriptor(id, descriptor)
+    val descriptor = input.readVariableDescriptor(context)
+    if (restore) {
+        context.variablePool.restore(id, descriptor)
+    }
     return id
 }
 

@@ -10,28 +10,21 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.AccessPath
-import org.jetbrains.lincheck.descriptors.ActiveLocal
-import org.jetbrains.lincheck.descriptors.ClassDescriptor
-import org.jetbrains.lincheck.descriptors.CodeLocations
-import org.jetbrains.lincheck.descriptors.FieldDescriptor
-import org.jetbrains.lincheck.descriptors.MethodDescriptor
-import org.jetbrains.lincheck.descriptors.VariableDescriptor
-import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRCatchTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLineBreakpointSnapshotTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLoopIterationTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLoopTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
-import org.jetbrains.lincheck.trace.DefaultTRLineBreakpointSnapshotTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRThrowTracePointPrinter.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.util.EnumSet
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
@@ -272,7 +265,7 @@ class TRMethodCallTracePoint(
     var exceptionClassName: String? = null
 
     // TODO Make parametrized
-    val methodDescriptor: MethodDescriptor get() = context.getMethodDescriptor(methodId)
+    val methodDescriptor: MethodDescriptor get() = context.methodPool[methodId]
     val classDescriptor: ClassDescriptor get() = methodDescriptor.classDescriptor
 
     // Shortcuts
@@ -535,7 +528,7 @@ sealed class TRFieldTracePoint(
     internal abstract fun accessSymbol(): String
 
     // TODO Make parametrized
-    val fieldDescriptor: FieldDescriptor get() = context.getFieldDescriptor(fieldId)
+    val fieldDescriptor: FieldDescriptor get() = context.fieldPool[fieldId]
     val classDescriptor: ClassDescriptor get() = fieldDescriptor.classDescriptor
 
     // Shortcuts
@@ -630,7 +623,7 @@ sealed class TRLocalVariableTracePoint(
     internal abstract fun accessSymbol(): String
 
     // TODO Make parametrized
-    val variableDescriptor: VariableDescriptor get() = context.getVariableDescriptor(localVariableId)
+    val variableDescriptor: VariableDescriptor get() = context.variablePool[localVariableId]
     val name: String get() = variableDescriptor.name
 
     override fun save(out: TraceWriter) {
@@ -950,11 +943,11 @@ sealed class TRValue {
 }
 
 @ConsistentCopyVisibility
-data class TRObject private constructor(
+data class TRObject internal constructor(
     override val classNameId: Int,
     override val identityHashCode: Int,
     override val className: String,
-    val fields: Map<String, TRValue?>,
+    val fields: Map<String, TRValue?> = emptyMap(),
 ) : TRValue() {
     internal constructor(classNameId: Int, identityHashCode: Int, cd: ClassDescriptor, fields: Map<String, TRValue?> = emptyMap()):
             this(classNameId, identityHashCode, cd.name, fields)
@@ -1008,32 +1001,30 @@ data class TRArray private constructor(
     }
 }
 
-const val TR_OBJECT_NULL_CLASSNAME = -1
-val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, ClassDescriptor("null"))
-
-const val TR_OBJECT_VOID_CLASSNAME = -2
-val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, ClassDescriptor("void"))
-
 const val UNFINISHED_METHOD_RESULT_SYMBOL = "<unfinished method>"
 const val UNTRACKED_METHOD_RESULT_SYMBOL = "<untracked result>"
 val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRPrimitive(TR_OBJECT_P_STRING, 0, UNFINISHED_METHOD_RESULT_SYMBOL)
 val TR_OBJECT_UNTRACKED_METHOD_RESULT = TRPrimitive(TR_OBJECT_P_STRING, 0, UNTRACKED_METHOD_RESULT_SYMBOL)
 
-const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
-const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1
-const val TR_OBJECT_P_INT = TR_OBJECT_P_SHORT - 1
-const val TR_OBJECT_P_LONG = TR_OBJECT_P_INT - 1
-const val TR_OBJECT_P_FLOAT = TR_OBJECT_P_LONG - 1
-const val TR_OBJECT_P_DOUBLE = TR_OBJECT_P_FLOAT - 1
-const val TR_OBJECT_P_CHAR = TR_OBJECT_P_DOUBLE - 1
-const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
-const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
-const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
-const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
-const val TR_OBJECT_P_JAVA_CLASS = TR_OBJECT_P_BOOLEAN - 1
-const val TR_OBJECT_P_KOTLIN_CLASS = TR_OBJECT_P_JAVA_CLASS - 1
-const val TR_OBJECT_P_STRING_BUILDER = TR_OBJECT_P_KOTLIN_CLASS - 1
+const val TR_OBJECT_NULL_CLASSNAME = -1
+const val TR_OBJECT_VOID_CLASSNAME = -2
+const val TR_OBJECT_P_BYTE = -3
+const val TR_OBJECT_P_SHORT = -4
+const val TR_OBJECT_P_INT = -5
+const val TR_OBJECT_P_LONG = -6
+const val TR_OBJECT_P_FLOAT = -7
+const val TR_OBJECT_P_DOUBLE = -8
+const val TR_OBJECT_P_CHAR = -9
+const val TR_OBJECT_P_STRING = -10
+const val TR_OBJECT_P_UNIT = -11
+const val TR_OBJECT_P_RAW_STRING = -12
+const val TR_OBJECT_P_BOOLEAN = -13
+const val TR_OBJECT_P_JAVA_CLASS = -14
+const val TR_OBJECT_P_KOTLIN_CLASS = -15
+const val TR_OBJECT_P_STRING_BUILDER = -16
 
+val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, "null")
+val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, "void")
 
 fun TRObjectOrNull(context: TraceContext, obj: Any?): TRValue? =
     obj?.let { TRValue(context, it) }
@@ -1068,26 +1059,26 @@ private fun classNameWhitelisted(obj: Any): Boolean {
 }
 
 fun TRObjectWithFields(context: TraceContext, obj: Any, fields: Map<String, Any?>): TRObject {
-    val classId = context.getOrCreateClassId(obj.javaClass.name)
+    val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
     val trObjectMap = fields.mapValues { (_, value) -> TRObjectOrNull(context, value) }
-    return TRObject(classId, System.identityHashCode(obj), context.getClassDescriptor(classId), trObjectMap)
+    return TRObject(cd.id, System.identityHashCode(obj), cd, trObjectMap)
 }
 
 fun TRArrayWithElements(context: TraceContext, arr: Any, size: Int, elements: List<Any?>): TRArray {
-    val classId = context.getOrCreateClassId(arr.javaClass.name)
+    val cd = context.createAndRegisterClassDescriptor(arr.javaClass.name)
     val elementsAsTRValues = elements.map { value -> TRObjectOrNull(context, value) }
-    return TRArray(classId, System.identityHashCode(arr), context.getClassDescriptor(classId), size, elementsAsTRValues)
+    return TRArray(cd.id, System.identityHashCode(arr), cd, size, elementsAsTRValues)
 }
 
 fun TRValue(context: TraceContext, obj: Any): TRValue {
     val defaultTRObject = {
-        val classId = context.getOrCreateClassId(obj.javaClass.name)
-        TRObject(classId, System.identityHashCode(obj), context.getClassDescriptor(classId))
+        val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
+        TRObject(cd.id, System.identityHashCode(obj), cd)
     }
     
     val defaultTRArray = { size: Int ->
-        val classId = context.getOrCreateClassId(obj.javaClass.name)
-        TRArray(classId, System.identityHashCode(obj), context.getClassDescriptor(classId), size)
+        val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
+        TRArray(cd.id, System.identityHashCode(obj), cd, size)
     }
 
     return when (obj) {
@@ -1227,7 +1218,7 @@ internal fun DataInput.readTRObject(context: TraceContext): TRValue? {
                     }
                 }
                 val totalSize = readInt()
-                TRArray(classNameId, identityHashCode, context.getClassDescriptor(classNameId), totalSize, capturedElements)
+                TRArray(classNameId, identityHashCode, context.classPool[classNameId], totalSize, capturedElements)
             } else {
                 val fields = buildMap {
                     repeat(childrenSize) {
@@ -1236,7 +1227,7 @@ internal fun DataInput.readTRObject(context: TraceContext): TRValue? {
                         put(fieldName, fieldValue)
                     }
                 }
-                TRObject(classNameId, identityHashCode, context.getClassDescriptor(classNameId), fields)
+                TRObject(classNameId, identityHashCode, context.classPool[classNameId], fields)
             }
         }
         else -> error("TRObject: Unknown Class Id $classNameId")

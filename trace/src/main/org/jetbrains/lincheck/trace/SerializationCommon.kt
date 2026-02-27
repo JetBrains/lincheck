@@ -402,8 +402,8 @@ internal fun DataOutput.writeClassDescriptor(value: ClassDescriptor) {
     writeUTF(value.name)
 }
 
-internal fun DataInput.readClassDescriptor(): ClassDescriptor {
-    return ClassDescriptor(readUTF())
+internal fun DataInput.readClassDescriptor(context: TraceContext): ClassDescriptor {
+    return ClassDescriptor(context, readUTF())
 }
 
 internal fun DataOutput.writeMethodDescriptor(value: MethodDescriptor) {
@@ -438,7 +438,7 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
         classId = readInt(),
         fieldName = readUTF(),
         type = readType(),
-        isStatic = readBoolean(),
+        fieldKind = FieldKind.fromIsStatic(isStatic = readBoolean()),
         isFinal = readBoolean()
     )
 }
@@ -448,8 +448,8 @@ internal fun DataOutput.writeVariableDescriptor(value: VariableDescriptor) {
     writeType(value.type)
 }
 
-internal fun DataInput.readVariableDescriptor(): VariableDescriptor {
-    return VariableDescriptor(readUTF(), readType())
+internal fun DataInput.readVariableDescriptor(context: TraceContext): VariableDescriptor {
+    return VariableDescriptor(context, readUTF(), readType())
 }
 
 internal fun DataInput.readAccessLocation(): ShallowAccessLocation {

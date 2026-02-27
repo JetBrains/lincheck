@@ -261,7 +261,9 @@ class TraceCollectingEventTracker(
                     context = context,
                     threadId = threadData.threadId,
                     codeLocationId = -1,
-                    methodId = context.getOrCreateMethodId("Thread", "run", Types.MethodType(Types.VOID_TYPE)),
+                    methodId = context.createAndRegisterMethodDescriptor(
+                        "Thread", "run", Types.MethodType(Types.VOID_TYPE)
+                    ).id,
                     obj = TRValue(context, thread),
                     parameters = emptyList()
                 )
@@ -430,7 +432,7 @@ class TraceCollectingEventTracker(
         value: Any?,
         fieldId: Int,
     ): Unit = threadDescriptor.runInsideInjectedCode {
-        val fieldDescriptor = context.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.fieldPool[fieldId]
         if (!fieldDescriptor.isStatic && obj == null) {
             // Ignore, NullPointerException will be thrown
             return
@@ -513,7 +515,7 @@ class TraceCollectingEventTracker(
         interceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
 
@@ -549,7 +551,7 @@ class TraceCollectingEventTracker(
     ): Unit = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         if (methodSection == AnalysisSectionType.IGNORED) {
@@ -599,7 +601,7 @@ class TraceCollectingEventTracker(
     ): Unit = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
         val thread = Thread.currentThread()
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
 
         val methodSection = methodAnalysisSectionType(receiver, methodDescriptor.className, methodDescriptor.methodName)
         if (methodSection == AnalysisSectionType.IGNORED) {
@@ -668,7 +670,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            val methodDescriptor = context.getMethodDescriptor(methodId)
+            val methodDescriptor = context.methodPool[methodId]
             Logger.error {
                 "Return from inline method $methodId ${methodDescriptor.className}.${methodDescriptor.methodName}" +
                 "but on stack ${tracePoint.methodId} ${tracePoint.className}.${tracePoint.methodName}"
@@ -687,7 +689,7 @@ class TraceCollectingEventTracker(
 
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
-            val methodDescriptor = context.getMethodDescriptor(methodId)
+            val methodDescriptor = context.methodPool[methodId]
             Logger.error {
                 "Exception in inline method $methodId ${methodDescriptor.className}.${methodDescriptor.methodName}" +
                 "but on stack ${tracePoint.methodId} ${tracePoint.className}.${tracePoint.methodName}"
@@ -893,7 +895,9 @@ class TraceCollectingEventTracker(
                 context = context,
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
-                methodId = context.getOrCreateMethodId(className, methodName, Types.MethodType(Types.VOID_TYPE)),
+                methodId = context.createAndRegisterMethodDescriptor(
+                    className, methodName, Types.MethodType(Types.VOID_TYPE)
+                ).id,
                 obj = null,
                 parameters = emptyList()
             )
@@ -919,7 +923,9 @@ class TraceCollectingEventTracker(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocationId,
-            methodId = context.getOrCreateMethodId(className, methodName, methodType),
+            methodId = context.createAndRegisterMethodDescriptor(
+                className, methodName, methodType
+            ).id,
             obj = obj,
             parameters = params,
             flags = INCOMPLETE_METHOD_FLAG.toShort(),

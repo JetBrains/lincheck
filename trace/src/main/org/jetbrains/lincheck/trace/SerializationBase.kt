@@ -290,7 +290,7 @@ internal sealed class TraceWriterBase(
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.CLASS_DESCRIPTOR)
         dataOutput.writeInt(id)
-        dataOutput.writeClassDescriptor(context.getClassDescriptor(id))
+        dataOutput.writeClassDescriptor(context.classPool[id])
         contextState.markClassDescriptorSaved(id)
 
         writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position, -1)
@@ -299,7 +299,7 @@ internal sealed class TraceWriterBase(
     override fun writeMethodDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
         if (contextState.isMethodDescriptorSaved(id)) return
-        val descriptor = context.getMethodDescriptor(id)
+        val descriptor = context.methodPool[id]
         writeClassDescriptor(descriptor.classId)
 
         // Write method descriptor into data and position into index
@@ -315,7 +315,7 @@ internal sealed class TraceWriterBase(
     override fun writeFieldDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
         if (contextState.isFieldDescriptorSaved(id)) return
-        val descriptor = context.getFieldDescriptor(id)
+        val descriptor = context.fieldPool[id]
         writeClassDescriptor(descriptor.classId)
         // Write field descriptor into data and position into index
         val position = currentDataPosition
@@ -334,7 +334,7 @@ internal sealed class TraceWriterBase(
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.VARIABLE_DESCRIPTOR)
         dataOutput.writeInt(id)
-        dataOutput.writeVariableDescriptor(context.getVariableDescriptor(id))
+        dataOutput.writeVariableDescriptor(context.variablePool[id])
         contextState.markVariableDescriptorSaved(id)
 
         writeIndexCell(ObjectKind.VARIABLE_DESCRIPTOR, id, position, -1)

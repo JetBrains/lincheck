@@ -12,6 +12,8 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
+import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
@@ -429,11 +431,11 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Field access instructions */
 
             Opcodes.GETSTATIC -> {
-                val fieldDescriptor = context.getFieldDescriptor(
+                val fieldDescriptor = context.createAndRegisterFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
                     type = descriptor!!.toType(),
-                    isStatic = true,
+                    fieldKind = FieldKind.STATIC,
                     isFinal = FinalFields.isFinalField(className, fieldName)
                 )
                 val fieldAccess = StaticFieldAccessLocation(fieldDescriptor)
@@ -449,11 +451,11 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
             Opcodes.GETFIELD -> {
                 val ownerName = pop()
-                val fieldDescriptor = context.getFieldDescriptor(
+                val fieldDescriptor = context.createAndRegisterFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
                     type = descriptor!!.toType(),
-                    isStatic = false,
+                    fieldKind = FieldKind.INSTANCE,
                     isFinal = FinalFields.isFinalField(className, fieldName)
                 )
                 val fieldAccess = ObjectFieldAccessLocation(fieldDescriptor)
@@ -783,7 +785,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         }
         for (localVar in localVariables) {
             val localVarType = Types.convertAsmTypeName(localVar.type)
-            val localVarDescriptor = context.getVariableDescriptor(localVar.name, localVarType)
+            val localVarDescriptor = context.createAndRegisterVariableDescriptor(localVar.name, localVarType)
             val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
             set(localVar.index, OwnerName(localVarAccess))
         }
