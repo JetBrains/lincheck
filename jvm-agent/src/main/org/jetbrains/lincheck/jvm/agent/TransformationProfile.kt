@@ -292,6 +292,8 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         if (className.startsWith("com.android.tools.")) return false
 
         if (isRecognizedUninstrumentedClass(className)) return false
+        if (isSpringRelatedClass(className)) return false
+
         return true
     }
 
@@ -767,6 +769,8 @@ private fun isRecognizedUninstrumentedClass(className: String): Boolean {
 
     if (isRecognizedUninstrumentedThirdPartyLibraryClass(className)) return true
 
+    if (isSpringRelatedClass(className)) return true
+
     // All the classes that were not filtered out are eligible for transformation.
     return false
 }
@@ -807,6 +811,8 @@ private fun shouldWrapInIgnoredSection(className: String, methodName: String, de
     if (isIntellijRuntimeAgentClass(className))
         return true
 
+    if (isSpringRelatedClass(className))
+        return true
     return false
 }
 
