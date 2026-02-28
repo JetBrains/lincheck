@@ -106,6 +106,8 @@ public class SafeClassWriter extends ClassWriter {
             try {
                 // try to fallback to the default implementation
                 return super.getCommonSuperClass(type1, type2);
+            } catch (TypeNotPresentException ignored2) {
+                return "java/lang/Object";
             } catch (Exception e) {
                 throw new RuntimeException(e.toString());
             }

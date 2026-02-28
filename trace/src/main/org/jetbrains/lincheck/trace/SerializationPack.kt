@@ -264,7 +264,8 @@ internal class TraceDataProvider(val traceFileName: String) : AutoCloseable {
         }
     }
 
-    val dataFileName: String = tmpDataFile?.absolutePath ?: traceFileName
+    val dataFileName: String
+        get() = tmpDataFile?.absolutePath ?: traceFileName
 
     override fun close() {
         idMapDataInput?.close()
