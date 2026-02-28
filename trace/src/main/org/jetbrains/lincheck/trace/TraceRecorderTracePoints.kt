@@ -112,6 +112,9 @@ sealed class TRTracePoint(
     val activeLocals: List<ActiveLocal> get() = CodeLocations.activeLocals(context, codeLocationId) ?: emptyList() // used in plugin
     val accessPath: AccessPath? get() = CodeLocations.accessPath(context, codeLocationId)
 
+    fun getAccessPath(useParameterAsReceiver: Boolean): AccessPath? =
+        CodeLocations.accessPath(context, codeLocationId, useParameterAsReceiver)
+
     fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
         toText(DefaultTRTextAppendable(sb, verbose))
@@ -259,6 +262,12 @@ class TRMethodCallTracePoint(
     val parameters: List<TRValue?>,
     val flags: Short = 0,
     parentTracePoint: TRContainerTracePoint? = null,
+    // For reflection-like calls (Method.invoke, MethodHandle.invoke, KFunction.call, etc.)
+    // these fields store information about the target method being invoked
+    val reflectionTargetClassName: String? = null,
+    val reflectionTargetMethodName: String? = null,
+    val reflectionTargetOwner: TRValue? = null,
+    val reflectionTargetParameters: List<TRValue?>? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
     var result: TRValue? = null
@@ -318,6 +327,15 @@ class TRMethodCallTracePoint(
             out.writeTRValue(it)
         }
         out.writeShort(flags.toInt())
+
+        out.writeNullableUTF(reflectionTargetClassName)
+        out.writeNullableUTF(reflectionTargetMethodName)
+        out.writeTRValue(reflectionTargetOwner)
+        out.writeInt(reflectionTargetParameters?.size ?: -1)
+        reflectionTargetParameters?.forEach {
+            out.writeTRValue(it)
+        }
+
         // Mark this as container tracepoint which could have children and will have footer
         out.endWriteContainerTracepointHeader(eventId)
     }
@@ -327,6 +345,11 @@ class TRMethodCallTracePoint(
         out.writeMethodDescriptor(methodId)
         out.preWriteTRValue(obj)
         parameters.forEach {
+            out.preWriteTRValue(it)
+        }
+
+        out.preWriteTRValue(reflectionTargetOwner)
+        reflectionTargetParameters?.forEach {
             out.preWriteTRValue(it)
         }
     }
@@ -370,6 +393,14 @@ class TRMethodCallTracePoint(
             }
             val flags = inp.readShort()
 
+            val reflectionTargetClassName = inp.readNullableUTF()
+            val reflectionTargetMethodName = inp.readNullableUTF()
+            val reflectionTargetOwner = inp.readTRObject(context)
+            val reflectionTargetPCount = inp.readInt()
+            val reflectionTargetParameters = if (reflectionTargetPCount >= 0) {
+                List(reflectionTargetPCount) { inp.readTRObject(context) }
+            } else null
+
             return TRMethodCallTracePoint(
                 context = context,
                 threadId = threadId,
@@ -378,6 +409,10 @@ class TRMethodCallTracePoint(
                 obj = obj,
                 parameters = parameters,
                 flags = flags,
+                reflectionTargetClassName = reflectionTargetClassName,
+                reflectionTargetMethodName = reflectionTargetMethodName,
+                reflectionTargetOwner = reflectionTargetOwner,
+                reflectionTargetParameters = reflectionTargetParameters,
                 eventId = eventId,
             ).also {
                 it.childrenDiffStatuses = childrenDiffStatus

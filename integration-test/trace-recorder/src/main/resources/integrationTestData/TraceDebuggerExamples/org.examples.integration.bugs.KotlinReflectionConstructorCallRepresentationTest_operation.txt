@@ -1,0 +1,5 @@
+# Thread 1
+KotlinReflectionConstructorCallRepresentationTest.operation() at ReflectionLike.kt:316
+  invokeViaKotlinReflectionConstructor(16): ReflectionInvokeBase.ReflectionTarget@1 at ReflectionLike.kt:316
+    Object;@1[0] = 16 at ReflectionLike.kt:311
+    ReflectionInvokeBase.ReflectionTarget.<init>(16) [by ctor.call(Object;@1)]: ReflectionInvokeBase.ReflectionTarget@1 at ReflectionLike.kt:311

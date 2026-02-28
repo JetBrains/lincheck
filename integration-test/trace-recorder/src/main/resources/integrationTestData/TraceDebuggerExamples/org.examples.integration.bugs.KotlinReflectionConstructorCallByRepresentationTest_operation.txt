@@ -1,0 +1,10 @@
+# Thread 1
+KotlinReflectionConstructorCallByRepresentationTest.operation() at ReflectionLike.kt:332
+  invokeViaKotlinReflectionConstructorCallBy(17): ReflectionInvokeBase.ReflectionTarget@1 at ReflectionLike.kt:332
+    ctor.getParameters(): ArrayList@1 at ReflectionLike.kt:324
+    ArrayList@1.get(0): KParameterImpl@1 at ReflectionLike.kt:324
+    p1 = KParameterImpl@1 at ReflectionLike.kt:324
+    to(p1, 17): Pair@1 at ReflectionLike.kt:325
+    mapOf(Pair@1): Collections.SingletonMap@1 at ReflectionLike.kt:325
+    params = Collections.SingletonMap@1 at ReflectionLike.kt:324
+    ReflectionInvokeBase.ReflectionTarget.<init>(17) [by ctor.callBy(params)]: ReflectionInvokeBase.ReflectionTarget@1 at ReflectionLike.kt:327

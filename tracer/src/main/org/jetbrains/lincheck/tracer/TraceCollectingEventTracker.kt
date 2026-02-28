@@ -526,6 +526,9 @@ class TraceCollectingEventTracker(
         }
 
         val parentTracepoint = threadData.currentTopTracePoint()
+        val reflectionTarget = detectReflectionTarget(
+            context, receiver, methodDescriptor.className, methodDescriptor.methodName, params
+        )
         val tracePoint = TRMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
@@ -534,8 +537,13 @@ class TraceCollectingEventTracker(
             obj = TRObjectOrNull(context, receiver),
             parameters = params.map { TRObjectOrNull(context, it) },
             parentTracePoint = parentTracepoint,
+            reflectionTargetClassName = reflectionTarget?.className,
+            reflectionTargetMethodName = reflectionTarget?.methodName,
+            reflectionTargetOwner = reflectionTarget?.owner,
+            reflectionTargetParameters = reflectionTarget?.parameters
         )
         strategy.tracePointCreated(parentTracepoint, tracePoint)
+        val receiver = if (reflectionTarget != null) reflectionTarget.owner else receiver
         threadData.pushStackFrame(tracePoint, receiver, isInline = false)
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
@@ -1089,5 +1097,28 @@ class TraceCollectingEventTracker(
     ): AnalysisSectionType {
         val ownerName = owner?.javaClass?.canonicalName ?: className
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
+    }
+
+    private data class ReflectionTargetData(
+        val className: String,
+        val methodName: String,
+        val owner: TRValue?,
+        val parameters: List<TRValue?>
+    )
+
+    private fun detectReflectionTarget(
+        context: TraceContext,
+        receiver: Any?,
+        className: String,
+        methodName: String,
+        params: Array<Any?>
+    ): ReflectionTargetData? {
+        val reflectedCall = detectReflectedCall(receiver, className, methodName, params) ?: return null
+        return ReflectionTargetData(
+            className = reflectedCall.className,
+            methodName = reflectedCall.methodName,
+            owner = reflectedCall.owner?.let { TRValue(context, it) },
+            parameters = reflectedCall.methodParams.map { TRObjectOrNull(context, it) }
+        )
     }
 }

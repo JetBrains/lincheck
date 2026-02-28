@@ -1,0 +1,5 @@
+# Thread 1
+ReflectionConstructorInvokeRepresentationTest.operation() at ReflectionLike.kt:385
+  invokeViaReflectionConstructor(15): ReflectionInvokeBase.ReflectionTarget@1 at ReflectionLike.kt:385
+    Object;@1[0] = 15 at ReflectionLike.kt:380
+    ReflectionInvokeBase.ReflectionTarget.<init>(15) [by reflectionTargetConstructor.newInstance(Object;@1)]: ReflectionInvokeBase.ReflectionTarget@1 at ReflectionLike.kt:380

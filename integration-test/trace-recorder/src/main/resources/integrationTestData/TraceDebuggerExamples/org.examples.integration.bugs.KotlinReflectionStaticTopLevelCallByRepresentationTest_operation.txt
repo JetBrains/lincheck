@@ -1,0 +1,24 @@
+# Thread 1
+KotlinReflectionStaticTopLevelCallByRepresentationTest.operation() at ReflectionLike.kt:369
+  invokeViaKotlinReflectionStaticCallBy(20, 21): 61 at ReflectionLike.kt:369
+    fn.getParameters(): ArrayList@1 at ReflectionLike.kt:361
+    ArrayList@1.get(0): KParameterImpl@1 at ReflectionLike.kt:361
+    p1 = KParameterImpl@1 at ReflectionLike.kt:361
+    ArrayList@1.get(1): KParameterImpl@1 at ReflectionLike.kt:361
+    p2 = KParameterImpl@1 at ReflectionLike.kt:361
+    new AbstractMap.SimpleEntry(p1, 20): AbstractMap.SimpleEntry@1 at ReflectionLike.kt:362
+    AbstractMap.SimpleEntry;@1[0] = AbstractMap.SimpleEntry@1 at ReflectionLike.kt:362
+    new AbstractMap.SimpleEntry(p2, 21): AbstractMap.SimpleEntry@1 at ReflectionLike.kt:362
+    AbstractMap.SimpleEntry;@1[1] = AbstractMap.SimpleEntry@1 at ReflectionLike.kt:362
+    new ListMap(AbstractMap.SimpleEntry;@1): ListMap@1 at ReflectionLike.kt:362
+    params = ListMap@1 at ReflectionLike.kt:361
+    staticTopLevelTarget(20, 21) [by fn.callBy(params)]: 61 at ReflectionLike.kt:364
+      getElements(): AbstractMap.SimpleEntry;@1 at ReflectionLike.kt:353
+      iterator(AbstractMap.SimpleEntry;@1): ArrayIterator@1 at ReflectionLike.kt:353
+      getElements(): AbstractMap.SimpleEntry;@1 at ReflectionLike.kt:353
+      iterator(AbstractMap.SimpleEntry;@1): ArrayIterator@1 at ReflectionLike.kt:353
+      getElements(): AbstractMap.SimpleEntry;@1 at ReflectionLike.kt:353
+      iterator(AbstractMap.SimpleEntry;@1): ArrayIterator@1 at ReflectionLike.kt:353
+      getElements(): AbstractMap.SimpleEntry;@1 at ReflectionLike.kt:353
+      iterator(AbstractMap.SimpleEntry;@1): ArrayIterator@1 at ReflectionLike.kt:353
+      ReflectionLikeKt.topLevelHelper.placeholder() at ReflectionLike.kt:12

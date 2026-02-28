@@ -1,0 +1,5 @@
+# Thread 1
+MethodHandleInvokeStaticTopLevelRepresentationTest.operation() at ReflectionLike.kt:203
+  invokeViaMethodHandleInvoke(5, 6): 16 at ReflectionLike.kt:203
+    staticTopLevelTarget(5, 6) [by targetMethodHandle.invoke(a ➜ 5, b ➜ 6)]: 16 at ReflectionLike.kt:198
+      ReflectionLikeKt.topLevelHelper.placeholder() at ReflectionLike.kt:12

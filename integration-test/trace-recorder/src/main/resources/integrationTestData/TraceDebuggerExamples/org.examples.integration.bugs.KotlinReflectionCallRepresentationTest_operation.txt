@@ -1,0 +1,8 @@
+# Thread 1
+KotlinReflectionCallRepresentationTest.operation() at ReflectionLike.kt:283
+  invokeViaKotlinReflection(11, 12): -1 at ReflectionLike.kt:283
+    Object;@1[0] = KotlinReflectionCallRepresentationTest@1 at ReflectionLike.kt:278
+    Object;@1[1] = 11 at ReflectionLike.kt:278
+    Object;@1[2] = 12 at ReflectionLike.kt:278
+    targetKotlinReflection(11, 12) [by targetKotlinFunction.call(Object;@1)]: -1 at ReflectionLike.kt:278
+      helper.placeholder() at ReflectionLike.kt:36

@@ -1,0 +1,7 @@
+# Thread 1
+KotlinReflectionStaticTopLevelCallRepresentationTest.operation() at ReflectionLike.kt:345
+  invokeViaKotlinReflectionStatic(18, 19): 55 at ReflectionLike.kt:345
+    Object;@1[0] = 18 at ReflectionLike.kt:340
+    Object;@1[1] = 19 at ReflectionLike.kt:340
+    staticTopLevelTarget(18, 19) [by fn.call(Object;@1)]: 55 at ReflectionLike.kt:340
+      ReflectionLikeKt.topLevelHelper.placeholder() at ReflectionLike.kt:12

@@ -253,7 +253,13 @@ internal class MethodCallTracePoint(
     codeLocation: Int,
     val isStatic: Boolean,
     var callType: CallType = CallType.NORMAL,
-    val isSuspend: Boolean
+    val isSuspend: Boolean,
+    // For reflection-like calls (Method.invoke, MethodHandle.invoke, KFunction.call, etc.)
+    // these fields store information about the target method being invoked
+    val reflectionTargetClassName: String? = null,
+    val reflectionTargetMethodName: String? = null,
+    val reflectionTargetOwnerName: String? = null,
+    val reflectionTargetParameters: List<String>? = null
 ) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     var thrownException: Throwable? = null
@@ -263,13 +269,6 @@ internal class MethodCallTracePoint(
     var ownerName: String? = null
         private set
     fun updateOwnerName(name: String?) { ownerName = name }
-
-    // For reflection-like calls (Method.invoke, MethodHandle.invoke, KFunction.call, etc.)
-    // these fields store information about the target method being invoked
-    var reflectionTargetClassName: String? = null
-    var reflectionTargetMethodName: String? = null
-    var reflectionTargetOwnerName: String? = null
-    var reflectionTargetParameters: List<String>? = null
 
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
@@ -344,18 +343,16 @@ internal class MethodCallTracePoint(
     }
 
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): MethodCallTracePoint = copiedObjects.mapAndCast(this) {
-        MethodCallTracePoint(context, eventId, iThread, actorId, className, methodName, codeLocation, isStatic, callType, isSuspend)
-            .also {
-                it.returnedValue = returnedValue
-                it.thrownException = thrownException
-                it.parameters = parameters
-                it.ownerName = ownerName
-                it.parameterTypes = parameterTypes
-                it.reflectionTargetClassName = reflectionTargetClassName
-                it.reflectionTargetMethodName = reflectionTargetMethodName
-                it.reflectionTargetOwnerName = reflectionTargetOwnerName
-                it.reflectionTargetParameters = reflectionTargetParameters
-            }
+        MethodCallTracePoint(
+            context, eventId, iThread, actorId, className, methodName, codeLocation, isStatic, callType, isSuspend,
+            reflectionTargetClassName, reflectionTargetMethodName, reflectionTargetOwnerName, reflectionTargetParameters
+        ).also {
+            it.returnedValue = returnedValue
+            it.thrownException = thrownException
+            it.parameters = parameters
+            it.ownerName = ownerName
+            it.parameterTypes = parameterTypes
+        }
     }
 
     fun initializeVoidReturnedValue() {

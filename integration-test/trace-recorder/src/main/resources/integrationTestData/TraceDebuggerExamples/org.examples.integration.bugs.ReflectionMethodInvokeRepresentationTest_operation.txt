@@ -1,0 +1,7 @@
+# Thread 1
+ReflectionMethodInvokeRepresentationTest.operation() at ReflectionLike.kt:83
+  invokeViaReflection(1, 2): 3 at ReflectionLike.kt:83
+    Object;@1[0] = 1 at ReflectionLike.kt:78
+    Object;@1[1] = 2 at ReflectionLike.kt:78
+    targetReflection(1, 2) [by targetReflectionMethod.invoke(, Object;@1)]: 3 at ReflectionLike.kt:78
+      helper.placeholder() at ReflectionLike.kt:26

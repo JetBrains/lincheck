@@ -137,7 +137,17 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
         appendDiffStatus(tracePoint.diffStatus)
-        if (tracePoint.isConstructor()) {
+        // For reflection-like calls, show target method first, then how it was invoked
+        if (tracePoint.reflectionTargetMethodName != null) {
+            appendReflectionTarget(tracePoint)
+            appendSpecialSymbol(" ")
+            appendSpecialSymbol("[")
+            appendKeyword("by")
+            appendSpecialSymbol(" ")
+            appendReflectionInvoker(tracePoint)
+            appendSpecialSymbol("]")
+            appendResult(tracePoint)
+        } else if (tracePoint.isConstructor()) {
             appendKeyword("new")
             appendSpecialSymbol(" ")
             appendClassName(tracePoint.classDescriptor)
@@ -156,11 +166,75 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         return this
     }
 
-    protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
+    protected fun TRAppendable.appendReflectionTarget(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        appendReflectionTargetOwner(tracePoint)
+        append(tracePoint.reflectionTargetMethodName!!)
+        appendSpecialSymbol("(")
+        tracePoint.reflectionTargetParameters?.forEachIndexed { i, parameter ->
+            if (i != 0) {
+                appendSpecialSymbol(",")
+                appendSpecialSymbol(" ")
+            }
+            appendObject(parameter)
+        }
+        appendSpecialSymbol(")")
+        return this
+    }
+
+    protected fun TRAppendable.appendReflectionTargetOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        val className = tracePoint.reflectionTargetClassName ?: return this
+        val methodName = tracePoint.reflectionTargetMethodName ?: return this
+        val owner = tracePoint.reflectionTargetOwner
+        val parameters = tracePoint.reflectionTargetParameters ?: emptyList()
+
+        // Create a fake trace point with reflection target data to reuse appendOwner logic
+        val methodType = Types.MethodType(
+            argumentTypes = parameters.map { Types.OBJECT_TYPE }.toMutableList(),
+            returnType = Types.VOID_TYPE // return type doesn't matter for owner rendering
+        )
+        val methodId = tracePoint.context.getOrCreateMethodId(className, methodName, methodType)
+        val fakeTracePoint = TRMethodCallTracePoint(
+            context = tracePoint.context,
+            threadId = tracePoint.threadId,
+            codeLocationId = tracePoint.codeLocationId,
+            methodId = methodId,
+            obj = owner,
+            parameters = parameters,
+            parentTracePoint = tracePoint.parentTracePoint
+        )
+
+        return when {
+            tracePoint.className.startsWith("java.lang.invoke.") && tracePoint.methodName != "invokeWithArguments" ->
+                appendOwner(fakeTracePoint, useParameterAsReceiver = true)
+
+            fakeTracePoint.isStatic() && fakeTracePoint.isCalledFromDefiningClass() -> this
+            fakeTracePoint.obj != null && fakeTracePoint.obj == (tracePoint.parentTracePoint as? TRMethodCallTracePoint)?.obj -> this
+            fakeTracePoint.obj != null -> {
+                appendObject(tracePoint.reflectionTargetOwner)
+                appendSpecialSymbol(".")
+                this
+            }
+
+            else -> appendOwner(fakeTracePoint, useParameterAsReceiver = true)
+        }
+    }
+
+    protected fun TRAppendable.appendReflectionInvoker(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        appendOwner(tracePoint)
+        appendMethodName(tracePoint.methodDescriptor)
+        appendSpecialSymbol("(")
+        appendParameters(tracePoint)
+        appendSpecialSymbol(")")
+        return this
+    }
+
+    protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint, useParameterAsReceiver: Boolean = false): TRAppendable {
         if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass()) {
             return this
         }
-        val ownerName = tracePoint.accessPath
+        val ownerName =
+            if (useParameterAsReceiver && tracePoint.obj == null) null
+            else tracePoint.getAccessPath(useParameterAsReceiver)
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
                 if (it.isObjectInstanceAccess()) {

@@ -1,0 +1,9 @@
+# Thread 1
+ReflectionStaticMethodInvokeRepresentationTest.operation() at ReflectionLike.kt:118
+  invokeViaReflection(1, 2): 5 at ReflectionLike.kt:118
+    Object;@1[0] = 1 at ReflectionLike.kt:113
+    Object;@1[1] = 2 at ReflectionLike.kt:113
+    staticTarget(1, 2) [by targetReflectionMethod.invoke(null, Object;@1)]: 5 at ReflectionLike.kt:113
+      ReflectionStaticMethodInvokeRepresentationTest.staticTarget(a ➜ 1, b ➜ 2): 5 at ReflectionLike.kt:0
+        ReflectionStaticMethodInvokeRepresentationTest.getHelper(): ReflectionStaticMethodInvokeRepresentationTest.Companion.Helper@1 at ReflectionLike.kt:101
+        ReflectionStaticMethodInvokeRepresentationTest.Companion.Helper@1.placeholder() at ReflectionLike.kt:101

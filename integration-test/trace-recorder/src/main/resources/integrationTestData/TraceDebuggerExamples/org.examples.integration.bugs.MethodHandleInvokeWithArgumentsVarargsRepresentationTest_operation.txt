@@ -1,0 +1,8 @@
+# Thread 1
+MethodHandleInvokeWithArgumentsVarargsRepresentationTest.operation() at ReflectionLike.kt:140
+  invokeViaMethodHandleVarargs(3, 4): 12 at ReflectionLike.kt:140
+    Object;@1[0] = MethodHandleInvokeWithArgumentsVarargsRepresentationTest@1 at ReflectionLike.kt:135
+    Object;@1[1] = 3 at ReflectionLike.kt:135
+    Object;@1[2] = 4 at ReflectionLike.kt:135
+    targetMethodHandle(3, 4) [by targetMethodHandle.invokeWithArguments(Object;@1)]: 12 at ReflectionLike.kt:135
+      helper.placeholder() at ReflectionLike.kt:31
