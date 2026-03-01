@@ -297,11 +297,19 @@ private val Type.requiresBoxing: Boolean
  * @param shouldIntercept Flag indicating whether to intercept results.
  */
 internal fun GeneratorAdapter.pushResultInterceptor(shouldIntercept: Boolean) {
+    // STACK: threadDescriptor
     if (shouldIntercept) {
+        // STACK: threadDescriptor
         invokeStatic(Injections::createResultInterceptor)
+        // STACK: interceptor
     } else {
+        // STACK: threadDescriptor
+        pop()
+        // STACK: <empty>
         pushNull()
+        // STACK: null
     }
+    // STACK: interceptor?
 }
 
 /**

@@ -856,11 +856,13 @@ public class Injections {
     }
 
     /**
-     * Creates and returns a new instance of result interceptor.
+     * Creates and returns a new instance of a result interceptor.
      *
-     * @return a new {@link ResultInterceptor} instance.
+     * @param descriptor the thread descriptor of the current thread.
+     * @return a new {@link ResultInterceptor} instance or null if the {@code descriptor} is null.
      */
-    public static ResultInterceptor createResultInterceptor() {
+    public static ResultInterceptor createResultInterceptor(ThreadDescriptor descriptor) {
+        if (descriptor == null) return null;
         return new ResultInterceptor();
     }
 
