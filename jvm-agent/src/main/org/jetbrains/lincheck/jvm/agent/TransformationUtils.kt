@@ -20,6 +20,7 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.ResultInterceptor
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KFunction
@@ -287,6 +288,52 @@ internal fun GeneratorAdapter.pushArray(locals: IntArray) {
 
 private val Type.requiresBoxing: Boolean
     get() = !(sort == OBJECT || sort == ARRAY)
+
+
+/**
+ * Creates a result interceptor object and pushes it onto the stack,
+ * or pushed a `null` depending on the supplied boolean flag [shouldIntercept].
+ *
+ * @param shouldIntercept Flag indicating whether to intercept results.
+ */
+internal fun GeneratorAdapter.pushResultInterceptor(shouldIntercept: Boolean) {
+    if (shouldIntercept) {
+        invokeStatic(Injections::createResultInterceptor)
+    } else {
+        pushNull()
+    }
+}
+
+/**
+ * Checks if a result or exception was intercepted by the [ResultInterceptor] object
+ * stored in the given local variable.
+ *
+ * @param resultInterceptorLocal the local variable index that holds a reference to the result interceptor.
+ */
+internal fun GeneratorAdapter.isResultIntercepted(resultInterceptorLocal: Int) {
+    // STACK: <empty>
+    loadLocal(resultInterceptorLocal)
+    // STACK: interceptor
+    invokeStatic(Injections::isResultOrExceptionIntercepted)
+    // STACK: isIntercepted
+}
+
+/**
+ * Retrieves the intercepted result or exception from the [ResultInterceptor] object
+ * stored in the given local variable.
+ *
+ * @param resultInterceptorLocal the local variable index that holds a reference to the result interceptor.
+ * @param returnType the type of the intercepted result or exception.
+ */
+internal fun GeneratorAdapter.getOrThrowInterceptedResult(resultInterceptorLocal: Int, returnType: Type) {
+    // STACK: <empty>
+    loadLocal(resultInterceptorLocal)
+    // STACK: interceptor
+    invokeStatic(Injections::getOrThrowInterceptedResult)
+    // STACK: result
+    if (returnType == VOID_TYPE) pop() else unbox(returnType)
+    // STACK: result?
+}
 
 /**
  * Adds invocation of [sun.nio.ch.lincheck.Injections.beforeEvent] method.

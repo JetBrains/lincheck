@@ -80,7 +80,7 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         ).id
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            pushResultInterceptor()
+            pushResultInterceptor(shouldIntercept = configuration.interceptReadResults)
             storeLocal(it)
         }
 
@@ -118,7 +118,7 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         ).id
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            pushResultInterceptor()
+            pushResultInterceptor(shouldIntercept = configuration.interceptReadResults)
             storeLocal(it)
         }
 
@@ -249,7 +249,7 @@ internal class SharedMemoryAccessTransformer(
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            pushResultInterceptor()
+            pushResultInterceptor(shouldIntercept = configuration.interceptReadResults)
             storeLocal(it)
         }
 
@@ -329,12 +329,12 @@ internal class SharedMemoryAccessTransformer(
 
         ifStatement(
             condition = {
-                isReadResultIntercepted(resultInterceptorLocal)
+                isResultIntercepted(resultInterceptorLocal)
             },
             thenClause = {
                 cleanStack()
                 // STACK: <empty>
-                getInterceptedReadResult(resultInterceptorLocal, returnType)
+                getOrThrowInterceptedResult(resultInterceptorLocal, returnType)
                 // STACK: value
             },
             elseClause = {
@@ -415,33 +415,4 @@ internal class SharedMemoryAccessTransformer(
         check(arrayType.dimensions > 0)
         return getType(arrayDesc.substring(1))
     }
-
-    // TODO: extract helper result interceptor methods and unify with `MethodCallTransformer`
-
-    private fun GeneratorAdapter.pushResultInterceptor() {
-        if (configuration.interceptReadResults) {
-            invokeStatic(Injections::createResultInterceptor)
-        } else {
-            pushNull()
-        }
-    }
-
-    private fun GeneratorAdapter.isReadResultIntercepted(resultInterceptorLocal: Int) {
-        // STACK: <empty>
-        loadLocal(resultInterceptorLocal)
-        // STACK: interceptor
-        invokeStatic(Injections::isResultOrExceptionIntercepted)
-        // STACK: isIntercepted
-    }
-
-    private fun GeneratorAdapter.getInterceptedReadResult(resultInterceptorLocal: Int, returnType: Type) {
-        // STACK: <empty>
-        loadLocal(resultInterceptorLocal)
-        // STACK: interceptor
-        invokeStatic(Injections::getOrThrowInterceptedResult) // NOTE: Can we ever decide to intercept with an exception?
-        // STACK: result
-        if (returnType == VOID_TYPE) pop() else unbox(returnType)
-        // STACK: result?
-    }
-
 }
