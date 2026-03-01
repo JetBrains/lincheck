@@ -284,6 +284,9 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         if (className == "java.lang.Thread") return true
         if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
         if (className.startsWith("kotlin.reflect.")) return false
+        // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
+        // See details in https://github.com/JetBrains/lincheck/issues/717.
+        if (isJavaUtilArraysClass(className)) return false
 
         // In the trace recording mode, we do not instrument Java/Kotlin stdlib classes.
         if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
@@ -476,6 +479,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             if (className == "java.lang.Throwable") return true
             // Instrument `java.util.concurrent` classes, except atomics.
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
+            if (isJavaUtilArraysClass(className)) return false
             // Instrument `java.util` classes.
             if (className.startsWith("java.util.")) return true
             return false
