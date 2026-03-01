@@ -17,31 +17,40 @@ import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 
 
 /**
- * Instances of this interface represent a result of an actor invocation.
+ * A special Lincheck-specific result-like object representing an outcome of a method invocation.
+ *
+ * It can be one of the following:
+ * - [NoResult]: Represents an invocation of a function that has not yet completed (equals to `null`).
+ * - [VoidResult]: Represents a successful invocation of a function that does not return a value.
+ * - [ValueResult]: Represents a successful invocation of a function returning a value.
+ * - [ExceptionResult]: Represents an invocation of a function failed with an exception.
+ * - [SuspendedResult]: Represents an invocation of `suspend` function that resulted in suspension.
+ * - [CancelledResult]: Represents an invocation of `suspend` function that resulted in cancellation.
+ * - [ResumedResult]: A special type of result used to resume suspended functions.
  */
 sealed interface LincheckResult
 
 /**
- * Represents the result of an actor invocation that has not finished yet.
+ * Represents an invocation of a function that has not yet completed (equals to `null`).
  */
 val NoResult : LincheckResult? = null
 
 /**
- * Represents the result of an actor invocation that was completed normally and does not return any value.
+ * Represents a successful invocation of a function that does not return a value.
  */
 data object VoidResult : LincheckResult {
     override fun toString() = "void"
 }
 
 /**
- * Represents the result of an actor invocation that was completed normally and returned [value].
+ * Represents a successful invocation of a function returning a value.
  */
 data class ValueResult(val value: Any?) : LincheckResult {
     override fun toString() = value.toString()
 }
 
 /**
- * Represents the result of an actor invocation that failed with an exception.
+ * Represents an invocation of a function failed with an exception.
  */
 data class ExceptionResult(
     /**
@@ -67,14 +76,14 @@ data class ExceptionResult(
 }
 
 /**
- * Represents the result of an actor invocation that was suspended during its execution.
+ * Represents the result of a function invocation that was suspended during its execution.
  */
 data object SuspendedResult : LincheckResult {
     override fun toString() = "SUSPENDED"
 }
 
 /**
- * Represents the result of an actor invocation that was cancelled during its execution.
+ * Represents the result of a function invocation that was canceled during its execution.
  */
 data object CancelledResult : LincheckResult {
     override fun toString() = "CANCELLED"
@@ -82,7 +91,8 @@ data object CancelledResult : LincheckResult {
 
 /**
  * Type of result used for verification.
- * Resuming thread writes result of the suspension point and continuation to be executed in the resumed thread into [contWithSuspensionPointRes].
+ * Resuming thread writes the result of the suspension point and continuation
+ * to be executed in the resumed thread into [contWithSuspensionPointRes].
  */
 internal data class ResumedResult(val contWithSuspensionPointRes: Pair<Continuation<Any?>?, Result<Any?>>) : LincheckResult {
     lateinit var resumedActor: Actor
