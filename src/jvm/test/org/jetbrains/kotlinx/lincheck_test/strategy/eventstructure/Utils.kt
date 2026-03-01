@@ -29,6 +29,7 @@ import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
 import org.jetbrains.lincheck.withLincheckTestContext
+import org.jetbrains.kotlinx.lincheck.util.*
 
 import org.junit.Assert
 
@@ -97,14 +98,14 @@ internal fun createVerifier(testScenario: ExecutionScenario?, verify: (Execution
 
     }
 
-internal inline fun<reified T> getValue(result: Result): T =
+internal inline fun<reified T> getValue(result: LincheckResult): T =
     (result as ValueResult).value as T
 
-internal fun getValueSuspended(result: Result): Any? = when (result) {
+internal fun getValueSuspended(result: LincheckResult): Any? = when (result) {
     is ValueResult -> result.value
     is ExceptionResult -> result.throwable
-    is Suspended -> result
-    is Cancelled -> result
+    is SuspendedResult -> result
+    is CancelledResult -> result
     else -> throw IllegalArgumentException()
 }
 
