@@ -11,12 +11,12 @@ package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.VoidResult
+import org.jetbrains.kotlinx.lincheck.util.VoidResult
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.lincheck.util.isLincheckInternalException
 import org.jetbrains.lincheck.util.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
-import org.jetbrains.kotlinx.lincheck.util.ThreadId
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.trace.TraceContext
 

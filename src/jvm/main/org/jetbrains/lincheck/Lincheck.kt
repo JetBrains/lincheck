@@ -9,7 +9,7 @@
  */
 package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.kotlinx.lincheck.runPluginReplay
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.datastructures.CTestConfiguration

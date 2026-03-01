@@ -10,13 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.runner
 
-import org.jetbrains.kotlinx.lincheck.NoResult
+import org.jetbrains.kotlinx.lincheck.util.NoResult
 import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
 import org.jetbrains.kotlinx.lincheck.execution.emptyClock
 import org.jetbrains.kotlinx.lincheck.execution.emptyExecutionResult
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.toLincheckResult
+import org.jetbrains.kotlinx.lincheck.util.toLincheckResult
 import org.jetbrains.kotlinx.lincheck.util.threadMapOf
 import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.ExecutionException

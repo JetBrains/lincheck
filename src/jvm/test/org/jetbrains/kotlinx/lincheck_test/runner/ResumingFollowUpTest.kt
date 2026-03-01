@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.runner
 
-import org.jetbrains.kotlinx.lincheck.SuspendedResult
-import org.jetbrains.kotlinx.lincheck.ValueResult
+import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
+import org.jetbrains.kotlinx.lincheck.util.ValueResult
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier
 import org.junit.Test

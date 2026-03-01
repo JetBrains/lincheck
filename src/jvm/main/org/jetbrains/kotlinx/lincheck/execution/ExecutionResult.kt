@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.util.LincheckResult
 
 /**
  * This class represents a result of [ExecutionScenario] execution.

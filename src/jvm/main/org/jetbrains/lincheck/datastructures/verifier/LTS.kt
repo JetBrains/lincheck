@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.datastructures.verifier
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.datastructures.verifier.LTS.*
 import org.jetbrains.lincheck.datastructures.verifier.OperationType.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
@@ -75,7 +76,9 @@ class LTS(private val sequentialSpecification: Class<*>) {
 
         private fun createAtomicallySuspendedAndCancelledTransition() =
             copyAndApply { _, _, resumedTicketsWithResults, _ ->
-                TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toSet(), NO_TICKET, null, CancelledResult)
+                TransitionInfo(this, getResumedOperations(resumedTicketsWithResults).map { it.resumedActorTicket }.toSet(), NO_TICKET, null,
+                    CancelledResult
+                )
             }
 
         private fun nextByRequest(actor: Actor, expectedResult: LincheckResult): TransitionInfo? {

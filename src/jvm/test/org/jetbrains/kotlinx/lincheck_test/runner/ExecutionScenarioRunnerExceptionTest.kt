@@ -9,13 +9,14 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.runner
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.util.VoidResult
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.jetbrains.kotlinx.lincheck_test.verifier.*

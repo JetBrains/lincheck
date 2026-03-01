@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.LincheckResult
+import org.jetbrains.kotlinx.lincheck.util.LincheckResult
 
 data class HBClock(val clock: IntArray) {
     val threads: Int get() = clock.size

@@ -9,8 +9,8 @@
  */
 package org.jetbrains.lincheck.datastructures.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
 
 /**
  * An abstraction for verifiers which use the labeled transition system (LTS) under the hood.

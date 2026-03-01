@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck_test.verifier
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.util.LincheckResult
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.jetbrains.lincheck.datastructures.verifier.Verifier

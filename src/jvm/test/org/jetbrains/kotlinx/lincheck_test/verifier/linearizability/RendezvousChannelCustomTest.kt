@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck_test.verifier.linearizability
 
 import kotlinx.coroutines.channels.*
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck_test.verifier.*
 import org.jetbrains.lincheck.datastructures.actor
 import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier

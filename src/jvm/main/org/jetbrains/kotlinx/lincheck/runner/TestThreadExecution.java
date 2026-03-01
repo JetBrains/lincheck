@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner;
 
-import org.jetbrains.kotlinx.lincheck.LincheckResult;
+import org.jetbrains.kotlinx.lincheck.util.LincheckResult;
 
 
 /**
