@@ -328,17 +328,15 @@ public class Injections {
 
     /**
      * Creates a BooleanSupplier instance for a breakpoint condition.
-     * Delegates to {@link BreakpointConditionRegistry}.
+     * Delegates to {@link BreakpointStorage}.
      *
-     * @param className the fully qualified name of the condition class
-     * @param lineNumber the line number of the breakpoint
-     * @param classLoaderId identifier for the class loader (e.g., class loader's identity hash code)
-     * @param args the captured local variable values to pass to the condition
+     * @param breakpointId the unique integer id of the breakpoint
+     * @param args         the captured local variable values to pass to the condition
      * @return a BooleanSupplier instance that evaluates the condition
-     * @throws IllegalStateException if no factory has been registered for the given key
+     * @throws IllegalStateException if no state or factory is registered for the given id
      */
-    public static BooleanSupplier createConditionInstance(String className, int lineNumber, String classLoaderId, Object[] args) {
-        return BreakpointConditionRegistry.createConditionInstance(className, lineNumber, classLoaderId, args);
+    public static BooleanSupplier createConditionInstance(int breakpointId, Object[] args) {
+        return BreakpointStorage.createConditionInstance(breakpointId, args);
     }
 
     /**
@@ -830,11 +828,12 @@ public class Injections {
      * @param locals       An array containing the current values of local variables at the breakpoint location.
      *                     This includes: this, function parameters, and local variables.
      * @param traceId      ID to correlate snapshot breakpoints. Can be provided by frameworks like OpenTelemetry.
+     * @param breakpointId The unique integer id of the breakpoint that was hit.
      */
-    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId) {
+    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId, int breakpointId) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
-        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, locals, traceId);
+        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, locals, traceId, breakpointId);
     }
 
     /**

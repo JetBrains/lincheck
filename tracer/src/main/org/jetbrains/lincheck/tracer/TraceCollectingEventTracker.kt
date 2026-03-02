@@ -705,9 +705,14 @@ class TraceCollectingEventTracker(
         codeLocation: Int,
         locals: Array<Any?>,
         traceId: String?,
+        breakpointId: Int,
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        
+
+        // Check the hit limit before doing any work. Returns false if the limit has already been
+        // reached; the thread that hits exactly the limit fires the removal callback.
+        if (!BreakpointStorage.incrementAndCheckHitLimit(breakpointId)) return
+
         // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
         val stackTrace = Exception().stackTrace
             // Removes lincheck related calls

@@ -20,8 +20,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.*
 import sun.nio.ch.lincheck.*
-import sun.nio.ch.lincheck.BreakpointConditionRegistry
-import sun.nio.ch.lincheck.BreakpointConditionRegistry.getClassLoaderId
+import sun.nio.ch.lincheck.BreakpointStorage
 import java.util.function.BooleanSupplier
 import java.util.function.Function
 import kotlin.collections.orEmpty
@@ -79,7 +78,7 @@ internal class SnapshotBreakpointTransformer(
 
         callIfNotInsideBreakpointCondition(threadDescriptorLocal) {
             if (breakpointSettings.conditionClassName == null) {
-                injectBreakpointHit(threadDescriptorLocal)
+                injectBreakpointHit(threadDescriptorLocal, breakpointSettings.id)
             } else {
                 ifStatement(
                     condition = {
@@ -90,7 +89,7 @@ internal class SnapshotBreakpointTransformer(
                         leaveBreakpointCondition(threadDescriptorLocal)
                     },
                     thenClause = {
-                        injectBreakpointHit(threadDescriptorLocal)
+                        injectBreakpointHit(threadDescriptorLocal, breakpointSettings.id)
                     }
                 )
             }
@@ -148,32 +147,18 @@ internal class SnapshotBreakpointTransformer(
         }
 
         // === STEP 3: Register the condition factory (transformation time) ===
-        // Extract a unique identifier for the classloader to handle multi-classloader scenarios.
-        // Different classloaders may load classes with the same name, so we need to distinguish them.
-        val classLoaderId = getClassLoaderId(classLoader)
         // The condition class has a static "createFactory" method that returns a Function.
         // This factory takes captured variables as input and produces a BooleanSupplier.
         val createFactoryMethod = conditionClass.getDeclaredMethod("createFactory")
         createFactoryMethod.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         val factory = createFactoryMethod.invoke(null) as Function<Array<Any?>, BooleanSupplier>
-        // Register this factory in a global registry so it can be retrieved at runtime.
-        // The registry is keyed by (className, lineNumber, classLoaderId).
-        BreakpointConditionRegistry.registerConditionFactory(
-            breakpointSettings.conditionClassName,
-            breakpointSettings.lineNumber,
-            classLoaderId,
-            factory,
-            classLoader
-        )
+        BreakpointStorage.registerConditionFactory(breakpointSettings.id, factory)
 
-        // === STEP 4: Inject bytecode to push factory lookup parameters (runtime) ===
+        // === STEP 4: Inject bytecode to push the breakpointId (runtime) ===
         // The following bytecode will execute at runtime when the breakpoint is hit.
-        // Push the className, lineNumber, and classLoaderId onto the stack.
-        // These will be used to look up the factory in Injections.createConditionInstance.
-        push(breakpointSettings.conditionClassName)  // Stack: [className]
-        push(breakpointSettings.lineNumber)           // Stack: [className, lineNumber]
-        push(classLoaderId)                           // Stack: [className, lineNumber, classLoaderId]
+        // Push the breakpointId so Injections.createConditionInstance can look up the factory.
+        push(breakpointSettings.id)   // Stack: [breakpointId]
 
         // === STEP 5: Capture local variables and build Object[] array (runtime) ===
         // The condition may reference local variables from the breakpoint location.
@@ -216,7 +201,7 @@ internal class SnapshotBreakpointTransformer(
         // Stack after loop: [...lookup params..., capturedValuesArray]
 
         // === STEP 6: Create the condition instance and evaluate it (runtime) ===
-        // Call Injections.createConditionInstance(className, lineNumber, classLoaderId, capturedValues).
+        // Call Injections.createConditionInstance(breakpointId, capturedValues).
         // This looks up the registered factory and creates a BooleanSupplier instance.
         invokeStatic(Injections::createConditionInstance)
         // Stack: [BooleanSupplier instance]
@@ -278,7 +263,10 @@ internal class SnapshotBreakpointTransformer(
         )
     }
 
-    private fun GeneratorAdapter.injectBreakpointHit(threadDescriptorLocal: Int) {
+    private fun GeneratorAdapter.injectBreakpointHit(
+        threadDescriptorLocal: Int,
+        breakpointId: Int,
+    ) {
         loadLocal(threadDescriptorLocal)
         loadNewCodeLocationId()
         val activeLocals = currentActiveLocals
@@ -308,6 +296,9 @@ internal class SnapshotBreakpointTransformer(
         }
 
         traceIdCapturers.loadTraceIdIfAvailable(adapter)
+        // Push the breakpoint's integer id as a compile-time constant.
+        // Used by the event tracker for O(1) hit-limit checking and condition lookup.
+        push(breakpointId)
         invokeStatic(Injections::onSnapshotLineBreakpoint)
     }
 }

@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.settings
 
 import org.jetbrains.lincheck.util.*
+import sun.nio.ch.lincheck.BreakpointStorage
 import java.io.File
 import java.util.*
 
@@ -25,21 +26,40 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint> = emptyList
     fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
         val addedBreakpoints = mutableListOf<SnapshotBreakpoint>()
         for (breakpoint in breakpoints) {
-            if (!lineBreakPoints.contains(breakpoint)) {
-                _lineBreakPoints.add(breakpoint)
-                addedBreakpoints.add(breakpoint)
-            }
+            // Synchronize the entire check-then-act to prevent two concurrent callers from
+            // both passing the duplicate check and registering the same breakpoint twice.
+            val registered = synchronized(_lineBreakPoints) {
+                if (_lineBreakPoints.any { it == breakpoint }) return@synchronized null
+                // Register in BreakpointStorage, which assigns the unique id and stores the
+                // breakpoint as userData (passed directly to the hit-limit callback).
+                val id = BreakpointStorage.registerBreakpoint(breakpoint.hitLimit, breakpoint)
+                val registered = breakpoint.copy(id = id)
+                _lineBreakPoints.add(registered)
+                registered
+            } ?: continue
+            addedBreakpoints.add(registered)
         }
         return addedBreakpoints
     }
 
+    /**
+     * Removes breakpoints matched by location (className / fileName / lineNumber).
+     * Used for explicit user-initiated removal (e.g. via JMX), where the caller supplies
+     * breakpoints parsed from strings and therefore [SnapshotBreakpoint.UNASSIGNED_ID].
+     */
     fun removeBreakpoints(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
         val removedBreakpoints = mutableListOf<SnapshotBreakpoint>()
         for (breakpoint in breakpoints) {
-            if (lineBreakPoints.contains(breakpoint)) {
-                _lineBreakPoints.remove(breakpoint)
-                removedBreakpoints.add(breakpoint)
-            }
+            // Synchronize the entire find-then-remove to prevent two concurrent callers from
+            // both finding the entry and attempting a double removal.
+            val existing = synchronized(_lineBreakPoints) {
+                val found = _lineBreakPoints.firstOrNull { it == breakpoint }
+                    ?: return@synchronized null
+                _lineBreakPoints.remove(found)
+                found
+            } ?: continue
+            BreakpointStorage.removeBreakpoint(existing.id)
+            removedBreakpoints.add(existing)
         }
         return removedBreakpoints
     }
@@ -51,8 +71,29 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint> = emptyList
             return removed
         }
     }
-    
-override fun equals(other: Any?): Boolean {
+
+    /**
+     * Removes the breakpoint with the given [id].
+     *
+     * Unlike [removeBreakpoints] (which matches by location), this matches by the breakpoint's
+     * unique integer id.  This is important for the hit-limit path: if the user re-adds a
+     * breakpoint at the same location after the hit-limit fires (giving it a new id), this
+     * method will correctly find *nothing* (the old id is no longer in the list) rather than
+     * accidentally removing the freshly re-added breakpoint.
+     *
+     * Returns the removed [SnapshotBreakpoint], or `null` if no breakpoint with that id exists.
+     */
+    fun removeBreakpointById(id: Int): SnapshotBreakpoint? {
+        val existing = synchronized(_lineBreakPoints) {
+            val found = _lineBreakPoints.firstOrNull { it.id == id } ?: return null
+            _lineBreakPoints.remove(found)
+            found
+        }
+        BreakpointStorage.removeBreakpoint(id)
+        return existing
+    }
+
+    override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is LiveDebuggerSettings) return false
 
@@ -75,9 +116,16 @@ data class SnapshotBreakpoint(
     val conditionClassName: String?,
     val conditionFactoryMethodName: String?,
     val conditionCapturedVars: List<String>?,
-    val conditionCodeFragment: ByteArray?
+    val conditionCodeFragment: ByteArray?,
+    val hitLimit: Int = DEFAULT_HIT_LIMIT,
+    /** Unique integer id assigned by [LiveDebuggerSettings] when the breakpoint is registered. */
+    val id: Int = UNASSIGNED_ID,
 ) {
     companion object {
+        const val DEFAULT_HIT_LIMIT = 100
+        /** Sentinel value indicating the breakpoint has not yet been registered with [LiveDebuggerSettings]. */
+        const val UNASSIGNED_ID = -1
+
         fun parseFromString(rawString: String): SnapshotBreakpoint {
             val parts = rawString.split(":")
 
@@ -92,6 +140,7 @@ data class SnapshotBreakpoint(
             val conditionCodeFragment = parts.getOrNull(6)?.let {
                 if (it == "null") null else Base64.getDecoder().decode(it)
             }
+            val hitLimit = parts.getOrNull(7)?.toIntOrNull() ?: DEFAULT_HIT_LIMIT
 
             return SnapshotBreakpoint(
                 className = className,
@@ -100,7 +149,8 @@ data class SnapshotBreakpoint(
                 conditionClassName = conditionClassName,
                 conditionFactoryMethodName = conditionFactoryMethodName,
                 conditionCapturedVars = conditionCapturedVars,
-                conditionCodeFragment = conditionCodeFragment
+                conditionCodeFragment = conditionCodeFragment,
+                hitLimit = hitLimit,
             )
         }
     }
@@ -145,6 +195,7 @@ data class SnapshotBreakpoint(
  *   fileName = MyClass.java
  *   lineNumber = 120
  *   # the following properties are optional
+ *   hitLimit = 50
  *   conditionClassName = org.example.MyCondition
  *   conditionFactoryMethodName = create
  *   conditionCapturedVars = var1,var2
@@ -158,6 +209,7 @@ object BreakpointsFileParser {
     private const val KEY_CLASS_NAME = "className"
     private const val KEY_FILE_NAME = "fileName"
     private const val KEY_LINE_NUMBER = "lineNumber"
+    private const val KEY_HIT_LIMIT = "hitLimit"
     private const val KEY_CONDITION_CLASS_NAME = "conditionClassName"
     private const val KEY_CONDITION_FACTORY_METHOD_NAME = "conditionFactoryMethodName"
     private const val KEY_CONDITION_CAPTURED_VARS = "conditionCapturedVars"
@@ -263,6 +315,8 @@ object BreakpointsFileParser {
             }
         }
 
+        val hitLimit = properties[KEY_HIT_LIMIT]?.toIntOrNull() ?: SnapshotBreakpoint.DEFAULT_HIT_LIMIT
+
         return SnapshotBreakpoint(
             className = className,
             fileName = fileName,
@@ -270,7 +324,8 @@ object BreakpointsFileParser {
             conditionClassName = conditionClassName,
             conditionFactoryMethodName = conditionFactoryMethodName,
             conditionCapturedVars = conditionCapturedVars,
-            conditionCodeFragment = conditionCodeFragment
+            conditionCodeFragment = conditionCodeFragment,
+            hitLimit = hitLimit,
         )
     }
 }

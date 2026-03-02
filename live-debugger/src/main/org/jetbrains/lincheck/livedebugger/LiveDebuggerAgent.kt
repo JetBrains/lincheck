@@ -56,6 +56,9 @@ internal object LiveDebuggerAgent {
 
         override fun parseArguments(agentArgs: String?) {
             TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+            // Wire the JMX notification sender before loading breakpoints so that a hit-limit
+            // event can never fire before the sender is in place.
+            LiveDebugger.notificationSender = jmxController::notifyBreakpointHitLimitReached
             LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
         }
 
