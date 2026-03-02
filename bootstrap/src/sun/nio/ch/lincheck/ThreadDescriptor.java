@@ -102,6 +102,33 @@ public class ThreadDescriptor {
     private boolean insideBreakpointCondition = false;
 
     /**
+     * Fixed-size pool of {@link ResultInterceptor} objects.
+     * <p>
+     *
+     * Used to optimize allocations of {@link ResultInterceptor} objects,
+     * by re-using the interceptor object stored in the pool.
+     * <p>
+     *
+     * The pool is organized as a stack to match nested method call order.
+     * Result interceptors are taken from and returned into the pool in stack (LIFO) order.
+     * The top of the stack is located at index 0 of the array.
+     * <p>
+     *
+     * Null by default, lazily allocated on first use.
+     */
+    private ResultInterceptor[] resultInterceptorPool = null;
+
+    /**
+     * The index of the next available {@code ResultInterceptor} in the per-thread pool.
+     */
+    private int resultInterceptorPoolIndex = -1;
+
+    /**
+     * The size of the per-thread pool for {@link ResultInterceptor} instances.
+     */
+    private static final int RESULT_INTERCEPTOR_POOL_SIZE = 64;
+
+    /**
      * Creates a new thread descriptor for the given thread.
      */
     public ThreadDescriptor(Thread thread) {
@@ -265,6 +292,36 @@ public class ThreadDescriptor {
 
     public boolean isInsideBreakpointCondition() {
         return insideBreakpointCondition;
+    }
+
+    /**
+     * Takes a {@link ResultInterceptor} from the per-thread pool,
+     * or returns {@code null} if the pool is empty.
+     *
+     * @return a recycled {@link ResultInterceptor} instance, or {@code null} if the pool is empty.
+     */
+    public ResultInterceptor takeResultInterceptor() {
+        if (resultInterceptorPool == null) {
+            resultInterceptorPool = new ResultInterceptor[RESULT_INTERCEPTOR_POOL_SIZE];
+            resultInterceptorPoolIndex = 0;
+        }
+        if (resultInterceptorPoolIndex >= RESULT_INTERCEPTOR_POOL_SIZE) return null;
+
+        return resultInterceptorPool[resultInterceptorPoolIndex++];
+    }
+
+    /**
+     * Returns a {@link ResultInterceptor} to the per-thread pool for re-use.
+     * The interceptor is {@linkplain ResultInterceptor#reset() reset} before being returned to the pool.
+     * If the pool is full, the interceptor is simply discarded.
+     *
+     * @param interceptor the interceptor to return to the pool.
+     */
+    public void returnResultInterceptor(ResultInterceptor interceptor) {
+        if (resultInterceptorPool == null || resultInterceptorPoolIndex <= 0) return;
+
+        interceptor.reset();
+        resultInterceptorPool[--resultInterceptorPoolIndex] = interceptor;
     }
 
     /**

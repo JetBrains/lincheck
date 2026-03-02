@@ -295,16 +295,17 @@ private val Type.requiresBoxing: Boolean
  * or pushed a `null` depending on the supplied boolean flag [shouldIntercept].
  *
  * @param shouldIntercept Flag indicating whether to intercept results.
+ * @param threadDescriptorLocal The local variable index that holds a reference to the current thread descriptor.
  */
-internal fun GeneratorAdapter.pushResultInterceptor(shouldIntercept: Boolean) {
-    // STACK: threadDescriptor
+internal fun GeneratorAdapter.pushResultInterceptor(threadDescriptorLocal: Int, shouldIntercept: Boolean) {
+    // STACK: <empty>
     if (shouldIntercept) {
+        // STACK: <empty>
+        loadLocal(threadDescriptorLocal)
         // STACK: threadDescriptor
         invokeStatic(Injections::createResultInterceptor)
         // STACK: interceptor
     } else {
-        // STACK: threadDescriptor
-        pop()
         // STACK: <empty>
         pushNull()
         // STACK: null

@@ -80,17 +80,17 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FinalFields.isFinalField(owner, fieldName)
         ).id
 
-        // STACK: <empty>
-        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        // STACK: descriptor
-
+        val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
+            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+            storeLocal(it)
+        }
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            dup()
-            pushResultInterceptor(shouldIntercept = configuration.interceptReadResults)
+            pushResultInterceptor(threadDescriptorLocal, shouldIntercept = configuration.interceptReadResults)
             storeLocal(it)
         }
 
-        // STACK: descriptor
+        // STACK: <empty>
+        loadLocal(threadDescriptorLocal)
         val codeLocationId = loadNewCodeLocationId()
         pushNull()
         push(fieldId)
@@ -108,7 +108,7 @@ internal class SharedMemoryAccessTransformer(
         )
 
         // STACK: value
-        invokeAfterReadField(null, fieldId, getType(desc), codeLocationId)
+        invokeAfterReadField(null, fieldId, getType(desc), codeLocationId, threadDescriptorLocal, resultInterceptorLocal)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read static field")
         // STACK: value
@@ -127,17 +127,16 @@ internal class SharedMemoryAccessTransformer(
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(0)
         val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
 
-        // STACK: obj
-        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        // STACK: obj, descriptor
-
+        val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
+            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+            storeLocal(it)
+        }
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            dup()
-            pushResultInterceptor(shouldIntercept = configuration.interceptReadResults)
+            pushResultInterceptor(threadDescriptorLocal, shouldIntercept = configuration.interceptReadResults)
             storeLocal(it)
         }
 
-        // STACK: obj, descriptor
+        loadLocal(threadDescriptorLocal)
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(ownerLocal)
         push(fieldId)
@@ -160,7 +159,7 @@ internal class SharedMemoryAccessTransformer(
         )
 
         // STACK: value
-        invokeAfterReadField(ownerLocal, fieldId, getType(desc), codeLocationId)
+        invokeAfterReadField(ownerLocal, fieldId, getType(desc), codeLocationId, threadDescriptorLocal, resultInterceptorLocal)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read field")
         // STACK: value
@@ -260,22 +259,22 @@ internal class SharedMemoryAccessTransformer(
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
 
-        // STACK: <empty>
-        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        // STACK: descriptor
-
+        val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
+            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+            storeLocal(it)
+        }
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            dup()
-            pushResultInterceptor(shouldIntercept = configuration.interceptReadResults)
+            pushResultInterceptor(threadDescriptorLocal, shouldIntercept = configuration.interceptReadResults)
             storeLocal(it)
         }
 
-        // STACK: descriptor
+        // STACK: <empty>
+        loadLocal(threadDescriptorLocal)
         val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         loadLocal(resultInterceptorLocal)
-        // STACK: descriptor, codeLocation, array, index
+        // STACK: descriptor, codeLocation, array, index, resultInterceptor
         invokeStatic(Injections::beforeReadArray)
         // STACK: <empty>
         loadLocal(arrayLocal)
@@ -296,7 +295,7 @@ internal class SharedMemoryAccessTransformer(
         )
 
         // STACK: value
-        invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType, codeLocationId)
+        invokeAfterReadArray(arrayLocal, indexLocal, arrayElementType, codeLocationId, threadDescriptorLocal, resultInterceptorLocal)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read array")
         // STACK: value
@@ -359,11 +358,15 @@ internal class SharedMemoryAccessTransformer(
         )
     }
 
-    private fun GeneratorAdapter.invokeAfterReadField(ownerLocal: Int?, fieldId: Int, valueType: Type, codeLocationId: Int) {
+    private fun GeneratorAdapter.invokeAfterReadField(ownerLocal: Int?, fieldId: Int, valueType: Type,
+        codeLocationId: Int,
+        threadDescriptorLocal: Int,
+        resultInterceptorLocal: Int,
+    ) {
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
-        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+        loadLocal(threadDescriptorLocal)
         push(codeLocationId)
         if (ownerLocal != null) {
             loadLocal(ownerLocal)
@@ -373,22 +376,28 @@ internal class SharedMemoryAccessTransformer(
         push(fieldId)
         loadLocal(resultLocal)
         box(valueType)
-        // STACK: value, descriptor, codeLocation, owner, fieldId, boxed value
+        loadLocal(resultInterceptorLocal)
+        // STACK: value, descriptor, codeLocation, owner, fieldId, boxed value, interceptor
         invokeStatic(Injections::afterReadField)
         // STACK: value
     }
 
-    private fun GeneratorAdapter.invokeAfterReadArray(arrayLocal: Int, indexLocal: Int, valueType: Type, codeLocationId: Int) {
+    private fun GeneratorAdapter.invokeAfterReadArray(arrayLocal: Int, indexLocal: Int, valueType: Type,
+        codeLocationId: Int,
+        threadDescriptorLocal: Int,
+        resultInterceptorLocal: Int,
+    ) {
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
-        invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+        loadLocal(threadDescriptorLocal)
         push(codeLocationId)
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         loadLocal(resultLocal)
         box(valueType)
-        // STACK: value, descriptor, codeLocation, array, index, boxed value
+        loadLocal(resultInterceptorLocal)
+        // STACK: value, descriptor, codeLocation, array, index, boxed value, interceptor
         invokeStatic(Injections::afterReadArray)
         // STACK: value
     }

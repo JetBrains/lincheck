@@ -13,9 +13,7 @@ package sun.nio.ch.lincheck;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BooleanSupplier;
-import java.util.function.Function;
 
 /**
  * Methods of this object are called from the instrumented code.
@@ -698,19 +696,21 @@ public class Injections {
     /**
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
-    public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value) {
+    public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
         eventTracker.afterReadField(descriptor, codeLocation, obj, fieldId, value);
+        recycleResultInterceptor(descriptor, interceptor);
     }
 
     /**
      * Called from the instrumented code after each array read.
      */
-    public static void afterReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
+    public static void afterReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
         eventTracker.afterReadArrayElement(descriptor, codeLocation, array, index, value);
+        recycleResultInterceptor(descriptor, interceptor);
     }
 
     /**
@@ -791,6 +791,7 @@ public class Injections {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
         eventTracker.onMethodCallReturn(descriptor, methodId, receiver, params, result, interceptor);
+        recycleResultInterceptor(descriptor, interceptor);
     }
 
     /**
@@ -815,6 +816,7 @@ public class Injections {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
         eventTracker.onMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
+        recycleResultInterceptor(descriptor, interceptor);
     }
 
     /**
@@ -856,14 +858,29 @@ public class Injections {
     }
 
     /**
-     * Creates and returns a new instance of a result interceptor.
+     * Creates and returns a result interceptor object.
+     * Attempts to re-use one from the per-thread pool if available,
+     * or allocates a new instance otherwise.
      *
-     * @param descriptor the thread descriptor of the current thread.
-     * @return a new {@link ResultInterceptor} instance or null if the {@code descriptor} is null.
+     * @param descriptor the thread descriptor of the current thread, or {@code null}.
+     * @return a {@link ResultInterceptor} instance or null if the {@code descriptor} is null.
      */
     public static ResultInterceptor createResultInterceptor(ThreadDescriptor descriptor) {
         if (descriptor == null) return null;
+        ResultInterceptor interceptor = descriptor.takeResultInterceptor();
+        if (interceptor != null) return interceptor;
         return new ResultInterceptor();
+    }
+
+    /**
+     * Recycles a result interceptor back into the per-thread pool for re-use.
+     *
+     * @param descriptor the thread descriptor of the current thread, or {@code null}.
+     * @param interceptor the interceptor to recycle, or {@code null}.
+     */
+    public static void recycleResultInterceptor(ThreadDescriptor descriptor, ResultInterceptor interceptor) {
+        if (descriptor == null || interceptor == null) return;
+        descriptor.returnResultInterceptor(interceptor);
     }
 
     /**

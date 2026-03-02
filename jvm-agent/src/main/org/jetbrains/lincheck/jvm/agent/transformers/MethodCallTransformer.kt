@@ -112,8 +112,7 @@ internal class MethodCallTransformer(
         // if configuration disables method result interception,
         // does not create an object and pushes `null` instead
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            loadLocal(threadDescriptorLocal)
-            pushResultInterceptor(shouldIntercept = configuration.interceptMethodCallResults)
+            pushResultInterceptor(threadDescriptorLocal, shouldIntercept = configuration.interceptMethodCallResults)
             storeLocal(it)
         }
 
