@@ -270,3 +270,10 @@ private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Lon
     }
     return null // Field not found
 }
+
+fun cleanupUnsafeCaches() {
+    fieldOffsetCache.clear()
+    fieldBaseObjectCache.clear()
+    fieldDescriptorByOffsetCache.clear()
+    declaredFieldsCache.clear()
+}
