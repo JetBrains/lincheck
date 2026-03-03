@@ -169,4 +169,12 @@ public class BreakpointStorage {
     public static void setOnHitLimitReached(Consumer<Object> callback) {
         onHitLimitReached = callback;
     }
+
+    /**
+     * Clears all stored breakpoint states and associated data,
+     * including breakpoint condition factories.
+     */
+    public static void clear() {
+        states.clear();
+    }
 }

@@ -29,7 +29,7 @@ import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
 import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.cleanupUnsafeCaches
-import sun.nio.ch.lincheck.BreakpointConditionRegistry
+import sun.nio.ch.lincheck.BreakpointStorage
 import java.lang.instrument.Instrumentation
 
 /**
@@ -81,7 +81,7 @@ internal object LiveDebuggerAgent {
 
                 // clean up caches and other global structures
                 cleanupUnsafeCaches()
-                BreakpointConditionRegistry.clear()
+                BreakpointStorage.clear()
             }
 
             override fun addBreakpoints(breakpoints: List<String>) {
