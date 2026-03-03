@@ -35,6 +35,7 @@ public class BreakpointConditionRegistry {
         private final String className;
         private final int lineNumber;
         private final String classLoaderId;
+
         // We need to store this weak reference somewhere to subscribe for class loader collection by GC.
         @SuppressWarnings("all")
         private final WeakReference<ClassLoader> classLoaderRef;
@@ -70,12 +71,14 @@ public class BreakpointConditionRegistry {
     /**
      * Cache of condition factories: (className, lineNumber, classLoaderId) -> Function<Object[], BooleanSupplier>
      */
-    private static final ConcurrentHashMap<ConditionFactoryKey, Function<Object[], BooleanSupplier>> conditionFactories = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<ConditionFactoryKey, Function<Object[], BooleanSupplier>> conditionFactories =
+        new ConcurrentHashMap<>();
 
     /**
      * Reference queue for tracking garbage collected class loaders.
      */
-    private static final ReferenceQueue<ClassLoader> classLoaderReferenceQueue = new ReferenceQueue<>();
+    private static final ReferenceQueue<ClassLoader> classLoaderReferenceQueue =
+        new ReferenceQueue<>();
 
     /**
      * Thread that monitors for garbage collected class loaders and cleans up their factories.
@@ -149,5 +152,9 @@ public class BreakpointConditionRegistry {
 
     public static String getClassLoaderId(ClassLoader loader) {
         return String.valueOf(System.identityHashCode(loader));
+    }
+
+    public static void clear() {
+        conditionFactories.clear();
     }
 }
