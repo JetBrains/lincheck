@@ -122,7 +122,7 @@ data class SnapshotBreakpoint(
     val id: Int = UNASSIGNED_ID,
 ) {
     companion object {
-        const val DEFAULT_HIT_LIMIT = 100
+        const val DEFAULT_HIT_LIMIT = 10_000
         /** Sentinel value indicating the breakpoint has not yet been registered with [LiveDebuggerSettings]. */
         const val UNASSIGNED_ID = -1
 
