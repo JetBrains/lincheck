@@ -29,7 +29,7 @@ import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
 import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.cleanupUnsafeCaches
-import sun.nio.ch.lincheck.BreakpointConditionRegistry
+import sun.nio.ch.lincheck.BreakpointStorage
 import java.lang.instrument.Instrumentation
 
 /**
@@ -56,6 +56,9 @@ internal object LiveDebuggerAgent {
 
         override fun parseArguments(agentArgs: String?) {
             TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+            // Wire the JMX notification sender before loading breakpoints so that a hit-limit
+            // event can never fire before the sender is in place.
+            LiveDebugger.notificationSender = jmxController::notifyBreakpointHitLimitReached
             LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
         }
 
@@ -78,7 +81,7 @@ internal object LiveDebuggerAgent {
 
                 // clean up caches and other global structures
                 cleanupUnsafeCaches()
-                BreakpointConditionRegistry.clear()
+                BreakpointStorage.clear()
             }
 
             override fun addBreakpoints(breakpoints: List<String>) {

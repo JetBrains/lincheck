@@ -2026,7 +2026,8 @@ internal abstract class ManagedStrategy(
         descriptor: ThreadDescriptor?,
         codeLocation: Int,
         locals: Array<Any?>,
-        traceId: String?
+        traceId: String?,
+        breakpointId: Int,
     ) {}
 
     override fun onInlineMethodCall(

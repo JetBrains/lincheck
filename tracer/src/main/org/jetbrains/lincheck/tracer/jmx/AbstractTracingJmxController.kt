@@ -10,20 +10,24 @@
 
 package org.jetbrains.lincheck.tracer.jmx
 
-import org.jetbrains.lincheck.trace.jmx.TracingJmxController
-import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
-import org.jetbrains.lincheck.tracer.Tracer
-import org.jetbrains.lincheck.tracer.TraceOutputMode
-import org.jetbrains.lincheck.tracer.TracingSession
-import org.jetbrains.lincheck.util.Logger
-import java.lang.management.ManagementFactory
-import javax.management.ObjectName
-import javax.management.StandardMBean
+import org.jetbrains.lincheck.trace.jmx.*
+import org.jetbrains.lincheck.tracer.*
+import org.jetbrains.lincheck.util.*
+import java.lang.management.*
+import java.util.concurrent.atomic.*
+import javax.management.*
 
 /**
  * A base abstract class for implementing tracing JMX controller interface for the [Tracer].
+ *
+ * Extends [NotificationBroadcasterSupport] so that the registered [StandardEmitterMBean] can emit
+ * JMX notifications to remote clients (e.g., to the IDE plugin when a breakpoint reaches its
+ * hit limit).
  */
-abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxController {
+abstract class AbstractTracingJmxController :
+    NotificationBroadcasterSupport(), TracingJmxRegistrator, TracingJmxController {
+
+    private val notificationSequence = AtomicLong(0)
 
     protected open val mbeanInterface: Class<out TracingJmxController>
         get() = TracingJmxController::class.java
@@ -42,7 +46,7 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
             }
 
             @Suppress("UNCHECKED_CAST")
-            val mbean = StandardMBean(this, mbeanInterface as Class<TracingJmxController>)
+            val mbean = StandardEmitterMBean(this, mbeanInterface as Class<TracingJmxController>, this)
             mbs.registerMBean(mbean, objectName)
 
             Logger.info { "JMX MBean registered successfully at $mbeanName" }
@@ -56,6 +60,23 @@ abstract class AbstractTracingJmxController : TracingJmxRegistrator, TracingJmxC
         } catch (e: Exception) {
             Logger.error(e) { "Failed to register shutdown hook for JMX MBean at $mbeanName" }
         }
+    }
+
+    /**
+     * Sends a JMX notification to inform the IDE that the given breakpoint has reached its hit limit.
+     *
+     * @param breakpointId a `"className:fileName:lineNumber"` string identifying the breakpoint.
+     */
+    fun notifyBreakpointHitLimitReached(breakpointId: String) {
+        val notification = Notification(
+            LiveDebuggerJmxController.BREAKPOINT_HIT_LIMIT_NOTIFICATION_TYPE,
+            ObjectName(mbeanName),
+            notificationSequence.incrementAndGet(),
+            "Breakpoint '$breakpointId' has reached its hit limit",
+        )
+        notification.userData = breakpointId
+        sendNotification(notification)
+        Logger.info { "Sent hit-limit notification for breakpoint: $breakpointId" }
     }
 
     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
