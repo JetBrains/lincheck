@@ -77,6 +77,7 @@ private data class ActiveMethodCallInfo(
 private data class LoopDetectorThreadState(
     val threadId: Int,
     val callStack: ArrayDeque<ActiveMethodCallInfo> = ArrayDeque(),
+    val methodCallCounters: MutableMap<Int /* MethodId */, Int> = mutableMapOf()
 )
 
 class BoundedLoopDetector(
@@ -98,21 +99,17 @@ class BoundedLoopDetector(
     // Per-thread stack of currently active loops
     private val activeLoopStack = mutableThreadMapOf<ArrayDeque<LoopContext>>()
 
-    private val methodCallCounters = mutableThreadMapOf<MutableMap<Int /* MethodId */, Int>>()
-
     private fun loopStack(thread: Int): ArrayDeque<LoopContext> =
         activeLoopStack.getOrPut(thread) { ArrayDeque() }
 
     override fun resetAll() {
         threadStates.clear()
         activeLoopStack.clear()
-        methodCallCounters.clear()
     }
 
     override fun resetThread(threadId: Int) {
         threadStates.remove(threadId)
         activeLoopStack.remove(threadId)
-        methodCallCounters.remove(threadId)
     }
 
     private fun state(threadId: Int): LoopDetectorThreadState =
@@ -248,7 +245,7 @@ class BoundedLoopDetector(
         val stack = st.callStack
         val top = stack.lastOrNull()
 
-        val counters = methodCallCounters.getOrPut(threadId) { mutableMapOf() }
+        val counters = st.methodCallCounters
         val methodCallCounter = (counters[methodId] ?: 0) + 1
         counters[methodId] = methodCallCounter
         if (methodCallCounter > recursiveCallsBound) {
@@ -280,9 +277,9 @@ class BoundedLoopDetector(
         val stack = st.callStack
         val top = stack.lastOrNull() ?: return
 
-        val counters = methodCallCounters.getOrPut(threadId) { mutableMapOf() }
+        val counters = st.methodCallCounters
         val methodCallCounter = (counters[methodId] ?: 1) - 1
-        counters[methodId] = methodCallCounter
+        if (methodCallCounter <= 0) counters.remove(methodId) else counters[methodId] = methodCallCounter
 
         if (top.methodId == methodId) {
             if (top.depth > 1) top.depth -= 1 else stack.removeLast()
