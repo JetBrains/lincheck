@@ -2128,6 +2128,7 @@ internal abstract class ManagedStrategy(
             when (decision) {
                 LoopDetector.Decision.IDLE -> {}
                 LoopDetector.Decision.SWITCH_THREAD -> {
+                    tryAbortingUserThreads(threadId, BlockingReason.LiveLocked)
                     onSwitchPoint(threadId)
                     switchCurrentThread(threadId, BlockingReason.LiveLocked)
                 }
