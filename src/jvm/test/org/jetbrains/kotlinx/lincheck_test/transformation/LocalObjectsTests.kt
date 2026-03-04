@@ -40,15 +40,16 @@ class LocalObjectEliminationTest {
 
     @Operation
     fun operation(): Int {
+        val N = LOOP_ITERATIONS
         val a = A(0, this, IntArray(2))
         a.any = a
-        repeat(20) {
+        repeat(N) {
             a.value = it
         }
         a.array[1] = 54
         val b = A(a.value, a.any, a.array)
         b.value = 65
-        repeat(20) {
+        repeat(N) {
             b.array[0] = it
         }
         a.any = b
@@ -61,7 +62,7 @@ class LocalObjectEliminationTest {
             a.value += 1
             x += 1
         }
-        repeat(20) {
+        repeat(N) {
             closure()
         }
         return (a.any as A).array.sum()
@@ -77,6 +78,12 @@ class LocalObjectEliminationTest {
         .check(this::class)
 
     private data class A(var value: Int, var any: Any, val array: IntArray)
+
+    companion object {
+        // IMPORTANT: this constant should be less than the loop iterations bound N
+        //   used by LoopDetector to perform thread switches after N repeated iterations of the same loop.
+        private const val LOOP_ITERATIONS = 5
+    }
 }
 
 class LocalObjectEscapeConstructorTest {
