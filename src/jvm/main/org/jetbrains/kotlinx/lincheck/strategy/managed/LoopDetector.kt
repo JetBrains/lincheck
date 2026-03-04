@@ -98,17 +98,21 @@ class BoundedLoopDetector(
     // Per-thread stack of currently active loops
     private val activeLoopStack = mutableThreadMapOf<ArrayDeque<LoopContext>>()
 
+    private val methodCallCounters = mutableThreadMapOf<MutableMap<Int /* MethodId */, Int>>()
+
     private fun loopStack(thread: Int): ArrayDeque<LoopContext> =
         activeLoopStack.getOrPut(thread) { ArrayDeque() }
 
     override fun resetAll() {
         threadStates.clear()
         activeLoopStack.clear()
+        methodCallCounters.clear()
     }
 
     override fun resetThread(threadId: Int) {
         threadStates.remove(threadId)
         activeLoopStack.remove(threadId)
+        methodCallCounters.remove(threadId)
     }
 
     private fun state(threadId: Int): LoopDetectorThreadState =
@@ -244,6 +248,13 @@ class BoundedLoopDetector(
         val stack = st.callStack
         val top = stack.lastOrNull()
 
+        val counters = methodCallCounters.getOrPut(threadId) { mutableMapOf() }
+        val methodCallCounter = (counters[methodId] ?: 0) + 1
+        counters[methodId] = methodCallCounter
+        if (methodCallCounter > recursiveCallsBound) {
+            return LoopDetector.Decision.STUCK
+        }
+
         if (top != null && top.methodId == methodId) {
             top.depth += 1
             if (top.depth > recursiveCallsBound) {
@@ -268,10 +279,15 @@ class BoundedLoopDetector(
         val st = state(threadId)
         val stack = st.callStack
         val top = stack.lastOrNull() ?: return
+
+        val counters = methodCallCounters.getOrPut(threadId) { mutableMapOf() }
+        val methodCallCounter = (counters[methodId] ?: 1) - 1
+        counters[methodId] = methodCallCounter
+
         if (top.methodId == methodId) {
-                if (top.depth > 1) top.depth -= 1 else stack.removeLast()
-                return
-            }
+            if (top.depth > 1) top.depth -= 1 else stack.removeLast()
+            return
+        }
 
         // If methodId is not on top, then we need to find it in the stack and remove all frames above it.
         val idx = stack.indexOfLast { it.methodId == methodId }
@@ -280,6 +296,7 @@ class BoundedLoopDetector(
         val frame = stack.lastOrNull() ?: return
         if (frame.depth > 1) frame.depth -= 1 else stack.removeLast()
     }
+
     override fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {
         val st = state(threadId)
         val stack = st.callStack
