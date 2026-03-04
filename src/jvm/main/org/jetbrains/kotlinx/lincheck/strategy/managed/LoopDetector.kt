@@ -43,6 +43,8 @@ interface LoopDetector {
         result: Any?,
     )
 
+    fun onIrreducibleLoop(threadId: Int, codeLocation: Int): Decision
+
     fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int) : Int
 
     fun currentMethodId(threadId: Int): Int
@@ -292,6 +294,27 @@ class BoundedLoopDetector(
         while (stack.size - 1 > idx) stack.removeLast()
         val frame = stack.lastOrNull() ?: return
         if (frame.depth > 1) frame.depth -= 1 else stack.removeLast()
+    }
+
+    // --- IRREDUCIBLE LOOPS ---
+    override fun onIrreducibleLoop(threadId: Int, codeLocation: Int): LoopDetector.Decision {
+        val st = threadStates[threadId] ?: return LoopDetector.Decision.IDLE
+        val frame = st.callStack.lastOrNull() ?: return LoopDetector.Decision.IDLE
+
+        // For irreducible loops we can use the placeholder loop ID -2, to make sure that they are not mixed with
+        // regular loops. We also don't need to track them in the loop stack, as they are not nested and don't have enter and exit events.
+        val loop = frame.loops.lastOrNull { it.key.loopId == -2 && it.key.codeLocation == codeLocation }
+            ?: ActiveLoopInfo(LoopKey(-2, codeLocation)).also { frame.loops.addLast(it) }
+
+        loop.iterationCount += 1
+
+        if (loop.iterationCount % iterationsBeforeThreadSwitch == 0)
+            return LoopDetector.Decision.SWITCH_THREAD
+
+        if (loop.iterationCount >= iterationsBound)
+            return LoopDetector.Decision.STUCK
+
+        return LoopDetector.Decision.IDLE
     }
 
     override fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {

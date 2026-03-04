@@ -171,9 +171,9 @@ class BasicBlockControlFlowGraph(
                 }
             } else {
                 isReducible = false
-                // CFG is irreducible, our loop calculation algorithm will not work with it
-                // so we report that fact and don't compute any loop information
-                Logger.warn { "Irreducible CFG detected, loop information will not be computed for $className::$method" }
+                // CFG is irreducible, our loop calculation algorithm will not work perfectly in this case
+                // so we report that fact and compute limited loop information
+                Logger.warn { "Irreducible CFG detected, loop information will be limited for $className::$method" }
                 Logger.debug { "CFG:\n${toFormattedString()}" }
                 loopInfo = MethodLoopsInformation()
             }

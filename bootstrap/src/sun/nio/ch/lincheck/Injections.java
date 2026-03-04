@@ -1068,6 +1068,15 @@ public class Injections {
         );
     }
 
+    /**
+     * Called at the beginning of every loop iteration for irreducible loops (loops with multiple entries)
+     */
+    public static void onIrreducibleLoop(ThreadDescriptor descriptor, int codeLocation) {
+        EventTracker tracker = getEventTracker(descriptor);
+        if (tracker == null || descriptor == null) return;
+        tracker.onIrreducibleLoop(descriptor, codeLocation);
+    }
+
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 

@@ -81,6 +81,13 @@ internal class LoopTransformer(
     private val opcodesReachableFromOutsideLoops: Map<InstructionIndex, Set<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeReachabilityFromOutsideLoops(insnIndexRemapping, loopInfo)
 
+    private val isReducible = methodInfo.basicControlFlowGraph!!.isReducible ?: true
+    private val irreducibleHitSites: Set<InstructionIndex> = if (!isReducible) {
+        methodInfo.basicControlFlowGraph!!.computeIrreducibleLoopEntries(insnIndexRemapping)
+    } else {
+        emptySet()
+    }
+
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
@@ -134,6 +141,14 @@ internal class LoopTransformer(
             }
             // Restore the exception object back to the stack for the handler body (e.g., ASTORE)
             loadLocal(exceptionLocal)
+        }
+
+        if (nonPhonyIndex in irreducibleHitSites) {
+            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+            loadNewCodeLocationId()
+            // STACK: descriptor, codeLocation
+            adapter.invokeStatic(Injections::onIrreducibleLoop)
+            // STACK: <empty>
         }
     }
 }
@@ -234,4 +249,28 @@ private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
         }
     }
     return result.mapValues { it.value.toSet() }
+}
+
+/**
+ * Computes heuristic loop entry sites for irreducible CFGs by identifying targets
+ * of backward edges (where target block index <= source block index).
+ */
+private fun BasicBlockControlFlowGraph.computeIrreducibleLoopEntries(
+    insnIndexRemapping: IntArray
+): Set<InstructionIndex> {
+    val result = mutableSetOf<InstructionIndex>()
+
+    // Blocks are sorted topologically by their range
+    // Therefore, any edge where target <= source is a jump backwards.
+    for (edge in edges) {
+        if (edge.target <= edge.source) {
+            val idx = firstOpcodeIndexOf(edge.target) ?: continue
+            val mappedIndex = insnIndexRemapping.getOrNull(idx) ?: -1
+            if (mappedIndex >= 0) {
+                result.add(mappedIndex)
+            }
+        }
+    }
+
+    return result
 }
