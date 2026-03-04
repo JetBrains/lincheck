@@ -34,7 +34,7 @@ interface Descriptor {
     }
 }
 
-open class ClassDescriptor(
+data class ClassDescriptor(
     private val context: TraceContext,
     val name: String
 ) : Descriptor {
