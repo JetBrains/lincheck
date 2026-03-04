@@ -256,7 +256,7 @@ class LazyTraceReader private constructor(
             return input.threadIdMap
         }
 
-    val diffTEventIdMap: List<Pair<Int, Int>>?
+    val diffEventIdMap: List<Pair<Int, Int>>?
         get() {
             check(isDiff) { "Event ID map is only available for trace diffs" }
             return input.eventIdMap

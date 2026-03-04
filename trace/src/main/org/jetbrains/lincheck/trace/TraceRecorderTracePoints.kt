@@ -139,7 +139,7 @@ sealed class TRContainerTracePoint(
     // We need this to have unmodifiable list here, ad "children" list needs some bookkeeping
     val events: List<TRTracePoint?> get() = children
 
-    val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: emptySet()
+    val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: SUBTREE_STATUS_UNCHANGED
 
     private fun TRTracePoint.setParentIfContainer(parent: TRContainerTracePoint) {
         if (this !is TRContainerTracePoint) return
@@ -247,6 +247,8 @@ sealed class TRContainerTracePoint(
             }
             return set
         }
+
+        private val SUBTREE_STATUS_UNCHANGED = EnumSet.of(DiffStatus.UNCHANGED)
     }
 }
 
