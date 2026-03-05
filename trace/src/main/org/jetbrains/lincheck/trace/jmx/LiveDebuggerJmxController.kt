@@ -12,6 +12,8 @@ package org.jetbrains.lincheck.trace.jmx
 
 import org.jetbrains.lincheck.trace.controller.LiveDebuggerController
 import org.jetbrains.lincheck.trace.controller.TracingController
+import org.jetbrains.lincheck.trace.controller.TracingNotification
+import javax.management.Notification
 import javax.management.remote.JMXConnector
 
 class LiveDebuggerJmxController(
@@ -27,5 +29,10 @@ class LiveDebuggerJmxController(
 
     override fun removeBreakpoints(breakpoints: List<String>) {
         mBean.removeBreakpoints(breakpoints)
+    }
+
+    override fun parseJmxNotification(notification: Notification): TracingNotification? {
+        return LiveDebuggerJmxMBean.parseJmxNotification(notification)
+            ?: super.parseJmxNotification(notification)
     }
 }

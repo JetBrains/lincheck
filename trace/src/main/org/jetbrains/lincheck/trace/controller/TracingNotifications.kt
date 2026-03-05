@@ -12,5 +12,5 @@ package org.jetbrains.lincheck.trace.controller
 
 typealias TracingNotificationListener = (TracingNotification) -> Unit
 
-sealed class TracingNotification {}
+open class TracingNotification(open val timestamp: Long) {}
 

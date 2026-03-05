@@ -53,8 +53,8 @@ abstract class AbstractTracingJmxController(
         if (!mbeanConnection.isRegistered(objectName)) {
             throw IllegalStateException("MBean ${mBean.name} is not registered")
         }
-        val listener = NotificationListener { notification, _ ->
-            val notification = mBean.parseNotification(notification) ?: return@NotificationListener
+        val listener = NotificationListener { jmxNotification, _ ->
+            val notification = parseJmxNotification(jmxNotification) ?: return@NotificationListener
             notificationListeners.forEach { listener ->
                 listener(notification)
             }
@@ -66,7 +66,7 @@ abstract class AbstractTracingJmxController(
         notificationListeners.add(listener)
     }
 
-    protected open fun Notification.parse(): TracingNotification? = null
+    protected open fun parseJmxNotification(notification: Notification): TracingNotification? = null
 }
 
 class TracingJmxController(

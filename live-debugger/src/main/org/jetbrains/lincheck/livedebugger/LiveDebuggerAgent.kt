@@ -24,6 +24,9 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTraceDebu
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTraceDebugging
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
+import org.jetbrains.lincheck.trace.controller.LiveDebuggerNotification
+import org.jetbrains.lincheck.trace.controller.TracingNotification
+import org.jetbrains.lincheck.trace.jmx.JmxNotificationData
 import org.jetbrains.lincheck.trace.jmx.LiveDebuggerJmxMBean
 import org.jetbrains.lincheck.trace.jmx.TracingJmxMBean
 import org.jetbrains.lincheck.tracer.TraceOutputMode
@@ -32,6 +35,7 @@ import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.cleanupUnsafeCaches
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.lang.instrument.Instrumentation
+import javax.management.Notification
 
 /**
  * Live debugging JVM agent.
@@ -91,6 +95,10 @@ internal object LiveDebuggerAgent {
             override fun removeBreakpoints(breakpoints: List<String>) {
                 LiveDebugger.removeBreakpoints(breakpoints)
             }
+
+            override fun getJmxNotificationData(notification: TracingNotification): JmxNotificationData? =
+                LiveDebuggerJmxMBean.getJmxNotificationData(notification)
+                    ?: super.getJmxNotificationData(notification)
         }
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider? = null

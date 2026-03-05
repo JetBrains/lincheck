@@ -66,9 +66,9 @@ abstract class AbstractTracingJmxMBean : NotificationBroadcasterSupport(), Traci
         }
     }
 
-    override fun sendNotification(notification: TracingNotification) {
+    fun sendNotification(notification: TracingNotification) {
         try {
-            val jmxNotificationData = notification.getJmxNotificationData() ?: return
+            val jmxNotificationData = getJmxNotificationData(notification) ?: return
             val jmxNotification = Notification(
                 /* type = */ jmxNotificationData.type,
                 /* source = */ ObjectName(name),
@@ -79,38 +79,12 @@ abstract class AbstractTracingJmxMBean : NotificationBroadcasterSupport(), Traci
             if (jmxNotificationData.userData != null) {
                 jmxNotification.userData = jmxNotificationData.userData
             }
-            sendNotification(notification)
+            sendNotification(jmxNotification)
             Logger.info { "Sent notification via JMX: $notification" }
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot send notification via JMX: $notification" }
         }
     }
 
-    protected data class JmxNotificationData(
-        val type: String,
-        val message: String,
-        val timestamp: Long,
-        val userData: Any? = null,
-    )
-
-    protected fun TracingNotification.getJmxNotificationData(): JmxNotificationData? = null
-
-    override fun parseNotification(jmxNotification: Notification): TracingNotification? = null
-
-    /**
-     * Sends a JMX notification to inform that the given breakpoint has reached its hit limit.
-     *
-     * @param breakpointId a `"className:fileName:lineNumber"` string identifying the breakpoint.
-     */
-    fun notifyBreakpointHitLimitReached(breakpointId: String) {
-        val notification = Notification(
-            LiveDebuggerJmxMBean.BREAKPOINT_HIT_LIMIT_NOTIFICATION_TYPE,
-            ObjectName(name),
-            notificationSequence.incrementAndGet(),
-            "Breakpoint '$breakpointId' has reached its hit limit",
-        )
-        notification.userData = breakpointId
-        sendNotification(notification)
-        Logger.info { "Sent hit-limit notification for breakpoint: $breakpointId" }
-    }
+    protected open fun getJmxNotificationData(notification: TracingNotification): JmxNotificationData? = null
 }

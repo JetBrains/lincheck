@@ -46,20 +46,5 @@ interface TracingJmxMBean : NotificationEmitter {
      * Stops the current tracing operation.
      */
     fun stopTracing()
-
-    /**
-     * Sends the specified tracing notification to registered listeners.
-     *
-     * @param notification the instance of [TracingNotification] to be sent.
-     */
-    fun sendNotification(notification: TracingNotification)
-
-    /**
-     * Parses a JMX [Notification] into a [TracingNotification] instance.
-     *
-     * @param jmxNotification the JMX notification to be parsed.
-     * @return the parsed [TracingNotification] instance,
-     *   or null if the JMX notification cannot be mapped to [TracingNotification].
-     */
-    fun parseNotification(jmxNotification: Notification): TracingNotification?
 }
+
