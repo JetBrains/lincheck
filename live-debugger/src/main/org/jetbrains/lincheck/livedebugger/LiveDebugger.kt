@@ -45,6 +45,8 @@ internal object LiveDebugger {
 
     fun startRecording(mode: TraceOutputMode, traceDumpFilePath: String? = null, packTrace: Boolean = true) {
         try {
+            ensureHitLimitCallbackInstalled()
+
             val session = Tracer.startTracing(
                 outputMode = mode,
                 startMode = TracingSession.StartMode.Static,
@@ -88,7 +90,7 @@ internal object LiveDebugger {
         try {
             Logger.info { "Loading breakpoints from file: $breakpointsFilePath" }
 
-            ensureHitLimitCallbackInstalled()
+
             val breakpoints = BreakpointsFileParser.parseBreakpointsFile(breakpointsFilePath)
             val settings = LincheckClassFileTransformer.liveDebuggerSettings
             val addedBreakpoints = settings.addBreakpoints(breakpoints)
@@ -102,7 +104,6 @@ internal object LiveDebugger {
     fun addBreakpoints(breakpoints: List<String>) {
         Logger.info { "Adding breakpoints: $breakpoints" }
 
-        ensureHitLimitCallbackInstalled()
         val addedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
             .addBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
         retransformBreakpointClasses(addedBreakpoints)
@@ -162,15 +163,17 @@ internal object LiveDebugger {
 
     /**
      * Registers the hit-limit callback on [BreakpointStorage], if not yet installed.
-     * [BreakpointStorage] passes the breakpoint's [userData][BreakpointStorage.BreakpointState.userData]
-     * (the [SnapshotBreakpoint] stored at registration time) directly to the callback,
+     *
+     * [BreakpointStorage] passes to the callback the [SnapshotBreakpoint] stored at registration time
+     * as userData (see [BreakpointStorage.BreakpointState.userData]),
      * so no id-to-object lookup is needed here.
      *
-     * Must be called before the first breakpoint is registered so that no hit-limit event
+     * Must be called before the tracing is started so that no hit-limit event
      * can fire before the callback is in place.
      */
     private fun ensureHitLimitCallbackInstalled() {
         if (!hitLimitCallbackInstalled.compareAndSet(false, true)) return
+
         BreakpointStorage.setOnHitLimitReached { userData ->
             onHitLimitReached(userData as SnapshotBreakpoint)
         }
