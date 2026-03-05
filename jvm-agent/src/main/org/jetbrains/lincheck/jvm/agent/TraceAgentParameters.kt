@@ -115,8 +115,6 @@ object TraceAgentParameters {
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
     const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
 
-    const val DEFAULT_TRACE_PORT = 9997
-
     @JvmStatic
     lateinit var rawArgs: String
 

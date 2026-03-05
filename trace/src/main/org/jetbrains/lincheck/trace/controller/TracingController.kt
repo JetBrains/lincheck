@@ -1,22 +1,21 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.jmx
+package org.jetbrains.lincheck.trace.controller
 
 import org.jetbrains.lincheck.trace.NetworkTraceReader
-import javax.management.NotificationEmitter
 
 /**
- * JMX MBean interface for managing tracing operations.
+ * Controller interface for managing tracing.
  */
-interface TracingJmxMBean : NotificationEmitter {
+interface TracingController {
 
     /**
      * Starts tracing writing the trace output to the specified file.
@@ -31,12 +30,20 @@ interface TracingJmxMBean : NotificationEmitter {
      *
      * The trace producer acts as a server,
      * listening for incoming reader connections on an automatically assigned port.
-     * Clients should connect to this port using [NetworkTraceReader] class.
+     * Clients connect to this port using [NetworkTraceReader] returned as a result.
+     *
+     * @return trace reader instance for reading the trace data,
+     *   `null` if tracing was not started due to some internal error.
      */
-    fun startNetworkTracing()
+    fun startNetworkTracing(): NetworkTraceReader?
 
     /**
      * Stops the current tracing operation.
      */
     fun stopTracing()
+
+    companion object {
+        const val DEFAULT_TRACING_HOST = "localhost"
+        const val DEFAULT_TRACING_PORT = 9997
+    }
 }
