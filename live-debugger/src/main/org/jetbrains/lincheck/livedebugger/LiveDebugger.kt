@@ -117,30 +117,6 @@ internal object LiveDebugger {
         retransformBreakpointClasses(removedBreakpoints)
     }
 
-    /**
-     * Called (on [hitLimitExecutor]) when a breakpoint's hit count reaches its configured limit.
-     * Sends a JMX notification, then removes the breakpoint and retransforms the class.
-     */
-    private fun onHitLimitReached(breakpoint: SnapshotBreakpoint) {
-        hitLimitExecutor.submit {
-            val breakpointId = "${breakpoint.className}:${breakpoint.fileName}:${breakpoint.lineNumber}"
-            Logger.info { "Breakpoint hit limit reached: $breakpointId" }
-
-            // Notify the IDE first (lightweight — just sends a JMX message).
-            notificationSender?.invoke(breakpointId)
-
-            // Remove specifically by id, not by location equality.
-            // If the user re-added the breakpoint at the same location in the window between
-            // the hit-limit callback firing and this executor task running, the re-added
-            // breakpoint will have a different id and must not be touched.
-            val removed = LincheckClassFileTransformer.liveDebuggerSettings
-                .removeBreakpointById(breakpoint.id)
-            if (removed != null) {
-                retransformBreakpointClasses(listOf(removed))
-            }
-        }
-    }
-
     fun removeAllBreakpoints() {
         Logger.info { "Removing all breakpoints" }
 
@@ -176,6 +152,31 @@ internal object LiveDebugger {
 
         BreakpointStorage.setOnHitLimitReached { userData ->
             onHitLimitReached(userData as SnapshotBreakpoint)
+        }
+    }
+
+    /**
+     * Called when a breakpoint's hit count reaches its configured limit.
+     * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
+     */
+    private fun onHitLimitReached(breakpoint: SnapshotBreakpoint) {
+        hitLimitExecutor.submit {
+            val breakpointId = "${breakpoint.className}:${breakpoint.fileName}:${breakpoint.lineNumber}"
+            Logger.info { "Breakpoint hit limit reached: $breakpointId" }
+
+            // Notify the IDE first (lightweight — just sends a JMX message).
+            notificationSender?.invoke(breakpointId)
+
+            // Remove specifically by id, not by location equality.
+            // If the user re-added the breakpoint at the same location in the window between
+            // the hit-limit callback firing and this executor task running,
+            // the re-added breakpoint will have a different id and must not be touched.
+            val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
+                .removeBreakpointById(breakpoint.id)
+
+            if (removedBreakpoint != null) {
+                retransformBreakpointClasses(listOf(removedBreakpoint))
+            }
         }
     }
 }
