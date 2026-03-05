@@ -29,7 +29,7 @@ abstract class AbstractTracingJmxController :
 
     private val notificationSequence = AtomicLong(0)
 
-    protected open val mbeanInterface: Class<out TracingJmxMBean>
+    override val mbeanInterface: Class<out TracingJmxMBean>
         get() = TracingJmxMBean::class.java
     
     abstract fun onStreamingDisconnect()
