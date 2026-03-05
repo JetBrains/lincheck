@@ -24,7 +24,7 @@ import javax.management.*
  * JMX notifications to remote clients (e.g., to the IDE plugin when a breakpoint reaches its
  * hit limit).
  */
-abstract class AbstractTracingJmxController :
+abstract class AbstractTracingJmxMBean :
     NotificationBroadcasterSupport(), TracingJmxRegistrator, TracingJmxMBean {
 
     override val mbeanInterface: Class<out TracingJmxMBean>

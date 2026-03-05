@@ -23,7 +23,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
 import org.jetbrains.lincheck.tracer.TracerAgent
-import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
+import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxMBean
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import java.lang.instrument.Instrumentation
 
@@ -64,7 +64,7 @@ internal object TraceRecorderAgent {
 
         override val jmxRegistrator: TracingJmxRegistrator get() = jmxController
 
-        private val jmxController = object : AbstractTracingJmxController() {
+        private val jmxController = object : AbstractTracingJmxMBean() {
             override val mbeanName = "org.jetbrains.lincheck:type=TraceRecorder"
             override fun onStreamingDisconnect() {}
         }
