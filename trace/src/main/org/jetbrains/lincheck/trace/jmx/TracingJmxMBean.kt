@@ -12,6 +12,9 @@ package org.jetbrains.lincheck.trace.jmx
 
 import org.jetbrains.lincheck.trace.NetworkTraceReader
 
+/**
+ * JMX MBean interface for managing tracing operations.
+ */
 interface TracingJmxMBean {
 
     /**

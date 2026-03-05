@@ -27,10 +27,10 @@ import javax.management.*
 abstract class AbstractTracingJmxController :
     NotificationBroadcasterSupport(), TracingJmxRegistrator, TracingJmxMBean {
 
-    private val notificationSequence = AtomicLong(0)
-
     override val mbeanInterface: Class<out TracingJmxMBean>
         get() = TracingJmxMBean::class.java
+
+    private val notificationSequence = AtomicLong(0)
     
     abstract fun onStreamingDisconnect()
 
@@ -60,23 +60,6 @@ abstract class AbstractTracingJmxController :
         } catch (e: Exception) {
             Logger.error(e) { "Failed to register shutdown hook for JMX MBean at $mbeanName" }
         }
-    }
-
-    /**
-     * Sends a JMX notification to inform the IDE that the given breakpoint has reached its hit limit.
-     *
-     * @param breakpointId a `"className:fileName:lineNumber"` string identifying the breakpoint.
-     */
-    fun notifyBreakpointHitLimitReached(breakpointId: String) {
-        val notification = Notification(
-            LiveDebuggerJmxMBean.BREAKPOINT_HIT_LIMIT_NOTIFICATION_TYPE,
-            ObjectName(mbeanName),
-            notificationSequence.incrementAndGet(),
-            "Breakpoint '$breakpointId' has reached its hit limit",
-        )
-        notification.userData = breakpointId
-        sendNotification(notification)
-        Logger.info { "Sent hit-limit notification for breakpoint: $breakpointId" }
     }
 
     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
@@ -118,5 +101,22 @@ abstract class AbstractTracingJmxController :
 
     private fun shutdownHook() {
         stopTracing()
+    }
+
+    /**
+     * Sends a JMX notification to inform that the given breakpoint has reached its hit limit.
+     *
+     * @param breakpointId a `"className:fileName:lineNumber"` string identifying the breakpoint.
+     */
+    fun notifyBreakpointHitLimitReached(breakpointId: String) {
+        val notification = Notification(
+            LiveDebuggerJmxMBean.BREAKPOINT_HIT_LIMIT_NOTIFICATION_TYPE,
+            ObjectName(mbeanName),
+            notificationSequence.incrementAndGet(),
+            "Breakpoint '$breakpointId' has reached its hit limit",
+        )
+        notification.userData = breakpointId
+        sendNotification(notification)
+        Logger.info { "Sent hit-limit notification for breakpoint: $breakpointId" }
     }
 }

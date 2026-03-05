@@ -11,9 +11,9 @@
 package org.jetbrains.lincheck.trace.jmx
 
 /**
- * Live debugger JMX controller.
+ * Live debugger JMX MBean interface.
  *
- * Extends the functionality of the tracing JMX controller by providing
+ * Extends the functionality of the tracing JMX MBean by providing
  * operations specific to the live debugger, such as managing breakpoints.
  */
 interface LiveDebuggerJmxMBean : TracingJmxMBean {
