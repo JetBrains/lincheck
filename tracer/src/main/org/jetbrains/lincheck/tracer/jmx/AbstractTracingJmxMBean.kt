@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.tracer.jmx
 
+import org.jetbrains.lincheck.trace.controller.*
 import org.jetbrains.lincheck.trace.jmx.*
 import org.jetbrains.lincheck.tracer.*
 import org.jetbrains.lincheck.util.*
@@ -64,6 +65,37 @@ abstract class AbstractTracingJmxMBean : NotificationBroadcasterSupport(), Traci
             Logger.error(t) { "Cannot stop trace recording" }
         }
     }
+
+    override fun sendNotification(notification: TracingNotification) {
+        try {
+            val jmxNotificationData = notification.getJmxNotificationData() ?: return
+            val jmxNotification = Notification(
+                /* type = */ jmxNotificationData.type,
+                /* source = */ ObjectName(name),
+                /* sequenceNumber = */ notificationSequence.incrementAndGet(),
+                /* timeStamp = */ jmxNotificationData.timestamp,
+                /* message = */ jmxNotificationData.message,
+            )
+            if (jmxNotificationData.userData != null) {
+                jmxNotification.userData = jmxNotificationData.userData
+            }
+            sendNotification(notification)
+            Logger.info { "Sent notification via JMX: $notification" }
+        } catch (t: Throwable) {
+            Logger.error(t) { "Cannot send notification via JMX: $notification" }
+        }
+    }
+
+    protected data class JmxNotificationData(
+        val type: String,
+        val message: String,
+        val timestamp: Long,
+        val userData: Any? = null,
+    )
+
+    protected fun TracingNotification.getJmxNotificationData(): JmxNotificationData? = null
+
+    override fun parseNotification(jmxNotification: Notification): TracingNotification? = null
 
     /**
      * Sends a JMX notification to inform that the given breakpoint has reached its hit limit.

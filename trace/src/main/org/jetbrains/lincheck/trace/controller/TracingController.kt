@@ -42,6 +42,14 @@ interface TracingController {
      */
     fun stopTracing()
 
+    /**
+     * Registers a notification listener to receive tracing notifications.
+     *
+     * @param listener the listener that will handle tracing notifications.
+     *   Listener is a function that takes a [TracingNotification] as an argument.
+     */
+    fun addNotificationListener(listener: TracingNotificationListener)
+
     companion object {
         const val DEFAULT_TRACING_HOST = "localhost"
         const val DEFAULT_TRACING_PORT = 9997
