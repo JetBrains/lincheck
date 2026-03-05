@@ -25,12 +25,12 @@ import javax.management.*
  * hit limit).
  */
 abstract class AbstractTracingJmxController :
-    NotificationBroadcasterSupport(), TracingJmxRegistrator, TracingJmxController {
+    NotificationBroadcasterSupport(), TracingJmxRegistrator, TracingJmxMBean {
 
     private val notificationSequence = AtomicLong(0)
 
-    protected open val mbeanInterface: Class<out TracingJmxController>
-        get() = TracingJmxController::class.java
+    protected open val mbeanInterface: Class<out TracingJmxMBean>
+        get() = TracingJmxMBean::class.java
     
     abstract fun onStreamingDisconnect()
 
@@ -46,7 +46,7 @@ abstract class AbstractTracingJmxController :
             }
 
             @Suppress("UNCHECKED_CAST")
-            val mbean = StandardEmitterMBean(this, mbeanInterface as Class<TracingJmxController>, this)
+            val mbean = StandardEmitterMBean(this, mbeanInterface as Class<TracingJmxMBean>, this)
             mbs.registerMBean(mbean, objectName)
 
             Logger.info { "JMX MBean registered successfully at $mbeanName" }
@@ -69,7 +69,7 @@ abstract class AbstractTracingJmxController :
      */
     fun notifyBreakpointHitLimitReached(breakpointId: String) {
         val notification = Notification(
-            LiveDebuggerJmxController.BREAKPOINT_HIT_LIMIT_NOTIFICATION_TYPE,
+            LiveDebuggerJmxMBean.BREAKPOINT_HIT_LIMIT_NOTIFICATION_TYPE,
             ObjectName(mbeanName),
             notificationSequence.incrementAndGet(),
             "Breakpoint '$breakpointId' has reached its hit limit",

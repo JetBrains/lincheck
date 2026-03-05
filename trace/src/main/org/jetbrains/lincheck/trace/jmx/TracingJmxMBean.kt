@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.trace.jmx
 
 import org.jetbrains.lincheck.trace.NetworkTraceReader
 
-interface TracingJmxController {
+interface TracingJmxMBean {
 
     /**
      * Starts tracing writing the trace output to the specified file.

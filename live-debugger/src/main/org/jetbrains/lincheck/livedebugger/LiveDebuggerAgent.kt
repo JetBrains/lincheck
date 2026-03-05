@@ -24,7 +24,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTraceDebu
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTraceDebugging
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
-import org.jetbrains.lincheck.trace.jmx.LiveDebuggerJmxController
+import org.jetbrains.lincheck.trace.jmx.LiveDebuggerJmxMBean
 import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
@@ -74,9 +74,9 @@ internal object LiveDebuggerAgent {
 
         override val jmxRegistrator: TracingJmxRegistrator get() = jmxController
 
-        private val jmxController = object : AbstractTracingJmxController(), LiveDebuggerJmxController {
+        private val jmxController = object : AbstractTracingJmxController(), LiveDebuggerJmxMBean {
             override val mbeanName = "org.jetbrains.lincheck:type=LiveDebugger"
-            override val mbeanInterface = LiveDebuggerJmxController::class.java
+            override val mbeanInterface = LiveDebuggerJmxMBean::class.java
 
             override fun onStreamingDisconnect() {
                 LiveDebugger.removeAllBreakpoints()
