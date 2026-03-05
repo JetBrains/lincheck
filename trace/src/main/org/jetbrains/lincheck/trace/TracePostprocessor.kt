@@ -31,6 +31,7 @@ interface TracePostprocessor {
 object CompressingPostprocessor : TracePostprocessor {
     private val COVERAGE_LOCAL_VAR_NAMES = setOf($$"__$coverage_local$__", $$"__$hits$__" /* might be loaded via LDC */)
     private val COVERAGE_FIELD_NAMES = setOf($$"__$hits$__", $$"__$traceMask$__", $$"__$classData$__")
+    private val COVERAGE_ARRAY_NAMES = COVERAGE_LOCAL_VAR_NAMES + COVERAGE_FIELD_NAMES
 
 
     override fun postprocess(reader: LazyTraceReader, tracePoint: TRTracePoint): TRTracePoint? {
@@ -260,7 +261,7 @@ object CompressingPostprocessor : TracePostprocessor {
         fun TRTracePoint.isCoverageFieldAccess(varNames: Set<String>) = this is TRFieldTracePoint && varNames.contains(name)
 
         if (
-            isCoverageArrayAccess(COVERAGE_LOCAL_VAR_NAMES + COVERAGE_FIELD_NAMES) ||
+            isCoverageArrayAccess(COVERAGE_ARRAY_NAMES) ||
             isCoverageLocalVarAccess(COVERAGE_LOCAL_VAR_NAMES) ||
             isCoverageFieldAccess(COVERAGE_FIELD_NAMES)
         ) return null
