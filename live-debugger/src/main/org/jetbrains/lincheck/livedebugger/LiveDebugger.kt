@@ -178,8 +178,6 @@ internal object LiveDebugger {
                 ),
             )
 
-            notificationListener.get()?.invoke(notification)
-
             // Remove specifically by id, not by location equality.
             // If the user re-added the breakpoint at the same location in the window between
             // the hit-limit callback firing and this executor task running,
@@ -190,6 +188,8 @@ internal object LiveDebugger {
             if (removedBreakpoint != null) {
                 retransformBreakpointClasses(listOf(removedBreakpoint))
             }
+
+            notificationListener.get()?.invoke(notification)
         }
     }
 
