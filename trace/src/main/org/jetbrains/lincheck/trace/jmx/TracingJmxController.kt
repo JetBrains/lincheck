@@ -14,8 +14,8 @@ import org.jetbrains.lincheck.trace.NetworkTraceReader
 import org.jetbrains.lincheck.trace.controller.TracingController
 import java.net.URI
 
-class TracingJmxController(
-    val mBean: TracingJmxMBean,
+abstract class AbstractTracingJmxController(
+    open val mBean: TracingJmxMBean,
     val tracingHost: String = TracingController.DEFAULT_TRACING_HOST,
     val tracingPort: Int = TracingController.DEFAULT_TRACING_PORT,
 ) : TracingController {
@@ -34,3 +34,9 @@ class TracingJmxController(
         mBean.stopTracing()
     }
 }
+
+class TracingJmxController(
+    mBean: TracingJmxMBean,
+    tracingHost: String = TracingController.DEFAULT_TRACING_HOST,
+    tracingPort: Int = TracingController.DEFAULT_TRACING_PORT,
+) : AbstractTracingJmxController(mBean, tracingHost, tracingPort)

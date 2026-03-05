@@ -17,6 +17,7 @@ package org.jetbrains.lincheck.trace.jmx
  * operations specific to the live debugger, such as managing breakpoints.
  */
 interface LiveDebuggerJmxMBean : TracingJmxMBean {
+
     /**
      * Adds breakpoints to Live Debugger.
      */
