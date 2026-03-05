@@ -14,6 +14,8 @@ import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.trace.controller.LiveDebuggerNotification
+import org.jetbrains.lincheck.trace.controller.TracingNotificationListener
 import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.TracingSession
@@ -22,25 +24,24 @@ import org.jetbrains.lincheck.util.Logger
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 internal object LiveDebugger {
 
     private val shutdownHookInstalled = AtomicBoolean(false)
 
     /**
-     * Called by [LiveDebuggerAgent] to wire the JMX notification sender.
-     * Invoked with a `"className:fileName:lineNumber"` breakpoint-ID string when a hit limit fires.
+     * Listener responsible for handling live debugging notifications.
      */
-    @Volatile
-    var notificationSender: ((String) -> Unit)? = null
+    private val notificationListener = AtomicReference<TracingNotificationListener>()
 
     /**
      * Single-threaded executor used to process hit-limit events off the instrumented thread.
      * Retransforming classes inside the instrumented execution thread can be risky;
      * scheduling it here keeps the hot path lightweight.
      */
-    private val hitLimitExecutor = Executors.newSingleThreadExecutor { r ->
-        Thread(r, "LiveDebugger-HitLimit-Handler").also { it.isDaemon = true }
+    private val notificationsExecutor = Executors.newSingleThreadExecutor { r ->
+        Thread(r, "LiveDebugger-Notifications-Handler").also { it.isDaemon = true }
     }
 
     fun startRecording(mode: TraceOutputMode, traceDumpFilePath: String? = null, packTrace: Boolean = true) {
@@ -160,12 +161,24 @@ internal object LiveDebugger {
      * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
      */
     private fun onHitLimitReached(breakpoint: SnapshotBreakpoint) {
-        hitLimitExecutor.submit {
-            val breakpointId = "${breakpoint.className}:${breakpoint.fileName}:${breakpoint.lineNumber}"
-            Logger.info { "Breakpoint hit limit reached: $breakpointId" }
+        val timestamp = System.currentTimeMillis()
 
-            // Notify the IDE first (lightweight — just sends a JMX message).
-            notificationSender?.invoke(breakpointId)
+        notificationsExecutor.submit {
+            Logger.info {
+                with (breakpoint) {
+                    "Hit limit reached for breakpoint in $className at $fileName:$lineNumber"
+                }
+            }
+            val notification = LiveDebuggerNotification.BreakpointHitLimitReached(
+                timestamp = timestamp,
+                breakpointData = LiveDebuggerNotification.BreakpointData(
+                    className = breakpoint.className,
+                    fileName = breakpoint.fileName,
+                    lineNumber = breakpoint.lineNumber,
+                ),
+            )
+
+            notificationListener.get()?.invoke(notification)
 
             // Remove specifically by id, not by location equality.
             // If the user re-added the breakpoint at the same location in the window between
@@ -177,6 +190,13 @@ internal object LiveDebugger {
             if (removedBreakpoint != null) {
                 retransformBreakpointClasses(listOf(removedBreakpoint))
             }
+        }
+    }
+
+    fun installNotificationListener(listener: TracingNotificationListener) {
+        val wasAlreadySet = !notificationListener.compareAndSet(null, listener)
+        if (wasAlreadySet) {
+            error("Live Debugger notification listener was already set")
         }
     }
 }

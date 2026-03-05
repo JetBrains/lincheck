@@ -80,6 +80,12 @@ internal object LiveDebuggerAgent {
         override val jmxMBean: TracingJmxMBean = object : AbstractTracingJmxMBean(), LiveDebuggerJmxMBean {
             override val name = "org.jetbrains.lincheck:type=LiveDebugger"
 
+            init {
+                LiveDebugger.installNotificationListener { notification ->
+                    sendNotification(notification)
+                }
+            }
+
             override fun onStreamingDisconnect() {
                 LiveDebugger.removeAllBreakpoints()
 
