@@ -105,11 +105,7 @@ internal object LiveDebugger {
         ensureHitLimitCallbackInstalled()
         val addedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
             .addBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
-        val classNamesToRetransform = addedBreakpoints.map { it.className }.toSet()
-        val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
-            .filter { it.name in classNamesToRetransform }
-
-        LincheckInstrumentation.retransformClasses(classesToRetransform)
+        retransformBreakpointClasses(addedBreakpoints)
     }
 
     fun removeBreakpoints(breakpoints: List<String>) {
@@ -117,7 +113,7 @@ internal object LiveDebugger {
 
         val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
             .removeBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
-        cleanupRemovedBreakpoints(removedBreakpoints)
+        retransformBreakpointClasses(removedBreakpoints)
     }
 
     /**
@@ -138,31 +134,26 @@ internal object LiveDebugger {
             // breakpoint will have a different id and must not be touched.
             val removed = LincheckClassFileTransformer.liveDebuggerSettings
                 .removeBreakpointById(breakpoint.id)
-            if (removed != null) cleanupRemovedBreakpoints(listOf(removed))
+            if (removed != null) {
+                retransformBreakpointClasses(listOf(removed))
+            }
         }
     }
 
-    /**
-     * Retransforms the classes that contained the given removed breakpoints.
-     * Condition factory and hit-counter cleanup is handled automatically by
-     * [LiveDebuggerSettings.removeBreakpointById] / [LiveDebuggerSettings.removeBreakpoints],
-     * which call [BreakpointStorage.removeBreakpoint].
-     */
-    private fun cleanupRemovedBreakpoints(removedBreakpoints: List<SnapshotBreakpoint>) {
-        val classNamesToRetransform = removedBreakpoints.map { it.className }.toSet()
-        val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
-            .filter { it.name in classNamesToRetransform }
-        LincheckInstrumentation.retransformClasses(classesToRetransform)
-    }
-    
     fun removeAllBreakpoints() {
         Logger.info { "Removing all breakpoints" }
 
         val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings.removeAllBreakpoints()
-        val classNamesToRetransform = removedBreakpoints.map { it.className }.toSet()
+        retransformBreakpointClasses(removedBreakpoints)
+    }
+
+    /**
+     * Retransforms the classes that contain the given breakpoints.
+     */
+    private fun retransformBreakpointClasses(breakpoints: List<SnapshotBreakpoint>) {
+        val classNamesToRetransform = breakpoints.map { it.className }.toSet()
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
             .filter { it.name in classNamesToRetransform }
-
         LincheckInstrumentation.retransformClasses(classesToRetransform)
     }
 
