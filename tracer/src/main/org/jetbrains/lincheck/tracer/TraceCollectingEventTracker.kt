@@ -99,7 +99,6 @@ private class ThreadData(
         val frame = stack.last()
         val loop = frame.loopStack.last()
         loop.iterations.add(loopIterationTracePoint)
-        loop.header.incrementIterations()
     }
 
     fun exitLoop() {
