@@ -8,8 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.jmx
+package org.jetbrains.lincheck.tracer.jmx
 
+import org.jetbrains.lincheck.trace.jmx.TracingJmxMBean
 import org.jetbrains.lincheck.util.Logger
 import java.lang.management.ManagementFactory
 import javax.management.ObjectName
@@ -25,7 +26,7 @@ object TracingJmxRegistrator {
      * Before registering the MBean, checks if an MBean with the given name is already registered,
      * and if so, exits without registering.
      *
-     * @param mBean the MBean instance implementing the [TracingJmxMBean] interface to be registered.
+     * @param mBean the MBean instance implementing the [org.jetbrains.lincheck.trace.jmx.TracingJmxMBean] interface to be registered.
      */
     fun register(mBean: TracingJmxMBean) {
         // register JMX MBean

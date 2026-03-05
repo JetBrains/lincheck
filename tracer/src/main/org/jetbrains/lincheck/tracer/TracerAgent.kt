@@ -17,7 +17,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
 import org.jetbrains.lincheck.trace.jmx.TracingJmxMBean
-import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
+import org.jetbrains.lincheck.tracer.jmx.TracingJmxRegistrator
 import java.lang.instrument.Instrumentation
 
 /**
