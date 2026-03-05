@@ -65,7 +65,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
         .also { it.deleteOnExit() }
     val idMapStream = DataOutputStream(FileOutputStream(idMapFile).buffered(OUTPUT_BUFFER_SIZE))
 
-    val cloner = TracePointCloner(output.context,idMapStream)
+    val cloner = TracePointCloner(output.context, idMapStream)
     output.use {
         if (options.diffOnlyStartThreads) {
             // Diff only thread with eventIds = 0
@@ -101,6 +101,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                 output.startNewRoot(outputThreadId)
 
                 if (leftThreadIdx >= 0 && rightThreadIdx >= 0) {
+                    output.context.setThreadName(outputThreadId, name)
                     diffOneThread(
                         cloner = cloner,
                         output = output,
