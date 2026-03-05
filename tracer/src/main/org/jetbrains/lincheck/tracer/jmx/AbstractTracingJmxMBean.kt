@@ -13,54 +13,18 @@ package org.jetbrains.lincheck.tracer.jmx
 import org.jetbrains.lincheck.trace.jmx.*
 import org.jetbrains.lincheck.tracer.*
 import org.jetbrains.lincheck.util.*
-import java.lang.management.*
 import java.util.concurrent.atomic.*
 import javax.management.*
 
 /**
- * A base abstract class for implementing tracing JMX controller interface for the [Tracer].
+ * A base abstract class for implementing tracing JMX MBean interface.
  *
- * Extends [NotificationBroadcasterSupport] so that the registered [StandardEmitterMBean] can emit
- * JMX notifications to remote clients (e.g., to the IDE plugin when a breakpoint reaches its
- * hit limit).
+ * Extends [NotificationBroadcasterSupport] so that the registered [StandardEmitterMBean]
+ * can emit JMX notifications to remote clients.
  */
-abstract class AbstractTracingJmxMBean :
-    NotificationBroadcasterSupport(), TracingJmxRegistrator, TracingJmxMBean {
-
-    override val mbeanInterface: Class<out TracingJmxMBean>
-        get() = TracingJmxMBean::class.java
+abstract class AbstractTracingJmxMBean : NotificationBroadcasterSupport(), TracingJmxMBean {
 
     private val notificationSequence = AtomicLong(0)
-    
-    abstract fun onStreamingDisconnect()
-
-    override fun register() {
-        // register JMX MBean
-        try {
-            val mbs = ManagementFactory.getPlatformMBeanServer()
-            val objectName = ObjectName(mbeanName)
-
-            if (mbs.isRegistered(objectName)) {
-                Logger.error { "JMX MBean already registered at $mbeanName" }
-                return
-            }
-
-            @Suppress("UNCHECKED_CAST")
-            val mbean = StandardEmitterMBean(this, mbeanInterface as Class<TracingJmxMBean>, this)
-            mbs.registerMBean(mbean, objectName)
-
-            Logger.info { "JMX MBean registered successfully at $mbeanName" }
-        } catch (e: Exception) {
-            Logger.error(e) { "Failed to register JMX MBean at $mbeanName" }
-        }
-
-        // register shutdown hook
-        try {
-            Runtime.getRuntime().addShutdownHook(Thread(this::shutdownHook))
-        } catch (e: Exception) {
-            Logger.error(e) { "Failed to register shutdown hook for JMX MBean at $mbeanName" }
-        }
-    }
 
     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
         try {
@@ -91,16 +55,14 @@ abstract class AbstractTracingJmxMBean :
         }
     }
 
+    open fun onStreamingDisconnect() {}
+
     override fun stopTracing() {
         try {
             Tracer.stopTracing()
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot stop trace recording" }
         }
-    }
-
-    private fun shutdownHook() {
-        stopTracing()
     }
 
     /**
@@ -111,7 +73,7 @@ abstract class AbstractTracingJmxMBean :
     fun notifyBreakpointHitLimitReached(breakpointId: String) {
         val notification = Notification(
             LiveDebuggerJmxMBean.BREAKPOINT_HIT_LIMIT_NOTIFICATION_TYPE,
-            ObjectName(mbeanName),
+            ObjectName(name),
             notificationSequence.incrementAndGet(),
             "Breakpoint '$breakpointId' has reached its hit limit",
         )

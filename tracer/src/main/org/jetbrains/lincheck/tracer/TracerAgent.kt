@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
+import org.jetbrains.lincheck.trace.jmx.TracingJmxMBean
 import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
 import java.lang.instrument.Instrumentation
 
@@ -76,11 +77,11 @@ abstract class TracerAgent {
     protected abstract fun parseArguments(agentArgs: String?)
     protected abstract fun validateArguments(attachType: JavaAgentAttachType)
 
-    protected abstract val jmxRegistrator: TracingJmxRegistrator?
+    protected abstract val jmxMBean: TracingJmxMBean?
 
     private fun registerJmxMBeanIfRequested() {
         if (TraceAgentParameters.jmxMBeanEnabled) {
-            jmxRegistrator?.register()
+             jmxMBean?.let { TracingJmxRegistrator.register(it) }
         }
     }
 

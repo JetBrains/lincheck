@@ -19,6 +19,11 @@ import javax.management.NotificationEmitter
 interface TracingJmxMBean : NotificationEmitter {
 
     /**
+     * The name of the MBean.
+     */
+    val name: String
+
+    /**
      * Starts tracing writing the trace output to the specified file.
      *
      * @param traceDumpFilePath the file path where the trace output will be saved.
