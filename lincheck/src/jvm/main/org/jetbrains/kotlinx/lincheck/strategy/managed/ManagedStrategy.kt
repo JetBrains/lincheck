@@ -2178,6 +2178,13 @@ internal abstract class ManagedStrategy(
             }
         }
     }
+         ride fun onAwaitLoopSpin(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        loopId: Int
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
+        onLoopIteration(threadDescriptor, codeLocation, loopId)
+    }
 
     override fun afterLoopExit(
         threadDescriptor: ThreadDescriptor,
