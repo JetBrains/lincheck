@@ -19,9 +19,10 @@ import javax.management.remote.JMXConnector
 class LiveDebuggerJmxController(
     jmxConnector: JMXConnector,
     override val mBean: LiveDebuggerJmxMBean,
+    mBeanName: String,
     tracingHost: String = TracingController.DEFAULT_TRACING_HOST,
     tracingPort: Int = TracingController.DEFAULT_TRACING_PORT,
-) : AbstractTracingJmxController(jmxConnector, mBean, tracingHost, tracingPort), LiveDebuggerController {
+) : AbstractTracingJmxController(jmxConnector, mBean, mBeanName, tracingHost, tracingPort), LiveDebuggerController {
 
     override fun addBreakpoints(breakpoints: List<String>) {
         mBean.addBreakpoints(breakpoints)

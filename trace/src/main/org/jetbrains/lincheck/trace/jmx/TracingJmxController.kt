@@ -23,6 +23,7 @@ import java.net.URI
 abstract class AbstractTracingJmxController(
     val jmxConnector: JMXConnector,
     open val mBean: TracingJmxMBean,
+    val mBeanName: String,
     val tracingHost: String = TracingController.DEFAULT_TRACING_HOST,
     val tracingPort: Int = TracingController.DEFAULT_TRACING_PORT,
 ) : TracingController {
@@ -49,9 +50,9 @@ abstract class AbstractTracingJmxController(
 
     private fun subscribeToNotifications() {
         val mbeanConnection = jmxConnector.mBeanServerConnection
-        val objectName = ObjectName(mBean.name)
+        val objectName = ObjectName(mBeanName)
         if (!mbeanConnection.isRegistered(objectName)) {
-            throw IllegalStateException("MBean ${mBean.name} is not registered")
+            throw IllegalStateException("MBean $mBeanName is not registered")
         }
         val listener = NotificationListener { jmxNotification, _ ->
             val notification = parseJmxNotification(jmxNotification) ?: return@NotificationListener
@@ -72,6 +73,7 @@ abstract class AbstractTracingJmxController(
 class TracingJmxController(
     jmxConnector: JMXConnector,
     mBean: TracingJmxMBean,
+    mBeanName: String,
     tracingHost: String = TracingController.DEFAULT_TRACING_HOST,
     tracingPort: Int = TracingController.DEFAULT_TRACING_PORT,
-) : AbstractTracingJmxController(jmxConnector, mBean, tracingHost, tracingPort)
+) : AbstractTracingJmxController(jmxConnector, mBean, mBeanName, tracingHost, tracingPort)

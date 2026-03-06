@@ -26,34 +26,34 @@ object TracingJmxRegistrator {
      * Before registering the MBean, checks if an MBean with the given name is already registered,
      * and if so, exits without registering.
      *
-     * @param mBean the MBean instance implementing the [org.jetbrains.lincheck.trace.jmx.TracingJmxMBean] interface to be registered.
+     * @param mBean the MBean instance implementing the [TracingJmxMBean] interface to be registered.
+     * @param mBeanInterface the class object of the [TracingJmxMBean] interface implemented by [mBean].
      */
-    fun register(mBean: TracingJmxMBean) {
+    fun register(mBean: TracingJmxMBean, mBeanName: String, mBeanInterface: Class<out TracingJmxMBean>) {
         // register JMX MBean
         try {
             val mbs = ManagementFactory.getPlatformMBeanServer()
-            val objectName = ObjectName(mBean.name)
-            val mbeanInterface: Class<out TracingJmxMBean> = mBean::class.java
+            val objectName = ObjectName(mBeanName)
 
             if (mbs.isRegistered(objectName)) {
-                Logger.error { "JMX MBean already registered at ${mBean.name}" }
+                Logger.error { "JMX MBean already registered at $mBeanName" }
                 return
             }
 
             @Suppress("UNCHECKED_CAST")
-            val mbean = StandardEmitterMBean(mBean, mbeanInterface as Class<TracingJmxMBean>, mBean)
+            val mbean = StandardEmitterMBean(mBean, mBeanInterface as Class<TracingJmxMBean>, mBean)
             mbs.registerMBean(mbean, objectName)
 
-            Logger.info { "JMX MBean registered successfully at ${mBean.name}" }
+            Logger.info { "JMX MBean registered successfully at $mBeanName" }
         } catch (e: Exception) {
-            Logger.error(e) { "Failed to register JMX MBean at ${mBean.name}" }
+            Logger.error(e) { "Failed to register JMX MBean at $mBeanName" }
         }
 
         // register shutdown hook
         try {
             Runtime.getRuntime().addShutdownHook(Thread { mBean.stopTracing() })
         } catch (e: Exception) {
-            Logger.error(e) { "Failed to register shutdown hook for JMX MBean at ${mBean.name}" }
+            Logger.error(e) { "Failed to register shutdown hook for JMX MBean at $mBeanName" }
         }
     }
 }

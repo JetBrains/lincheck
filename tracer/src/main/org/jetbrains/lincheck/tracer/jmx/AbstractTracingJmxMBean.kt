@@ -23,7 +23,7 @@ import javax.management.*
  * Extends [NotificationBroadcasterSupport] so that the registered [StandardEmitterMBean]
  * can emit JMX notifications to remote clients.
  */
-abstract class AbstractTracingJmxMBean : NotificationBroadcasterSupport(), TracingJmxMBean {
+abstract class AbstractTracingJmxMBean(val mBeanName: String) : NotificationBroadcasterSupport(), TracingJmxMBean {
 
     private val notificationSequence = AtomicLong(0)
 
@@ -71,7 +71,7 @@ abstract class AbstractTracingJmxMBean : NotificationBroadcasterSupport(), Traci
             val jmxNotificationData = getJmxNotificationData(notification) ?: return
             val jmxNotification = Notification(
                 /* type = */ jmxNotificationData.type,
-                /* source = */ ObjectName(name),
+                /* source = */ ObjectName(mBeanName),
                 /* sequenceNumber = */ notificationSequence.incrementAndGet(),
                 /* timeStamp = */ jmxNotificationData.timestamp,
                 /* message = */ jmxNotificationData.message,

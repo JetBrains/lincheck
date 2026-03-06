@@ -73,9 +73,10 @@ internal object LiveDebuggerAgent {
             }
         }
 
-        override val jmxMBean: TracingJmxMBean = object : AbstractTracingJmxMBean(), LiveDebuggerJmxMBean {
-            override val name = "org.jetbrains.lincheck:type=LiveDebugger"
+        override val jmxMBeanName: String = "org.jetbrains.lincheck:type=LiveDebugger"
+        override val jmxMBeanInterface: Class<out TracingJmxMBean> = LiveDebuggerJmxMBean::class.java
 
+        override val jmxMBean: TracingJmxMBean = object : AbstractTracingJmxMBean(jmxMBeanName), LiveDebuggerJmxMBean {
             init {
                 LiveDebugger.installNotificationListener { notification ->
                     sendNotification(notification)

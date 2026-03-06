@@ -77,11 +77,13 @@ abstract class TracerAgent {
     protected abstract fun parseArguments(agentArgs: String?)
     protected abstract fun validateArguments(attachType: JavaAgentAttachType)
 
-    protected abstract val jmxMBean: TracingJmxMBean?
+    protected abstract val jmxMBeanName: String
+    protected abstract val jmxMBeanInterface: Class<out TracingJmxMBean>
+    protected abstract val jmxMBean: TracingJmxMBean
 
     private fun registerJmxMBeanIfRequested() {
         if (TraceAgentParameters.jmxMBeanEnabled) {
-             jmxMBean?.let { TracingJmxRegistrator.register(it) }
+             TracingJmxRegistrator.register(jmxMBean, jmxMBeanName, jmxMBeanInterface)
         }
     }
 
