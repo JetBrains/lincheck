@@ -10,12 +10,16 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import com.sun.xml.internal.ws.org.objectweb.asm.Opcodes
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
+import org.objectweb.asm.tree.InvokeDynamicInsnNode
+import org.objectweb.asm.tree.MethodInsnNode
 import sun.nio.ch.lincheck.*
 
 /**
@@ -82,6 +86,8 @@ internal class LoopTransformer(
     private val opcodesReachableFromOutsideLoops: Map<InstructionIndex, Set<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeReachabilityFromOutsideLoops(insnIndexRemapping, loopInfo)
 
+    private val awaitLoopIds: Set<LoopId> = methodInfo.basicControlFlowGraph!!.computeAwaitLoops(loopInfo)
+
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
@@ -117,7 +123,12 @@ internal class LoopTransformer(
             adapter.push(loopId)
             // STACK: descriptor, codeLocation, loopId
             if (isReducible) {
-                adapter.invokeStatic(Injections::onLoopIteration)
+                if (loopId in awaitLoopIds) {
+                    adapter.invokeStatic(Injections::onAwaitLoopSpin)
+                }
+                else {
+                    adapter.invokeStatic(Injections::onLoopIteration)
+                }
             } else if (shouldTrackIrreducibleLoops) {
                 adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
             }
@@ -250,4 +261,80 @@ private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
         }
     }
     return result.mapValues { it.value.toSet() }
+}
+
+/**
+* A loop is considered an await loop if:
+*  - it contains at least one shared read (field/array read)
+*  - it contains no shared writes, no monitor operations,
+*    and no potentially side-effecting calls except Thread.onSpinWait
+*/
+private val ON_SPIN_WAIT_METHOD = runCatching {
+    Thread::class.java.getDeclaredMethod("onSpinWait")
+}.getOrNull()
+private val THREAD_OWNER: String = Type.getInternalName(Thread::class.java)
+
+internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
+    loopInfo: MethodLoopsInformation
+): Set<LoopId> {
+    if (!loopInfo.hasLoops()) return emptySet()
+    val res = mutableSetOf<LoopId>()
+
+    fun isSharedWriteOpcode(opcode: Int): Boolean = when (opcode) {
+        Opcodes.PUTFIELD, Opcodes.PUTSTATIC,
+        Opcodes.IASTORE, Opcodes.LASTORE, Opcodes.FASTORE, Opcodes.DASTORE,
+        Opcodes.AASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE,
+        Opcodes.MONITORENTER, Opcodes.MONITOREXIT -> true
+        else -> false
+    }
+
+    fun isSharedReadOpcode(opcode: Int): Boolean = when (opcode) {
+        Opcodes.GETFIELD, Opcodes.GETSTATIC,
+        Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.FALOAD, Opcodes.DALOAD,
+        Opcodes.AALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD -> true
+        else -> false
+    }
+
+    // TODO: Need to check for other functions as well + if the owner is right.
+    fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
+        insn.opcode == Opcodes.INVOKESTATIC &&
+                insn.owner == THREAD_OWNER &&
+                insn.name == ON_SPIN_WAIT_METHOD?.name &&
+                insn.desc == ON_SPIN_WAIT_METHOD.let(Type::getMethodDescriptor)
+
+    for (loop in loopInfo.loops) {
+        var hasSharedRead = false
+        var hasSideEffects = false
+
+        for (block in loop.body) {
+            val execRange = basicBlocks.getOrNull(block)?.executableRange ?: continue
+            for (i in execRange) {
+                val insn = instructions.get(i)
+                val opcode = insn.opcode
+                if (opcode < 0) continue
+                if (isSharedReadOpcode(opcode)) hasSharedRead = true
+                if (isSharedWriteOpcode(opcode)) {
+                    hasSideEffects = true
+                    break
+                }
+                when (insn) {
+                    is MethodInsnNode -> {
+                        if (!isFunctionCallAwait(insn)) {
+                            hasSideEffects = true
+                            break
+                        }
+                    }
+                    is InvokeDynamicInsnNode -> {
+                        hasSideEffects = true
+                        break
+                    }
+                }
+            }
+            if (hasSideEffects) break
+        }
+        if (hasSharedRead && !hasSideEffects) {
+            res.add(loop.id)
+        }
+    }
+    return res
 }
