@@ -14,6 +14,7 @@ import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.LoggingLevel.*
 import java.io.*
@@ -463,11 +464,11 @@ private fun executionResultsRepresentation(
 private data class ResultActorData(
     val threadId: Int,
     val actor: Actor,
-    val result: Result?,
+    val result: LincheckResult?,
     val exceptionInfo: ExceptionNumberAndStacktrace? = null,
     val hbClock: HBClock? = null
 ) {
-    constructor(threadId: Int, actor: Actor, result: Result?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
+    constructor(threadId: Int, actor: Actor, result: LincheckResult?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
             : this(threadId, actor, result, (result as? ExceptionResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
 
     override fun toString(): String {

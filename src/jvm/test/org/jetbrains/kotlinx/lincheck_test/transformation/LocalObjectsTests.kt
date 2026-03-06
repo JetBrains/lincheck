@@ -14,6 +14,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.lincheck.util.JdkVersion
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.jdkVersion

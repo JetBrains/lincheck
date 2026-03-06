@@ -10,13 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.runner
 
-import org.jetbrains.kotlinx.lincheck.NoResult
+import org.jetbrains.kotlinx.lincheck.util.NoResult
 import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
 import org.jetbrains.kotlinx.lincheck.execution.emptyClock
 import org.jetbrains.kotlinx.lincheck.execution.emptyExecutionResult
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.toLinCheckResult
+import org.jetbrains.kotlinx.lincheck.util.toLincheckResult
 import org.jetbrains.kotlinx.lincheck.util.threadMapOf
 import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.ExecutionException
@@ -54,7 +54,7 @@ internal class LambdaRunner(
     }
 
     private class LambdaWrapper(val strategy: Strategy, val block: Runnable) : Runnable {
-        var result: kotlin.Result<Unit>? = null
+        var result: Result<Unit>? = null
 
         override fun run() {
             result = kotlin.runCatching {
@@ -90,7 +90,7 @@ internal class LambdaRunner(
     private fun collectExecutionResults(wrapper: LambdaWrapper) =
         emptyExecutionResult().copy(
             parallelResultsWithClock = listOf(listOf(
-                ResultWithClock(wrapper.result?.toLinCheckResult() ?: NoResult, emptyClock(1))
+                ResultWithClock(wrapper.result?.toLincheckResult() ?: NoResult, emptyClock(1))
             ))
         )
 

@@ -27,7 +27,7 @@ import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import kotlin.random.*
 
-private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<kotlin.Result<Any?>, Continuation<Any?>>>
+private typealias SuspensionPointResultWithContinuation = AtomicReference<Pair<Result<Any?>, Continuation<Any?>>>
 
 /**
  * This runner executes parallel scenario part in different threads.
@@ -66,7 +66,7 @@ internal class ExecutionScenarioRunner(
     private val completedOrSuspendedThreads = AtomicInteger(0)
 
     private var suspensionPointResults = List(scenario.nThreads) { t ->
-        MutableList<Result>(scenario.threads[t].size) { NoResult }
+        MutableList<LincheckResult?>(scenario.threads[t].size) { null }
     }
 
     private val completions = List(scenario.nThreads) { t ->
@@ -113,7 +113,7 @@ internal class ExecutionScenarioRunner(
 
         // We need to run this code in an ignored section,
         // as it is called in the testing code but should not be analyzed.
-        override fun resumeWith(result: kotlin.Result<Any?>) = runInsideIgnoredSection {
+        override fun resumeWith(result: Result<Any?>) = runInsideIgnoredSection {
             // decrement completed or suspended threads only if the operation was not cancelled and
             // the continuation was not intercepted; it was already decremented before writing `resWithCont` otherwise
             if (!result.cancelledByLincheck()) {
@@ -217,7 +217,7 @@ internal class ExecutionScenarioRunner(
      * Otherwise if the invoked actor completed without suspension, then it just writes it's final result.
      */
     @Suppress("unused")
-    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): Result = runInsideIgnoredSection {
+    fun processInvocationResult(res: Any?, iThread: Int, actorId: Int): LincheckResult? = runInsideIgnoredSection {
         val finalResult = if (res !== COROUTINE_SUSPENDED) {
             createLincheckResult(res)
         } else {
@@ -231,21 +231,21 @@ internal class ExecutionScenarioRunner(
                     // already resumed, increment `completedOrSuspendedThreads` back
                     completedOrSuspendedThreads.incrementAndGet()
                 }
-                Cancelled
+                CancelledResult
             } else {
                 waitAndInvokeFollowUp(thread, actorId)
             }
         }
         val isLastActor = actorId == scenario.parallelExecution[iThread].size - 1
-        if (isLastActor && finalResult !== Suspended)
+        if (isLastActor && finalResult !== SuspendedResult)
             completedOrSuspendedThreads.incrementAndGet()
-        suspensionPointResults[iThread][actorId] = NoResult
+        suspensionPointResults[iThread][actorId] = null
         return finalResult
     }
 
     // We need to run this code in an ignored section,
     // as it is called in the testing code but should not be analyzed.
-    private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): Result = runInsideIgnoredSection {
+    private fun waitAndInvokeFollowUp(thread: TestThread, actorId: Int): LincheckResult? = runInsideIgnoredSection {
         val threadId = thread.threadId
         // Coroutine is suspended. Call method so that strategy can learn it.
         afterCoroutineSuspended(threadId)
@@ -259,8 +259,8 @@ internal class ExecutionScenarioRunner(
             spinners[threadId].spinWaitUntil {
                 // Check whether the scenario is completed and the current suspended operation cannot be resumed.
                 if (currentExecutionPart == POST || isParallelExecutionCompleted) {
-                    suspensionPointResults[threadId][actorId] = NoResult
-                    return Suspended
+                    suspensionPointResults[threadId][actorId] = null
+                    return SuspendedResult
                 }
                 // Wait until coroutine is resumed.
                 isCoroutineResumed(threadId, actorId)
@@ -602,7 +602,7 @@ internal class ExecutionScenarioRunner(
         }
     }
 
-    fun getActorResult(iThread: Int, actorId: Int): Result? {
+    fun getActorResult(iThread: Int, actorId: Int): LincheckResult? {
         if (iThread != 0) return parallelPartExecutions[iThread].results.getOrNull(actorId)
 
         val initSize = initialPartExecution?.results?.size ?: 0

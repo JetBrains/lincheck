@@ -25,6 +25,8 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.LockSupport.*
 import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.util.CancelledResult
+import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.Ignore
@@ -926,7 +928,7 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(
-            (Suspended to false),
+            (SuspendedResult to false),
             (1 to true)
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
@@ -957,7 +959,7 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(
-            (Suspended to false),
+            (SuspendedResult to false),
             (CancelledOperationException to true)
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
@@ -988,7 +990,7 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(
-            (Cancelled to false),
+            (CancelledResult to false),
             (1 to true)
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
@@ -1020,8 +1022,8 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(
-            (Cancelled to false),
-            (Cancelled to true),
+            (CancelledResult to false),
+            (CancelledResult to true),
             // (1 to true),
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
@@ -1056,7 +1058,7 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(
-            Triple(Suspended, false, false),
+            Triple(SuspendedResult, false, false),
             Triple(1, true, false),
             Triple(CancelledOperationException, false, true)
         )
@@ -1088,9 +1090,9 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(
-            Triple(Suspended, Suspended, false),
-            Triple(Suspended, 1, true),
-            Triple(1, Suspended, true),
+            Triple(SuspendedResult, SuspendedResult, false),
+            Triple(SuspendedResult, 1, true),
+            Triple(1, SuspendedResult, true),
         )
         litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
             val r1 = getValueSuspended(results.parallelResults[0][0]!!)
@@ -1120,7 +1122,7 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(
-            Triple(Suspended, false, false),
+            Triple(SuspendedResult, false, false),
             Triple(1, true, false),
             Triple(2, false, true),
         )

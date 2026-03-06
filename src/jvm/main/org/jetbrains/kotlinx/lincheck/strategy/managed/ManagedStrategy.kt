@@ -33,7 +33,6 @@ import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
-import kotlin.Result as KResult
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -1747,10 +1746,10 @@ internal abstract class ManagedStrategy(
     ) {
         val interceptorData = (interceptor.eventTrackerData as DeterministicMethodCallInterceptorData)
         if (isInTraceDebuggerMode && isFirstReplay) {
-            val newResult = saveFirstResultWithCast(receiver, params, KResult.success(result)) {
+            val newResult = saveFirstResultWithCast(receiver, params, Result.success(result)) {
                 nativeMethodCallStatesTracker.setState(interceptorData.deterministicCallId, methodCallInfo, it)
             }.getOrElse {
-                error("Unexpected replacement success -> failure:\n$result\n${KResult.failure<Any?>(it)}")
+                error("Unexpected replacement success -> failure:\n$result\n${Result.failure<Any?>(it)}")
             }
         }
     }
@@ -1763,7 +1762,7 @@ internal abstract class ManagedStrategy(
     ) {
         val interceptorData = (interceptor.eventTrackerData as DeterministicMethodCallInterceptorData)
         if (isInTraceDebuggerMode && isFirstReplay) {
-            val newThrowable = saveFirstResult(receiver, params, KResult.failure(throwable)) {
+            val newThrowable = saveFirstResult(receiver, params, Result.failure(throwable)) {
                 nativeMethodCallStatesTracker.setState(interceptorData.deterministicCallId, methodCallInfo, it)
             }.let { newResult ->
                 newResult.exceptionOrNull() ?: error("Unexpected replacement failure -> success:\n$throwable\n$newResult")
