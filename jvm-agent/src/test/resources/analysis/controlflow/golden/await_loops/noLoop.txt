@@ -1,0 +1,6 @@
+=== Loop Information ===
+NO LOOPS
+
+
+=== Await Loop Detection ===
+No await loops detected.
