@@ -24,7 +24,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTraceDebu
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTraceDebugging
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
-import org.jetbrains.lincheck.trace.controller.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.controller.TracingNotification
 import org.jetbrains.lincheck.trace.jmx.JmxNotificationData
 import org.jetbrains.lincheck.trace.jmx.LiveDebuggerJmxMBean
@@ -111,6 +110,7 @@ internal object LiveDebuggerAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         agent.premain(agentArgs, inst)
+        installCallbacks()
 
         val mode = TraceOutputMode.parse(
             outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
@@ -135,5 +135,11 @@ internal object LiveDebuggerAgent {
     @JvmStatic
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         agent.agentmain(agentArgs, inst)
+        installCallbacks()
+    }
+
+    @JvmStatic
+    private fun installCallbacks() {
+        LiveDebugger.ensureHitLimitCallbackInstalled()
     }
 }

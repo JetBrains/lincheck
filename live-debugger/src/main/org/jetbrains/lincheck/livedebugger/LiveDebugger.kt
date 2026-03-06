@@ -46,8 +46,6 @@ internal object LiveDebugger {
 
     fun startRecording(mode: TraceOutputMode, traceDumpFilePath: String? = null, packTrace: Boolean = true) {
         try {
-            ensureHitLimitCallbackInstalled()
-
             val session = Tracer.startTracing(
                 outputMode = mode,
                 startMode = TracingSession.StartMode.Static,
@@ -148,7 +146,7 @@ internal object LiveDebugger {
      * Must be called before the tracing is started so that no hit-limit event
      * can fire before the callback is in place.
      */
-    private fun ensureHitLimitCallbackInstalled() {
+    fun ensureHitLimitCallbackInstalled() {
         if (!hitLimitCallbackInstalled.compareAndSet(false, true)) return
 
         BreakpointStorage.setOnHitLimitReached { userData ->
@@ -162,13 +160,13 @@ internal object LiveDebugger {
      */
     private fun onHitLimitReached(breakpoint: SnapshotBreakpoint) {
         val timestamp = System.currentTimeMillis()
+        Logger.info {
+            with (breakpoint) {
+                "Hit limit reached for breakpoint in $className at $fileName:$lineNumber"
+            }
+        }
 
         notificationsExecutor.submit {
-            Logger.info {
-                with (breakpoint) {
-                    "Hit limit reached for breakpoint in $className at $fileName:$lineNumber"
-                }
-            }
             val notification = LiveDebuggerNotification.BreakpointHitLimitReached(
                 timestamp = timestamp,
                 breakpointData = LiveDebuggerNotification.BreakpointData(
