@@ -1,0 +1,113 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+// Test cases for await-loop detection in control-flow graph analysis.
+// An await loop is a loop that:
+//   - contains at least one shared read (field/array read)
+//   - contains NO shared writes, monitor operations, or side-effecting calls
+//     (except Thread.onSpinWait)
+
+public class AwaitLoopCases {
+
+    // Shared fields used in test cases
+    volatile boolean flag;
+    volatile int counter;
+    int[] array = new int[10];
+
+    // --- Case 1: Pure await loop (only field reads) ---
+    // Should be detected as an await loop.
+    public void awaitFieldRead() {
+        while (!flag) {
+            // busy-wait: only reads a volatile field
+        }
+    }
+
+    // --- Case 2: Non-await loop with a field write ---
+    // Should NOT be detected as an await loop.
+    public void nonAwaitFieldWrite() {
+        while (!flag) {
+            counter = 42;
+        }
+    }
+
+    // --- Case 3: Non-await loop with a method call ---
+    // Should NOT be detected as an await loop (method call is a side-effect).
+    public void nonAwaitWithMethodCall() {
+        while (!flag) {
+            doSomething();
+        }
+    }
+
+    private void doSomething() {
+        // some side-effecting call
+    }
+
+    // --- Case 4: Non-await loop with monitor enter ---
+    // Should NOT be detected as an await loop.
+    public void nonAwaitWithMonitor() {
+        while (!flag) {
+            synchronized (this) {
+                // monitor enter/exit
+            }
+        }
+    }
+
+    // --- Case 5: Await loop with array read only ---
+    // Should be detected as an await loop.
+    public int awaitArrayRead() {
+        int sum = 0;
+        while (sum < 100) {
+            sum = array[0];
+        }
+        return sum;
+    }
+
+    // --- Case 6: Non-await loop with array write ---
+    // Should NOT be detected as an await loop.
+    public void nonAwaitArrayWrite() {
+        while (!flag) {
+            array[0] = 1;
+        }
+    }
+
+    // --- Case 7: No loops at all (straight-line code) ---
+    // No loops, so no await loops either.
+    public int noLoop() {
+        return counter + 1;
+    }
+
+    // --- Case 8: Multiple loops, one await and one not ---
+    // First loop is await (only reads), second is not (has a write).
+    public void mixedLoops() {
+        while (!flag) {
+            // await: only reads
+        }
+        while (!flag) {
+            counter = 0; // write => not await
+        }
+    }
+
+    // --- Case 9: Await loop with both field and array reads ---
+    // Should be detected as an await loop.
+    public void awaitMixedReads() {
+        while (!flag) {
+            int x = counter;
+            int y = array[0];
+        }
+    }
+
+    // --- Case 10: Non-await loop with PUTSTATIC equivalent (field write) ---
+    // This loop reads and writes, so it's not await.
+    public void nonAwaitReadAndWrite() {
+        while (counter < 10) {
+            counter++;
+        }
+    }
+}
