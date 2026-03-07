@@ -139,7 +139,15 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         // For reflection-like calls, show target method first, then how it was invoked
-        if (tracePoint.reflectionData != null) {
+        if (tracePoint.isConstructor()) {
+            appendKeyword("new")
+            appendSpecialSymbol(" ")
+            appendClassName(tracePoint.classDescriptor)
+            appendSpecialSymbol("(")
+            appendParameters(tracePoint)
+            appendSpecialSymbol(")")
+            appendResult(tracePoint)
+        } else if (tracePoint.reflectionData != null) {
             appendReflectionTarget(tracePoint)
             appendSpecialSymbol(" ")
             appendSpecialSymbol("[")
@@ -147,14 +155,6 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendSpecialSymbol(" ")
             appendReflectionInvoker(tracePoint)
             appendSpecialSymbol("]")
-            appendResult(tracePoint)
-        } else if (tracePoint.isConstructor()) {
-            appendKeyword("new")
-            appendSpecialSymbol(" ")
-            appendClassName(tracePoint.classDescriptor)
-            appendSpecialSymbol("(")
-            appendParameters(tracePoint)
-            appendSpecialSymbol(")")
             appendResult(tracePoint)
         } else {
             appendOwner(tracePoint)
