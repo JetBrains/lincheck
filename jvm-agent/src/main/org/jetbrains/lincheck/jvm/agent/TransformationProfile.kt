@@ -480,8 +480,6 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             // Instrument `java.util.concurrent` classes, except atomics.
             if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
             if (isJavaUtilArraysClass(className)) return false
-            if (className.startsWith("java.lang.invoke.")) return false
-            if (className.startsWith("java.lang.reflect.")) return false
             // Instrument `java.util` classes.
             if (className.startsWith("java.util.")) return true
             return false
