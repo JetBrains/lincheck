@@ -189,42 +189,53 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         reflectionData: ReflectionTargetData
     ): TRAppendable {
         val owner = reflectionData.extractOwner(tracePoint.parameters)
-        val parameters = reflectionData.extractParameters(tracePoint.parameters)
+        val targetClassName = reflectionData.className
+        val targetClassDescriptor = ClassDescriptor(tracePoint.context, targetClassName)
 
-        // Create a fake trace point with reflection target data to reuse appendOwner logic
-        val methodType = Types.MethodType(
-            argumentTypes = parameters.map { Types.OBJECT_TYPE }.toMutableList(),
-            returnType = Types.VOID_TYPE // return type doesn't matter for owner rendering
-        )
-        val methodId = tracePoint.context.getOrCreateMethodId(reflectionData.className, reflectionData.methodName, methodType)
-        val fakeTracePoint = TRMethodCallTracePoint(
-            context = tracePoint.context,
-            threadId = tracePoint.threadId,
-            codeLocationId = tracePoint.codeLocationId,
-            methodId = methodId,
-            obj = owner,
-            parameters = parameters,
-            parentTracePoint = tracePoint.parentTracePoint
-        )
+        val usesFirstArgumentAsReceiver = reflectionData.callKind == ReflectionCallKind.METHOD_HANDLE_INSTANCE
+        val isConstructor = reflectionData.methodName == "<init>"
+        val isStatic = owner == null
 
-        val usesParameterAsReceiver = reflectionData.callKind.let { kind ->
-            kind == ReflectionCallKind.METHOD_HANDLE_INSTANCE ||
-            kind == ReflectionCallKind.METHOD_HANDLE_STATIC ||
-            kind == ReflectionCallKind.METHOD_HANDLE_CONSTRUCTOR
+        fun isCalledFromDefiningClass(): Boolean {
+            val parent = (tracePoint.parentTracePoint as? TRMethodCallTracePoint) ?: return false
+            return targetClassName == parent.className ||
+                targetClassName.removeCompanionSuffix() == parent.className
         }
 
         return when {
-            usesParameterAsReceiver -> appendOwner(fakeTracePoint, useParameterAsReceiver = true)
-            fakeTracePoint.isStatic() && fakeTracePoint.isCalledFromDefiningClass() -> this
-            fakeTracePoint.obj != null && fakeTracePoint.obj == (tracePoint.parentTracePoint as? TRMethodCallTracePoint)?.obj -> this
-            fakeTracePoint.obj != null -> {
+            isConstructor -> {
+                appendClassName(targetClassDescriptor)
+                appendSpecialSymbol(".")
+                this
+            }
+            usesFirstArgumentAsReceiver -> appendOwnerFromFirstArgument(tracePoint)
+            isStatic && isCalledFromDefiningClass() -> this
+            isStatic && targetClassName.isKtClass() -> this // Top-level Kotlin functions
+            isStatic -> {
+                appendClassName(targetClassDescriptor)
+                appendSpecialSymbol(".")
+                this
+            }
+            owner == (tracePoint.parentTracePoint as? TRMethodCallTracePoint)?.obj -> this
+            else -> {
                 appendObject(owner)
                 appendSpecialSymbol(".")
                 this
             }
-
-            else -> appendOwner(fakeTracePoint, useParameterAsReceiver = true)
         }
+    }
+
+    /**
+     * Appends the owner using the first argument's access path (used for MethodHandle invocations
+     * where the first argument is the receiver).
+     */
+    protected fun TRAppendable.appendOwnerFromFirstArgument(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        val firstArgPath = tracePoint.argumentNames.firstOrNull()
+        firstArgPath?.filterThisAccesses()?.takeIf { !it.isEmpty() }?.let {
+            appendAccessPath(it)
+            appendSpecialSymbol(".")
+        }
+        return this
     }
 
     protected fun TRAppendable.appendReflectionInvoker(tracePoint: TRMethodCallTracePoint): TRAppendable {
@@ -236,13 +247,11 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         return this
     }
 
-    protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint, useParameterAsReceiver: Boolean = false): TRAppendable {
+    protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
         if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass()) {
             return this
         }
-        val ownerName =
-            if (useParameterAsReceiver && tracePoint.obj == null) null
-            else tracePoint.getAccessPath(useParameterAsReceiver)
+        val ownerName = tracePoint.accessPath
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
                 if (it.isObjectInstanceAccess()) {

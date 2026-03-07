@@ -2349,7 +2349,7 @@ internal abstract class ManagedStrategy(
         val reflectionTargetOwner = reflectionData?.extractOwner(effectiveParamsForExtraction, ::unpackVarArgs)
         val reflectionTargetParams = reflectionData?.extractParameters(effectiveParamsForExtraction, ::unpackVarArgs)
         val reflectionTargetOwnerName = reflectionData?.let {
-            resolveReflectionTargetOwnerName(it, reflectionTargetOwner, owner, className, methodName, codeLocation, callStackTrace)
+            resolveReflectionTargetOwnerName(it, reflectionTargetOwner, methodName, codeLocation, callStackTrace)
         }
         val reflectionTargetParameters = reflectionTargetParams?.map {
             objectTracker.getObjectRepresentation(it)
@@ -2390,15 +2390,13 @@ internal abstract class ManagedStrategy(
     private fun resolveReflectionTargetOwnerName(
         reflectionData: ReflectedCallData,
         reflectionTargetOwner: Any?,
-        owner: Any?,
-        className: String,
         methodName: String,
         codeLocation: Int,
         callStackTrace: MutableList<CallStackTraceElement>
     ): String? = when {
         reflectionTargetOwner == null -> reflectionData.className.adornedClassNameRepresentation()
         methodName == "invokeExact" || methodName == "invoke" ->
-            findOwnerName(owner, className, codeLocation, useParameterAsReceiver = true)
+            findOwnerNameFromFirstArgument(codeLocation)
         reflectionTargetOwner == callStackTrace.lastOrNull()?.instance -> null
         else -> objectTracker.getObjectRepresentation(reflectionTargetOwner)
     }
@@ -2461,11 +2459,16 @@ internal abstract class ManagedStrategy(
     private fun MethodCallTracePoint.initializeParameters(parameters: List<Any?>) =
         initializeParameters(parameters.map { objectTracker.getObjectRepresentation(it) }, parameters.map { objectFqTypeName(it) })
 
-    private fun findOwnerName(obj: Any?, className: String, codeLocationId: Int, useParameterAsReceiver: Boolean = false): String? {
+    private fun findOwnerName(obj: Any?, className: String, codeLocationId: Int): String? {
         val threadId = threadScheduler.getCurrentThreadId()
         val shadowStackFrame = shadowStack[threadId]!!.last()
-        val ownerName = findOwnerName(context, obj, className, codeLocationId, shadowStackFrame, objectTracker, useParameterAsReceiver)
+        val ownerName = findOwnerName(context, obj, className, codeLocationId, shadowStackFrame, objectTracker)
         return ownerName?.takeIf { it.isNotEmpty() }
+    }
+
+    private fun findOwnerNameFromFirstArgument(codeLocationId: Int): String? {
+        val firstArgPath = context.methodCallArgumentNames(codeLocationId)?.firstOrNull()
+        return firstArgPath?.toString()?.takeIf { it.isNotEmpty() }
     }
 
     private fun AtomicMethodDescriptor.findAtomicOwnerName(

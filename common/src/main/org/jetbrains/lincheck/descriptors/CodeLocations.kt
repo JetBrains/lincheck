@@ -77,7 +77,7 @@ object CodeLocations {
 
     @JvmStatic
     @Synchronized
-    fun accessPath(context: TraceContext, codeLocationId: Int, useParameterAsReceiver: Boolean = false): AccessPath? = context.accessPath(codeLocationId, useParameterAsReceiver)
+    fun accessPath(context: TraceContext, codeLocationId: Int): AccessPath? = context.accessPath(codeLocationId)
 
     @JvmStatic
     @Synchronized

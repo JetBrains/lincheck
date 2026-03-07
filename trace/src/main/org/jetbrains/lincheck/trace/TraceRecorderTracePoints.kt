@@ -51,13 +51,31 @@ data class ReflectionTargetData(
      * Extracts the target method's owner from the reflection call's parameters.
      */
     fun extractOwner(params: List<TRValue?>): TRValue? =
-        callKind.extractOwner(params, ::unpackTRVarArgs)
+        callKind.extractOwner(resolveEffectiveParams(params), ::unpackTRVarArgs)
 
     /**
      * Extracts the target method's parameters from the reflection call's parameters.
      */
     fun extractParameters(params: List<TRValue?>): List<TRValue?> =
-        callKind.extractParameters(params, ::unpackTRVarArgs)
+        callKind.extractParameters(resolveEffectiveParams(params), ::unpackTRVarArgs)
+
+    /**
+     * For KFunction calls, unpacks the vararg array first since extraction expects already-unpacked params.
+     * For other reflection calls, returns params as-is.
+     */
+    private fun resolveEffectiveParams(params: List<TRValue?>): List<TRValue?> =
+        if (callKind.isKFunctionCall()) {
+            unpackTRVarArgs(params.firstOrNull())
+        } else {
+            params
+        }
+
+    private fun ReflectionCallKind.isKFunctionCall(): Boolean = when (this) {
+        ReflectionCallKind.KFUNCTION_CALL_INSTANCE,
+        ReflectionCallKind.KFUNCTION_CALL_STATIC,
+        ReflectionCallKind.KFUNCTION_CALL_CONSTRUCTOR -> true
+        else -> false
+    }
 }
 
 /**
@@ -149,9 +167,6 @@ sealed class TRTracePoint(
     val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(context, codeLocationId)
     val activeLocals: List<ActiveLocal> get() = CodeLocations.activeLocals(context, codeLocationId) ?: emptyList() // used in plugin
     val accessPath: AccessPath? get() = CodeLocations.accessPath(context, codeLocationId)
-
-    fun getAccessPath(useParameterAsReceiver: Boolean): AccessPath? =
-        CodeLocations.accessPath(context, codeLocationId, useParameterAsReceiver)
 
     fun toText(verbose: Boolean): String {
         val sb = StringBuilder()

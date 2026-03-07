@@ -72,10 +72,10 @@ class TraceContext {
         return loc.stackTraceElement
     }
 
-    fun accessPath(codeLocationId: Int, useParameterAsReceiver: Boolean = false): AccessPath? {
+    fun accessPath(codeLocationId: Int): AccessPath? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
         val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
-        return if (useParameterAsReceiver) loc.argumentNames?.firstOrNull() else loc.accessPath
+        return loc.accessPath
     }
     
     fun methodCallArgumentNames(codeLocationId: Int): List<AccessPath?>? {
