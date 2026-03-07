@@ -1835,9 +1835,6 @@ internal abstract class ManagedStrategy(
         val reflectionData = reflectionResult?.data
         // For callBy, resolve the Map to get effective params for extraction
         val effectiveParameters = reflectionResult.resolveEffectiveParameters(parameters.asList())
-        if (reflectionData != null && reflectionData.extractOwner(effectiveParameters, ::unpackVarArgs) == null) {
-            LincheckInstrumentation.ensureClassHierarchyIsTransformed(reflectionData.className)
-        }
 
         // get method's analysis section type
         val methodSection = methodAnalysisSectionType(
@@ -1850,6 +1847,10 @@ internal abstract class ManagedStrategy(
         // in case if a static method is called, ensure its class is instrumented
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+        }
+        // in case if a static method is called through reflection, ensure its class is instrumented
+        if (reflectionData != null && reflectionData.extractOwner(effectiveParameters, ::unpackVarArgs) == null) {
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(reflectionData.className)
         }
 
         // in the case of atomics API setter method call, notify the object tracker about a new link between objects
@@ -2396,7 +2397,7 @@ internal abstract class ManagedStrategy(
     ): String? = when {
         reflectionTargetOwner == null -> reflectionData.className.adornedClassNameRepresentation()
         methodName == "invokeExact" || methodName == "invoke" ->
-            findOwnerNameFromFirstArgument(codeLocation)
+            findOwnerNameFromFirstArgument(context, codeLocation)
         reflectionTargetOwner == callStackTrace.lastOrNull()?.instance -> null
         else -> objectTracker.getObjectRepresentation(reflectionTargetOwner)
     }
@@ -2464,11 +2465,6 @@ internal abstract class ManagedStrategy(
         val shadowStackFrame = shadowStack[threadId]!!.last()
         val ownerName = findOwnerName(context, obj, className, codeLocationId, shadowStackFrame, objectTracker)
         return ownerName?.takeIf { it.isNotEmpty() }
-    }
-
-    private fun findOwnerNameFromFirstArgument(codeLocationId: Int): String? {
-        val firstArgPath = context.methodCallArgumentNames(codeLocationId)?.firstOrNull()
-        return firstArgPath?.toString()?.takeIf { it.isNotEmpty() }
     }
 
     private fun AtomicMethodDescriptor.findAtomicOwnerName(
