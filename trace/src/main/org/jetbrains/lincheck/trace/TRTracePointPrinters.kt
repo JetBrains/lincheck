@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.ReflectionCallKind
 import java.time.Instant
 
 
@@ -138,7 +139,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         // For reflection-like calls, show target method first, then how it was invoked
-        if (tracePoint.reflectionTargetMethodName != null) {
+        if (tracePoint.reflectionData != null) {
             appendReflectionTarget(tracePoint)
             appendSpecialSymbol(" ")
             appendSpecialSymbol("[")
@@ -167,10 +168,12 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     }
 
     protected fun TRAppendable.appendReflectionTarget(tracePoint: TRMethodCallTracePoint): TRAppendable {
-        appendReflectionTargetOwner(tracePoint)
-        append(tracePoint.reflectionTargetMethodName!!)
+        val reflectionData = tracePoint.reflectionData ?: return this
+        appendReflectionTargetOwner(tracePoint, reflectionData)
+        append(reflectionData.methodName)
         appendSpecialSymbol("(")
-        tracePoint.reflectionTargetParameters?.forEachIndexed { i, parameter ->
+        val targetParams = reflectionData.extractParameters(tracePoint.parameters)
+        targetParams.forEachIndexed { i, parameter ->
             if (i != 0) {
                 appendSpecialSymbol(",")
                 appendSpecialSymbol(" ")
@@ -181,18 +184,19 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         return this
     }
 
-    protected fun TRAppendable.appendReflectionTargetOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
-        val className = tracePoint.reflectionTargetClassName ?: return this
-        val methodName = tracePoint.reflectionTargetMethodName ?: return this
-        val owner = tracePoint.reflectionTargetOwner
-        val parameters = tracePoint.reflectionTargetParameters ?: emptyList()
+    protected fun TRAppendable.appendReflectionTargetOwner(
+        tracePoint: TRMethodCallTracePoint,
+        reflectionData: ReflectionTargetData
+    ): TRAppendable {
+        val owner = reflectionData.extractOwner(tracePoint.parameters)
+        val parameters = reflectionData.extractParameters(tracePoint.parameters)
 
         // Create a fake trace point with reflection target data to reuse appendOwner logic
         val methodType = Types.MethodType(
             argumentTypes = parameters.map { Types.OBJECT_TYPE }.toMutableList(),
             returnType = Types.VOID_TYPE // return type doesn't matter for owner rendering
         )
-        val methodId = tracePoint.context.getOrCreateMethodId(className, methodName, methodType)
+        val methodId = tracePoint.context.getOrCreateMethodId(reflectionData.className, reflectionData.methodName, methodType)
         val fakeTracePoint = TRMethodCallTracePoint(
             context = tracePoint.context,
             threadId = tracePoint.threadId,
@@ -203,14 +207,18 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             parentTracePoint = tracePoint.parentTracePoint
         )
 
-        return when {
-            tracePoint.className.startsWith("java.lang.invoke.") && tracePoint.methodName != "invokeWithArguments" ->
-                appendOwner(fakeTracePoint, useParameterAsReceiver = true)
+        val usesParameterAsReceiver = reflectionData.callKind.let { kind ->
+            kind == ReflectionCallKind.METHOD_HANDLE_INSTANCE ||
+            kind == ReflectionCallKind.METHOD_HANDLE_STATIC ||
+            kind == ReflectionCallKind.METHOD_HANDLE_CONSTRUCTOR
+        }
 
+        return when {
+            usesParameterAsReceiver -> appendOwner(fakeTracePoint, useParameterAsReceiver = true)
             fakeTracePoint.isStatic() && fakeTracePoint.isCalledFromDefiningClass() -> this
             fakeTracePoint.obj != null && fakeTracePoint.obj == (tracePoint.parentTracePoint as? TRMethodCallTracePoint)?.obj -> this
             fakeTracePoint.obj != null -> {
-                appendObject(tracePoint.reflectionTargetOwner)
+                appendObject(owner)
                 appendSpecialSymbol(".")
                 this
             }

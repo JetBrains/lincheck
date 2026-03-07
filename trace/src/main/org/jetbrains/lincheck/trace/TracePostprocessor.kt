@@ -380,10 +380,7 @@ object CompressingPostprocessor : TracePostprocessor {
             child.parameters,
             child.flags,
             parent.parentTracePoint,
-            child.reflectionTargetClassName,
-            child.reflectionTargetMethodName,
-            child.reflectionTargetOwner,
-            child.reflectionTargetParameters,
+            child.reflectionData,
             child.eventId
         )
         newNode.result = child.result
