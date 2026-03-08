@@ -275,8 +275,12 @@ private fun resolveKotlinReflectionCall(function: KFunction<*>): ReflectedCallDa
 }
 
 private fun resolveKotlinReflectionCallBy(function: KFunction<*>): ReflectionDetectionResult? {
-    // Get the ordered parameter keys for looking up values in the Map
-    val parameterKeys = function.parameters
+    val parameterKeys = try {
+        function.parameters
+    } catch (_: Throwable) {
+        // Initialization loop
+        return null
+    }
 
     function.javaMethod?.let { javaMethod ->
         val isStatic = Modifier.isStatic(javaMethod.modifiers)
