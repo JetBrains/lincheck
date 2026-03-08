@@ -13,4 +13,4 @@ LOOP 1
 
 
 === Await Loop Detection ===
-Await loop 0: header=1, body=[1, 2]
+Await loop 0: header=1, body=[1, 2], cleanBackEdgeSources=[2]

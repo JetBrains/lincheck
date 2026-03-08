@@ -103,11 +103,115 @@ public class AwaitLoopCases {
         }
     }
 
-    // --- Case 10: Non-await loop with PUTSTATIC equivalent (field write) ---
+    // --- Case 10: Non-await loop — reads AND writes (counter++) ---
     // This loop reads and writes, so it's not await.
     public void nonAwaitReadAndWrite() {
         while (counter < 10) {
             counter++;
+        }
+    }
+
+    // === Path-sensitive test cases ===
+    // These test loops where SOME paths through the loop body are read-only
+    // (spin-retry paths) while other paths have writes or calls.
+    // The new algorithm should detect the read-only back-edge path.
+
+    // --- Case 11: Loop with CAS on one path, read-only spin on another ---
+    // Simulates: check element, if null → spin (return@loop), else CAS + return
+    // Should be detected as an await loop (the null-check spin path is read-only).
+    volatile int head;
+    volatile int tail;
+    volatile int state;
+    java.util.concurrent.atomic.AtomicInteger atomicState = new java.util.concurrent.atomic.AtomicInteger();
+
+    public int awaitLoopWithCasOnAlternatePath() {
+        while (true) {
+            int element = array[head];
+            if (element == 0) {
+                // spin-retry: read-only path back to loop header
+                continue;
+            }
+            // non-spinning path: CAS + write (side effects)
+            if (atomicState.compareAndSet(0, 1)) {
+                array[head] = 0;
+                return element;
+            }
+        }
+    }
+
+    // --- Case 12: Loop with write on one branch, read-only spin on another ---
+    // Simulates: read flag, if condition A → spin, if condition B → write + exit
+    // Should be detected as an await loop.
+    public void awaitLoopWithWriteOnAlternatePath() {
+        while (true) {
+            int s = state;
+            if (s == 0) {
+                // spin-retry path: no writes, just continue
+                continue;
+            }
+            // exit path with a write
+            counter = s;
+            return;
+        }
+    }
+
+    // --- Case 13: Loop where ALL paths have side effects ---
+    // No read-only spin path exists.
+    // Should NOT be detected as an await loop.
+    public void nonAwaitAllPathsDirty() {
+        while (true) {
+            int s = state;
+            if (s == 0) {
+                counter = 42; // write on this path too
+                continue;
+            }
+            counter = s;
+            return;
+        }
+    }
+
+    // --- Case 14: Loop with method call on spin path ---
+    // The spin path has a method call (side effect).
+    // Should NOT be detected as an await loop.
+    public void nonAwaitCallOnSpinPath() {
+        while (true) {
+            int s = state;
+            if (s == 0) {
+                doSomething(); // method call on the spin path
+                continue;
+            }
+            return;
+        }
+    }
+
+    // --- Case 15: Loop with only reads and Thread.onSpinWait on spin path ---
+    // Thread.onSpinWait is explicitly allowed.
+    // Should be detected as an await loop.
+    public void awaitLoopWithOnSpinWait() {
+        while (true) {
+            int s = state;
+            if (s != 0) {
+                return;
+            }
+            Thread.onSpinWait();
+        }
+    }
+
+    // --- Case 16: Multi-path loop where one spin path has reads, another spin path has writes ---
+    // Two back-edge paths: one is clean (read-only), one is dirty (has writes).
+    // Should be detected as await loop because at least one clean path exists.
+    public void awaitLoopOneCleanOneNot() {
+        while (true) {
+            int s = state;
+            if (s == 0) {
+                // clean spin path
+                continue;
+            }
+            if (s == 1) {
+                counter = s; // dirty spin path
+                continue;
+            }
+            return;
         }
     }
 }
