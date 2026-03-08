@@ -2091,61 +2091,8 @@ internal abstract class ManagedStrategy(
 
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
             val (started, decision) = loopDetector.onLoopIteration(threadId, codeLocation, loopId)
-
-            if (collectTrace) {
-                if (started) {
-                    traceCollector?.addTracePointInternal(
-                        LoopStartTracePoint(
-                            context = context,
-                            eventId = getNextEventId(),
-                            iThread = threadId,
-                            actorId = currentActorId[threadId]!!,
-                            codeLocation = codeLocation,
-                            loopId = loopId
-                        )
-                    )
-                }
-
-                val iteration = loopDetector.getCurrentLoopIteration(threadId, loopId, codeLocation)
-                traceCollector?.addTracePointInternal(
-                    LoopIterationTracePoint(
-                        context = context,
-                        eventId = getNextEventId(),
-                        iThread = threadId,
-                        actorId = currentActorId[threadId]!!,
-                        codeLocation = codeLocation,
-                        loopId = loopId,
-                        iteration = iteration
-                    )
-                )
-            }
-
-            when (decision) {
-                LoopDetector.Decision.IDLE -> {}
-                LoopDetector.Decision.SWITCH_THREAD -> {
-                    tryAbortingUserThreads(threadId, BlockingReason.LiveLocked)
-                    onSwitchPoint(threadId)
-                    switchCurrentThread(threadId, BlockingReason.LiveLocked)
-                }
-
-                LoopDetector.Decision.STUCK -> {
-                    // TODO: should we add a LoopEndTracePoint here as well or not?
-                    if (collectTrace) {
-                        traceCollector?.addTracePointInternal(
-                            LoopEndTracePoint(
-                                context = context,
-                                eventId = getNextEventId(),
-                                iThread = threadId,
-                                actorId = currentActorId[threadId]!!,
-                                loopId = loopId,
-                                codeLocation = codeLocation
-                            )
-                        )
-                        traceCollector?.addStateRepresentation()
-                    }
-                    failDueToLivelock()
-                }
-            }
+            collectLoopTrace(started, threadId, codeLocation, loopId)
+            getLoopDecision(decision, threadId, loopId, codeLocation)
         }
     }
 
@@ -2177,7 +2124,13 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         loopId: Int
     ): Unit = threadDescriptor.runInsideIgnoredSection {
-        onLoopIteration(threadDescriptor, codeLocation, loopId)
+        val threadId = threadScheduler.getCurrentThreadId()
+
+        if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
+            val (started, decision) = loopDetector.onAwaitLoop(threadId, codeLocation, loopId)
+            collectLoopTrace(started, threadId, codeLocation, loopId)
+            getLoopDecision(decision, threadId, loopId, codeLocation)
+        }
     }
 
     override fun afterLoopExit(
@@ -2208,6 +2161,74 @@ internal abstract class ManagedStrategy(
                     )
                 )
                 traceCollector?.addStateRepresentation()
+            }
+        }
+    }
+
+    private fun collectLoopTrace(
+        started: Boolean,
+        threadId: ThreadId,
+        codeLocation: Int,
+        loopId: Int
+    ) {
+        if (collectTrace) {
+            if (started) {
+                traceCollector?.addTracePointInternal(
+                    LoopStartTracePoint(
+                        context = context,
+                        eventId = getNextEventId(),
+                        iThread = threadId,
+                        actorId = currentActorId[threadId]!!,
+                        codeLocation = codeLocation,
+                        loopId = loopId
+                    )
+                )
+            }
+
+            val iteration = loopDetector.getCurrentIteration(threadId, loopId, codeLocation)
+            traceCollector?.addTracePointInternal(
+                LoopIterationTracePoint(
+                    context = context,
+                    eventId = getNextEventId(),
+                    iThread = threadId,
+                    actorId = currentActorId[threadId]!!,
+                    codeLocation = codeLocation,
+                    loopId = loopId,
+                    iteration = iteration
+                )
+            )
+        }
+    }
+
+    private fun getLoopDecision(
+        decision: LoopDetector.Decision,
+        threadId: ThreadId,
+        loopId: Int,
+        codeLocation: Int
+    ) {
+        when (decision) {
+            LoopDetector.Decision.IDLE -> {}
+            LoopDetector.Decision.SWITCH_THREAD -> {
+                tryAbortingUserThreads(threadId, BlockingReason.LiveLocked)
+                onSwitchPoint(threadId)
+                switchCurrentThread(threadId, BlockingReason.LiveLocked)
+            }
+
+            LoopDetector.Decision.STUCK -> {
+                if (collectTrace) {
+                    traceCollector?.addTracePointInternal(
+                        LoopEndTracePoint(
+                            context = context,
+                            eventId = getNextEventId(),
+                            iThread = threadId,
+                            actorId = currentActorId[threadId]!!,
+                            loopId = loopId,
+                            codeLocation = codeLocation
+                        )
+                    )
+                    traceCollector?.addStateRepresentation()
+                }
+                failDueToLivelock()
             }
         }
     }
