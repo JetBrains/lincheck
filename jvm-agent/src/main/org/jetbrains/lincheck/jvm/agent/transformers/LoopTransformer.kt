@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
-import com.sun.xml.internal.ws.org.objectweb.asm.Opcodes
+import org.objectweb.asm.Opcodes
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.trace.TraceContext
@@ -86,7 +86,15 @@ internal class LoopTransformer(
     private val opcodesReachableFromOutsideLoops: Map<InstructionIndex, Set<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeReachabilityFromOutsideLoops(insnIndexRemapping, loopInfo)
 
-    private val awaitLoopIds: Set<LoopId> = methodInfo.basicControlFlowGraph!!.computeAwaitLoops(loopInfo)
+    private val awaitLoopBackEdgeSources: Map<LoopId, Set<BasicBlockIndex>> =
+        methodInfo.basicControlFlowGraph!!.computeAwaitLoops(loopInfo)
+
+    private val awaitLoopIds: Set<LoopId> = awaitLoopBackEdgeSources.keys
+
+    // Map from a non-phony instruction index (the last opcode of a clean back-edge source block)
+    // to the loopId. These are the sites where `onAwaitLoop` should be injected.
+    private val awaitInjectionLocation: Map<InstructionIndex, LoopId> =
+        methodInfo.basicControlFlowGraph!!.computeAwaitInjectionLocation(insnIndexRemapping, awaitLoopBackEdgeSources)
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
@@ -123,10 +131,7 @@ internal class LoopTransformer(
             adapter.push(loopId)
             // STACK: descriptor, codeLocation, loopId
             if (isReducible) {
-                if (loopId in awaitLoopIds) {
-                    adapter.invokeStatic(Injections::onAwaitLoopSpin)
-                }
-                else {
+                if (loopId !in awaitLoopIds) {
                     adapter.invokeStatic(Injections::onLoopIteration)
                 }
             } else if (shouldTrackIrreducibleLoops) {
@@ -134,6 +139,19 @@ internal class LoopTransformer(
             }
             // STACK: <empty>
         }
+
+        // Inject 'onAwaitLoop' at clean back-edge sources of await loops.
+        // This fires only when the iteration actually takes the read-only spin-retry path.
+        awaitInjectionLocation[nonPhonyIndex]?.let { loopId ->
+            // STACK: <empty>
+            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+            loadNewCodeLocationId()
+            adapter.push(loopId)
+            // STACK: descriptor, codeLocation, loopId
+            adapter.invokeStatic(Injections::onAwaitLoop)
+            // STACK: <empty>
+        }
+
 
         // Inject `onLoopExit` on exceptional transitions from within the loop body to outside exception handlers.
         exceptionExitSites[nonPhonyIndex]?.let { loopIds ->
@@ -264,22 +282,79 @@ private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
 }
 
 /**
-* A loop is considered an await loop if:
-*  - it contains at least one shared read (field/array read)
-*  - it contains no shared writes, no monitor operations,
-*    and no potentially side-effecting calls except Thread.onSpinWait
-*/
+ * Compute injection location for await loops
+ * This should happen at the back edge of the loop when the loop can be considered await.
+ * by back edge we mean the jump instruction that goes back to the loop header.
+ *
+ * Returns a map from non-phony instruction index to the loop id.
+ */
+private fun BasicBlockControlFlowGraph.computeAwaitInjectionLocation(
+    insnIndexRemapping: IntArray,
+    awaitBackEdges: Map<LoopId, Set<BasicBlockIndex>>,
+): Map<InstructionIndex, LoopId> {
+    if (awaitBackEdges.isEmpty()) return emptyMap()
+    val result = mutableMapOf<InstructionIndex, LoopId>()
+    for ((loopId, sourceBlocks) in awaitBackEdges) {
+        for (block in sourceBlocks) {
+            // Inject at the last opcode of the source block
+            val idx = lastOpcodeIndexOf(block) ?: continue
+            val nonPhonyIndex = insnIndexRemapping[idx]
+            if (nonPhonyIndex >= 0) {
+                // In the case of nested loops when they share the injection location,
+                // prefer the inner loop
+                result.merge(nonPhonyIndex, loopId) { old, new -> maxOf(old, new) }
+            }
+        }
+    }
+    return result
+}
+
+/**
+ * A loop is considered an await loop if there exists at least a back edge path such that:
+ *   - no shared writes (field/array writes), monitor operations, or side-effecting calls (except `Thread.onSpinWait`) are present on that path
+ *   - at least one shared read (field/array read) is present on that path
+ *
+ * By this definition, a loop that contains writes or calls on some paths can still be classified as an await loop,
+ * as long as it has at least one clean back-edge path that satisfies above conditions
+ *
+ * Examples:
+ * ```
+ * // Simple busy-wait — the whole loop body is read-only
+ * while (!flag) { }
+ *
+ * // Complex loop with CAS and writes on some paths, but a read-only spin-retry path
+ * _state.loop { state ->
+ *     val element = array[head].value
+ *     if (element == null) return@loop   // <-- read-only spin path
+ *     if (_state.compareAndSet(old, new)) { ... return result }
+ * }
+ * ```
+ */
+
 private val ON_SPIN_WAIT_METHOD = runCatching {
     Thread::class.java.getDeclaredMethod("onSpinWait")
 }.getOrNull()
 private val THREAD_OWNER: String = Type.getInternalName(Thread::class.java)
 
+/**
+ * Classification object result used for await loop analysis
+ */
+private data class BlockClassification(
+    val hasSharedRead: Boolean,
+    val hasSideEffects: Boolean,
+)
+
+/**
+ * Computes the set of "clean" back-edge source blocks for each await loop.
+ *
+ * Returns a map between [LoopId] and he set of clean back-edge source [BasicBlockIndex] values.
+ */
 internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
     loopInfo: MethodLoopsInformation
-): Set<LoopId> {
-    if (!loopInfo.hasLoops()) return emptySet()
-    val res = mutableSetOf<LoopId>()
+): Map<LoopId, Set<BasicBlockIndex>> {
+    if (!loopInfo.hasLoops()) return emptyMap()
 
+    // helpers for classification
     fun isSharedWriteOpcode(opcode: Int): Boolean = when (opcode) {
         Opcodes.PUTFIELD, Opcodes.PUTSTATIC,
         Opcodes.IASTORE, Opcodes.LASTORE, Opcodes.FASTORE, Opcodes.DASTORE,
@@ -302,12 +377,14 @@ internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
                 insn.name == ON_SPIN_WAIT_METHOD?.name &&
                 insn.desc == ON_SPIN_WAIT_METHOD.let(Type::getMethodDescriptor)
 
-    for (loop in loopInfo.loops) {
-        var hasSharedRead = false
-        var hasSideEffects = false
-
-        for (block in loop.body) {
-            val execRange = basicBlocks.getOrNull(block)?.executableRange ?: continue
+    // classify every basic block in the method
+    val blockClassifications = Array(basicBlocks.size) { blockIndex ->
+        val execRange = basicBlocks.getOrNull(blockIndex)?.executableRange
+        if (execRange == null) {
+            BlockClassification(hasSharedRead = false, hasSideEffects = false)
+        } else {
+            var hasSharedRead = false
+            var hasSideEffects = false
             for (i in execRange) {
                 val insn = instructions.get(i)
                 val opcode = insn.opcode
@@ -330,11 +407,84 @@ internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
                     }
                 }
             }
-            if (hasSideEffects) break
-        }
-        if (hasSharedRead && !hasSideEffects) {
-            res.add(loop.id)
+            BlockClassification(hasSharedRead, hasSideEffects)
         }
     }
-    return res
+
+    // for each loop, find if there exists clean back-edges.
+    val result = mutableMapOf<LoopId, Set<BasicBlockIndex>>()
+
+    for (loop in loopInfo.loops) {
+        val awaitBackEdges = findCleanBackEdge(loop, blockClassifications)
+        if (awaitBackEdges.isNotEmpty()) {
+            result[loop.id] = awaitBackEdges
+        }
+    }
+
+    return result
+}
+
+/**
+ * Finds clean back-edge source blocks by performing a forward BFS from the loop header.
+ */
+private fun BasicBlockControlFlowGraph.findCleanBackEdge(
+    loop: LoopInformation,
+    blockClassifications: Array<BlockClassification>,
+): Set<BasicBlockIndex> {
+    val header = loop.header
+    val bodyBlocks = loop.body
+    val backEdgeSources = loop.backEdges.map { it.source }.toSet()
+
+    val headerClassification = blockClassifications[header]
+
+    // If the header block itself has side effects, no suitable await loop can be formed
+    if (headerClassification.hasSideEffects) return emptySet()
+
+    // BFS visited state bitmask
+    // VISITED_NO_READ = visited without a read on the path,
+    // VISITED_WITH_READ = visited with at least one read on the path.
+    val VISITED_NO_READ = 1
+    val VISITED_WITH_READ = 2
+    val visitedState = IntArray(basicBlocks.size)
+
+    data class BfsEntry(val block: BasicBlockIndex, val hasRead: Boolean)
+
+    val initialHasRead = headerClassification.hasSharedRead
+    val queue = ArrayDeque<BfsEntry>()
+    queue.add(BfsEntry(header, initialHasRead))
+    visitedState[header] = if (initialHasRead) VISITED_WITH_READ else VISITED_NO_READ
+
+    val cleanBackEdges = mutableSetOf<BasicBlockIndex>()
+
+    while (queue.isNotEmpty()) {
+        val (currentBlock, pathHasRead) = queue.removeFirst()
+
+        // Add current block if is a back-edge source that has a read
+        if (currentBlock in backEdgeSources && pathHasRead) {
+            cleanBackEdges.add(currentBlock)
+        }
+
+        // Explore successors
+        val successorEdges = allSuccessors[currentBlock] ?: continue
+        for (edge in successorEdges) {
+            val target = edge.target
+            // Skip exception edges, targets outside the loop body, and back-edges to the header
+            if (edge.label is EdgeLabel.Exception || target !in bodyBlocks || target in loop.headers) continue
+
+            val targetClassification = blockClassifications[target]
+            // Skip side effects
+            if (targetClassification.hasSideEffects) continue
+
+            val newHasRead = pathHasRead || targetClassification.hasSharedRead
+            val bfsBit = if (newHasRead) VISITED_WITH_READ else VISITED_NO_READ
+
+            // Skip if this block was already visited with the same read state
+            if ((visitedState[target] and bfsBit) == 0) {
+                visitedState[target] = visitedState[target] or bfsBit
+                queue.add(BfsEntry(target, newHasRead))
+            }
+        }
+    }
+
+    return cleanBackEdges
 }
