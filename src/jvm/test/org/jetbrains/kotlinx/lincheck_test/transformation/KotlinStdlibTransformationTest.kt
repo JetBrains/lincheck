@@ -12,6 +12,10 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
+import org.jetbrains.lincheck.util.JdkVersion
+import org.jetbrains.lincheck.util.jdkVersion
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 
 /**
  * This test checks that some methods in kotlin stdlib related to
@@ -54,5 +58,11 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
+    }
+    
+    @Before
+    fun setUp() {
+        // https://github.com/JetBrains/lincheck/issues/508
+        assumeFalse(jdkVersion == JdkVersion.JDK_21)
     }
 }
