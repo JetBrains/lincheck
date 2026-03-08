@@ -2277,6 +2277,14 @@ internal abstract class ManagedStrategy(
                 return guarantee.type
             }
         }
+        // Check if the method is declared in a different class (inheritance),
+        // and if yes, check the section for the declared class as well.
+        if (ownerName != className) {
+            val declaredSection = analysisProfile.getAnalysisSectionFor(className, methodName)
+            if (declaredSection > section) {
+                return declaredSection
+            }
+        }
         return section
     }
 
