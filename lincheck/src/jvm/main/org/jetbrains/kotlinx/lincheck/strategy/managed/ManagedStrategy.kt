@@ -2188,7 +2188,7 @@ internal abstract class ManagedStrategy(
             }
         }
     }
-         ride fun onAwaitLoopSpin(
+    override fun onAwaitLoopSpin(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         loopId: Int
