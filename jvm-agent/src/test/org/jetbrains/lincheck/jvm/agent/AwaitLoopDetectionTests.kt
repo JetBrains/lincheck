@@ -43,18 +43,19 @@ class AwaitLoopDetectionTests {
             className, name, desc
         ) { cfg ->
             val loopInfo = cfg.computeLoopInformation()
-            val awaitLoopIds = cfg.computeAwaitLoops(loopInfo)
+            val awaitLoopBackEdgeSources = cfg.computeAwaitLoops(loopInfo)
             buildString {
                 appendLine("=== Loop Information ===")
                 appendLine(loopInfo.toFormattedString())
                 appendLine()
                 appendLine("=== Await Loop Detection ===")
-                if (awaitLoopIds.isEmpty()) {
+                if (awaitLoopBackEdgeSources.isEmpty()) {
                     appendLine("No await loops detected.")
                 } else {
-                    for (loopId in awaitLoopIds.sorted()) {
+                    for (loopId in awaitLoopBackEdgeSources.keys.sorted()) {
                         val loop = loopInfo.getLoopInfo(loopId)!!
-                        appendLine("Await loop $loopId: header=${loop.header}, body=${loop.body}")
+                        val cleanSources = awaitLoopBackEdgeSources[loopId]!!.sorted()
+                        appendLine("Await loop $loopId: header=${loop.header}, body=${loop.body}, cleanBackEdgeSources=$cleanSources")
                     }
                 }
             }.trimEnd()
@@ -99,4 +100,30 @@ class AwaitLoopDetectionTests {
     // Case 10: Non-await loop — reads AND writes (counter++)
     @Test
     fun nonAwaitReadAndWrite() = test("nonAwaitReadAndWrite", "()V")
+
+    // === Path-sensitive test cases ===
+
+    // Case 11: Loop with CAS on one path, read-only spin on another → await
+    @Test
+    fun awaitLoopWithCasOnAlternatePath() = test("awaitLoopWithCasOnAlternatePath", "()I")
+
+    // Case 12: Loop with write on exit path, read-only spin on continue path → await
+    @Test
+    fun awaitLoopWithWriteOnAlternatePath() = test("awaitLoopWithWriteOnAlternatePath", "()V")
+
+    // Case 13: ALL paths have side effects → not await
+    @Test
+    fun nonAwaitAllPathsDirty() = test("nonAwaitAllPathsDirty", "()V")
+
+    // Case 14: Method call on the spin path → not await
+    @Test
+    fun nonAwaitCallOnSpinPath() = test("nonAwaitCallOnSpinPath", "()V")
+
+    // Case 15: Thread.onSpinWait on spin path (allowed) → await
+    @Test
+    fun awaitLoopWithOnSpinWait() = test("awaitLoopWithOnSpinWait", "()V")
+
+    // Case 16: Two spin paths, one clean, one dirty → await (at least one clean path)
+    @Test
+    fun awaitLoopOneCleanOneNot() = test("awaitLoopOneCleanOneNot", "()V")
 }
