@@ -72,7 +72,16 @@ enum class DiffStatus {
      *
      * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
      */
-    EDITED_NEW,
+    EDITED_NEW, ;
+
+    fun toLeaf(): DiffStatus =
+        when (this) {
+            UNCHANGED -> UNCHANGED
+            REMOVED -> REMOVED
+            ADDED -> ADDED
+            EDITED_OLD -> REMOVED
+            EDITED_NEW -> ADDED
+        }
 }
 
 sealed class TRTracePoint(
@@ -92,6 +101,16 @@ sealed class TRTracePoint(
             check(field == null) { "Diff status can be changed only once" }
             field = value
         }
+
+    internal fun copyDiffStatus(other: TRTracePoint) {
+        check(diffStatus == null) { "Diff status can be changed only once" }
+        if (other.diffStatus == null) return
+        if (this is TRContainerTracePoint) {
+            diffStatus = other.diffStatus
+        } else {
+            diffStatus = other.diffStatus?.toLeaf()
+        }
+    }
 
     internal open fun save(out: TraceWriter) {
         saveReferences(out)
@@ -178,12 +197,14 @@ sealed class TRContainerTracePoint(
         children = from.children
         childrenAddresses = from.childrenAddresses
         childrenDiffStatuses = null
+        // Copy this, as all children could be null in case of compressing post-processor
+        val cds = from.childrenDiffStatuses
+        if (cds != null) {
+            childrenDiffStatuses = EnumSet<DiffStatus>.copyOf(cds)
+        }
         // .filter can be very expensive in case of huge children list
         from.children.forEach {
-            if (it != null) {
-                addChildStatus(it)
-                it.setParentIfContainer(this)
-            }
+            it?.setParentIfContainer(this)
         }
     }
 
