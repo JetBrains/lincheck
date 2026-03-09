@@ -212,8 +212,16 @@ class TracePointCloner(
             TRArray(cd.id, identityHashCode, cd, totalSize, capturedElements.clone())
         }
         is TRObject -> {
-            val cd = context.createAndRegisterClassDescriptor(className)
-            TRObject(cd.id, identityHashCode, cd, fields.clone())
+            if (this == TR_OBJECT_NULL || this == TR_OBJECT_NULL) {
+                this
+            } else if (this.classNameId == TR_OBJECT_NULL_CLASSNAME) {
+                TR_OBJECT_NULL
+            } else if (this.classNameId == TR_OBJECT_VOID_CLASSNAME) {
+                TR_OBJECT_VOID
+            } else {
+                val cd = context.createAndRegisterClassDescriptor(className)
+                TRObject(cd.id, identityHashCode, cd, fields.clone())
+            }
         }
     }
 
