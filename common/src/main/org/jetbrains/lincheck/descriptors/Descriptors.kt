@@ -50,13 +50,16 @@ data class MethodDescriptor(
     val methodSignature: MethodSignature,
     val isInline: Boolean = false
 ) : Descriptor {
+    // ClassName cannot be used in Key, because MethodDescriptor can be read before ClassDescriptor
+    // and only classId will be known in such case.
+    // Key is needed to restore MethodDescriptor, though.
     data class Key(
-        val className: String,
+        val classId: Int,
         val methodSignature: MethodSignature,
     ) : Descriptor.Key()
 
     override val id: Int get() = context.methodPool.getId(key)
-    override val key: Descriptor.Key get() = Key(className, methodSignature)
+    override val key: Descriptor.Key get() = Key(classId, methodSignature)
 
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
@@ -83,15 +86,18 @@ data class FieldDescriptor(
     val fieldKind: FieldKind,
     val isFinal: Boolean,
 ) : Descriptor {
+    // ClassName cannot be used in Key, because FieldDescriptor can be read before ClassDescriptor
+    // and only classId will be known in such case.
+    // Key is needed to restore FieldDescriptor, though.
     data class Key(
-        val className: String,
+        val classId: Int,
         val fieldName: String,
         val type: Types.Type,
         val fieldKind: FieldKind
     ) : Descriptor.Key()
 
     override val id: Int get() = context.fieldPool.getId(key)
-    override val key: Descriptor.Key get() = Key(className, fieldName, type, fieldKind)
+    override val key: Descriptor.Key get() = Key(classId, fieldName, type, fieldKind)
 
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
