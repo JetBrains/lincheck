@@ -146,11 +146,11 @@ fun TraceContext.createAndRegisterMethodDescriptor(
 ): MethodDescriptor {
     // If a descriptor with the same key already exists, return the existing instance (with a proper id).
     val signature = MethodSignature(methodName, methodType)
-    val key = MethodDescriptor.Key(className, signature)
+    val clazzId = createAndRegisterClassDescriptor(className).id
+    val key = MethodDescriptor.Key(clazzId, signature)
     methodPool[key]?.let { return it }
 
     // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
-    val clazzId = createAndRegisterClassDescriptor(className).id
     val descriptor = MethodDescriptor(
         context = this,
         classId = clazzId,
@@ -175,11 +175,11 @@ fun TraceContext.createAndRegisterFieldDescriptor(
     isFinal: Boolean
 ): FieldDescriptor {
     // If a descriptor with the same key already exists, return the existing instance (with a proper id).
-    val key = FieldDescriptor.Key(className, fieldName, type, fieldKind)
+    val clazzId = createAndRegisterClassDescriptor(className).id
+    val key = FieldDescriptor.Key(clazzId, fieldName, type, fieldKind)
     fieldPool[key]?.let { return it }
 
     // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
-    val clazzId = createAndRegisterClassDescriptor(className).id
     val descriptor = FieldDescriptor(
         context = this,
         classId = clazzId,

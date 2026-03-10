@@ -51,12 +51,12 @@ data class MethodDescriptor(
     val isInline: Boolean = false
 ) : Descriptor {
     data class Key(
-        val className: String,
+        val classId: Int,
         val methodSignature: MethodSignature,
     ) : Descriptor.Key()
 
     override val id: Int get() = context.methodPool.getId(key)
-    override val key: Descriptor.Key get() = Key(className, methodSignature)
+    override val key: Descriptor.Key get() = Key(classId, methodSignature)
 
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
@@ -84,14 +84,14 @@ data class FieldDescriptor(
     val isFinal: Boolean,
 ) : Descriptor {
     data class Key(
-        val className: String,
+        val classId: Int,
         val fieldName: String,
         val type: Types.Type,
         val fieldKind: FieldKind
     ) : Descriptor.Key()
 
     override val id: Int get() = context.fieldPool.getId(key)
-    override val key: Descriptor.Key get() = Key(className, fieldName, type, fieldKind)
+    override val key: Descriptor.Key get() = Key(classId, fieldName, type, fieldKind)
 
     val classDescriptor: ClassDescriptor get() = context.classPool[classId]
     val className: String get() = classDescriptor.name
