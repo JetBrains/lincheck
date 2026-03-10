@@ -50,6 +50,9 @@ data class MethodDescriptor(
     val methodSignature: MethodSignature,
     val isInline: Boolean = false
 ) : Descriptor {
+    // ClassName cannot be used in Key, because MethodDescriptor can be read before ClassDescriptor
+    // and only classId will be known in such case.
+    // Key is needed to restore MethodDescriptor, though.
     data class Key(
         val classId: Int,
         val methodSignature: MethodSignature,
@@ -83,6 +86,9 @@ data class FieldDescriptor(
     val fieldKind: FieldKind,
     val isFinal: Boolean,
 ) : Descriptor {
+    // ClassName cannot be used in Key, because FieldDescriptor can be read before ClassDescriptor
+    // and only classId will be known in such case.
+    // Key is needed to restore FieldDescriptor, though.
     data class Key(
         val classId: Int,
         val fieldName: String,
