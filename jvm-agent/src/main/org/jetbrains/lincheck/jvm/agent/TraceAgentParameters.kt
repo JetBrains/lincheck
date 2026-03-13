@@ -114,6 +114,7 @@ object TraceAgentParameters {
     const val ARGUMENT_PACK = "pack"
     const val ARGUMENT_JMX_MBEAN = "jmxMBean"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
+    const val ARGUMENT_PHONE_HOME = "phoneHome"
 
     const val DEFAULT_TRACE_PORT = 9997
 
@@ -136,6 +137,10 @@ object TraceAgentParameters {
     @JvmStatic
     val breakpointsFilePath: String?
         get() = getArg(ARGUMENT_BREAKPOINTS_FILE)
+
+    @JvmStatic
+    val phoneHomeEnabled: Boolean
+        get() = (getArg(ARGUMENT_PHONE_HOME)?.lowercase() == "on")
 
     @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()
