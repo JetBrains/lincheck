@@ -212,7 +212,7 @@ class TracePointCloner(
             TRArray(cd.id, identityHashCode, cd, totalSize, capturedElements.clone())
         }
         is TRObject -> {
-            if (this == TR_OBJECT_NULL || this == TR_OBJECT_NULL) {
+            if (this == TR_OBJECT_NULL || this == TR_OBJECT_VOID) {
                 this
             } else if (this.classNameId == TR_OBJECT_NULL_CLASSNAME) {
                 TR_OBJECT_NULL

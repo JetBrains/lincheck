@@ -47,6 +47,8 @@ class TraceContext {
 
     fun getThreadId(name: String): Int = threadNames.filter { (_, value) -> value == name }.keys.firstOrNull() ?: -1
 
+    fun getThreadIds(name: String): Set<Int> = threadNames.filter { (_, value) -> value == name }.keys
+
     fun threadNames(): List<String> = threadNames.values.toList()
 
     val codeLocations: List<CodeLocation?> get() = locations

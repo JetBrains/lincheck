@@ -49,15 +49,15 @@ data class TraceDiffOptions private constructor (
         CUSTOM_BY_INDEX;
 
         fun isAuto(): Boolean = this == AUTO_BY_NAME || this == AUTO_BY_INDEX
-        fun isCustom(): Boolean = !isAuto()
+        fun isCustom(): Boolean = this == CUSTOM_BY_NAME || this == CUSTOM_BY_INDEX
     }
 
     /**
-     * What to do if there is left unmatched threads in left or right trace.
+     * What to do if there are unmatched threads in left or right trace.
      */
     enum class UnmatchedThreadsBehavior {
         /**
-         * Skip such threads and don'te their traces.
+         * Skip such threads and don't match their traces.
          */
         SKIP,
 
@@ -79,33 +79,33 @@ data class TraceDiffOptions private constructor (
         val customThreadNameMap: Map<String, String>?
     ) {
         private var unmatchedThreadsBehavior = UnmatchedThreadsBehavior.DIFF
-        private var forceMatchStartThreads= false
+        private var forceMatchStartThreads = false
         private var diffOnlyStartThreads = false
         private var forceDiff = false
 
         /**
-         * Set option to match two threads winch contain trace point with event id = 0, no matter what are
+         * Set option to match two threads that contain trace point with event id = 0, no matter what are
          * their names or indices.
          *
          * It will throw error if selected matching strategy is [ThreadMatchingStrategy.CUSTOM_BY_INDEX] or
          * [ThreadMatchingStrategy.CUSTOM_BY_NAME].
          */
         fun matchStartThreads(): DiffOptionsBuilder {
-            check(threadsMatchingStrategy.isAuto()) { "Cannot match start threads when match strategy is custom." }
+            check(!threadsMatchingStrategy.isCustom()) { "Cannot match start threads when match strategy is custom." }
             forceMatchStartThreads = true
             return this
         }
 
         /**
-         * Set option to diff only two threads winch contain trace point with event id = 0 and skip mall others.
+         * Set option to diff only two threads that contain trace point with event id = 0 and skip all others.
          *
-         * It implies [matchStartThreads]
+         * It implies [matchStartThreads].
          *
          * It will throw error if selected matching strategy is [ThreadMatchingStrategy.CUSTOM_BY_INDEX] or
          * [ThreadMatchingStrategy.CUSTOM_BY_NAME].
          */
         fun onlyDiffStartThreads(): DiffOptionsBuilder {
-            check(threadsMatchingStrategy.isAuto()) { "Cannot diff only start threads when match strategy is custom." }
+            check(!threadsMatchingStrategy.isCustom()) { "Cannot diff only start threads when match strategy is custom." }
             forceMatchStartThreads = true
             diffOnlyStartThreads = true
             return this

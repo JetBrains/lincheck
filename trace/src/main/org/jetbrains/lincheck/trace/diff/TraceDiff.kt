@@ -18,7 +18,7 @@ import java.io.FileOutputStream
 import kotlin.collections.component1
 import kotlin.collections.component2
 
-internal data class ThreadMapElement(val name: String, val startThread: Boolean, val leftIdx: Int, val rightIdx: Int)
+internal data class ThreadMapElement(val name: String, val isStartThread: Boolean, val leftIdx: Int, val rightIdx: Int)
 
 fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName: String) =
     diffTwoTraces(left, right, outputBaseName, TraceDiffOptions.DEFAULT)
@@ -70,7 +70,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
         if (options.diffOnlyStartThreads) {
             // Diff only thread with eventIds = 0
             val threadMapping = threadMap.getOrNull(0)
-            if (threadMapping == null || !threadMapping.startThread) {
+            if (threadMapping == null || !threadMapping.isStartThread) {
                 throw IllegalStateException("Only start thread diff is requested, but no start threads pair was found.")
             }
             cloner.setThread(0)
@@ -233,16 +233,7 @@ private fun matchThreadsByName(
     forceMatchStartThreads: Boolean
 ): List<ThreadMapElement> {
     val threadMap = mutableListOf<ThreadMapElement>()
-
-    val startMatch = if (forceMatchStartThreads) {
-        val match = matchStartThreads(left, leftRoots, right, rightRoots)
-        if (match != null) {
-            threadMap.add(match)
-        }
-        match
-    } else {
-        null
-    }
+    val startMatch = tryMatchStartThreads(forceMatchStartThreads, left, leftRoots, right, rightRoots, threadMap)
 
     val usedRightIdxes = mutableSetOf<Int>()
 
@@ -252,9 +243,7 @@ private fun matchThreadsByName(
 
         val leftId = lr.threadId
         val leftName = left.context.getThreadName(leftId)
-        // What to do with multiple threads with same name?
-        val rightId = right.context.getThreadId(leftName)
-        val rightIdx = rightRoots.indexOfFirst { it.threadId == rightId }
+        val rightIdx = findFirstUnusedThreadByName(right, leftName, rightRoots, usedRightIdxes, "right")
         // rightIdx can be -1, it is Ok
         usedRightIdxes.add(rightIdx)
         threadMap.add(ThreadMapElement(leftName, false, leftIdx, rightIdx))
@@ -281,16 +270,7 @@ private fun matchThreadsByIdx(
     forceMatchStartThreads: Boolean
 ): List<ThreadMapElement> {
     val threadMap = mutableListOf<ThreadMapElement>()
-
-    val startMatch = if (forceMatchStartThreads) {
-        val match = matchStartThreads(left, leftRoots, right, rightRoots)
-        if (match != null) {
-            threadMap.add(match)
-        }
-        match
-    } else {
-        null
-    }
+    val startMatch = tryMatchStartThreads(forceMatchStartThreads, left, leftRoots, right, rightRoots, threadMap)
 
     var leftIdx = 0
     var rightIdx = 0
@@ -315,7 +295,6 @@ private fun matchThreadsByIdx(
                 leftName
             } else {
                 "left: $leftName, right: $rightName"
-
             }
             ThreadMapElement(name, false, leftIdx, rightIdx)
         } else if (leftIdx < leftRoots.size) {
@@ -339,6 +318,26 @@ private fun matchThreadsByIdx(
     return threadMap
 }
 
+private fun tryMatchStartThreads(
+    forceMatchStartThreads: Boolean,
+    left: LazyTraceReader,
+    leftRoots: List<TRTracePoint>,
+    right: LazyTraceReader,
+    rightRoots: List<TRTracePoint>,
+    threadMap: MutableList<ThreadMapElement>
+): ThreadMapElement? {
+    val startMatch = if (forceMatchStartThreads) {
+        val match = matchStartThreads(left, leftRoots, right, rightRoots)
+        if (match != null) {
+            threadMap.add(match)
+        }
+        match
+    } else {
+        null
+    }
+    return startMatch
+}
+
 private fun matchThreadsByCustomName(
     left: LazyTraceReader,
     leftRoots: List<TRTracePoint>,
@@ -351,38 +350,20 @@ private fun matchThreadsByCustomName(
     val usedRightIdx = mutableSetOf<Int>()
 
     customThreadNameMap.forEach { (leftName, rightName) ->
-        val leftId = left.context.getThreadId(leftName)
-        require(leftId >= 0) { "There is no thread $leftName in left trace" }
-        val leftIdx = leftRoots.indexOfFirst { it.threadId == leftId }
+        val leftIdx = findFirstUnusedThreadByName(left, leftName, leftRoots, usedLeftIdx, "left")
         require(leftIdx >= 0) { "There is no trace points in thread $leftName in left trace" }
         usedLeftIdx.add(leftIdx)
 
-        val rightId = right.context.getThreadId(rightName)
-        require(rightId >= 0) { "There is no thread $rightName in right trace" }
-        val rightIdx = rightRoots.indexOfFirst { it.threadId == rightId }
+        val rightIdx = findFirstUnusedThreadByName(right, rightName, rightRoots, usedLeftIdx, "right")
         require(rightIdx >= 0) { "There is no trace points in thread $rightName in right trace" }
         require(usedRightIdx.add(rightIdx)) { "Thread $rightName from right trace was mapped twice" }
 
-        val name = if (leftName == rightName) {
-            leftName
-        } else {
-            "left: $leftName, right: $rightName"
-        }
+        val name = makeThreadName(leftName, rightName)
 
         threadMap.add(ThreadMapElement(name, false, leftIdx, rightIdx))
     }
 
-    // Map unmapped to -1
-    leftRoots.forEachIndexed { idx, root ->
-        if (usedLeftIdx.contains(idx)) return@forEachIndexed
-        threadMap.add(ThreadMapElement(left.context.getThreadName(root.threadId), false, idx, -1))
-    }
-
-    // Map unmapped to -1
-    rightRoots.forEachIndexed { idx, root ->
-        if (usedRightIdx.contains(idx)) return@forEachIndexed
-        threadMap.add(ThreadMapElement(right.context.getThreadName(root.threadId), false, -1, idx))
-    }
+    mapUnmappedThreads(threadMap, left, leftRoots, usedLeftIdx, right, rightRoots, usedRightIdx)
 
     return threadMap
 }
@@ -409,16 +390,43 @@ private fun matchThreadsByCustomIdx(
         val rightName = right.context.getThreadName(rightId)
         require(usedRightIdx.add(rightIdx)) { "Thread $rightName from right trace was mapped twice" }
 
-        val name = if (leftName == rightName) {
-            leftName
-        } else {
-            "left: $leftName, right: $rightName"
-        }
-
+        val name = makeThreadName(leftName, rightName)
         threadMap.add(ThreadMapElement(name, false, leftIdx, rightIdx))
     }
 
-    // Map unmapped to -1
+    mapUnmappedThreads(threadMap, left, leftRoots, usedLeftIdx, right, rightRoots, usedRightIdx)
+
+    return threadMap
+}
+
+private fun findFirstUnusedThreadByName(
+    reader: LazyTraceReader,
+    name: String,
+    roots: List<TRTracePoint>,
+    usedIdx: MutableSet<Int>,
+    side: String
+): Int {
+    val leftIds = reader.context.getThreadIds(name)
+    require(leftIds.isNotEmpty()) { "There is no thread $name in $side trace" }
+    return roots.indices.firstOrNull { !usedIdx.contains(it) && leftIds.contains(roots[it].threadId) } ?: -1
+}
+
+private fun makeThreadName(leftName: String, rightName: String): String =
+    if (leftName == rightName) {
+        leftName
+    } else {
+        "left: $leftName, right: $rightName"
+    }
+
+private fun mapUnmappedThreads(
+    threadMap: MutableList<ThreadMapElement>,
+    left: LazyTraceReader,
+    leftRoots: List<TRTracePoint>,
+    usedLeftIdx: MutableSet<Int>,
+    right: LazyTraceReader,
+    rightRoots: List<TRTracePoint>,
+    usedRightIdx: MutableSet<Int>
+) {
     leftRoots.forEachIndexed { idx, root ->
         if (usedLeftIdx.contains(idx)) return@forEachIndexed
         threadMap.add(ThreadMapElement(left.context.getThreadName(root.threadId), false, idx, -1))
@@ -429,11 +437,9 @@ private fun matchThreadsByCustomIdx(
         if (usedRightIdx.contains(idx)) return@forEachIndexed
         threadMap.add(ThreadMapElement(right.context.getThreadName(root.threadId), false, -1, idx))
     }
-
-    return threadMap
 }
 
-private fun saveThreadMap(threadMap:List<ThreadMapElement>): File {
+private fun saveThreadMap(threadMap: List<ThreadMapElement>): File {
     val threadMapFile = File.createTempFile("trace-diff-", ".$THREAD_MAP_FILENAME_EXT")
         .also { it.deleteOnExit() }
     val threadMapStream = FileOutputStream(threadMapFile).buffered(OUTPUT_BUFFER_SIZE)

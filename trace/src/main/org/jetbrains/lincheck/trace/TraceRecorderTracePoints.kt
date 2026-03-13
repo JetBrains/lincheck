@@ -72,7 +72,7 @@ enum class DiffStatus {
      *
      * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
      */
-    EDITED_NEW, ;
+    EDITED_NEW;
 
     fun toLeaf(): DiffStatus =
         when (this) {

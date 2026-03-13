@@ -162,7 +162,7 @@ class ChunkedList<T>: List<T?>, RandomAccess {
                 }
             }
             if (element == null) {
-                // Check, do this chunk has smaller size than needed?
+                // Check, does this chunk have a smaller size than needed?
                 val sizeMustBe = if (chunk == lastChunk) totalSize and CHUNK_MASK else CHUNK_SIZE
                 if (ch.size < sizeMustBe) {
                     return (chunk shl CHUNK_SHIFT) + ch.size
@@ -174,7 +174,7 @@ class ChunkedList<T>: List<T?>, RandomAccess {
 
     override fun lastIndexOf(element: T?): Int {
         val lastChunk = ((totalSize - 1) shr CHUNK_SHIFT)
-        for (chunk in lastChunk downTo  0) {
+        for (chunk in lastChunk downTo 0) {
             val ch = chunks.getOrNull(chunk)
             if (ch == null) {
                 // Found null
@@ -220,7 +220,7 @@ class ChunkedList<T>: List<T?>, RandomAccess {
     }
 
     private fun checkRange(index: Int) {
-        if (index !in 0..< totalSize)
+        if (index !in 0 ..< totalSize)
             throw IndexOutOfBoundsException("Index: $index, Size: $totalSize")
     }
 
@@ -248,7 +248,7 @@ class ChunkedList<T>: List<T?>, RandomAccess {
         var idx: Int
     ): ListIterator<T?> {
         override fun next(): T? {
-            if (idx !in 0..< totalSize)
+            if (idx !in 0 ..< totalSize)
                 throw NoSuchElementException("Index: $idx, Size: $totalSize")
             return get(idx++)
         }
