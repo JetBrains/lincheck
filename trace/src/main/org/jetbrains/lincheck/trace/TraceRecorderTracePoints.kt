@@ -72,7 +72,16 @@ enum class DiffStatus {
      *
      * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
      */
-    EDITED_NEW,
+    EDITED_NEW;
+
+    fun toLeaf(): DiffStatus =
+        when (this) {
+            UNCHANGED -> UNCHANGED
+            REMOVED -> REMOVED
+            ADDED -> ADDED
+            EDITED_OLD -> REMOVED
+            EDITED_NEW -> ADDED
+        }
 }
 
 sealed class TRTracePoint(
@@ -92,6 +101,16 @@ sealed class TRTracePoint(
             check(field == null) { "Diff status can be changed only once" }
             field = value
         }
+
+    internal fun copyDiffStatus(other: TRTracePoint) {
+        check(diffStatus == null) { "Diff status can be changed only once" }
+        if (other.diffStatus == null) return
+        if (this is TRContainerTracePoint) {
+            diffStatus = other.diffStatus
+        } else {
+            diffStatus = other.diffStatus?.toLeaf()
+        }
+    }
 
     internal open fun save(out: TraceWriter) {
         saveReferences(out)
@@ -139,14 +158,14 @@ sealed class TRContainerTracePoint(
     // We need this to have unmodifiable list here, ad "children" list needs some bookkeeping
     val events: List<TRTracePoint?> get() = children
 
-    val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: emptySet()
+    val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: SUBTREE_STATUS_UNCHANGED
 
     private fun TRTracePoint.setParentIfContainer(parent: TRContainerTracePoint) {
         if (this !is TRContainerTracePoint) return
         parentTracePoint = parent
     }
 
-    internal fun addChildAddress(address: Long) {
+    internal open fun addChildAddress(address: Long) {
         childrenAddresses.add(address)
         children.add(null)
     }
@@ -159,7 +178,7 @@ sealed class TRContainerTracePoint(
         }
     }
 
-    fun addChild(child: TRTracePoint, address: Long = -1) {
+    open fun addChild(child: TRTracePoint, address: Long = -1) {
         childrenAddresses.add(address)
         children.add(child)
 
@@ -178,12 +197,14 @@ sealed class TRContainerTracePoint(
         children = from.children
         childrenAddresses = from.childrenAddresses
         childrenDiffStatuses = null
+        // Copy this, as all children could be null in case of compressing post-processor
+        val cds = from.childrenDiffStatuses
+        if (cds != null) {
+            childrenDiffStatuses = EnumSet<DiffStatus>.copyOf(cds)
+        }
         // .filter can be very expensive in case of huge children list
         from.children.forEach {
-            if (it != null) {
-                addChildStatus(it)
-                it.setParentIfContainer(this)
-            }
+            it?.setParentIfContainer(this)
         }
     }
 
@@ -247,6 +268,8 @@ sealed class TRContainerTracePoint(
             }
             return set
         }
+
+        private val SUBTREE_STATUS_UNCHANGED = EnumSet.of(DiffStatus.UNCHANGED)
     }
 }
 
@@ -413,8 +436,16 @@ class TRLoopTracePoint(
     var iterations: Int = 0
         private set
 
-    fun incrementIterations(): Int {
-        return iterations++
+    override fun addChild(child: TRTracePoint, address: Long) {
+        require(child is TRLoopIterationTracePoint) { "Only loop iterations can be children of loops" }
+        super.addChild(child, address)
+        iterations++
+    }
+
+    override fun addChildAddress(address: Long) {
+        super.addChildAddress(address)
+        // We believe that it is address of iteration
+        iterations++
     }
 
     override fun save(out: TraceWriter) {

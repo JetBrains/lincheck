@@ -48,7 +48,7 @@ internal class SeekableChannelBufferedInputStream(
 
     init {
         // Mark it as "empty"
-        buffer.position(buffer.capacity())
+        buffer.limit(0)
     }
 
     override fun read(): Int {
