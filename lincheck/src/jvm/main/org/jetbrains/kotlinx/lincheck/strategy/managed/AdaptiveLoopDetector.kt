@@ -13,6 +13,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.util.mutableThreadMapOf
 import kotlin.math.abs
 //TODO: check for unused function parameters
+//TODO: eliminate duplicates
+//TODO: bug in traces, the number of last iteration seems to appear twice.
 /**
  * Loop detector that classifies loops based on observed shared-memory operations
  * and makes switching/stuck decisions accordingly.
@@ -35,6 +37,8 @@ class AdaptiveLoopDetector(
     val casSwitchThreshold: Int = 5,
     // Threshold for repeated signatures or cycle repetition before switching threads for unknown loops.
     val defaultSwitchThreshold: Int = 10,
+    // Threshold for repeated signature cycles before switching threads for ZNE loops.
+    val zneSwitchThreshold: Int = 3,
     // Fallback limit to declare stuck. Used regardless of loop classification
     val iterationBoundThreshold: Int = 200,
     // Threshold for abstract state revisits before declaring STUCK.
@@ -138,7 +142,7 @@ class AdaptiveLoopDetector(
         }
 
         val inst = getOrCreateInstance(threadId, loopId, codeLocation)
-        val decision = processIteration(inst, threadId)
+        val decision = processIteration(inst)
         return Pair(started, decision)
     }
 
@@ -206,7 +210,7 @@ class AdaptiveLoopDetector(
     // --- Decision logic ---
 
     // Compute loop signature, classify loop, and make decision
-    private fun processIteration(inst: LoopInstanceState, threadId: Int): LoopDetector.Decision {
+    private fun processIteration(inst: LoopInstanceState): LoopDetector.Decision {
         if (inst.iterNumber > 0) {
             // upper threshold: we declare stuck after too many iterations
             if (inst.iterNumber >= iterationBoundThreshold) {
@@ -234,6 +238,13 @@ class AdaptiveLoopDetector(
 
                 inst.repeatCount = if (signature == inst.lastSignature) inst.repeatCount + 1 else 0
                 inst.lastSignature = signature
+
+                // Track write only signature for ZNE detection. we count consecutive iterations where same locations are written with same values
+                if (inst.obs.writes.isNotEmpty()) {
+                    val writeSignature = inst.obs.writeSignature()
+                    inst.staleWriteCount = if (writeSignature == inst.lastWriteSignature) inst.staleWriteCount + 1 else 0
+                    inst.lastWriteSignature = writeSignature
+                }
 
                 if (inst.repeatCount > 0 || hasCycle(inst.signatureHistory)) {
                     inst.waitSetCandidates.addAll(inst.obs.reads.keys)
@@ -296,7 +307,7 @@ class AdaptiveLoopDetector(
 
         when {
             inst.totalCasFailures >= 2 && inst.repeatCount > 0 -> inst.kind = LoopKind.CAS
-            inst.obs.writes.isNotEmpty() && hasCycle(inst.signatureHistory) -> inst.kind = LoopKind.ZNE
+            inst.staleWriteCount >= 2 -> inst.kind = LoopKind.ZNE
         }
 
 //        println("Classified loop ${inst.ownerThreadId}:${inst.signatureHistory.joinToString(",")} as ${inst.kind}")
@@ -330,8 +341,11 @@ class AdaptiveLoopDetector(
                 if (inst.repeatCount >= casSwitchThreshold)
                     return LoopDetector.Decision.SWITCH_THREAD
             }
-            // TODO: think of another way to handle zne
-            LoopKind.ZNE, LoopKind.UNKNOWN -> {
+            LoopKind.ZNE -> {
+                if (inst.staleWriteCount >= zneSwitchThreshold)
+                    return LoopDetector.Decision.SWITCH_THREAD
+            }
+            LoopKind.UNKNOWN -> {
                 if (hasCycle(inst.signatureHistory) || inst.repeatCount >= defaultSwitchThreshold)
                     return LoopDetector.Decision.SWITCH_THREAD
             }
@@ -425,7 +439,7 @@ class AdaptiveLoopDetector(
     // --- IRREDUCIBLE LOOPS ---
     override fun onIrreducibleLoop(threadId: Int, codeLocation: Int): LoopDetector.Decision {
         val inst = getOrCreateInstance(threadId, -2, codeLocation)
-        return processIteration(inst, threadId)
+        return processIteration(inst)
     }
 
     // --- Callbacks for shared-memory operations --
