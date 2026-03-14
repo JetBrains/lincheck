@@ -137,6 +137,9 @@ internal class IterationObservations {
         h = h * 31 + casFailures
         return h
     }
+
+    // Hash of writes, for ZNE detection.
+    fun writeSignature(): Int = writes.hashCode()
 }
 
 /**
@@ -178,6 +181,10 @@ internal class LoopInstanceState(
 
     // CAS failure count across iterations
     var totalCasFailures: Int = 0
+
+    // track for zne loops
+    var lastWriteSignature: Int = 0
+    var staleWriteCount: Int = 0
 
     // External write tracking
     var lastRelevantWriteVersion: Long = 0L
