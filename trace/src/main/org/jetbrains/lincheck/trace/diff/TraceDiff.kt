@@ -243,7 +243,7 @@ private fun matchThreadsByName(
 
         val leftId = lr.threadId
         val leftName = left.context.getThreadName(leftId)
-        val rightIdx = findFirstUnusedThreadByName(right, leftName, rightRoots, usedRightIdxes, "right")
+        val rightIdx = findFirstUnusedThreadByName(right, leftName, rightRoots, usedRightIdxes)
         // rightIdx can be -1, it is Ok
         usedRightIdxes.add(rightIdx)
         threadMap.add(ThreadMapElement(leftName, false, leftIdx, rightIdx))
@@ -350,11 +350,11 @@ private fun matchThreadsByCustomName(
     val usedRightIdx = mutableSetOf<Int>()
 
     customThreadNameMap.forEach { (leftName, rightName) ->
-        val leftIdx = findFirstUnusedThreadByName(left, leftName, leftRoots, usedLeftIdx, "left")
+        val leftIdx = findFirstUnusedThreadByName(left, leftName, leftRoots, usedLeftIdx)
         require(leftIdx >= 0) { "There is no trace points in thread $leftName in left trace" }
         usedLeftIdx.add(leftIdx)
 
-        val rightIdx = findFirstUnusedThreadByName(right, rightName, rightRoots, usedLeftIdx, "right")
+        val rightIdx = findFirstUnusedThreadByName(right, rightName, rightRoots, usedLeftIdx)
         require(rightIdx >= 0) { "There is no trace points in thread $rightName in right trace" }
         require(usedRightIdx.add(rightIdx)) { "Thread $rightName from right trace was mapped twice" }
 
@@ -404,11 +404,9 @@ private fun findFirstUnusedThreadByName(
     name: String,
     roots: List<TRTracePoint>,
     usedIdx: MutableSet<Int>,
-    side: String
 ): Int {
-    val leftIds = reader.context.getThreadIds(name)
-    require(leftIds.isNotEmpty()) { "There is no thread $name in $side trace" }
-    return roots.indices.firstOrNull { !usedIdx.contains(it) && leftIds.contains(roots[it].threadId) } ?: -1
+    val ids = reader.context.getThreadIds(name)
+    return roots.indices.firstOrNull { !usedIdx.contains(it) && ids.contains(roots[it].threadId) } ?: -1
 }
 
 private fun makeThreadName(leftName: String, rightName: String): String =
