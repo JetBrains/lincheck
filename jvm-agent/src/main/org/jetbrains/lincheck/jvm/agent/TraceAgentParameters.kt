@@ -58,6 +58,9 @@ import javax.management.remote.JMXServiceURL
  * - breakpointsFile — path to an INI file with live debugger breakpoints (optional, liveDebugger mode only);
  *       see [BreakpointsFileParser] for details on file format.
  *       Example: `breakpointsFile="/tmp/breakpoints.ini"`
+ *       
+ * - phoneHome — boolean that enables heartbeat messages when used in kubernetes setup.
+ *       Example: `phoneHome=on` or `phoneHome=off`, it is off by default.
  *
  * - format — output format for trace recorder dumps. Possible options are:
  *       * `binary` --- serialized binary format;
