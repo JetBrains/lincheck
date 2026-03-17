@@ -48,7 +48,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
-    
+
     val liveDebuggerSettings = LiveDebuggerSettings()
 
     override fun transform(
@@ -67,18 +67,23 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // this can be related to the Kotlin compiler bug:
         // - https://youtrack.jetbrains.com/issue/KT-16727/
         if (internalClassName == null) return null
-        // If the class should not be transformed, return immediately.
-        if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode)) {
-            return null
-        }
-        // If lazy mode is used, transform classes lazily,
-        // once they are used in the testing code.
-        if (instrumentationStrategy == InstrumentationStrategy.LAZY &&
-            // do not re-transform already instrumented classes
-            internalClassName.toCanonicalClassName() !in instrumentedClasses &&
-            // always transform eagerly instrumented classes
-            !isEagerlyInstrumentedClass(internalClassName.toCanonicalClassName())
-        ) {
+        try {
+            // If the class should not be transformed, return immediately.
+            if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode)) {
+                return null
+            }
+            // If lazy mode is used, transform classes lazily,
+            // once they are used in the testing code.
+            if (instrumentationStrategy == InstrumentationStrategy.LAZY &&
+                // do not re-transform already instrumented classes
+                internalClassName.toCanonicalClassName() !in instrumentedClasses &&
+                // always transform eagerly instrumented classes
+                !isEagerlyInstrumentedClass(internalClassName.toCanonicalClassName())
+            ) {
+                return null
+            }
+        } catch (_: ClassCircularityError) {
+            // Some bootstrap class
             return null
         }
 
@@ -121,7 +126,10 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         )
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, liveDebuggerSettings, LincheckInstrumentation.context)
+        val context = LincheckInstrumentation.context
+        val visitor = LincheckClassVisitor(
+            writer, classInfo, instrumentationMode, profile, statsTracker, liveDebuggerSettings, context
+        )
 
         try {
             val timeNano = measureTimeNano {
@@ -163,8 +171,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     private fun getMethodsLocalVariables(
         classNode: ClassNode, profile: TransformationProfile,
-    ): Map<String, MethodVariables> {
-        return classNode.methods.associateBy(
+    ): Map<String, MethodVariables> = classNode.methods
+        .associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
                 val config = profile.getMethodConfiguration(classNode.name.toCanonicalClassName(), m.name, m.desc)
@@ -183,7 +191,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
         .mapValues { MethodVariables(it.value) }
-    }
     
     private fun computeLocalKind(name: String, index: Int, methodNode: MethodNode): LocalKind {
         val isStatic = (methodNode.access and Opcodes.ACC_STATIC) != 0
@@ -196,7 +203,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
     }
 
-    private fun sanitizeVariableName(owner: String, originalName: String, config: TransformationConfiguration, type: Type): String? {
+    private fun sanitizeVariableName(
+        owner: String, originalName: String, config: TransformationConfiguration, type: Type
+    ): String? {
         fun callRecursive(originalName: String) = sanitizeVariableName(owner, originalName, config, type)
 
         fun callRecursiveForSuffixAfter(prefix: String): String =
@@ -215,8 +224,10 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             } else {
                 null
             }
+
             originalName.startsWith($$"$i$f$") ->
                 if (config.trackInlineMethodCalls) callRecursiveForSuffixAfter($$"$i$f$") else null
+
             originalName.endsWith($$"$iv") ->
                 if (config.trackInlineMethodCalls) callRecursiveForPrefixBefore($$"$iv")
                 else callRecursive(originalName.removeSuffix($$"$iv"))
@@ -224,14 +235,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             originalName.contains('-') -> callRecursive(originalName.substringBeforeLast('-'))
             originalName.contains("_u24lambda_u24") ->
                 callRecursive(originalName.replace("_u24lambda_u24", $$"$lambda$"))
+
             else -> originalName
         }
     }
 
     private fun getMethodsLabels(
         classNode: ClassNode
-    ): Map<String, MethodLabels> {
-        return classNode.methods.associateBy(
+    ): Map<String, MethodLabels> = classNode.methods
+        .associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
                 val labels = mutableMapOf<Label, Int>().also { map ->
@@ -243,7 +255,6 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
         .mapValues { MethodLabels(it.value.first, it.value.second) }
-    }
 
 
     /**
@@ -271,6 +282,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     }
 
     private val NESTED_LAMBDA_RE = Regex($$"^([^$]+)\\$lambda\\$")
+
     /*
      * Collect all line numbers of all methods.
      * Some line numbers could be beyond source file line count and need to be mapped.
@@ -286,9 +298,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             return a.length == b.length
                     && a.length > 3
                     && (
-                           (a.startsWith("set") && b.startsWith("get"))
-                        || (a.startsWith("get") && b.startsWith("set"))
-                       )
+                    (a.startsWith("set") && b.startsWith("get"))
+                            || (a.startsWith("get") && b.startsWith("set"))
+                    )
                     && a.substring(3) == b.substring(3)
         }
 
@@ -320,7 +332,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         allMethods.sortBy { it.third.first() }
 
         // Special case: on-line setter and getter for same name can share this line
-        for (i in 0 ..< allMethods.size - 1) {
+        for (i in 0..<allMethods.size - 1) {
             val (curName, _, curLines) = allMethods[i]
             val (nxtName, _, nxtLines) = allMethods[i + 1]
             if (isSetterGetterPair(
@@ -340,7 +352,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
 
-        val linesToMethodNames =  allMethods
+        val linesToMethodNames = allMethods
             .filter { (it.third.firstOrNull() ?: 0) > 0 && (it.third.lastOrNull() ?: 0) > 0 }
             .groupBy(
                 keySelector = { it.third.first() to it.third.last() },
@@ -350,7 +362,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 val (k, v) = it
                 Triple(k.first, k.second, v.toSet())
             }
-        linesToMethodNames.sortedWith { a, b ->  a.first.compareTo(b.first) }
+        linesToMethodNames.sortedWith { a, b -> a.first.compareTo(b.first) }
 
         return methodsToLines to linesToMethodNames
     }
@@ -432,7 +444,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         isCoroutineConcurrentKtInternalClass(className)
 
     private fun readUTF(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
-        for (offset in 0 ..< utfLength) {
+        for (offset in 0..<utfLength) {
             buffer[offset] = (classReader.readByte(offset + utfOffset) and 0xff).toByte()
         }
         return String(buffer, 0, utfLength, Charsets.UTF_8)

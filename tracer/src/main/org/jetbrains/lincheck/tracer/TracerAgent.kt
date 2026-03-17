@@ -47,6 +47,9 @@ abstract class TracerAgent {
 
         // install instrumentation
         installInstrumentation()
+
+        // call post-installation hook
+        afterInstrumentationInstalled(JavaAgentAttachType.STATIC)
     }
 
     // entry point for a dynamically attached java agent
@@ -65,6 +68,9 @@ abstract class TracerAgent {
 
         // install instrumentation and re-transform already loaded classes
         installInstrumentation()
+
+        // call post-installation hook
+        afterInstrumentationInstalled(JavaAgentAttachType.DYNAMIC)
     }
 
     protected abstract val modeSystemPropertyName: String
@@ -105,4 +111,10 @@ abstract class TracerAgent {
     private fun installInstrumentation() {
         LincheckInstrumentation.install(instrumentationMode)
     }
+
+    /**
+     * Hook called after instrumentation is installed.
+     * Can be used for post-initialization tasks like starting program-scoped recording.
+     */
+    protected open fun afterInstrumentationInstalled(attachType: JavaAgentAttachType) {}
 }

@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
+import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.TracerAgent
 import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
@@ -56,9 +57,18 @@ internal object TraceRecorderAgent {
 
         override fun validateArguments(attachType: JavaAgentAttachType) {
             TraceAgentParameters.validateMode()
+        }
 
-            if (attachType == JavaAgentAttachType.STATIC) {
-                TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
+        override fun afterInstrumentationInstalled(attachType: JavaAgentAttachType) {
+            // start recording at program start if trace dump file path was provided
+            if (TraceAgentParameters.traceDumpFilePath != null) {
+                val mode = TraceOutputMode.parse(
+                    outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
+                    outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
+                    outputFilePath = TraceAgentParameters.traceDumpFilePath,
+                )
+                val packTrace = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
+                ProgramScopedTraceRecorder.startRecording(mode, TraceAgentParameters.traceDumpFilePath, packTrace)
             }
         }
 
@@ -69,8 +79,8 @@ internal object TraceRecorderAgent {
             override fun onStreamingDisconnect() {}
         }
 
-        override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider
-            get() = ::TraceRecorderMethodTransformer
+        override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider?
+            get() = null
     }
 
     // entry point for a statically attached java agent

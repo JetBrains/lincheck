@@ -305,7 +305,8 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
         className.startsWith("java.util.concurrent.locks.AbstractQueuedSynchronizer") -> SILENT
         className == "java.util.concurrent.FutureTask" -> SILENT
         !analyzeStdLib && isConcurrentCollectionsLibrary(className) -> SILENT
-        
+        isSpringRelatedClass(className) -> SILENT
+
         else -> NORMAL
     }
 
@@ -318,7 +319,7 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
      * @return true if calls should be hidden from results, false otherwise
      */
     @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future
-    fun shouldBeHidden(className: String, methodName: String): Boolean = 
+    fun shouldBeHidden(className: String, methodName: String): Boolean =
         !analyzeStdLib && (isConcurrentCollectionsLibrary(className) || isCollectionsLibrary(className))
 
     companion object {

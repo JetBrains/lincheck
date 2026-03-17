@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 const val UNKNOWN_CODE_LOCATION_ID = -1
 // This method type corresponds to the following method descriptor '(V)V'
@@ -40,8 +41,12 @@ class TraceContext {
     val methodPool = DescriptorPool<MethodDescriptor>()
     val fieldPool = DescriptorPool<FieldDescriptor>()
     val variablePool = DescriptorPool<VariableDescriptor>()
+    private val anonymousThreadCounter = AtomicInteger(0)
 
-    fun setThreadName(id: Int, name: String) { threadNames[id] = name }
+
+    fun setThreadName(id: Int, name: String?) {
+        threadNames[id] = name ?: "anonymous-thread-${anonymousThreadCounter.getAndIncrement()}"
+    }
 
     fun getThreadName(id: Int): String = threadNames[id] ?: ""
 

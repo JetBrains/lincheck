@@ -392,3 +392,38 @@ fun isMethodHandleRelatedClass(className: String): Boolean =
  */
 fun isIgnoredMethodHandleMethod(className: String, methodName: String): Boolean =
     isMethodHandleRelatedClass(className) && !methodName.contains("invoke")
+
+
+fun isSpringRelatedClass(className: String) = when {
+    className.startsWith("sun.rmi.") -> true
+    className.startsWith("javax.") -> true
+
+    className.startsWith("org.springframework.data.jpa.") -> true
+    className.startsWith("org.springframework.boot.sql.") -> true
+    className.startsWith("org.springframework.boot.autoconfigure.") -> true
+    className.startsWith("org.springframework.cache.") -> true
+    className.startsWith("org.springframework.boot.logging.") -> true
+    className.startsWith("org.springframework.boot.cache.") -> true
+    className.startsWith("org.springframework.boot.jdbc.") -> true
+
+    className.startsWith("org.apache.logging.") -> true
+    className.startsWith("org.apache.logging.log4j.") -> true
+    className.startsWith("org.apache.juli.logging.") -> true
+    className.startsWith("org.apache.tomcat.") -> true
+    className.startsWith("org.apache.catalina.") -> true
+    className.startsWith("org.apache.coyote.") -> true
+    className.startsWith("org.antlr.") -> true
+
+    className.startsWith("ch.qos.logback.") -> true
+    className.startsWith("io.micrometer.") -> true
+    className.startsWith("io.opentelemetry.") -> true
+    className.startsWith("com.google.protobuf.") -> true
+    className.startsWith("com.fasterxml.") -> true
+    className.startsWith("tools.jackson.") -> true
+
+    className.startsWith("org.hibernate.") -> true
+    className.startsWith("org.h2.") -> true
+    className.startsWith("jakarta.") -> true
+
+    else -> false
+}
