@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_HEARTBEAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTraceDebugging
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTraceDebugging
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
@@ -47,6 +48,7 @@ internal object LiveDebuggerAgent {
         ARGUMENT_PACK,
         ARGUMENT_JMX_MBEAN,
         ARGUMENT_BREAKPOINTS_FILE,
+        ARGUMENT_HEARTBEAT,
     )
 
     private val agent = object : TracerAgent() {
@@ -112,6 +114,11 @@ internal object LiveDebuggerAgent {
         // otherwise assume tracing will be requested later dynamically via JMX controller
         if (traceDumpFilePath != null) {
             LiveDebugger.startRecording(mode, traceDumpFilePath, packTrace)
+        }
+
+        // start phone-home heartbeat if enabled
+        if (TraceAgentParameters.heartBeatEnabled) {
+            PhoneHomeHeartbeat.start()
         }
     }
 
