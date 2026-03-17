@@ -12,15 +12,11 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
-import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
-import org.jetbrains.lincheck.util.TRACE_DEBUGGER_MODE_PROPERTY
-import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
-import javax.management.remote.JMXServiceURL
 
 /**
  * Parses and stores arguments passed to Lincheck JVM javaagents (trace-recorder and trace-debugger).
@@ -59,8 +55,8 @@ import javax.management.remote.JMXServiceURL
  *       see [BreakpointsFileParser] for details on file format.
  *       Example: `breakpointsFile="/tmp/breakpoints.ini"`
  *       
- * - phoneHome — boolean that enables heartbeat messages when used in kubernetes setup.
- *       Example: `phoneHome=on` or `phoneHome=off`, it is off by default.
+ * - liveDebuggerHeartbeat — boolean that enables heartbeat messages when used in kubernetes setup.
+ *       Example: `liveDebuggerHeartbeat=on` or `liveDebuggerHeartbeat=off`, it is off by default.
  *
  * - format — output format for trace recorder dumps. Possible options are:
  *       * `binary` --- serialized binary format;
@@ -117,7 +113,7 @@ object TraceAgentParameters {
     const val ARGUMENT_PACK = "pack"
     const val ARGUMENT_JMX_MBEAN = "jmxMBean"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
-    const val ARGUMENT_PHONE_HOME = "phoneHome"
+    const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
 
     const val DEFAULT_TRACE_PORT = 9997
 
@@ -135,15 +131,15 @@ object TraceAgentParameters {
 
     @JvmStatic
     val jmxMBeanEnabled: Boolean
-        get() = (getArg(ARGUMENT_JMX_MBEAN)?.lowercase() == "on")
+        get() = getArg(ARGUMENT_JMX_MBEAN)?.lowercase() == "on"
 
     @JvmStatic
     val breakpointsFilePath: String?
         get() = getArg(ARGUMENT_BREAKPOINTS_FILE)
 
     @JvmStatic
-    val phoneHomeEnabled: Boolean
-        get() = (getArg(ARGUMENT_PHONE_HOME)?.lowercase() == "on")
+    val heartBeatEnabled: Boolean
+        get() = getArg(ARGUMENT_HEARTBEAT)?.lowercase() == "on"
 
     @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()

@@ -35,9 +35,6 @@ private const val HTTP_TIMEOUT_MS = 5_000
  */
 internal object PhoneHomeHeartbeat {
 
-    @Volatile
-    private var running = false
-
     fun start() {
         val podName = System.getenv(ENV_POD_NAME)
             ?: error("phoneHome=on requires the $ENV_POD_NAME environment variable to be set")
@@ -51,11 +48,9 @@ internal object PhoneHomeHeartbeat {
         val heartbeatUrl = "${controlPlaneUrl.trimEnd('/')}/heartbeat"
         val body = """{"podName":"$podName","namespace":"$namespace","podIp":"$podIp","jmxPort":$DEFAULT_JMX_PORT}"""
 
-        running = true
-
         val thread = Thread({
             Logger.debug { "Phone-home heartbeat started: $heartbeatUrl" }
-            while (running) {
+            while (true) {
                 try {
                     sendHeartbeat(heartbeatUrl, body)
                 } catch (e: Exception) {
@@ -70,10 +65,6 @@ internal object PhoneHomeHeartbeat {
         }, "live-debugger-phone-home")
         thread.isDaemon = true
         thread.start()
-    }
-
-    fun stop() {
-        running = false
     }
 
     private fun sendHeartbeat(url: String, body: String) {
