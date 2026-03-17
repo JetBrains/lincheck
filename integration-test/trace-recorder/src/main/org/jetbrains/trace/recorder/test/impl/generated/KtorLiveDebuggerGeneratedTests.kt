@@ -16,34 +16,70 @@ import org.junit.jupiter.api.Timeout
 class KtorLiveDebuggerTraceRecorderJsonIntegrationTests {
     @Nested
     inner class CharArrayBuilderTest {
-        @Nested
-        inner class TestAppendFewChars : KtorLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                testMethodName = "testAppendFewChars",
-                extraJvmArgs = listOf(),
-                commands = listOf(":ktor-http-cio:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"io.ktor.http.cio.internals.CharArrayBuilder","filePath":"CharArrayBuilder.kt","line":62,"condition":null},{"className":"io.ktor.http.cio.internals.CharArrayBuilder","filePath":"CharArrayBuilder.kt","line":60,"condition":null},{"className":"io.ktor.tests.http.cio.CharArrayBuilderTest","filePath":"CharArrayBuilderTest.kt","line":72,"condition":null},{"className":"io.ktor.tests.http.cio.CharArrayBuilderTest","filePath":"CharArrayBuilderTest.kt","line":39,"condition":null}]"""
-            )
-        }
+                        @Nested
+                        inner class TestAppendFewChars : KtorLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                                testMethodName = "testAppendFewChars",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":ktor-http-cio:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = io.ktor.http.cio.internals.CharArrayBuilder
+        fileName = CharArrayBuilder.kt
+        lineNumber = 62
     
-        @Nested
-        inner class TestAppendSingleChar : KtorLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                testMethodName = "testAppendSingleChar",
-                extraJvmArgs = listOf(),
-                commands = listOf(":ktor-http-cio:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"io.ktor.http.cio.internals.CharArrayBuilder","filePath":"CharArrayBuilder.kt","line":62,"condition":null},{"className":"io.ktor.http.cio.internals.CharArrayBuilder","filePath":"CharArrayBuilder.kt","line":60,"condition":null},{"className":"io.ktor.tests.http.cio.CharArrayBuilderTest","filePath":"CharArrayBuilderTest.kt","line":72,"condition":null},{"className":"io.ktor.tests.http.cio.CharArrayBuilderTest","filePath":"CharArrayBuilderTest.kt","line":39,"condition":null}]"""
-            )
-        }
+        [Breakpoint 2]
+        className = io.ktor.http.cio.internals.CharArrayBuilder
+        fileName = CharArrayBuilder.kt
+        lineNumber = 60
+    
+        [Breakpoint 3]
+        className = io.ktor.tests.http.cio.CharArrayBuilderTest
+        fileName = CharArrayBuilderTest.kt
+        lineNumber = 72
+    
+        [Breakpoint 4]
+        className = io.ktor.tests.http.cio.CharArrayBuilderTest
+        fileName = CharArrayBuilderTest.kt
+        lineNumber = 39"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class TestAppendSingleChar : KtorLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+                                testMethodName = "testAppendSingleChar",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":ktor-http-cio:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = io.ktor.http.cio.internals.CharArrayBuilder
+        fileName = CharArrayBuilder.kt
+        lineNumber = 62
+    
+        [Breakpoint 2]
+        className = io.ktor.http.cio.internals.CharArrayBuilder
+        fileName = CharArrayBuilder.kt
+        lineNumber = 60
+    
+        [Breakpoint 3]
+        className = io.ktor.tests.http.cio.CharArrayBuilderTest
+        fileName = CharArrayBuilderTest.kt
+        lineNumber = 72
+    
+        [Breakpoint 4]
+        className = io.ktor.tests.http.cio.CharArrayBuilderTest
+        fileName = CharArrayBuilderTest.kt
+        lineNumber = 39"""
+                            )
+                        }
     }
 }

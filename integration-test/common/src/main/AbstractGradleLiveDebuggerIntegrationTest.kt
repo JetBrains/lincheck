@@ -17,6 +17,8 @@
  */
 abstract class AbstractGradleLiveDebuggerIntegrationTest : AbstractGradleTraceIntegrationTest() {
 
+    override val fatJarName: String = "live-debugger-fat.jar"
+
     override val defaultJvmArgs: List<String> = listOf(
         "-Dlincheck.liveDebuggerMode=true",
         "-XX:+UnlockExperimentalVMOptions",

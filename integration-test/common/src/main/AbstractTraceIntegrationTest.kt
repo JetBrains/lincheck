@@ -74,12 +74,12 @@ abstract class AbstractTraceIntegrationTest {
         testNameSuffix: String? = null,
         onStdErrOutput: (String) -> Unit = failOnErrorInStdErr,
         traceShouldContain: List<String> = emptyList(),
-        breakpointsJson: String? = null,
+        breakpointsIni: String? = null,
     ) {
-        val breakpointsAgentArgs = if (breakpointsJson != null) {
-            val breakpointsFile = File.createTempFile("breakpoints", ".json")
+        val breakpointsAgentArgs = if (breakpointsIni != null) {
+            val breakpointsFile = File.createTempFile("breakpoints", ".ini")
             breakpointsFile.deleteOnExit()
-            breakpointsFile.writeText(breakpointsJson)
+            breakpointsFile.writeText(breakpointsIni)
             mapOf("breakpointsFile" to breakpointsFile.absolutePath)
         } else {
             emptyMap()

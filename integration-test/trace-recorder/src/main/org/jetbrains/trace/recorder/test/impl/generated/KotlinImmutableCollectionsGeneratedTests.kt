@@ -27,7 +27,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -42,7 +42,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -57,7 +57,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -72,7 +72,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -87,7 +87,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -102,7 +102,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -117,7 +117,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -132,7 +132,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -147,7 +147,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -162,7 +162,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -177,7 +177,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = true,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -192,7 +192,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = false,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -207,7 +207,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = false,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     
@@ -222,7 +222,7 @@ class KotlinImmutableCollectionsTraceRecorderJsonIntegrationTests {
                 commands = listOf(":kotlinx-collections-immutable:jvmTest"),
                 checkRepresentation = false,
                 traceShouldContain = listOf(),
-                breakpointsJson = null
+                breakpointsIni = null
             )
         }
     }

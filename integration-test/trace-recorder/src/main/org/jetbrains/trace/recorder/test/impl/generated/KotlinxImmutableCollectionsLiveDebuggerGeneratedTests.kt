@@ -16,214 +16,2286 @@ import org.junit.jupiter.api.Timeout
 class KotlinxImmutableCollectionsLiveDebuggerTraceRecorderJsonIntegrationTests {
     @Nested
     inner class ImmutableListTest {
-        @Nested
-        inner class Empty : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "empty",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+                        @Nested
+                        inner class Empty : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "empty",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
     
-        @Nested
-        inner class OfElements : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "ofElements",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
     
-        @Nested
-        inner class ToImmutable : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "toImmutable",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
     
-        @Nested
-        inner class EmptyListToPersistentList : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "emptyListToPersistentList",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
     
-        @Nested
-        inner class AddElements : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "addElements",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
     
-        @Nested
-        inner class ReplaceElements : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "replaceElements",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
     
-        @Nested
-        inner class SmallPersistentListFromMutableBuffer : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "smallPersistentListFromMutableBuffer",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
     
-        @Nested
-        inner class SubList : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "subList",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
     
-        @Nested
-        inner class SubListOfBuilder : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "subListOfBuilder",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
     
-        @Nested
-        inner class NoOperation : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "noOperation",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
     
-        @Nested
-        inner class CovariantTyping : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "covariantTyping",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
     
-        @Nested
-        inner class Builder : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "builder",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
     
-        @Nested
-        inner class PersistentListFails : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "persistentListFails",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
     
-        @Nested
-        inner class RemoveElements : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "tests.contract.list.ImmutableListTest",
-                testMethodName = "removeElements",
-                extraJvmArgs = listOf(),
-                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsJson = """[{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":29,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":39,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":53,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":99,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":121,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":131,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":149,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":156,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector","filePath":"SmallPersistentVector.kt","line":135,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":37,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":83,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":148,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":158,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":182,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":264,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":294,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":301,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVector","filePath":"PersistentVector.kt","line":268,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":44,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":118,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":174,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":278,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":530,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":552,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder","filePath":"PersistentVectorBuilder.kt","line":690,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":18,"condition":null},{"className":"kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList","filePath":"AbstractPersistentList.kt","line":30,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":447,"condition":null},{"className":"kotlinx.collections.immutable.ExtensionsKt","filePath":"extensions.kt","line":604,"condition":null}]"""
-            )
-        }
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class OfElements : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "ofElements",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class ToImmutable : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "toImmutable",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class EmptyListToPersistentList : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "emptyListToPersistentList",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class AddElements : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "addElements",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class ReplaceElements : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "replaceElements",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class SmallPersistentListFromMutableBuffer : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "smallPersistentListFromMutableBuffer",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class SubList : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "subList",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class SubListOfBuilder : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "subListOfBuilder",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class NoOperation : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "noOperation",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class CovariantTyping : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "covariantTyping",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class Builder : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "builder",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class PersistentListFails : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "persistentListFails",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
+    
+                        @Nested
+                        inner class RemoveElements : KotlinxImmutableCollectionsLiveDebuggerJsonTests() {
+                            @Test
+                            @Timeout(20 * 60)
+                            fun test() = runTest(
+                                testClassName = "tests.contract.list.ImmutableListTest",
+                                testMethodName = "removeElements",
+                                extraJvmArgs = listOf(),
+                                commands = listOf(":kotlinx-collections-immutable:jvmTest"),
+                                checkRepresentation = false,
+                                traceShouldContain = listOf(),
+                                breakpointsIni = """[Breakpoint 1]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 29
+    
+        [Breakpoint 2]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 39
+    
+        [Breakpoint 3]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 53
+    
+        [Breakpoint 4]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 99
+    
+        [Breakpoint 5]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 121
+    
+        [Breakpoint 6]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 131
+    
+        [Breakpoint 7]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 149
+    
+        [Breakpoint 8]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 156
+    
+        [Breakpoint 9]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 10]
+        className = kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector
+        fileName = SmallPersistentVector.kt
+        lineNumber = 135
+    
+        [Breakpoint 11]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 37
+    
+        [Breakpoint 12]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 83
+    
+        [Breakpoint 13]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 148
+    
+        [Breakpoint 14]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 158
+    
+        [Breakpoint 15]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 182
+    
+        [Breakpoint 16]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 264
+    
+        [Breakpoint 17]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 294
+    
+        [Breakpoint 18]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 301
+    
+        [Breakpoint 19]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVector
+        fileName = PersistentVector.kt
+        lineNumber = 268
+    
+        [Breakpoint 20]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 44
+    
+        [Breakpoint 21]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 118
+    
+        [Breakpoint 22]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 174
+    
+        [Breakpoint 23]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 278
+    
+        [Breakpoint 24]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 530
+    
+        [Breakpoint 25]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 552
+    
+        [Breakpoint 26]
+        className = kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder
+        fileName = PersistentVectorBuilder.kt
+        lineNumber = 690
+    
+        [Breakpoint 27]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 18
+    
+        [Breakpoint 28]
+        className = kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList
+        fileName = AbstractPersistentList.kt
+        lineNumber = 30
+    
+        [Breakpoint 29]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 447
+    
+        [Breakpoint 30]
+        className = kotlinx.collections.immutable.ExtensionsKt
+        fileName = extensions.kt
+        lineNumber = 604"""
+                            )
+                        }
     }
 }

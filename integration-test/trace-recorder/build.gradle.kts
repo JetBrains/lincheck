@@ -39,6 +39,7 @@ tasks {
     registerTraceAgentIntegrationTestsPrerequisites()
 
     val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
+    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "live-debugger-fat.jar")
 
     val integrationTestSuite: String? by project
     val integrationTestSuiteType = when (integrationTestSuite?.lowercase()) {
@@ -87,5 +88,6 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceRecorderFatJar)
+        dependsOn(copyLiveDebuggerFatJar)
     }
 }

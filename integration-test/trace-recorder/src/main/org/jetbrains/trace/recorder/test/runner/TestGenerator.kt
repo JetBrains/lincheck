@@ -13,6 +13,9 @@ package org.jetbrains.trace.recorder.test.runner
 import java.nio.file.Path
 import java.util.Locale
 import kotlin.io.path.writeText
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 sealed class TestGenerator(
     val groupName: String,
@@ -43,7 +46,7 @@ sealed class TestGenerator(
                     checkRepresentation = jsonEntry.checkRepresentation,
                     traceShouldContain = jsonEntry.traceShouldContain,
                     reasonForMuting = jsonEntry.reasonsForMuting[it],
-                    breakpoints = jsonEntry.breakpoints?.toString()
+                    breakpoints = jsonEntry.breakpoints?.let { convertBreakpointsToIni(it) }
                 )
             }
         }
@@ -95,7 +98,7 @@ sealed class TestGenerator(
                         commands = listOf(${testCase.gradleCommand.toLiteral()}),
                         checkRepresentation = ${testCase.checkRepresentation},
                         traceShouldContain = listOf(${testCase.traceShouldContain.joinToString { it.toLiteral() }}),
-                        breakpointsJson = $breakpointsArg
+                        breakpointsIni = $breakpointsArg
                     )
                 }
                 """.trimIndent()
@@ -174,4 +177,31 @@ sealed class TestGenerator(
 
         return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\nclass ${groupName}TraceRecorderJsonIntegrationTests {\n$renderedTestCases\n}\n"
     }
+}
+
+/**
+ * Converts a JSON array of breakpoint definitions into INI file content.
+ *
+ * Each JSON entry has the form:
+ *   { "className": "...", "filePath": "...", "line": N, "condition": null }
+ *
+ * The resulting INI format is:
+ *   [Breakpoint 1]
+ *   className = ...
+ *   fileName = ...
+ *   lineNumber = N
+ */
+internal fun convertBreakpointsToIni(breakpoints: JsonArray): String {
+    return breakpoints.mapIndexed { index, element ->
+        val obj = element.jsonObject
+        val className = obj["className"]?.jsonPrimitive?.content ?: error("Missing className in breakpoint")
+        val filePath = obj["filePath"]?.jsonPrimitive?.content ?: error("Missing filePath in breakpoint")
+        val line = obj["line"]?.jsonPrimitive?.content ?: error("Missing line in breakpoint")
+        buildString {
+            appendLine("[Breakpoint ${index + 1}]")
+            appendLine("className = $className")
+            appendLine("fileName = $filePath")
+            append("lineNumber = $line")
+        }
+    }.joinToString("\n\n")
 }

@@ -92,6 +92,7 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
         prerequisite.forEach { dependsOn(it) }
         dependsOn(":trace-debugger:traceDebuggerFatJar")
         dependsOn(":trace-recorder:traceRecorderFatJar")
+        dependsOn(":live-debugger:liveDebuggerFatJar")
     }
 }
 
