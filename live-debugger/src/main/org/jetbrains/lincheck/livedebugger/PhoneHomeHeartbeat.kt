@@ -25,7 +25,11 @@ private const val HTTP_TIMEOUT_MS = 5_000
 
 /**
  * Sends periodic heartbeat messages to the live-debugger control plane,
- * registering this agent so that the control plane knows which pods are available.
+ * registering this agent so that the control plane knows which agents are available.
+ * 
+ * Note: These heartbeats are not used to check if a connection is open, 
+ * their only purpose is to show that this agent is live. 
+ * Connection lost events are handled by [NetworkTraceServer].
  *
  * Requires the following environment variables to be set:
  * - `POD_NAME` — the Kubernetes pod name (typically via Downward API)
