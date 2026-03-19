@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.util
 
 import org.jetbrains.lincheck.descriptors.FieldKind
-import java.util.concurrent.ConcurrentHashMap
 import java.lang.reflect.Array as ReflectArray
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
@@ -27,23 +26,14 @@ object UnsafeHolder {
     }
 }
 
-val fieldOffsetCache = ConcurrentHashMap<Field, Long>()
-val fieldBaseObjectCache = ConcurrentHashMap<Field, Any>()
-
 @Suppress("DEPRECATION")
 private inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
-        val base = fieldBaseObjectCache.computeIfAbsent(field) {
-            UnsafeHolder.UNSAFE.staticFieldBase(it)
-        }
-        val offset = fieldOffsetCache.computeIfAbsent(field) {
-            UnsafeHolder.UNSAFE.staticFieldOffset(it)
-        }
+        val base = ClassUnsafeCache[field.declaringClass].staticFieldBase[field]!!
+        val offset = ClassUnsafeCache[field.declaringClass].staticFieldOffset[field]!!
         return UnsafeHolder.UNSAFE.getter(base, offset)
     } else {
-        val offset = fieldOffsetCache.computeIfAbsent(field) {
-            UnsafeHolder.UNSAFE.objectFieldOffset(it)
-        }
+        val offset = ClassUnsafeCache[field.declaringClass].objectFieldOffset[field]!!
         return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
@@ -176,9 +166,6 @@ fun getFieldOffsetViaUnsafe(field: Field): Long {
     }
 }
 
-private val fieldDescriptorByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long>, Any /* FieldDescriptor */>()
-private val DESCRIPTOR_NOT_FOUND = Any() // cannot store `null` in the cache.
-
 fun findFieldsForObject(obj: Any?): Map<String, Any?> {
     // Null fields and primitives do not have fields
     if (obj == null || obj::class.javaPrimitiveType != null) return emptyMap()
@@ -237,33 +224,53 @@ fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kind: Fie
 
 @Suppress("DEPRECATION")
 fun findFieldDescriptorByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kind: FieldKind): Field? =
-    fieldDescriptorByOffsetCache.getOrPut(targetType to offset) {
-        findFieldNameByOffsetViaUnsafeImpl(targetType, offset, kind) ?: DESCRIPTOR_NOT_FOUND
-    }.let { if (it === DESCRIPTOR_NOT_FOUND) null else (it as Field) }
+    ClassUnsafeCache[targetType].let { cache ->
+        if (kind == FieldKind.STATIC) cache.staticFieldByOffset[offset] else cache.objectFieldByOffset[offset]
+    }
 
-private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long, kind: FieldKind): Field? {
-    for (field in targetType.allDeclaredFields) {
-        try {
-            val isStatic = Modifier.isStatic(field.modifiers)
-            if (Modifier.isNative(field.modifiers)) continue
-            if (kind == FieldKind.STATIC && !isStatic) continue
-            if (kind == FieldKind.INSTANCE && isStatic) continue
+private object ClassUnsafeCache {
+    data class ReflectionData(
+        val staticFieldBase: HashMap<Field, Any>,
+        val staticFieldOffset: HashMap<Field, Long>,
+        val objectFieldOffset: HashMap<Field, Long>,
+        val staticFieldByOffset: HashMap<Long, Field>,
+        val objectFieldByOffset: HashMap<Long, Field>,
+    )
 
-            val fieldOffset = if (isStatic) {
-                UnsafeHolder.UNSAFE.staticFieldOffset(field)
-            } else {
-                UnsafeHolder.UNSAFE.objectFieldOffset(field)
+    private val cache = object : ClassValue<ReflectionData>() {
+        override fun computeValue(type: Class<*>): ReflectionData {
+            val staticFieldBase = HashMap<Field, Any>()
+            val staticFieldOffset = HashMap<Field, Long>()
+            val objectFieldOffset = HashMap<Field, Long>()
+            val staticFieldByOffset = HashMap<Long, Field>()
+            val objectFieldByOffset = HashMap<Long, Field>()
+
+            for (field in type.allDeclaredFields) {
+                // Skip native fields since they are not accessible via Unsafe
+                if (Modifier.isNative(field.modifiers)) continue
+
+                if (Modifier.isStatic(field.modifiers)) {
+                    val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
+                    val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+                    staticFieldBase[field] = base
+                    staticFieldOffset[field] = offset
+                    staticFieldByOffset[offset] = field
+                } else {
+                    val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+                    objectFieldOffset[field] = offset
+                    objectFieldByOffset[offset] = field
+                }
             }
-            if (fieldOffset == offset) return field
-        } catch (t: Throwable) {
-            t.printStackTrace()
+
+            return ReflectionData(
+                staticFieldBase = staticFieldBase,
+                staticFieldOffset = staticFieldOffset,
+                objectFieldOffset = objectFieldOffset,
+                staticFieldByOffset = staticFieldByOffset,
+                objectFieldByOffset = objectFieldByOffset,
+            )
         }
     }
-    return null // Field not found
-}
 
-fun cleanupUnsafeCaches() {
-    fieldOffsetCache.clear()
-    fieldBaseObjectCache.clear()
-    fieldDescriptorByOffsetCache.clear()
+    operator fun get(type: Class<*>): ReflectionData = cache.get(type)
 }
