@@ -191,7 +191,7 @@ fun findFieldsForObject(obj: Any?): Map<String, Any?> {
     if (clazz.isPrimitive || clazz == String::class.java) return emptyMap()
 
     val fields = declaredFieldsCache.getOrPut(clazz) {
-        clazz.allDeclaredFieldWithSuperclasses
+        clazz.allDeclaredFields
             .filter { !Modifier.isStatic(it.modifiers) }
             .toTypedArray()
     }
@@ -251,7 +251,7 @@ fun findFieldDescriptorByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kin
     }.let { if (it === DESCRIPTOR_NOT_FOUND) null else (it as Field) }
 
 private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long, kind: FieldKind): Field? {
-    for (field in targetType.allDeclaredFieldWithSuperclasses) {
+    for (field in targetType.allDeclaredFields) {
         try {
             val isStatic = Modifier.isStatic(field.modifiers)
             if (Modifier.isNative(field.modifiers)) continue

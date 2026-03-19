@@ -41,11 +41,12 @@ val Class<*>.companionClass: Class<*>? get() =
     declaredFields.firstOrNull { it.name == "Companion" }?.type
 
 /**
- * Returns all found fields in the hierarchy.
+ * Returns all declared fields in the class, including fields from superclasses and interfaces.
+ *
  * Multiple fields with the same name and the same type may be returned
  * if they appear in the subclass and a parent class.
  */
-val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
+val Class<*>.allDeclaredFields get(): List<Field> {
     if (superclass == null && interfaces.isEmpty()) {
         return this.declaredFields.asList()
     }
@@ -72,7 +73,7 @@ val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
  * @return the name of the field that references the given object, or null if no such field is found.
  */
 fun Any.findInstanceFieldReferringTo(obj: Any): Field? {
-    for (field in this.javaClass.allDeclaredFieldWithSuperclasses) {
+    for (field in this.javaClass.allDeclaredFields) {
         if (readFieldSafely(this, field).getOrNull() === obj) {
             return field
         }
