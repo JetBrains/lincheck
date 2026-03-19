@@ -10,16 +10,16 @@
 
 package org.jetbrains.lincheck.util
 
-import org.jetbrains.lincheck.util.AtomicMethodKind.*
-import org.jetbrains.lincheck.util.AtomicApiKind.*
-import org.jetbrains.lincheck.util.MemoryOrdering.*
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TraceContext
-import java.util.concurrent.atomic.*
-import java.util.concurrent.ConcurrentHashMap
+import org.jetbrains.lincheck.util.AtomicApiKind.*
+import org.jetbrains.lincheck.util.AtomicMethodKind.*
+import org.jetbrains.lincheck.util.MemoryOrdering.*
 import sun.misc.Unsafe
-import kotlin.contracts.contract
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.*
 import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 internal data class AtomicMethodDescriptor(
     val kind: AtomicMethodKind,
@@ -427,11 +427,11 @@ private class VarHandleStaticFieldExtractor(private val varHandleClass: Class<*>
         varHandleClass.allDeclaredFields.find { it.name == "fieldOffset" }!!
 
     fun extractBase(varHandle: Any): Class<*> {
-        return readFieldViaUnsafe(varHandle, baseField, Unsafe::getObject) as Class<*>
+        return readFieldViaUnsafe(varHandle, baseField) as Class<*>
     }
 
     fun extractFieldOffset(varHandle: Any): Long {
-        return readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
+        return readFieldViaUnsafe(varHandle, fieldOffsetField) as Long
     }
 }
 
@@ -442,11 +442,11 @@ private class VarHandleInstanceFieldExtractor(private val varHandleClass: Class<
         varHandleClass.allDeclaredFields.find { it.name == "fieldOffset" }!!
 
     fun extractReceiverType(varHandle: Any): Class<*> {
-        return readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
+        return readFieldViaUnsafe(varHandle, receiverTypeField) as Class<*>
     }
 
     fun extractFieldOffset(varHandle: Any): Long {
-        return readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
+        return readFieldViaUnsafe(varHandle, fieldOffsetField) as Long
     }
 }
 

@@ -31,7 +31,7 @@ val fieldOffsetCache = ConcurrentHashMap<Field, Long>()
 val fieldBaseObjectCache = ConcurrentHashMap<Field, Any>()
 
 @Suppress("DEPRECATION")
-inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
+private inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
         val base = fieldBaseObjectCache.computeIfAbsent(field) {
             UnsafeHolder.UNSAFE.staticFieldBase(it)
