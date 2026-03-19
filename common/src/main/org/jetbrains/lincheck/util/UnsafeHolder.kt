@@ -59,23 +59,26 @@ fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
  * Reads a [field] of the owner object [obj] via Unsafe,
  * in case of failure fallbacks into reading the field via reflection.
  */
-fun readFieldSafely(obj: Any?, field: Field): Result<Any?> =
-    // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
-    // which can be thrown, for instance, when attempting to read
-    // a field of a hidden or record class (starting from Java 15);
-    // in this case we fall back to read via reflection
-    runCatching {
-        readFieldViaUnsafe(obj, field)
+fun readFieldSafely(obj: Any?, field: Field): Result<Any?> {
+    if (canAccessFieldViaUnsafe(field)) {
+        // shouldn't throw as we performed the `canAccessFieldViaUnsafe` check above,
+        // but still wrap into try-catch just to be sure.
+        try {
+            return Result.success(readFieldViaUnsafe(obj, field))
+        } catch (t: Throwable) {
+            Logger.debug(t) { "Failed to read field ${field.name} via Unsafe" }
+        }
     }
-    .onFailure { exception ->
-        Logger.debug(exception) { "Failed to read field ${field.name} via Unsafe" }
-    }
-    .recoverCatching {
-        field.apply { isAccessible = true }.get(obj)
-    }
-    .onFailure { exception ->
+
+    // Fall back to reflection if the field cannot be read via Unsafe.
+    try {
+        val obj = field.apply { isAccessible = true }.get(obj)
+        return Result.success(obj)
+    } catch (exception: Exception) {
         Logger.debug(exception) { "Failed to read field ${field.name} via reflection." }
+        return Result.failure(exception)
     }
+}
 
 fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
     val offset = getArrayElementOffsetViaUnsafe(arr, index)
@@ -228,6 +231,15 @@ fun findFieldDescriptorByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kin
         if (kind == FieldKind.STATIC) cache.staticFieldByOffset[offset] else cache.objectFieldByOffset[offset]
     }
 
+private fun canAccessFieldViaUnsafe(field: Field): Boolean {
+    val offset = if (Modifier.isStatic(field.modifiers)) {
+        ClassUnsafeCache[field.declaringClass].staticFieldOffset[field]
+    } else {
+        ClassUnsafeCache[field.declaringClass].objectFieldOffset[field]
+    }
+    return (offset != null)
+}
+
 private object ClassUnsafeCache {
     data class ReflectionData(
         val staticFieldBase: HashMap<Field, Any>,
@@ -249,16 +261,25 @@ private object ClassUnsafeCache {
                 // Skip native fields since they are not accessible via Unsafe
                 if (Modifier.isNative(field.modifiers)) continue
 
+                // We wrap base and offset calculation into `runCatching`
+                // mainly to handle `UnsupportedOperationException` (but also any other exceptions just in case).
+                // The `UnsupportedOperationException` exception can be thrown on newer JVMs,
+                // when attempting to read a field of a hidden or record class (starting from Java 15).
+
                 if (Modifier.isStatic(field.modifiers)) {
-                    val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-                    val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
-                    staticFieldBase[field] = base
-                    staticFieldOffset[field] = offset
-                    staticFieldByOffset[offset] = field
+                    try {
+                        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
+                        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+                        staticFieldBase[field] = base
+                        staticFieldOffset[field] = offset
+                        staticFieldByOffset[offset] = field
+                    } catch (_: Throwable) {}
                 } else {
-                    val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
-                    objectFieldOffset[field] = offset
-                    objectFieldByOffset[offset] = field
+                    try {
+                        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+                        objectFieldOffset[field] = offset
+                        objectFieldByOffset[offset] = field
+                    } catch (_: Throwable) {}
                 }
             }
 
