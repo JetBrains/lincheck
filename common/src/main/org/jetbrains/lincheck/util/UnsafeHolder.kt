@@ -179,9 +179,6 @@ fun getFieldOffsetViaUnsafe(field: Field): Long {
 private val fieldDescriptorByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long>, Any /* FieldDescriptor */>()
 private val DESCRIPTOR_NOT_FOUND = Any() // cannot store `null` in the cache.
 
-// Cache for class -> declared fields mapping (for snapshot breakpoint field capture)
-private val declaredFieldsCache = ConcurrentHashMap<Class<*>, Array<Field>>()
-
 fun findFieldsForObject(obj: Any?): Map<String, Any?> {
     // Null fields and primitives do not have fields
     if (obj == null || obj::class.javaPrimitiveType != null) return emptyMap()
@@ -190,14 +187,8 @@ fun findFieldsForObject(obj: Any?): Map<String, Any?> {
     // Skip primitive box types and strings
     if (clazz.isPrimitive || clazz == String::class.java) return emptyMap()
 
-    val fields = declaredFieldsCache.getOrPut(clazz) {
-        clazz.allDeclaredFields
-            .filter { !Modifier.isStatic(it.modifiers) }
-            .toTypedArray()
-    }
-
     return buildMap {
-        fields.forEach { field ->
+        clazz.allDeclaredInstanceFields.forEach { field ->
             val result = readFieldSafely(obj, field)
             if (result.isSuccess) put(field.name, result.getOrNull())
         }
@@ -275,5 +266,4 @@ fun cleanupUnsafeCaches() {
     fieldOffsetCache.clear()
     fieldBaseObjectCache.clear()
     fieldDescriptorByOffsetCache.clear()
-    declaredFieldsCache.clear()
 }
