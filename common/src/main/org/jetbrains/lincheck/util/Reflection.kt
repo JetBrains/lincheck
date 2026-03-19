@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.util
 
 import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -36,7 +37,7 @@ object ClassCache {
  * Returns the companion object's class of this class if it exists.
  */
 val Class<*>.companionClass: Class<*>? get() =
-    ClassReflectionCache.getCompanionClass(this)
+    ClassReflectionCache[this].companionClass
 
 /**
  * Returns all declared fields in the class, including fields from superclasses and interfaces.
@@ -45,7 +46,25 @@ val Class<*>.companionClass: Class<*>? get() =
  * if they appear in the subclass and a parent class.
  */
 val Class<*>.allDeclaredFields get(): List<Field> =
-    ClassReflectionCache.getAllDeclaredFields(this)
+    ClassReflectionCache[this].allDeclaredFields
+
+/**
+ * Returns all declared instance fields in the class, including fields from superclasses and interfaces.
+ *
+ * Multiple fields with the same name and the same type may be returned
+ * if they appear in the subclass and a parent class.
+ */
+val Class<*>.allDeclaredInstanceFields get(): List<Field> =
+    ClassReflectionCache[this].allDeclaredInstanceFields
+
+/**
+ * Returns all declared static fields in the class, including fields from superclasses and interfaces.
+ *
+ * Multiple fields with the same name and the same type may be returned
+ * if they appear in the subclass and a parent class.
+ */
+val Class<*>.allDeclaredStaticFields get(): List<Field> =
+    ClassReflectionCache[this].allDeclaredStaticFields
 
 /**
  * Finds the field name of [this] object that directly references the given object [obj].
@@ -69,10 +88,26 @@ fun Any.findInstanceFieldReferringTo(obj: Any): Field? {
  * The implementation relies on a [ClassValue] to lazily compute the cached values.
  */
 private object ClassReflectionCache {
+    data class ReflectionData(
+        val allDeclaredFields: List<Field>,
+        val allDeclaredInstanceFields: List<Field>,
+        val allDeclaredStaticFields: List<Field>,
+        val companionClass: Class<*>?,
+    )
 
-    private val allDeclaredFieldsCache = object : ClassValue<List<Field>>() {
-        override fun computeValue(type: Class<*>): List<Field> =
-            computeAllDeclaredFields(type)
+    private val cache = object : ClassValue<ReflectionData>() {
+        override fun computeValue(type: Class<*>): ReflectionData {
+            val allDeclaredFields = computeAllDeclaredFields(type)
+            val companionClass = allDeclaredFields.firstOrNull { it.name == "Companion" }?.type
+            val (staticFields, instanceFields) = allDeclaredFields.partition { Modifier.isStatic(it.modifiers) }
+
+            return ReflectionData(
+                allDeclaredFields = allDeclaredFields,
+                allDeclaredInstanceFields = instanceFields,
+                allDeclaredStaticFields = staticFields,
+                companionClass = companionClass,
+            )
+        }
     }
 
     private fun computeAllDeclaredFields(clazz: Class<*>): List<Field> {
@@ -94,17 +129,5 @@ private object ClassReflectionCache {
         return fields
     }
 
-    fun getAllDeclaredFields(clazz: Class<*>): List<Field> =
-        allDeclaredFieldsCache.get(clazz)
-
-    private val companionClassCache = object : ClassValue<Class<*>?>() {
-        override fun computeValue(type: Class<*>): Class<*>? =
-            computeCompanionClass(type)
-    }
-
-    private fun computeCompanionClass(clazz: Class<*>): Class<*>? =
-        clazz.declaredFields.firstOrNull { it.name == "Companion" }?.type
-
-    fun getCompanionClass(clazz: Class<*>): Class<*>? =
-        companionClassCache.get(clazz)
+    operator fun get(clazz: Class<*>): ReflectionData = cache.get(clazz)
 }
