@@ -3,7 +3,7 @@
 <instance-profile id="kl" name="kotlinx-lincheck" start-page="lincheck-guide.md">
 	<snippet id="lincheck">
 		<toc-element topic="lincheck-guide.md"/>
-		<toc-element topic="introduction.md"/>
+		<toc-element topic="lincheck-getting-started.md" accepts-web-file-names="introduction.html"/>
 		<toc-element toc-title="Testing strategies" topic="testing-strategies.md"/>
 		<toc-element topic="operation-arguments.md"/>
 		<toc-element topic="constraints.md"/>
