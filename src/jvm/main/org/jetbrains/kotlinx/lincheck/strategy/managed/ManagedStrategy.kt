@@ -627,7 +627,8 @@ internal abstract class ManagedStrategy(
      * Also, notifies the respective tracker about interruption.
      */
     protected fun unblockInterruptedThreads() {
-        for ((threadId, thread) in getRegisteredThreads()) {
+        for (threadId in 0 until threadScheduler.nThreads) {
+            val thread = threadScheduler.getThread(threadId)!!
             if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
                 val blockingReason = threadScheduler.getBlockingReason(threadId)
                 if (blockingReason != null && blockingReason.isInterruptible()) {
@@ -831,7 +832,7 @@ internal abstract class ManagedStrategy(
 
     override fun awaitUserThreads(timeoutNano: Long): Long {
         var remainingTime = timeoutNano
-        for ((threadId, _) in getRegisteredThreads()) {
+        for (threadId in 0 until threadScheduler.nThreads) {
             if (isRunnerThread(threadId)) continue // do not wait for Lincheck threads
             val elapsedTime = threadScheduler.awaitThreadFinish(threadId, remainingTime)
             if (elapsedTime < 0) {
@@ -848,10 +849,10 @@ internal abstract class ManagedStrategy(
     fun getRegisteredThreads(): ThreadMap<Thread> =
         threadScheduler.getRegisteredThreads()
 
-    fun getUserThreadIds() = getRegisteredThreads().mapNotNull {
-        if (isRunnerThread(it.key)) null
-        else it.key
-    }
+    fun getUserThreadIds(): List<ThreadId> =
+        (0 until threadScheduler.nThreads).mapNotNull { threadId ->
+            if (isRunnerThread(threadId)) null else threadId
+        }
 
     protected fun isRegisteredThread(): Boolean {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
