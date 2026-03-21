@@ -92,8 +92,11 @@ fun BlockingReason.throwsInterruptedException(): Boolean =
  */
 open class ThreadScheduler {
 
-    private val threads_ = ConcurrentHashMap<ThreadId, ThreadData>()
-    protected val threads: ThreadMap<ThreadData> get() = threads_
+    /**
+     * Collection of all threads managed by the scheduler.
+     */
+    protected val threads: ThreadMap<ThreadData> get() = _threads
+    private val _threads = ConcurrentHashMap<ThreadId, ThreadData>()
 
     /**
      * Number of threads currently managed by the scheduler.
@@ -274,7 +277,7 @@ open class ThreadScheduler {
         if (thread is TestThread) {
             check(threadId == thread.threadId)
         }
-        threads_.put(threadId, threadData).ensureNull()
+        _threads.put(threadId, threadData).ensureNull()
         descriptor.eventTrackerData = threadData
         return threadId
     }
@@ -425,7 +428,7 @@ open class ThreadScheduler {
      * Resets the thread scheduler by removing all registered threads.
      */
     fun reset() {
-        threads_.clear()
+        _threads.clear()
     }
 
 }
