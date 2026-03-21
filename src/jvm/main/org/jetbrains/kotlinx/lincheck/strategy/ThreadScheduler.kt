@@ -98,12 +98,6 @@ open class ThreadScheduler {
     protected val threads: ThreadMap<ThreadData> get() = _threads
     private val _threads = ConcurrentHashMap<ThreadId, ThreadData>()
 
-    /**
-     * Number of threads currently managed by the scheduler.
-     */
-    val nThreads: Int get() =
-        threads.size
-
     protected open class ThreadData(
         val id: ThreadId,
         val descriptor: ThreadDescriptor,
@@ -119,6 +113,12 @@ open class ThreadScheduler {
     protected open fun createThreadData(id: ThreadId, descriptor: ThreadDescriptor): ThreadData {
         return ThreadData(id, descriptor, this)
     }
+
+    /**
+     * Return an iterable sequence of thread ids registered within this scheduler.
+     */
+    fun getRegisteredThreadIds(): Iterable<ThreadId> =
+        (0 until threads.size)
 
     /**
      * Retrieves all threads registered in the scheduler.

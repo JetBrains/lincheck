@@ -370,8 +370,10 @@ internal abstract class ManagedStrategy(
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
-        val threadNames = MutableList(threadScheduler.nThreads) { "" }
-        getRegisteredThreads().forEach { (threadId, thread) ->
+        val nThreads = threadScheduler.getRegisteredThreadIds().count()
+        val threadNames = MutableList(nThreads) { "" }
+        getUserThreadIds().forEach { threadId ->
+            val thread = threadScheduler.getThread(threadId)!!
             when (val threadNumber = objectTracker.getObjectDisplayNumber(thread)) {
                 0    -> threadNames[threadId] = "Main Thread"
                 else -> threadNames[threadId] = "Thread $threadNumber"
@@ -627,7 +629,7 @@ internal abstract class ManagedStrategy(
      * Also, notifies the respective tracker about interruption.
      */
     protected fun unblockInterruptedThreads() {
-        for (threadId in 0 until threadScheduler.nThreads) {
+        for (threadId in threadScheduler.getRegisteredThreadIds()) {
             val thread = threadScheduler.getThread(threadId)!!
             if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
                 val blockingReason = threadScheduler.getBlockingReason(threadId)
@@ -658,7 +660,7 @@ internal abstract class ManagedStrategy(
      */
     protected fun switchableThreads(iThread: Int) =
         if (currentExecutionPart == PARALLEL) {
-            (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
+            threadScheduler.getRegisteredThreadIds().filter { it != iThread && isActive(it) }
         } else {
             emptyList()
         }
@@ -672,7 +674,7 @@ internal abstract class ManagedStrategy(
      */
     private fun resumableThreads(iThread: Int): List<Int> =
         if (currentExecutionPart == PARALLEL) {
-            (0 until threadScheduler.nThreads).filter { it != iThread && threadScheduler.isLiveLocked(it) }
+            threadScheduler.getRegisteredThreadIds().filter { it != iThread && threadScheduler.isLiveLocked(it) }
         } else {
             emptyList()
         }
@@ -832,7 +834,7 @@ internal abstract class ManagedStrategy(
 
     override fun awaitUserThreads(timeoutNano: Long): Long {
         var remainingTime = timeoutNano
-        for (threadId in 0 until threadScheduler.nThreads) {
+        for (threadId in threadScheduler.getRegisteredThreadIds()) {
             if (isRunnerThread(threadId)) continue // do not wait for Lincheck threads
             val elapsedTime = threadScheduler.awaitThreadFinish(threadId, remainingTime)
             if (elapsedTime < 0) {
@@ -850,7 +852,7 @@ internal abstract class ManagedStrategy(
         threadScheduler.getRegisteredThreads()
 
     fun getUserThreadIds(): List<ThreadId> =
-        (0 until threadScheduler.nThreads).mapNotNull { threadId ->
+        threadScheduler.getRegisteredThreadIds().mapNotNull { threadId ->
             if (isRunnerThread(threadId)) null else threadId
         }
 
@@ -1292,7 +1294,7 @@ internal abstract class ManagedStrategy(
 
     @Suppress("UNUSED_PARAMETER")
     private fun unblockJoiningThreads(finishedThreadId: Int) {
-        for (threadId in 0 until threadScheduler.nThreads) {
+        for (threadId in threadScheduler.getRegisteredThreadIds()) {
             val blockingReason = threadScheduler.getBlockingReason(threadId)
             if (blockingReason is BlockingReason.ThreadJoin && blockingReason.joinedThreadId == finishedThreadId) {
                 threadScheduler.unblockThread(threadId)
