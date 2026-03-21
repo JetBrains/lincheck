@@ -888,22 +888,23 @@ internal abstract class ManagedStrategy(
      */
     private fun tryAbortingUserThreads(threadId: Int, blockingReason: BlockingReason?) {
         val userThreadsAbortionPossible =
-            // all `TestThread`s are finished (including main: with id of zero)
-            (0 ..< nRunnerThreads).all(threadScheduler::isFinished) &&
+            // All `TestThread`s are finished (including main: with id of zero).
+            (0 ..< nRunnerThreads).all(threadScheduler::isFinished)
             // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
             // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
             // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
-            getUserThreadIds()
+            && getUserThreadIds()
                 .filter { it != threadId } // we check invoking thread separately
                 .all { threadScheduler.isLiveLocked(it) || threadScheduler.isParked(it) }
-                .and(
-                    threadScheduler.isFinished(threadId) ||
-                    // if invoking thread is not finished, then it must execute strategy hook,
-                    // in which it will become LiveLocked or Parked
-                    blockingReason is BlockingReason.LiveLocked ||
-                    blockingReason is BlockingReason.Parked
-                )
+            // The invoking thread is finished, live-locked or parked.
+            && (
+                threadScheduler.isFinished(threadId) ||
+                // if invoking thread is not finished, then it must execute a strategy hook,
+                // in which it will become LiveLocked or Parked
+                blockingReason is BlockingReason.LiveLocked ||
+                blockingReason is BlockingReason.Parked
+            )
 
         if (userThreadsAbortionPossible) {
             threadScheduler.abortAllThreads()
