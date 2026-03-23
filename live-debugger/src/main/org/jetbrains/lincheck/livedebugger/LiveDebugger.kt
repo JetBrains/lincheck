@@ -191,6 +191,63 @@ internal object LiveDebugger {
         }
     }
 
+    /** Guard ensuring the condition-unsafety callback is registered exactly once. */
+    private val conditionUnsafetyCallbackInstalled = AtomicBoolean(false)
+
+    /**
+     * Registers the condition-unsafety callback on [BreakpointStorage], if not yet installed.
+     *
+     * The callback is fired at class-transformation time when a breakpoint's condition
+     * is detected to have side effects.
+     *
+     * Must be called before any class transformation can occur so that no
+     * condition-unsafety event can fire before the callback is in place.
+     */
+    fun ensureConditionUnsafetyCallbackInstalled() {
+        if (!conditionUnsafetyCallbackInstalled.compareAndSet(false, true)) return
+
+        BreakpointStorage.setOnConditionUnsafetyDetected { userData ->
+            onConditionUnsafetyDetected(userData as SnapshotBreakpoint)
+        }
+    }
+
+    /**
+     * Called when a breakpoint's condition is detected to be unsafe (has side effects).
+     * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
+     */
+    private fun onConditionUnsafetyDetected(breakpoint: SnapshotBreakpoint) {
+        val timestamp = System.currentTimeMillis()
+        Logger.info {
+            with (breakpoint) {
+                "Unsafe condition detected for breakpoint in $className at $fileName:$lineNumber"
+            }
+        }
+
+        notificationsExecutor.submit {
+            val notification = LiveDebuggerNotification.BreakpointConditionUnsafetyDetected(
+                timestamp = timestamp,
+                breakpointData = LiveDebuggerNotification.BreakpointData(
+                    className = breakpoint.className,
+                    fileName = breakpoint.fileName,
+                    lineNumber = breakpoint.lineNumber,
+                ),
+            )
+
+            // Remove specifically by id, not by location equality.
+            // If the user re-added the breakpoint at the same location in the window between
+            // the callback firing and this executor task running,
+            // the re-added breakpoint will have a different id and must not be touched.
+            val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
+                .removeBreakpointById(breakpoint.id)
+
+            if (removedBreakpoint != null) {
+                retransformBreakpointClasses(listOf(removedBreakpoint))
+            }
+
+            notificationListener.get()?.invoke(notification)
+        }
+    }
+
     fun installNotificationListener(listener: TracingNotificationListener) {
         val wasAlreadySet = !notificationListener.compareAndSet(null, listener)
         if (wasAlreadySet) {

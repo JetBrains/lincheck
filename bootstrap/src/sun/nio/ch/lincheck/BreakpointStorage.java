@@ -73,6 +73,12 @@ public class BreakpointStorage {
      */
     private static volatile Consumer<Object> onHitLimitReached = null;
 
+    /**
+     * Called when a breakpoint's condition is detected to be unsafe (has side effects).
+     * Receives {@link BreakpointState#userData} directly — no id look-up needed.
+     */
+    private static volatile Consumer<Object> onConditionUnsafetyDetected = null;
+
     // -------------------------------------------------------------------------
     // Public API
     // -------------------------------------------------------------------------
@@ -169,6 +175,32 @@ public class BreakpointStorage {
      */
     public static void setOnHitLimitReached(Consumer<Object> callback) {
         onHitLimitReached = callback;
+    }
+
+    /**
+     * Registers the callback that fires when a breakpoint's condition is detected to be unsafe.
+     * The callback receives the breakpoint's {@code userData} directly.
+     * <p>
+     *
+     * Should be called before any class transformation can occur, so that no
+     * condition-unsafety event can fire before the callback is in place.
+     *
+     * @param callback invoked (on the transformation thread) with the breakpoint's {@code userData}
+     */
+    public static void setOnConditionUnsafetyDetected(Consumer<Object> callback) {
+        onConditionUnsafetyDetected = callback;
+    }
+
+    /**
+     * Fires the condition-unsafety callback for the given breakpoint.
+     * Called at class-transformation time when a breakpoint's condition is found to have
+     * side effects and is therefore unsafe to evaluate at runtime.
+     *
+     * @param userData the breakpoint's {@code userData} (typically a {@code SnapshotBreakpoint})
+     */
+    public static void notifyConditionUnsafetyDetected(Object userData) {
+        Consumer<Object> callback = onConditionUnsafetyDetected;
+        if (callback != null) callback.accept(userData);
     }
 
     /**

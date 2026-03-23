@@ -61,9 +61,15 @@ internal class SnapshotBreakpointTransformer(
         if (line in instrumentedLinesInCurrentBlock) return@run
 
         val canonicalClassName = className.toCanonicalClassName()
-        val breakpointSettings = breakpoints.firstOrNull {
+        val breakpoint = breakpoints.firstOrNull {
             it.lineNumber == line && it.className == canonicalClassName
         } ?: return@run
+
+        // Check condition safety before emitting any breakpoint code.
+        // Must happen before bytecode emission so we can cleanly skip the breakpoint if unsafe.
+        if (breakpoint.conditionClassName != null && !isConditionSafe(breakpoint)) {
+            return@run
+        }
 
         // Mark this line as instrumented in the current block
         instrumentedLinesInCurrentBlock.add(line)
@@ -77,19 +83,19 @@ internal class SnapshotBreakpointTransformer(
         // STACK: <empty>
 
         callIfNotInsideBreakpointCondition(threadDescriptorLocal) {
-            if (breakpointSettings.conditionClassName == null) {
-                injectBreakpointHit(threadDescriptorLocal, breakpointSettings.id)
+            if (breakpoint.conditionClassName == null) {
+                injectBreakpointHit(threadDescriptorLocal, breakpoint.id)
             } else {
                 ifStatement(
                     condition = {
                         // The condition may execute code with an installed breakpoint.
                         // To not make a breakpoint hit, we track when we compute the condition.
                         enterBreakpointCondition(threadDescriptorLocal)
-                        injectConditionCallWithTryCatch(breakpointSettings)
+                        injectConditionCallWithTryCatch(breakpoint)
                         leaveBreakpointCondition(threadDescriptorLocal)
                     },
                     thenClause = {
-                        injectBreakpointHit(threadDescriptorLocal, breakpointSettings.id)
+                        injectBreakpointHit(threadDescriptorLocal, breakpoint.id)
                     }
                 )
             }
@@ -128,25 +134,9 @@ internal class SnapshotBreakpointTransformer(
             classBytes = breakpointSettings.conditionCodeFragment!!
         )
 
-        // === STEP 2: Validate that the condition is safe (transformation time) ===
-        // Check that the condition code doesn't have side effects (no writes, no unsafe calls, etc.)
-        val allowedFunctionCalls = { className: String, methodName: String, methodDescriptor: String ->
-            className == breakpointSettings.conditionClassName.toInternalClassName() && methodName.startsWith("accessToField")
-        }
-        val safetyViolation = ConditionSafetyChecker.checkMethodForSideEffects(
-            className = breakpointSettings.conditionClassName,
-            methodName = "invoke",
-            methodDescriptor = "()Z",
-            classLoader = conditionClass.classLoader,
-            allowedFunctionCalls = allowedFunctionCalls
-        )
-        if (safetyViolation != null) {
-            throw IllegalArgumentException(
-                "Breakpoint condition at ${breakpointSettings.fileName}:${breakpointSettings.lineNumber} is not safe:\n$safetyViolation"
-            )
-        }
+        // Condition safety has already been validated in visitLineNumber before bytecode emission.
 
-        // === STEP 3: Register the condition factory (transformation time) ===
+        // === STEP 2: Register the condition factory (transformation time) ===
         // The condition class has a static "createFactory" method that returns a Function.
         // This factory takes captured variables as input and produces a BooleanSupplier.
         val createFactoryMethod = conditionClass.getDeclaredMethod("createFactory")
@@ -155,12 +145,12 @@ internal class SnapshotBreakpointTransformer(
         val factory = createFactoryMethod.invoke(null) as Function<Array<Any?>, BooleanSupplier>
         BreakpointStorage.registerConditionFactory(breakpointSettings.id, factory)
 
-        // === STEP 4: Inject bytecode to push the breakpointId (runtime) ===
+        // === STEP 3: Inject bytecode to push the breakpointId (runtime) ===
         // The following bytecode will execute at runtime when the breakpoint is hit.
         // Push the breakpointId so Injections.createConditionInstance can look up the factory.
         push(breakpointSettings.id)   // Stack: [breakpointId]
 
-        // === STEP 5: Capture local variables and build Object[] array (runtime) ===
+        // === STEP 4: Capture local variables and build Object[] array (runtime) ===
         // The condition may reference local variables from the breakpoint location.
         // We need to capture their current values and pass them to the factory.
         val argNames = breakpointSettings.conditionCapturedVars.orEmpty()
@@ -200,7 +190,7 @@ internal class SnapshotBreakpointTransformer(
 
         // Stack after loop: [...lookup params..., capturedValuesArray]
 
-        // === STEP 6: Create the condition instance and evaluate it (runtime) ===
+        // === STEP 5: Create the condition instance and evaluate it (runtime) ===
         // Call Injections.createConditionInstance(breakpointId, capturedValues).
         // This looks up the registered factory and creates a BooleanSupplier instance.
         invokeStatic(Injections::createConditionInstance)
@@ -249,6 +239,47 @@ internal class SnapshotBreakpointTransformer(
 
         // Load the result onto the stack
         loadLocal(resultLocal)
+    }
+
+    /**
+     * Checks whether the condition bytecode for the given breakpoint is safe (has no side effects).
+     * If unsafe, fires the condition-unsafety notification via [BreakpointStorage] and returns `false`.
+     */
+    private fun isConditionSafe(breakpoint: SnapshotBreakpoint): Boolean {
+        val conditionClassName = breakpoint.conditionClassName
+            ?: return true // no condition is always safe
+
+        val conditionClassBytes = breakpoint.conditionCodeFragment
+        if (conditionClassBytes == null) {
+            Logger.error {
+                "Condition code for breakpoint at ${breakpoint.fileName}:${breakpoint.lineNumber} is not available"
+            }
+            return false
+        }
+
+        val conditionClass = loadClassFromBytes(
+            userCodeClassLoader = classLoader,
+            className = conditionClassName,
+            classBytes = conditionClassBytes
+        )
+        val allowedFunctionCalls = { className: String, methodName: String, _: String ->
+            className == conditionClassName.toInternalClassName() && methodName.startsWith("accessToField")
+        }
+        val safetyViolation = ConditionSafetyChecker.checkMethodForSideEffects(
+            className = conditionClassName,
+            methodName = "invoke",
+            methodDescriptor = "()Z",
+            classLoader = conditionClass.classLoader,
+            allowedFunctionCalls = allowedFunctionCalls
+        )
+        if (safetyViolation != null) {
+            Logger.warn {
+                "Breakpoint condition at ${breakpoint.fileName}:${breakpoint.lineNumber} is not safe: $safetyViolation"
+            }
+            BreakpointStorage.notifyConditionUnsafetyDetected(breakpoint)
+            return false
+        }
+        return true
     }
 
     private fun GeneratorAdapter.callIfNotInsideBreakpointCondition(threadDescriptorLocal: Int, block: () -> Unit) {

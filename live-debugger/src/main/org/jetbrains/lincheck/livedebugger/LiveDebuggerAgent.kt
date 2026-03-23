@@ -141,5 +141,6 @@ internal object LiveDebuggerAgent {
     @JvmStatic
     private fun installCallbacks() {
         LiveDebugger.ensureHitLimitCallbackInstalled()
+        LiveDebugger.ensureConditionUnsafetyCallbackInstalled()
     }
 }
