@@ -282,13 +282,17 @@ private object ClassUnsafeCache {
                         staticFieldBase[field] = base
                         staticFieldOffset[field] = offset
                         staticFieldByOffset[offset] = field
-                    } catch (_: Throwable) {}
+                    } catch (_: Throwable) {
+                        Logger.warn { "Failed to get static field base and offset for field ${field.name}" }
+                    }
                 } else {
                     try {
                         val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
                         objectFieldOffset[field] = offset
                         objectFieldByOffset[offset] = field
-                    } catch (_: Throwable) {}
+                    } catch (_: Throwable) {
+                        Logger.warn { "Failed to get object field offset for field ${field.name}" }
+                    }
                 }
             }
 
