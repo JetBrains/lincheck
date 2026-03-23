@@ -35,6 +35,7 @@ open class LiveDebuggerNotification(timestamp: Long) : TracingNotification(times
 
     data class BreakpointConditionUnsafetyDetected(
         val breakpointData: BreakpointData,
+        val safetyViolationMessage: String,
         override val timestamp: Long = System.currentTimeMillis(),
     ) : LiveDebuggerNotification(timestamp)
 

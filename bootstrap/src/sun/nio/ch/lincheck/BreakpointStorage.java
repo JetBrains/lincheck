@@ -12,6 +12,7 @@ package sun.nio.ch.lincheck;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -70,15 +71,15 @@ public class BreakpointStorage {
 
     /**
      * Called exactly once when the hit-count of a breakpoint reaches its limit.
-     * Receives {@link BreakpointState#userData} directly — no id look-up needed.
+     * Receives {@link BreakpointState#userData}.
      */
     private static volatile Consumer<Object> onHitLimitReached = null;
 
     /**
      * Called when a breakpoint's condition is detected to be unsafe (has side effects).
-     * Receives {@link BreakpointState#userData} directly — no id look-up needed.
+     * Receives {@link BreakpointState#userData} and `SafetyViolation`.
      */
-    private static volatile Consumer<Object> onConditionUnsafetyDetected = null;
+    private static volatile BiConsumer<Object, Object> onConditionUnsafetyDetected = null;
 
     // -------------------------------------------------------------------------
     // Public API
@@ -187,8 +188,9 @@ public class BreakpointStorage {
      * condition-unsafety event can fire before the callback is in place.
      *
      * @param callback invoked (on the transformation thread) with the breakpoint's {@code userData}
+     *                 and safety violation.
      */
-    public static void setOnConditionUnsafetyDetected(Consumer<Object> callback) {
+    public static void setOnConditionUnsafetyDetected(BiConsumer<Object, Object> callback) {
         onConditionUnsafetyDetected = callback;
     }
 
@@ -199,9 +201,9 @@ public class BreakpointStorage {
      *
      * @param userData the breakpoint's {@code userData} (typically a {@code SnapshotBreakpoint})
      */
-    public static void notifyConditionUnsafetyDetected(Object userData) {
-        Consumer<Object> callback = onConditionUnsafetyDetected;
-        if (callback != null) callback.accept(userData);
+    public static void notifyConditionUnsafetyDetected(Object userData, Object safetyViolation) {
+        BiConsumer<Object, Object> callback = onConditionUnsafetyDetected;
+        if (callback != null) callback.accept(userData, safetyViolation);
     }
 
     /**

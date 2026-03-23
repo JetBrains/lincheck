@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.livedebugger
 
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.controller.LiveDebuggerNotification
@@ -212,8 +213,8 @@ internal object LiveDebugger {
     fun ensureConditionUnsafetyCallbackInstalled() {
         if (!conditionUnsafetyCallbackInstalled.compareAndSet(false, true)) return
 
-        BreakpointStorage.setOnConditionUnsafetyDetected { userData ->
-            onConditionUnsafetyDetected(userData as SnapshotBreakpoint)
+        BreakpointStorage.setOnConditionUnsafetyDetected { userData, safetyViolation ->
+            onConditionUnsafetyDetected(userData as SnapshotBreakpoint, safetyViolation as SafetyViolation)
         }
     }
 
@@ -221,7 +222,7 @@ internal object LiveDebugger {
      * Called when a breakpoint's condition is detected to be unsafe (has side effects).
      * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
      */
-    private fun onConditionUnsafetyDetected(breakpoint: SnapshotBreakpoint) {
+    private fun onConditionUnsafetyDetected(breakpoint: SnapshotBreakpoint, safetyViolation: SafetyViolation) {
         val timestamp = System.currentTimeMillis()
         Logger.info {
             with (breakpoint) {
@@ -239,6 +240,7 @@ internal object LiveDebugger {
                     fileName = breakpoint.fileName,
                     lineNumber = breakpoint.lineNumber,
                 ),
+                safetyViolationMessage = safetyViolation.toString(),
             )
             notificationListener.get()?.invoke(notification)
         }

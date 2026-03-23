@@ -50,11 +50,15 @@ interface LiveDebuggerJmxMBean : TracingJmxMBean {
         fun parseJmxNotification(notification: Notification): TracingNotification? {
             return when (notification.type) {
                 UNSAFE_BREAKPOINT_CONDITION_NOTIFICATION_TYPE -> {
+                    val userData = (notification.userData as String).split(";")
+                    if (userData.size < 2) return null
+
                     LiveDebuggerNotification.BreakpointConditionUnsafetyDetected(
                         timestamp = notification.timeStamp,
                         breakpointData = LiveDebuggerNotification.BreakpointData
-                            .parseFromString(notification.userData as String)
+                            .parseFromString(userData[0])
                             ?: return null,
+                        safetyViolationMessage = userData[1],
                     )
                 }
 
@@ -78,7 +82,7 @@ interface LiveDebuggerJmxMBean : TracingJmxMBean {
                         type = UNSAFE_BREAKPOINT_CONDITION_NOTIFICATION_TYPE,
                         message = "Unsafe breakpoint condition detected",
                         timestamp = timestamp,
-                        userData = breakpointData.toString(),
+                        userData = "${breakpointData};${safetyViolationMessage}",
                     )
 
                     is LiveDebuggerNotification.BreakpointHitLimitReached -> JmxNotificationData(

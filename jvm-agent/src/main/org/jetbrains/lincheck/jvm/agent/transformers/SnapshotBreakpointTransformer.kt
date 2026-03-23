@@ -276,7 +276,7 @@ internal class SnapshotBreakpointTransformer(
             Logger.warn {
                 "Breakpoint condition at ${breakpoint.fileName}:${breakpoint.lineNumber} is not safe: $safetyViolation"
             }
-            BreakpointStorage.notifyConditionUnsafetyDetected(breakpoint)
+            BreakpointStorage.notifyConditionUnsafetyDetected(breakpoint, safetyViolation)
             return false
         }
         return true
