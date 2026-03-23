@@ -102,37 +102,11 @@ public class ThreadDescriptor {
     private boolean insideBreakpointCondition = false;
 
     /**
-     * Dynamically sized pool of {@link ResultInterceptor} objects.
-     * It is used to optimize allocations of {@link ResultInterceptor} objects,
-     * by re-using the interceptor object stored in the pool.
-     * <p>
+     * Per-thread stack-based pool of {@link ResultInterceptor} objects.
      *
-     * The pool is organized as a stack to match nested method call order.
-     * Result interceptors are taken from and returned into the pool in stack (LIFO) order.
-     * The top of the stack (corresponding to the most recent, deepest method call)
-     * is located at the last index of the array,
-     * the bottom of the stack (corresponding to the earliest method call)
-     * is located at the index 0.
-     * <p>
-     *
-     * The pool starts with an initial capacity of {@link #RESULT_INTERCEPTOR_POOL_MIN_SIZE}
-     * and grows by 2x when exceeded. When the used size drops to 1/4 of the capacity,
-     * the pool shrinks by 2x, but never below the minimum size.
-     * <p>
-     *
-     * Null by default, lazily allocated on first use.
+     * @see ResultInterceptorPool
      */
-    private ResultInterceptor[] resultInterceptorPool = null;
-
-    /**
-     * The index of the next available {@code ResultInterceptor} in the per-thread pool.
-     */
-    private int resultInterceptorPoolIndex = -1;
-
-    /**
-     * The minimum size of the per-thread pool for {@link ResultInterceptor} instances.
-     */
-    private static final int RESULT_INTERCEPTOR_POOL_MIN_SIZE = 64;
+    private final ResultInterceptorPool resultInterceptorPool = new ResultInterceptorPool();
 
     /**
      * Creates a new thread descriptor for the given thread.
@@ -307,14 +281,7 @@ public class ThreadDescriptor {
      * @return a recycled {@link ResultInterceptor} instance, or {@code null} if no recycled instance is available.
      */
     public ResultInterceptor takeResultInterceptor() {
-        if (resultInterceptorPool == null) {
-            resultInterceptorPool = new ResultInterceptor[RESULT_INTERCEPTOR_POOL_MIN_SIZE];
-            resultInterceptorPoolIndex = 0;
-        }
-        if (resultInterceptorPoolIndex >= resultInterceptorPool.length) {
-            growResultInterceptorPool();
-        }
-        return resultInterceptorPool[resultInterceptorPoolIndex++];
+        return resultInterceptorPool.take();
     }
 
     /**
@@ -324,28 +291,7 @@ public class ThreadDescriptor {
      * @param interceptor the interceptor to return to the pool.
      */
     public void giveResultInterceptor(ResultInterceptor interceptor) {
-        if (resultInterceptorPool == null || resultInterceptorPoolIndex <= 0) return;
-
-        interceptor.reset();
-        resultInterceptorPool[--resultInterceptorPoolIndex] = interceptor;
-        if (resultInterceptorPool.length > RESULT_INTERCEPTOR_POOL_MIN_SIZE
-                && resultInterceptorPoolIndex <= resultInterceptorPool.length / 4) {
-            shrinkResultInterceptorPool();
-        }
-    }
-
-    private void growResultInterceptorPool() {
-        int newSize = resultInterceptorPool.length * 2;
-        ResultInterceptor[] newPool = new ResultInterceptor[newSize];
-        System.arraycopy(resultInterceptorPool, 0, newPool, 0, resultInterceptorPool.length);
-        resultInterceptorPool = newPool;
-    }
-
-    private void shrinkResultInterceptorPool() {
-        int newSize = Math.max(resultInterceptorPool.length / 2, RESULT_INTERCEPTOR_POOL_MIN_SIZE);
-        ResultInterceptor[] newPool = new ResultInterceptor[newSize];
-        System.arraycopy(resultInterceptorPool, 0, newPool, 0, resultInterceptorPoolIndex);
-        resultInterceptorPool = newPool;
+        resultInterceptorPool.give(interceptor);
     }
 
     /**
