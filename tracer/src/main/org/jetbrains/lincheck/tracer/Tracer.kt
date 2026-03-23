@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.NetworkTraceServer
+import org.jetbrains.lincheck.trace.controller.TracingController
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.unreachable
@@ -215,7 +216,7 @@ object Tracer {
         if (mode is TraceOutputMode.BinaryNetworkStream) {
             try {
                 networkServer = NetworkTraceServer(
-                    port = TraceAgentParameters.DEFAULT_TRACE_PORT,
+                    port = TracingController.DEFAULT_TRACING_PORT,
                     subscriptionService = eventTracker.subscriptionService!!,
                     onDisconnected = { 
                         mode.onDisconnect() 

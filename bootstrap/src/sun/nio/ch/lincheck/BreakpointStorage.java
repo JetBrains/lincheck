@@ -161,6 +161,7 @@ public class BreakpointStorage {
      * Registers the callback that fires when a breakpoint's hit count reaches its limit.
      * The callback receives {@link BreakpointState#userData} directly.
      * <p>
+     *
      * Should be called before any breakpoint is registered, so that no hit-limit event
      * can fire before the callback is in place.
      *

@@ -1,7 +1,7 @@
 /*
  * Lincheck
  *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
  *
  * This Source Code Form is subject to the terms of the
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
@@ -11,28 +11,69 @@
 package org.jetbrains.lincheck.trace.jmx
 
 import org.jetbrains.lincheck.trace.NetworkTraceReader
+import org.jetbrains.lincheck.trace.controller.TracingController
+import org.jetbrains.lincheck.trace.controller.TracingNotification
+import org.jetbrains.lincheck.trace.controller.TracingNotificationListener
+import javax.management.Notification
+import javax.management.NotificationListener
+import javax.management.ObjectName
+import javax.management.remote.JMXConnector
+import java.net.URI
 
-interface TracingJmxController {
+abstract class AbstractTracingJmxController(
+    val jmxConnector: JMXConnector,
+    open val mBean: TracingJmxMBean,
+    val mBeanName: String,
+    val tracingHost: String = TracingController.DEFAULT_TRACING_HOST,
+    val tracingPort: Int = TracingController.DEFAULT_TRACING_PORT,
+) : TracingController {
 
-    /**
-     * Starts tracing writing the trace output to the specified file.
-     *
-     * @param traceDumpFilePath the file path where the trace output will be saved.
-     * @param packTrace whether to compress the trace output into a zip file.
-     */
-    fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean)
+    private val notificationListeners = mutableListOf<TracingNotificationListener>()
 
-    /**
-     * Starts WebSocket trace streaming.
-     *
-     * The trace producer acts as a server,
-     * listening for incoming reader connections on an automatically assigned port.
-     * Clients should connect to this port using [NetworkTraceReader] class.
-     */
-    fun startNetworkTracing()
+    init {
+        subscribeToNotifications()
+    }
 
-    /**
-     * Stops the current tracing operation.
-     */
-    fun stopTracing()
+    override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
+        mBean.startFileTracing(traceDumpFilePath, packTrace)
+    }
+
+    override fun startNetworkTracing(): NetworkTraceReader {
+        mBean.startNetworkTracing()
+        val uri = URI("ws://$tracingHost:$tracingPort")
+        return NetworkTraceReader(uri)
+    }
+
+    override fun stopTracing() {
+        mBean.stopTracing()
+    }
+
+    private fun subscribeToNotifications() {
+        val mbeanConnection = jmxConnector.mBeanServerConnection
+        val objectName = ObjectName(mBeanName)
+        if (!mbeanConnection.isRegistered(objectName)) {
+            throw IllegalStateException("MBean $mBeanName is not registered")
+        }
+        val listener = NotificationListener { jmxNotification, _ ->
+            val notification = parseJmxNotification(jmxNotification) ?: return@NotificationListener
+            notificationListeners.forEach { listener ->
+                listener(notification)
+            }
+        }
+        mbeanConnection.addNotificationListener(objectName, listener, null, null)
+    }
+
+    override fun addNotificationListener(listener: TracingNotificationListener) {
+        notificationListeners.add(listener)
+    }
+
+    protected open fun parseJmxNotification(notification: Notification): TracingNotification? = null
 }
+
+class TracingJmxController(
+    jmxConnector: JMXConnector,
+    mBean: TracingJmxMBean,
+    mBeanName: String,
+    tracingHost: String = TracingController.DEFAULT_TRACING_HOST,
+    tracingPort: Int = TracingController.DEFAULT_TRACING_PORT,
+) : AbstractTracingJmxController(jmxConnector, mBean, mBeanName, tracingHost, tracingPort)

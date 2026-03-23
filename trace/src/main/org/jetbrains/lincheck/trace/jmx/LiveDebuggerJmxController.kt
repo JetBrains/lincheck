@@ -10,30 +10,30 @@
 
 package org.jetbrains.lincheck.trace.jmx
 
-/**
- * Live debugger JMX controller.
- *
- * Extends the functionality of the tracing JMX controller by providing
- * operations specific to the live debugger, such as managing breakpoints.
- */
-interface LiveDebuggerJmxController : TracingJmxController {
-    /**
-     * Adds breakpoints to Live Debugger.
-     */
-    fun addBreakpoints(breakpoints: List<String>)
+import org.jetbrains.lincheck.trace.controller.LiveDebuggerController
+import org.jetbrains.lincheck.trace.controller.TracingController
+import org.jetbrains.lincheck.trace.controller.TracingNotification
+import javax.management.Notification
+import javax.management.remote.JMXConnector
 
-    /**
-     * Removes breakpoints from Live Debugger.
-     */
-    fun removeBreakpoints(breakpoints: List<String>)
+class LiveDebuggerJmxController(
+    jmxConnector: JMXConnector,
+    override val mBean: LiveDebuggerJmxMBean,
+    mBeanName: String,
+    tracingHost: String = TracingController.DEFAULT_TRACING_HOST,
+    tracingPort: Int = TracingController.DEFAULT_TRACING_PORT,
+) : AbstractTracingJmxController(jmxConnector, mBean, mBeanName, tracingHost, tracingPort), LiveDebuggerController {
 
-    companion object {
-        /**
-         * JMX notification type sent when a breakpoint reaches its hit limit.
-         *
-         * The notification's `userData` is a string `"className:fileName:lineNumber"` identifying
-         * the breakpoint. The IDE plugin uses this to find and disable the corresponding breakpoint.
-         */
-        const val BREAKPOINT_HIT_LIMIT_NOTIFICATION_TYPE = "breakpoint.hitLimitReached"
+    override fun addBreakpoints(breakpoints: List<String>) {
+        mBean.addBreakpoints(breakpoints)
+    }
+
+    override fun removeBreakpoints(breakpoints: List<String>) {
+        mBean.removeBreakpoints(breakpoints)
+    }
+
+    override fun parseJmxNotification(notification: Notification): TracingNotification? {
+        return LiveDebuggerJmxMBean.parseJmxNotification(notification)
+            ?: super.parseJmxNotification(notification)
     }
 }

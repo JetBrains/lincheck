@@ -24,14 +24,17 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTraceDebu
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTraceDebugging
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
-import org.jetbrains.lincheck.trace.jmx.LiveDebuggerJmxController
-import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
+import org.jetbrains.lincheck.trace.controller.TracingNotification
+import org.jetbrains.lincheck.trace.jmx.JmxNotificationData
+import org.jetbrains.lincheck.trace.jmx.LiveDebuggerJmxMBean
+import org.jetbrains.lincheck.trace.jmx.TracingJmxMBean
 import org.jetbrains.lincheck.tracer.TraceOutputMode
-import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
+import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxMBean
 import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.cleanupUnsafeCaches
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.lang.instrument.Instrumentation
+import javax.management.Notification
 
 /**
  * Live debugging JVM agent.
@@ -58,9 +61,6 @@ internal object LiveDebuggerAgent {
 
         override fun parseArguments(agentArgs: String?) {
             TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
-            // Wire the JMX notification sender before loading breakpoints so that a hit-limit
-            // event can never fire before the sender is in place.
-            LiveDebugger.notificationSender = jmxController::notifyBreakpointHitLimitReached
             LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
         }
 
@@ -72,11 +72,15 @@ internal object LiveDebuggerAgent {
             }
         }
 
-        override val jmxRegistrator: TracingJmxRegistrator get() = jmxController
+        override val jmxMBeanName: String = "org.jetbrains.lincheck:type=LiveDebugger"
+        override val jmxMBeanInterface: Class<out TracingJmxMBean> = LiveDebuggerJmxMBean::class.java
 
-        private val jmxController = object : AbstractTracingJmxController(), LiveDebuggerJmxController {
-            override val mbeanName = "org.jetbrains.lincheck:type=LiveDebugger"
-            override val mbeanInterface = LiveDebuggerJmxController::class.java
+        override val jmxMBean: TracingJmxMBean = object : AbstractTracingJmxMBean(jmxMBeanName), LiveDebuggerJmxMBean {
+            init {
+                LiveDebugger.installNotificationListener { notification ->
+                    sendNotification(notification)
+                }
+            }
 
             override fun onStreamingDisconnect() {
                 LiveDebugger.removeAllBreakpoints()
@@ -93,6 +97,10 @@ internal object LiveDebuggerAgent {
             override fun removeBreakpoints(breakpoints: List<String>) {
                 LiveDebugger.removeBreakpoints(breakpoints)
             }
+
+            override fun getJmxNotificationData(notification: TracingNotification): JmxNotificationData? =
+                LiveDebuggerJmxMBean.getJmxNotificationData(notification)
+                    ?: super.getJmxNotificationData(notification)
         }
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider? = null
@@ -102,6 +110,7 @@ internal object LiveDebuggerAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         agent.premain(agentArgs, inst)
+        installCallbacks()
 
         val mode = TraceOutputMode.parse(
             outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
@@ -126,5 +135,11 @@ internal object LiveDebuggerAgent {
     @JvmStatic
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         agent.agentmain(agentArgs, inst)
+        installCallbacks()
+    }
+
+    @JvmStatic
+    private fun installCallbacks() {
+        LiveDebugger.ensureHitLimitCallbackInstalled()
     }
 }

@@ -8,12 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.jmx
+package org.jetbrains.lincheck.trace.controller
 
-/**
- * Interface for registering tracing JMX MBean.
- */
-interface TracingJmxRegistrator {
-    val mbeanName: String
-    fun register()
-}
+typealias TracingNotificationListener = (TracingNotification) -> Unit
+
+open class TracingNotification(open val timestamp: Long) {}
+

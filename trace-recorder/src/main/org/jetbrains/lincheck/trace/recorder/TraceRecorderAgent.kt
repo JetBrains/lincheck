@@ -21,9 +21,9 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
-import org.jetbrains.lincheck.trace.jmx.TracingJmxRegistrator
+import org.jetbrains.lincheck.trace.jmx.TracingJmxMBean
 import org.jetbrains.lincheck.tracer.TracerAgent
-import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxController
+import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxMBean
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import java.lang.instrument.Instrumentation
 
@@ -62,12 +62,9 @@ internal object TraceRecorderAgent {
             }
         }
 
-        override val jmxRegistrator: TracingJmxRegistrator get() = jmxController
-
-        private val jmxController = object : AbstractTracingJmxController() {
-            override val mbeanName = "org.jetbrains.lincheck:type=TraceRecorder"
-            override fun onStreamingDisconnect() {}
-        }
+        override val jmxMBeanName: String = "org.jetbrains.lincheck:type=TraceRecorder"
+        override val jmxMBeanInterface: Class<out TracingJmxMBean> = TracingJmxMBean::class.java
+        override val jmxMBean: TracingJmxMBean = object : AbstractTracingJmxMBean(jmxMBeanName) {}
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider
             get() = ::TraceRecorderMethodTransformer
