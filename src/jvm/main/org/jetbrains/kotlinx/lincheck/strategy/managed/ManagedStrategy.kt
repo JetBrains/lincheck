@@ -629,7 +629,7 @@ internal abstract class ManagedStrategy(
      */
     protected fun unblockInterruptedThreads() {
         for (threadId in threadScheduler.getRegisteredThreadIds()) {
-            val thread = threadScheduler.getThread(threadId)!!
+            val thread = threadScheduler.getThread(threadId) ?: continue
             if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
                 val blockingReason = threadScheduler.getBlockingReason(threadId)
                 if (blockingReason != null && blockingReason.isInterruptible()) {
