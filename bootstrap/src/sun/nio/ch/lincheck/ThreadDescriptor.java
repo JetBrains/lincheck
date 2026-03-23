@@ -102,7 +102,7 @@ public class ThreadDescriptor {
     private boolean insideBreakpointCondition = false;
 
     /**
-     * Fixed-size pool of {@link ResultInterceptor} objects.
+     * Dynamically sized pool of {@link ResultInterceptor} objects.
      * It is used to optimize allocations of {@link ResultInterceptor} objects,
      * by re-using the interceptor object stored in the pool.
      * <p>
@@ -115,6 +115,11 @@ public class ThreadDescriptor {
      * is located at the index 0.
      * <p>
      *
+     * The pool starts with an initial capacity of {@link #RESULT_INTERCEPTOR_POOL_MIN_SIZE}
+     * and grows by 2x when exceeded. When the used size drops to 1/4 of the capacity,
+     * the pool shrinks by 2x, but never below the minimum size.
+     * <p>
+     *
      * Null by default, lazily allocated on first use.
      */
     private ResultInterceptor[] resultInterceptorPool = null;
@@ -125,9 +130,9 @@ public class ThreadDescriptor {
     private int resultInterceptorPoolIndex = -1;
 
     /**
-     * The size of the per-thread pool for {@link ResultInterceptor} instances.
+     * The minimum size of the per-thread pool for {@link ResultInterceptor} instances.
      */
-    private static final int RESULT_INTERCEPTOR_POOL_SIZE = 64;
+    private static final int RESULT_INTERCEPTOR_POOL_MIN_SIZE = 64;
 
     /**
      * Creates a new thread descriptor for the given thread.
@@ -296,25 +301,25 @@ public class ThreadDescriptor {
     }
 
     /**
-     * Takes a {@link ResultInterceptor} from the per-thread pool,
-     * or returns {@code null} if the pool is empty.
+     * Takes a {@link ResultInterceptor} from the per-thread pool.
+     * If the pool is full, it is expanded to 2x its current capacity.
      *
-     * @return a recycled {@link ResultInterceptor} instance, or {@code null} if the pool is empty.
+     * @return a recycled {@link ResultInterceptor} instance, or {@code null} if no recycled instance is available.
      */
     public ResultInterceptor takeResultInterceptor() {
         if (resultInterceptorPool == null) {
-            resultInterceptorPool = new ResultInterceptor[RESULT_INTERCEPTOR_POOL_SIZE];
+            resultInterceptorPool = new ResultInterceptor[RESULT_INTERCEPTOR_POOL_MIN_SIZE];
             resultInterceptorPoolIndex = 0;
         }
-        if (resultInterceptorPoolIndex >= RESULT_INTERCEPTOR_POOL_SIZE) return null;
-
+        if (resultInterceptorPoolIndex >= resultInterceptorPool.length) {
+            growResultInterceptorPool();
+        }
         return resultInterceptorPool[resultInterceptorPoolIndex++];
     }
 
     /**
      * Returns a {@link ResultInterceptor} to the per-thread pool for re-use.
      * The interceptor is {@linkplain ResultInterceptor#reset() reset} before being returned to the pool.
-     * If the pool is full, the interceptor is simply discarded.
      *
      * @param interceptor the interceptor to return to the pool.
      */
@@ -323,6 +328,24 @@ public class ThreadDescriptor {
 
         interceptor.reset();
         resultInterceptorPool[--resultInterceptorPoolIndex] = interceptor;
+        if (resultInterceptorPool.length > RESULT_INTERCEPTOR_POOL_MIN_SIZE
+                && resultInterceptorPoolIndex <= resultInterceptorPool.length / 4) {
+            shrinkResultInterceptorPool();
+        }
+    }
+
+    private void growResultInterceptorPool() {
+        int newSize = resultInterceptorPool.length * 2;
+        ResultInterceptor[] newPool = new ResultInterceptor[newSize];
+        System.arraycopy(resultInterceptorPool, 0, newPool, 0, resultInterceptorPool.length);
+        resultInterceptorPool = newPool;
+    }
+
+    private void shrinkResultInterceptorPool() {
+        int newSize = Math.max(resultInterceptorPool.length / 2, RESULT_INTERCEPTOR_POOL_MIN_SIZE);
+        ResultInterceptor[] newPool = new ResultInterceptor[newSize];
+        System.arraycopy(resultInterceptorPool, 0, newPool, 0, resultInterceptorPoolIndex);
+        resultInterceptorPool = newPool;
     }
 
     /**
