@@ -323,7 +323,7 @@ public class ThreadDescriptor {
      *
      * @param interceptor the interceptor to return to the pool.
      */
-    public void returnResultInterceptor(ResultInterceptor interceptor) {
+    public void giveResultInterceptor(ResultInterceptor interceptor) {
         if (resultInterceptorPool == null || resultInterceptorPoolIndex <= 0) return;
 
         interceptor.reset();

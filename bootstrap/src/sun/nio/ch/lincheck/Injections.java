@@ -880,7 +880,7 @@ public class Injections {
      */
     public static void recycleResultInterceptor(ThreadDescriptor descriptor, ResultInterceptor interceptor) {
         if (descriptor == null || interceptor == null) return;
-        descriptor.returnResultInterceptor(interceptor);
+        descriptor.giveResultInterceptor(interceptor);
     }
 
     /**
