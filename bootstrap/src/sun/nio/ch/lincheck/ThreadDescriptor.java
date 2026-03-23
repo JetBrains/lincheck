@@ -103,15 +103,16 @@ public class ThreadDescriptor {
 
     /**
      * Fixed-size pool of {@link ResultInterceptor} objects.
-     * <p>
-     *
-     * Used to optimize allocations of {@link ResultInterceptor} objects,
+     * It is used to optimize allocations of {@link ResultInterceptor} objects,
      * by re-using the interceptor object stored in the pool.
      * <p>
      *
      * The pool is organized as a stack to match nested method call order.
      * Result interceptors are taken from and returned into the pool in stack (LIFO) order.
-     * The top of the stack is located at index 0 of the array.
+     * The top of the stack (corresponding to the most recent, deepest method call)
+     * is located at the last index of the array,
+     * the bottom of the stack (corresponding to the earliest method call)
+     * is located at the index 0.
      * <p>
      *
      * Null by default, lazily allocated on first use.
