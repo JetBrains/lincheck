@@ -17,11 +17,12 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * Central registry for all live-debugger breakpoint runtime state.
+ * Central registry for the live-debugger breakpoint runtime state.
  * <p>
- * Lives in the bootstrap module (boot classloader) so it is reachable from every
- * other module without introducing circular dependencies.  Callers that need to
- * store module-specific data (e.g. {@code SnapshotBreakpoint}) pass it as an
+ *
+ * Lives in the bootstrap module (boot classloader), so it is reachable from every
+ * other module without introducing circular dependencies.
+ * Callers that need to store module-specific data (e.g. {@code SnapshotBreakpoint}) pass it as an
  * opaque {@code Object userData}; the bootstrap layer never needs to know its type.
  */
 public class BreakpointStorage {
@@ -33,7 +34,7 @@ public class BreakpointStorage {
     // -------------------------------------------------------------------------
 
     /**
-     * All mutable runtime state for a single registered breakpoint.
+     * Mutable runtime state for a single registered breakpoint.
      */
     public static class BreakpointState {
         /** Maximum number of hits before the hit-limit callback fires. */
@@ -42,7 +43,7 @@ public class BreakpointStorage {
         public final AtomicInteger hitCount = new AtomicInteger(0);
         /**
          * Caller-supplied payload stored at registration time.
-         * Typically a {@code SnapshotBreakpoint}, but the bootstrap layer treats it as opaque.
+         * Typically, a {@code SnapshotBreakpoint}, but the bootstrap layer treats it as opaque.
          */
         public final Object userData;
         /**
