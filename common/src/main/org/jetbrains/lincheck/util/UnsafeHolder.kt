@@ -109,13 +109,13 @@ fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
 }
 
 @Suppress("DEPRECATION")
-inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Unsafe.(Any?, Long, Any?) -> Unit) {
+private inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Unsafe.(Any?, Long, Any?) -> Unit) {
     if (Modifier.isStatic(field.modifiers)) {
-        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+        val base = field.staticFieldBase
+        val offset = field.staticFieldOffset
         return UnsafeHolder.UNSAFE.setter(base, offset, value)
     } else {
-        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+        val offset = field.objectFieldOffset
         return UnsafeHolder.UNSAFE.setter(obj, offset, value)
     }
 }
