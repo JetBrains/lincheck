@@ -124,6 +124,22 @@ internal object LiveDebugger {
     }
 
     /**
+     * Disables the breakpoint by removing it and retransforming the affected class.
+     *
+     */
+    private fun disableBreakpoint(breakpoint: SnapshotBreakpoint) {
+        // Remove specifically by id, not by location equality.
+        // If the user re-added the breakpoint at the same location in the window between
+        // the hit-limit callback firing and this executor task running,
+        // the re-added breakpoint will have a different id and must not be touched.
+        val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
+            .removeBreakpointById(breakpoint.id)
+        if (removedBreakpoint != null) {
+            retransformBreakpointClasses(listOf(removedBreakpoint))
+        }
+    }
+
+    /**
      * Retransforms the classes that contain the given breakpoints.
      */
     private fun retransformBreakpointClasses(breakpoints: List<SnapshotBreakpoint>) {
@@ -167,6 +183,8 @@ internal object LiveDebugger {
         }
 
         notificationsExecutor.submit {
+            disableBreakpoint(breakpoint)
+
             val notification = LiveDebuggerNotification.BreakpointHitLimitReached(
                 timestamp = timestamp,
                 breakpointData = LiveDebuggerNotification.BreakpointData(
@@ -175,18 +193,6 @@ internal object LiveDebugger {
                     lineNumber = breakpoint.lineNumber,
                 ),
             )
-
-            // Remove specifically by id, not by location equality.
-            // If the user re-added the breakpoint at the same location in the window between
-            // the hit-limit callback firing and this executor task running,
-            // the re-added breakpoint will have a different id and must not be touched.
-            val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
-                .removeBreakpointById(breakpoint.id)
-
-            if (removedBreakpoint != null) {
-                retransformBreakpointClasses(listOf(removedBreakpoint))
-            }
-
             notificationListener.get()?.invoke(notification)
         }
     }
@@ -224,6 +230,8 @@ internal object LiveDebugger {
         }
 
         notificationsExecutor.submit {
+            disableBreakpoint(breakpoint)
+
             val notification = LiveDebuggerNotification.BreakpointConditionUnsafetyDetected(
                 timestamp = timestamp,
                 breakpointData = LiveDebuggerNotification.BreakpointData(
@@ -232,18 +240,6 @@ internal object LiveDebugger {
                     lineNumber = breakpoint.lineNumber,
                 ),
             )
-
-            // Remove specifically by id, not by location equality.
-            // If the user re-added the breakpoint at the same location in the window between
-            // the callback firing and this executor task running,
-            // the re-added breakpoint will have a different id and must not be touched.
-            val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
-                .removeBreakpointById(breakpoint.id)
-
-            if (removedBreakpoint != null) {
-                retransformBreakpointClasses(listOf(removedBreakpoint))
-            }
-
             notificationListener.get()?.invoke(notification)
         }
     }
