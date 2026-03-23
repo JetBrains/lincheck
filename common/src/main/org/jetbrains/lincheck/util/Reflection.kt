@@ -11,15 +11,14 @@
 package org.jetbrains.lincheck.util
 
 import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
-
-
-// We store the class references in a local map to avoid repeated Class.forName calls and reflection overhead
 
 /**
  * Provides a thread-safe caching mechanism for [Class] lookup by its fully qualified class name.
  */
 object ClassCache {
+    // We store the class references in a local map to avoid repeated Class.forName calls and reflection overhead
     private val cache = ConcurrentHashMap<String, Class<*>>()
 
     /**
@@ -38,31 +37,34 @@ object ClassCache {
  * Returns the companion object's class of this class if it exists.
  */
 val Class<*>.companionClass: Class<*>? get() =
-    declaredFields.firstOrNull { it.name == "Companion" }?.type
+    ClassReflectionCache[this].companionClass
 
 /**
- * Returns all found fields in the hierarchy.
+ * Returns all declared fields in the class, including fields from superclasses and interfaces.
+ *
  * Multiple fields with the same name and the same type may be returned
  * if they appear in the subclass and a parent class.
  */
-val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
-    if (superclass == null && interfaces.isEmpty()) {
-        return this.declaredFields.asList()
-    }
+val Class<*>.allDeclaredFields get(): List<Field> =
+    ClassReflectionCache[this].allDeclaredFields
 
-    val fields: MutableList<Field> = mutableListOf()
-    val queue: MutableList<Class<*>> = mutableListOf(this)
-    while (queue.isNotEmpty()) {
-        val currentClass = queue.removeLast()
-        fields.addAll(currentClass.declaredFields)
+/**
+ * Returns all declared instance fields in the class, including fields from superclasses and interfaces.
+ *
+ * Multiple fields with the same name and the same type may be returned
+ * if they appear in the subclass and a parent class.
+ */
+val Class<*>.allDeclaredInstanceFields get(): List<Field> =
+    ClassReflectionCache[this].allDeclaredInstanceFields
 
-        queue.addAll(currentClass.interfaces)
-        if (currentClass.superclass != null) {
-            queue.add(currentClass.superclass)
-        }
-    }
-    return fields
-}
+/**
+ * Returns all declared static fields in the class, including fields from superclasses and interfaces.
+ *
+ * Multiple fields with the same name and the same type may be returned
+ * if they appear in the subclass and a parent class.
+ */
+val Class<*>.allDeclaredStaticFields get(): List<Field> =
+    ClassReflectionCache[this].allDeclaredStaticFields
 
 /**
  * Finds the field name of [this] object that directly references the given object [obj].
@@ -72,10 +74,60 @@ val Class<*>.allDeclaredFieldWithSuperclasses get(): List<Field> {
  * @return the name of the field that references the given object, or null if no such field is found.
  */
 fun Any.findInstanceFieldReferringTo(obj: Any): Field? {
-    for (field in this.javaClass.allDeclaredFieldWithSuperclasses) {
+    for (field in this.javaClass.allDeclaredFields) {
         if (readFieldSafely(this, field).getOrNull() === obj) {
             return field
         }
     }
     return null
+}
+
+/**
+ * A utility object for caching class reflection metadata in a thread-safe and gc-friendly manner.
+ *
+ * The implementation relies on a [ClassValue] to lazily compute the cached values.
+ */
+private object ClassReflectionCache {
+    data class ReflectionData(
+        val allDeclaredFields: List<Field>,
+        val allDeclaredInstanceFields: List<Field>,
+        val allDeclaredStaticFields: List<Field>,
+        val companionClass: Class<*>?,
+    )
+
+    private val cache = object : ClassValue<ReflectionData>() {
+        override fun computeValue(type: Class<*>): ReflectionData {
+            val allDeclaredFields = computeAllDeclaredFields(type)
+            val companionClass = allDeclaredFields.firstOrNull { it.name == "Companion" }?.type
+            val (staticFields, instanceFields) = allDeclaredFields.partition { Modifier.isStatic(it.modifiers) }
+
+            return ReflectionData(
+                allDeclaredFields = allDeclaredFields,
+                allDeclaredInstanceFields = instanceFields,
+                allDeclaredStaticFields = staticFields,
+                companionClass = companionClass,
+            )
+        }
+    }
+
+    private fun computeAllDeclaredFields(clazz: Class<*>): List<Field> {
+        if (clazz.superclass == null && clazz.interfaces.isEmpty()) {
+            return clazz.declaredFields.asList()
+        }
+
+        val fields: MutableList<Field> = mutableListOf()
+        val queue: MutableList<Class<*>> = mutableListOf(clazz)
+        while (queue.isNotEmpty()) {
+            val currentClass = queue.removeLast()
+            fields.addAll(currentClass.declaredFields)
+
+            queue.addAll(currentClass.interfaces)
+            if (currentClass.superclass != null) {
+                queue.add(currentClass.superclass)
+            }
+        }
+        return fields
+    }
+
+    operator fun get(clazz: Class<*>): ReflectionData = cache.get(clazz)
 }

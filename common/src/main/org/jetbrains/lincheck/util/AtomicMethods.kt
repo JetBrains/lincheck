@@ -10,16 +10,15 @@
 
 package org.jetbrains.lincheck.util
 
-import org.jetbrains.lincheck.util.AtomicMethodKind.*
-import org.jetbrains.lincheck.util.AtomicApiKind.*
-import org.jetbrains.lincheck.util.MemoryOrdering.*
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TraceContext
-import java.util.concurrent.atomic.*
-import java.util.concurrent.ConcurrentHashMap
+import org.jetbrains.lincheck.util.AtomicApiKind.*
+import org.jetbrains.lincheck.util.AtomicMethodKind.*
+import org.jetbrains.lincheck.util.MemoryOrdering.*
 import sun.misc.Unsafe
-import kotlin.contracts.contract
+import java.util.concurrent.atomic.*
 import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 internal data class AtomicMethodDescriptor(
     val kind: AtomicMethodKind,
@@ -365,9 +364,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
         // Static field access case
         isVarHandleStaticFieldClass(varHandleClassName) -> {
             try {
-                val extractor = varHandleStaticFieldExtractors.computeIfAbsent(varHandle.javaClass) {
-                    VarHandleStaticFieldExtractor(it)
-                }
+                val extractor = VarHandleStaticFieldExtractor[varHandle.javaClass]
                 val receiverType = extractor.extractBase(varHandle)
                 val fieldOffset = extractor.extractFieldOffset(varHandle)
                 val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(receiverType, fieldOffset, FieldKind.STATIC)
@@ -395,9 +392,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
             }
             try {
                 val targetObject = arguments[0]
-                val extractor = varHandleInstanceFieldExtractors.computeIfAbsent(varHandle.javaClass) {
-                    VarHandleInstanceFieldExtractor(it)
-                }
+                val extractor = VarHandleInstanceFieldExtractor[varHandle.javaClass]
                 val receiverType = extractor.extractReceiverType(varHandle)
                 val fieldOffset = extractor.extractFieldOffset(varHandle)
                 val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(receiverType, fieldOffset, FieldKind.INSTANCE)
@@ -420,39 +415,53 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
     }
 }
 
-private class VarHandleStaticFieldExtractor(private val varHandleClass: Class<*>) {
-    private val baseField =
-        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "base" }!!
-    private val fieldOffsetField =
-        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "fieldOffset" }!!
+private class VarHandleStaticFieldExtractor(varHandleClass: Class<*>) {
+    private val baseField = varHandleClass.allDeclaredFields.find { it.name == "base" }!!
+    private val fieldOffsetField = varHandleClass.allDeclaredFields.find { it.name == "fieldOffset" }!!
 
     fun extractBase(varHandle: Any): Class<*> {
-        return readFieldViaUnsafe(varHandle, baseField, Unsafe::getObject) as Class<*>
+        return readFieldViaUnsafe(varHandle, baseField) as Class<*>
     }
 
     fun extractFieldOffset(varHandle: Any): Long {
-        return readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
+        return readFieldViaUnsafe(varHandle, fieldOffsetField) as Long
+    }
+
+    companion object {
+        private val cache = object : ClassValue<VarHandleStaticFieldExtractor>() {
+            override fun computeValue(varHandleClass: Class<*>): VarHandleStaticFieldExtractor {
+                return VarHandleStaticFieldExtractor(varHandleClass)
+            }
+        }
+
+        operator fun get(varHandleClass: Class<*>): VarHandleStaticFieldExtractor =
+            cache.get(varHandleClass)
     }
 }
 
-private class VarHandleInstanceFieldExtractor(private val varHandleClass: Class<*>) {
-    private val receiverTypeField =
-        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "receiverType" }!!
-    private val fieldOffsetField =
-        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "fieldOffset" }!!
+private class VarHandleInstanceFieldExtractor(varHandleClass: Class<*>) {
+    private val receiverTypeField = varHandleClass.allDeclaredFields.find { it.name == "receiverType" }!!
+    private val fieldOffsetField = varHandleClass.allDeclaredFields.find { it.name == "fieldOffset" }!!
 
     fun extractReceiverType(varHandle: Any): Class<*> {
-        return readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
+        return readFieldViaUnsafe(varHandle, receiverTypeField) as Class<*>
     }
 
     fun extractFieldOffset(varHandle: Any): Long {
-        return readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
+        return readFieldViaUnsafe(varHandle, fieldOffsetField) as Long
+    }
+
+    companion object {
+        private val cache = object : ClassValue<VarHandleInstanceFieldExtractor>() {
+            override fun computeValue(varHandleClass: Class<*>): VarHandleInstanceFieldExtractor {
+                return VarHandleInstanceFieldExtractor(varHandleClass)
+            }
+        }
+
+        operator fun get(varHandleClass: Class<*>): VarHandleInstanceFieldExtractor =
+            cache.get(varHandleClass)
     }
 }
-
-private val varHandleStaticFieldExtractors = ConcurrentHashMap<Class<*>, VarHandleStaticFieldExtractor>()
-private val varHandleInstanceFieldExtractors = ConcurrentHashMap<Class<*>, VarHandleInstanceFieldExtractor>()
-
 
 internal fun isAtomic(receiver: Any?) =
     isJavaAtomic(receiver) ||
