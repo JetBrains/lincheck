@@ -16,8 +16,6 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
-import org.jetbrains.lincheck.trace.jmx.TracingJmxMBean
-import org.jetbrains.lincheck.tracer.jmx.TracingJmxRegistrator
 import java.lang.instrument.Instrumentation
 
 /**
@@ -40,9 +38,6 @@ abstract class TracerAgent {
         // attach java agent
         LincheckInstrumentation.attachJavaAgentStatically(inst)
 
-        // register JMX MBean if the specified argument was passed
-        registerJmxMBeanIfRequested()
-
         // install trace entry points transformer and instrumentation if requested
         installTraceEntryPointTransformerIfRequested()
 
@@ -61,9 +56,6 @@ abstract class TracerAgent {
         // attach java agent
         LincheckInstrumentation.attachJavaAgentDynamically(inst)
 
-        // register JMX MBean if the specified argument was passed
-        registerJmxMBeanIfRequested()
-
         // install instrumentation and re-transform already loaded classes
         installInstrumentation()
     }
@@ -76,16 +68,6 @@ abstract class TracerAgent {
 
     protected abstract fun parseArguments(agentArgs: String?)
     protected abstract fun validateArguments(attachType: JavaAgentAttachType)
-
-    protected abstract val jmxMBeanName: String
-    protected abstract val jmxMBeanInterface: Class<out TracingJmxMBean>
-    protected abstract val jmxMBean: TracingJmxMBean
-
-    private fun registerJmxMBeanIfRequested() {
-        if (TraceAgentParameters.jmxMBeanEnabled) {
-             TracingJmxRegistrator.register(jmxMBean, jmxMBeanName, jmxMBeanInterface)
-        }
-    }
 
     protected abstract val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider?
 

@@ -14,8 +14,8 @@ import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
-import org.jetbrains.lincheck.trace.controller.LiveDebuggerNotification
-import org.jetbrains.lincheck.trace.controller.TracingNotificationListener
+import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
+import org.jetbrains.lincheck.trace.network.TracingNotificationListener
 import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.TracingSession

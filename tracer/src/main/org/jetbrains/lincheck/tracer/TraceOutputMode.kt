@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.tracer
 
+import org.jetbrains.lincheck.trace.network.TracingServer
+
 /**
  * Trace output mode defines trace collecting and output strategy,
  * for instance, whether to keep the trace in-memory or streaming incrementally,
@@ -42,7 +44,7 @@ sealed class TraceOutputMode {
      * listening for incoming reader connections on an assigned port.
      * Multiple readers can connect and receive the trace data simultaneously.
      */
-    class BinaryNetworkStream(val onDisconnect: () -> Unit) : TraceOutputMode()
+    class BinaryNetworkStream(val tracingServer: TracingServer) : TraceOutputMode()
 
     /**
      * Throws away all recorded trace data.

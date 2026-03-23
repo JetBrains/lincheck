@@ -1,0 +1,144 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.jetbrains.lincheck.trace.network.ws
+
+import org.java_websocket.WebSocket
+import org.java_websocket.client.WebSocketClient
+import org.java_websocket.handshake.ClientHandshake
+import org.java_websocket.handshake.ServerHandshake
+import org.java_websocket.server.WebSocketServer
+import org.jetbrains.lincheck.trace.NetworkTraceReader
+import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
+import org.jetbrains.lincheck.trace.network.TracingClient
+import org.jetbrains.lincheck.trace.network.TracingClientApi
+import org.jetbrains.lincheck.trace.network.TracingServer
+import org.jetbrains.lincheck.trace.network.TracingServerApi
+import java.lang.Exception
+import java.net.InetSocketAddress
+import java.net.URI
+import java.nio.ByteBuffer
+
+/**
+ * Base class for WebSocket clients that implement [TracingClientApi].
+ * It handles incoming WebSocket messages and dispatches them to the corresponding API methods.
+ */
+abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
+    private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri) {
+        override fun onOpen(handshakedata: ServerHandshake?) {}
+
+        override fun onMessage(message: String?) {
+            if (message == null) return
+            val parts = message.split(":", limit = 3)
+            if (parts.size < 3) return
+
+            val type = parts[0]
+            val timestamp = parts[1].toLongOrNull() ?: return
+            val data = parts[2]
+
+            when (type) {
+                TracingClientApi.HIT_LIMIT_REACHED -> {
+                    val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data) ?: return
+                    hitLimitReached(breakpointData, timestamp)
+                }
+                TracingClientApi.CONDITION_UNSAFE -> {
+                    val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data) ?: return
+                    conditionUnsafe(breakpointData, timestamp)
+                }
+            }
+        }
+
+        override fun onMessage(bytes: ByteBuffer?) {
+            if (bytes == null) return
+            val data = ByteArray(bytes.remaining())
+            bytes.get(data)
+            networkTraceReader.processMessage(data)
+        }
+
+        override fun onClose(code: Int, reason: String?, remote: Boolean) {
+            onDisconnected()
+        }
+
+        override fun onError(ex: Exception?) {
+            // TODO log this
+        }
+    }
+
+    final override fun binaryTraceData(data: ByteArray) {}
+
+    override val server: TracingServerApi = WebSocketTracingController(webSocketConnection)
+    override val networkTraceReader: NetworkTraceReader = NetworkTraceReader()
+}
+
+/**
+ * Base WebSocket server that receives commands from clients and delegates them to [TracingServerApi].
+ */
+abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServer {
+    private val webSocketServer = object: WebSocketServer(address) {
+        override fun onOpen(conn: WebSocket?, handshake: ClientHandshake?) {
+            if (conn != null) {
+                synchronized(this@TracingWebSocketServer) {
+                    _client.close()
+                    onDisconnected()
+                    _client = WebSocketTracingNotifier(conn)
+                }
+            }
+        }
+
+        override fun onClose(conn: WebSocket?, code: Int, reason: String?, remote: Boolean) {
+            synchronized(this@TracingWebSocketServer) {
+                val client = _client
+                if (client is WebSocketTracingNotifier && client.webSocket == conn) {
+                    onDisconnected()
+                    _client = ClientSink()
+                }
+            }
+        }
+
+        override fun onMessage(conn: WebSocket?, message: String?) {
+            if (message == null) return
+            val parts = message.split(":", limit = 2)
+            val command = parts[0]
+            when (command) {
+                TracingServerApi.START_FILE_TRACING -> {
+                    if (parts.size < 2) return
+                    val args = parts[1].split(":")
+                    if (args.size >= 2) {
+                        startFileTracing(args[0], args[1].toBoolean())
+                    }
+                }
+
+                TracingServerApi.START_NETWORK_TRACING -> startNetworkTracing()
+                TracingServerApi.STOP_TRACING -> stopTracing()
+                TracingServerApi.ADD_BREAKPOINTS -> {
+                    val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
+                    addBreakpoints(breakpoints)
+                }
+
+                TracingServerApi.REMOVE_BREAKPOINTS -> {
+                    val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
+                    removeBreakpoints(breakpoints)
+                }
+            }
+        }
+
+        override fun onError(conn: WebSocket?, ex: Exception?) {
+            // TODO log it
+        }
+
+        override fun onStart() {}
+    }
+    
+    private var _client: TracingClientApi = ClientSink()
+
+    override val client: TracingClientApi
+        get() = synchronized(this) { _client }
+
+}

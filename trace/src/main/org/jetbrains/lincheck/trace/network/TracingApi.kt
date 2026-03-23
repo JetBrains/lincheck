@@ -1,0 +1,65 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.jetbrains.lincheck.trace.network
+
+import org.jetbrains.lincheck.trace.NetworkTraceReader
+import java.io.Closeable
+
+/**
+ * Interface for receiving notifications from the tracing server.
+ * This is implemented by the client (controller).
+ */
+interface TracingClientApi : Closeable {
+    fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long)
+    fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long)
+    fun binaryTraceData(data: ByteArray)
+    
+    companion object {
+        const val HIT_LIMIT_REACHED = "hitLimitReached"
+        const val CONDITION_UNSAFE = "conditionUnsafe"
+    }
+}
+
+/**
+ * Interface for sending commands to the tracing server.
+ * This is implemented by the server (agent) or a client-side proxy.
+ */
+interface TracingServerApi {
+    fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean)
+    fun startNetworkTracing()
+    fun stopTracing()
+    fun addBreakpoints(breakpoints: List<String>)
+    fun removeBreakpoints(breakpoints: List<String>)
+    
+    companion object {
+        const val START_FILE_TRACING = "startFileTracing"
+        const val START_NETWORK_TRACING = "startNetworkTracing"
+        const val STOP_TRACING = "stopTracing"
+        const val ADD_BREAKPOINTS = "addBreakpoints"
+        const val REMOVE_BREAKPOINTS = "removeBreakpoints"
+    }
+}
+
+/**
+ * Interface for components that need to be notified when a connection is closed.
+ */
+interface DisconnectAware {
+    fun onDisconnected()
+}
+
+interface TracingClient: TracingClientApi, DisconnectAware {
+    val server: TracingServerApi
+    val networkTraceReader: NetworkTraceReader
+}
+
+interface TracingServer: TracingServerApi, DisconnectAware {
+    val client: TracingClientApi
+}

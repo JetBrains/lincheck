@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.INDEX_FILENAME_EXT
 import org.jetbrains.lincheck.trace.PACK_FILENAME_EXT
 import org.jetbrains.lincheck.trace.TraceMetaInfo
-import org.jetbrains.lincheck.trace.NetworkTraceServer
+import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.printPostProcessedTrace
 import org.jetbrains.lincheck.trace.packRecordedTrace
 import org.jetbrains.lincheck.trace.saveRecorderTrace
@@ -23,7 +23,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 class TracingSession(
     val eventTracker: TraceCollectingEventTracker,
-    val networkServer: NetworkTraceServer? = null
 ) {
     internal sealed class State {
         object NotStarted : State()
@@ -120,11 +119,7 @@ class TracingSession(
     }
 
     private fun stopNetworkServer() {
-        try {
-            networkServer?.close()
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot stop WebSocket trace server" }
-        }
+        // TODO is this needed?
     }
 
     fun installOnFinishHook(hook: TracingSession.() -> Unit) {

@@ -111,9 +111,9 @@ object TraceAgentParameters {
     const val ARGUMENT_FORMAT = "format"
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
-    const val ARGUMENT_JMX_MBEAN = "jmxMBean"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
     const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
+    const val ARGUMENT_START_SERVER = "startServer"
 
     @JvmStatic
     lateinit var rawArgs: String
@@ -126,10 +126,6 @@ object TraceAgentParameters {
 
     @JvmStatic
     var traceDumpFilePath: String? = null
-
-    @JvmStatic
-    val jmxMBeanEnabled: Boolean
-        get() = getArg(ARGUMENT_JMX_MBEAN)?.lowercase() == "on"
 
     @JvmStatic
     val breakpointsFilePath: String?
