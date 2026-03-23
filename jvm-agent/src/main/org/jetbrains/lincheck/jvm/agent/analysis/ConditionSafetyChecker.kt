@@ -17,7 +17,19 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.tree.*
 
 /**
- * Represents a side-effect violation found during bytecode analysis.
+ * Represents a safety violation found during bytecode analysis.
+ * In this context "safety" assumes purity and side effect free behavior.
+ *
+ * Safety violations include:
+ * - field writes;
+ * - array writes;
+ * - uninitialized class static field reads;
+ * - monitor operations (synchronized blocks);
+ * - disallowed method calls;
+ * - disallowed dynamic invocations;
+ * - non-final method calls;
+ * - recursion depth exceeding;
+ * - loop detected.
  */
 sealed class SafetyViolation {
     abstract val fileName: String?
