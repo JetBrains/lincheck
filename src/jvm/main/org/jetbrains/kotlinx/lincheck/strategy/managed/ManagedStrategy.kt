@@ -370,10 +370,9 @@ internal abstract class ManagedStrategy(
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
-        val nThreads = threadScheduler.getRegisteredThreadIds().count()
-        val threadNames = MutableList(nThreads) { "" }
-        getUserThreadIds().forEach { threadId ->
-            val thread = threadScheduler.getThread(threadId)!!
+        val registeredThreads = getRegisteredThreads()
+        val threadNames = MutableList(registeredThreads.size) { "" }
+        registeredThreads.forEach { (threadId, thread) ->
             when (val threadNumber = objectTracker.getObjectDisplayNumber(thread)) {
                 0    -> threadNames[threadId] = "Main Thread"
                 else -> threadNames[threadId] = "Thread $threadNumber"
