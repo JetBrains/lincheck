@@ -851,9 +851,7 @@ internal abstract class ManagedStrategy(
         threadScheduler.getRegisteredThreads()
 
     fun getUserThreadIds(): List<ThreadId> =
-        threadScheduler.getRegisteredThreadIds().mapNotNull { threadId ->
-            if (isRunnerThread(threadId)) null else threadId
-        }
+        threadScheduler.getRegisteredThreadIds().filter { !isRunnerThread(it) }
 
     protected fun isRegisteredThread(): Boolean {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
