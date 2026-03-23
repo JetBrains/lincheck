@@ -29,11 +29,11 @@ object UnsafeHolder {
 @Suppress("DEPRECATION")
 private inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
-        val base = ClassUnsafeCache[field.declaringClass].staticFieldBase[field]!!
-        val offset = ClassUnsafeCache[field.declaringClass].staticFieldOffset[field]!!
+        val base = field.staticFieldBase
+        val offset = field.staticFieldOffset
         return UnsafeHolder.UNSAFE.getter(base, offset)
     } else {
-        val offset = ClassUnsafeCache[field.declaringClass].objectFieldOffset[field]!!
+        val offset = field.objectFieldOffset
         return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
@@ -239,6 +239,15 @@ private fun canAccessFieldViaUnsafe(field: Field): Boolean {
     }
     return (offset != null)
 }
+
+private val Field.staticFieldBase: Any get() =
+    ClassUnsafeCache[declaringClass].staticFieldBase[this] ?: error("Cannot get static base of field $name")
+
+private val Field.staticFieldOffset: Long get() =
+    ClassUnsafeCache[declaringClass].staticFieldOffset[this] ?: error("Cannot get static offset of field $name")
+
+private val Field.objectFieldOffset: Long get() =
+    ClassUnsafeCache[declaringClass].objectFieldOffset[this] ?: error("Cannot get object offset of field $name")
 
 private object ClassUnsafeCache {
     data class ReflectionData(
