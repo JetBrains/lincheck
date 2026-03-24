@@ -202,6 +202,11 @@ internal class ModelCheckingStrategy(
             isFullyExplored = choices.all { it.node.isFullyExplored }
         }
 
+        protected fun isLeaf(interleavingBuilder: InterleavingBuilder): Boolean {
+            return choices.all { it.node.isFullyExplored } ||
+                   maxNumberOfSwitches == interleavingBuilder.numberOfSwitches
+        }
+
         protected fun chooseUnexploredNode(): Choice {
             if (choices.size == 1) return choices.first()
             // Choose a weighted random child.
@@ -231,6 +236,10 @@ internal class ModelCheckingStrategy(
         override val isInitialized: Boolean = true
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
+            if (isLeaf(interleavingBuilder)) {
+                finishExploration()
+                return interleavingBuilder.build()
+            }
             val child = chooseUnexploredNode()
             interleavingBuilder.addThreadSwitchChoice(child.value)
             val interleaving = child.node.nextInterleaving(interleavingBuilder)
@@ -287,8 +296,7 @@ internal class ModelCheckingStrategy(
         }
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
-            val isLeaf = maxNumberOfSwitches == interleavingBuilder.numberOfSwitches
-            if (isLeaf) {
+            if (isLeaf(interleavingBuilder)) {
                 finishExploration()
                 return interleavingBuilder.build()
             }
