@@ -79,6 +79,16 @@ public class ResultInterceptor {
         this.eventTrackerData = eventTrackerData;
     }
 
+    /**
+     * Resets the interceptor to its initial state, so it can be re-used.
+     */
+    public void reset() {
+        interceptedResult = null;
+        interceptedException = null;
+        isResultIntercepted = false;
+        eventTrackerData = null;
+    }
+
     private static IllegalStateException ResultAlreadyInterceptedException(ResultInterceptor interceptor) {
         String message = "Result is already intercepted by" + getObjectRepresentation(interceptor);
         if (interceptor.interceptedResult != null) {

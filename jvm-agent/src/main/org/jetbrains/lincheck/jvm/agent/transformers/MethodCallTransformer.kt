@@ -112,11 +112,7 @@ internal class MethodCallTransformer(
         // if configuration disables method result interception,
         // does not create an object and pushes `null` instead
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            if (configuration.interceptMethodCallResults) {
-                invokeStatic(Injections::createResultInterceptor)
-            } else {
-                pushNull()
-            }
+            pushResultInterceptor(threadDescriptorLocal, shouldIntercept = configuration.interceptMethodCallResults)
             storeLocal(it)
         }
 
@@ -212,7 +208,7 @@ internal class MethodCallTransformer(
 
         ifStatement(
             condition = {
-                isMethodIntercepted(resultInterceptorLocal)
+                isResultIntercepted(resultInterceptorLocal)
             },
             thenClause = {
                 getOrThrowInterceptedResult(resultInterceptorLocal, returnType)
@@ -282,24 +278,6 @@ internal class MethodCallTransformer(
         // STACK: descriptor, methodId, receiver, params, exception, interceptor?
         invokeStatic(Injections::onMethodCallException)
         // STACK: <empty>
-    }
-
-    private fun GeneratorAdapter.isMethodIntercepted(resultInterceptorLocal: Int) {
-        // STACK: <empty>
-        loadLocal(resultInterceptorLocal)
-        // STACK: resultInterceptor
-        invokeStatic(Injections::isResultOrExceptionIntercepted)
-        // STACK: empty
-    }
-
-    private fun GeneratorAdapter.getOrThrowInterceptedResult(resultInterceptorLocal: Int, returnType: Type) {
-            // STACK: <empty>
-            loadLocal(resultInterceptorLocal)
-            // STACK: resultInterceptor
-            invokeStatic(Injections::getOrThrowInterceptedResult)
-            // STACK: result
-            if (returnType == VOID_TYPE) pop() else unbox(returnType)
-            // STACK: result?
     }
 
     private fun GeneratorAdapter.runMethod(
