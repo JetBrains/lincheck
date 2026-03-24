@@ -142,7 +142,7 @@ abstract class ManagedCTestConfiguration(
     companion object {
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
 
-        const val DEFAULT_HANGING_DETECTION_THRESHOLD = 101
+        const val DEFAULT_HANGING_DETECTION_THRESHOLD = 201
         const val DEFAULT_LIVELOCK_EVENTS_THRESHOLD = 10001
 
         val DEFAULT_STDLIB_ANALYSIS_ENABLED = AnalysisProfile.DEFAULT.analyzeStdLib

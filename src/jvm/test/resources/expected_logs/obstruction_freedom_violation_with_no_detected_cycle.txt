@@ -13,9 +13,9 @@ The following interleaving leads to the error:
 | operation(): <hung>                 |
 |   incrementManyTimes()              |
 |     counter.get(): 0                |
-|     loop(101 iterations)            |
+|     loop(201 iterations)            |
 |      counter.incrementAndGet(): 1   |
-|      counter.incrementAndGet(): 100 |
+|      counter.incrementAndGet(): 200 |
 | ----------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
@@ -26,12 +26,12 @@ Detailed trace:
 | operation(): <hung>                                                                                                                                     |
 |   incrementManyTimes() at ObstructionFreedomActiveLockRepresentationTest.operation(ObstructionFreedomRepresentationTest.kt:39)                          |
 |     counter.get(): 0 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:46)                   |
-|     loop(101 iterations) at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:48)               |
+|     loop(201 iterations) at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:48)               |
 |       <iteration 1> at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:48)                    |
 |         counter.incrementAndGet(): 1 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:49)   |
 |       ...                                                                                                                                               |
-|       <iteration 100> at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:48)                  |
-|         counter.incrementAndGet(): 100 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:49) |
-|       <iteration 101> at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:48)                  |
+|       <iteration 200> at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:48)                  |
+|         counter.incrementAndGet(): 200 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:49) |
+|       <iteration 201> at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:48)                  |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
