@@ -14,8 +14,7 @@ import sun.nio.ch.lincheck.TestThread
 import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.Spinner
-import org.jetbrains.lincheck.util.ensureNull
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
 
 /**
  * Enumeration representing the various states of a thread.
@@ -92,14 +91,11 @@ fun BlockingReason.throwsInterruptedException(): Boolean =
  */
 open class ThreadScheduler {
 
-    private val threads_ = ConcurrentHashMap<ThreadId, ThreadData>()
-    protected val threads: ThreadMap<ThreadData> get() = threads_
-
     /**
-     * Number of threads currently managed by the scheduler.
+     * Collection of all threads managed by the scheduler.
      */
-    val nThreads: Int get() =
-        threads.size
+    protected val threads: List<ThreadData> get() = _threads
+    private val _threads: MutableList<ThreadData> = Collections.synchronizedList(mutableListOf())
 
     protected open class ThreadData(
         val id: ThreadId,
@@ -118,15 +114,21 @@ open class ThreadScheduler {
     }
 
     /**
+     * Return an iterable sequence of thread ids registered within this scheduler.
+     */
+    fun getRegisteredThreadIds(): Iterable<ThreadId> =
+        (0 until threads.size)
+
+    /**
      * Retrieves all threads registered in the scheduler.
      *
      * @return a map from thread ids to thread instances that are currently registered.
      */
     fun getRegisteredThreads() : ThreadMap<Thread> = mutableThreadMapOf<Thread>().apply {
-        for ((threadId, threadData) in threads) {
+        for (threadData in threads) {
             val thread = threadData.descriptor.thread
             if (thread != null) {
-                put(threadId, thread)
+                put(threadData.id, thread)
             }
         }
     }
@@ -155,7 +157,7 @@ open class ThreadScheduler {
      * @return The thread associated with the provided identifier or null if the thread is not found.
      */
     fun getThread(threadId: ThreadId): Thread? =
-        threads[threadId]?.descriptor?.thread
+        threads.getOrNull(threadId)?.descriptor?.thread
 
     /**
      * Retrieves the current state of the thread for the specified thread id.
@@ -164,7 +166,7 @@ open class ThreadScheduler {
      * @return The current state of the thread, or null if the thread is not found.
      */
     fun getThreadState(threadId: ThreadId): ThreadState? =
-        threads[threadId]?.state
+        threads.getOrNull(threadId)?.state
 
     /**
      * Retrieves the blocking reason for the specified thread id.
@@ -173,7 +175,7 @@ open class ThreadScheduler {
      * @return The blocking reason of the thread, or null if the thread is not found or not blocked.
      */
     fun getBlockingReason(threadId: ThreadId): BlockingReason? =
-        threads[threadId]?.blockingReason
+        threads.getOrNull(threadId)?.blockingReason
 
     /**
      * Checks if the thread is currently enabled.
@@ -192,7 +194,7 @@ open class ThreadScheduler {
      * @return `true` if the thread is schedulable, `false` otherwise.
      */
     fun isSchedulable(threadId: ThreadId): Boolean {
-        val state = threads[threadId]?.state ?: return false
+        val state = threads.getOrNull(threadId)?.state ?: return false
         return (state == ThreadState.INITIALIZED) || (state == ThreadState.ENABLED)
     }
 
@@ -247,14 +249,14 @@ open class ThreadScheduler {
      * @return `true` if all threads are finished, otherwise `false`.
      */
     fun areAllThreadsFinished() =
-        threads.values.all { it.state == ThreadState.FINISHED }
+        threads.all { it.state == ThreadState.FINISHED }
 
     /**
      * Checks if all threads managed by the scheduler have finished or aborted.
      * @return `true` if all threads are finished or aborted, otherwise `false`.
      */
     fun areAllThreadsFinishedOrAborted() =
-        threads.values.all {
+        threads.all {
             it.state == ThreadState.FINISHED ||
             it.state == ThreadState.ABORTED
         }
@@ -274,7 +276,8 @@ open class ThreadScheduler {
         if (thread is TestThread) {
             check(threadId == thread.threadId)
         }
-        threads_.put(threadId, threadData).ensureNull()
+        check(threadId == _threads.size)
+        _threads.add(threadData)
         descriptor.eventTrackerData = threadData
         return threadId
     }
@@ -304,7 +307,7 @@ open class ThreadScheduler {
      * @param reason The reason why the thread is being blocked.
      */
     fun blockThread(threadId: ThreadId, reason: BlockingReason) {
-        threads[threadId]!!.apply {
+        threads[threadId].apply {
             blockingReason = reason
             state = ThreadState.BLOCKED
         }
@@ -317,7 +320,7 @@ open class ThreadScheduler {
      * @param threadId The identifier of the thread to unblock.
      */
     fun unblockThread(threadId: ThreadId) {
-        threads[threadId]!!.apply {
+        threads[threadId].apply {
             state = ThreadState.ENABLED
             blockingReason = null
         }
@@ -330,7 +333,7 @@ open class ThreadScheduler {
      * @param threadId The identifier of the thread to abort.
      */
     fun abortThread(threadId: ThreadId) {
-        threads[threadId]!!.apply {
+        threads[threadId].apply {
             state = ThreadState.ABORTED
         }
     }
@@ -341,7 +344,7 @@ open class ThreadScheduler {
      * @see abortThread
      */
     fun abortAllThreads() {
-        for (thread in threads.values) {
+        for (thread in threads) {
             if (thread.state == ThreadState.FINISHED)
                 continue
             thread.state = ThreadState.ABORTED
@@ -355,7 +358,7 @@ open class ThreadScheduler {
      */
     fun abortOtherThreads() {
         val currentThreadId = getCurrentThreadId()
-        for (thread in threads.values) {
+        for (thread in threads) {
             if (thread.state == ThreadState.FINISHED || thread.id == currentThreadId)
                 continue
             thread.state = ThreadState.ABORTED
@@ -371,7 +374,7 @@ open class ThreadScheduler {
      * @param threadId The identifier of the thread to be marked as finished.
      */
     fun finishThread(threadId: ThreadId) {
-        threads[threadId]!!.apply {
+        threads[threadId].apply {
             state = ThreadState.FINISHED
         }
     }
@@ -385,7 +388,7 @@ open class ThreadScheduler {
      *   -1 if the timeout is reached.
      */
     fun awaitThreadFinish(threadId: ThreadId, timeoutNano: Long): Long {
-        val threadData = threads[threadId]!!
+        val threadData = threads[threadId]
         // special handling of Lincheck test threads
         if (threadData.descriptor.thread is TestThread) {
             val elapsedTime = threadData.spinner.spinWaitTimedUntil(timeoutNano) {
@@ -413,7 +416,7 @@ open class ThreadScheduler {
      */
     fun awaitAllThreadsFinish(timeoutNano: Long): Long {
         var remainingTime = timeoutNano
-        for (threadData in threads.values) {
+        for (threadData in threads) {
             val elapsedTime = awaitThreadFinish(threadData.id, remainingTime)
             if (elapsedTime < 0) return -1
             remainingTime -= elapsedTime
@@ -425,7 +428,7 @@ open class ThreadScheduler {
      * Resets the thread scheduler by removing all registered threads.
      */
     fun reset() {
-        threads_.clear()
+        _threads.clear()
     }
 
 }
