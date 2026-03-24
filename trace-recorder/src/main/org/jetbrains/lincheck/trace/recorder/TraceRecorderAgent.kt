@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.trace.network.TracingServer
@@ -37,8 +38,6 @@ import java.net.InetSocketAddress
  *
  * Trace recorder captures the execution trace of a program and saves it into a file.
  */
-private const val DEFAULT_TRACING_PORT = 9997
-
 internal object TraceRecorderAgent {
 
     // Allowed additional arguments
@@ -50,6 +49,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_PACK,
         ARGUMENT_BREAKPOINTS_FILE,
         ARGUMENT_START_SERVER,
+        ARGUMENT_SERVER_PORT,
     )
     
     private var server: TracingServer? = null
@@ -77,12 +77,16 @@ internal object TraceRecorderAgent {
 
     private fun createTracingServer(): TracingServer? {
         try {
-            val server = object : TracingWebSocketServer(InetSocketAddress(DEFAULT_TRACING_PORT)) {
+            val port = TraceAgentParameters.serverPort
+            val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
                 override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
-                    Tracer.startTracing(
+                    val session = Tracer.startTracing(
                         TraceOutputMode.BinaryFileStream(traceDumpFilePath),
                         TracingSession.StartMode.Dynamic,
                     )
+                    session.installOnFinishHook {
+                        dumpTrace(traceDumpFilePath, packTrace)
+                    }
                 }
 
                 override fun startNetworkTracing() {
@@ -105,7 +109,7 @@ internal object TraceRecorderAgent {
                     // No cleanup needed for trace recorder
                 }
             }
-            Logger.info { "Started trace streaming server on port $DEFAULT_TRACING_PORT" }
+            Logger.info { "Started trace streaming server on port $port" }
             return server
         } catch (t: Throwable) {
             Logger.error(t) { "Cannot start trace server" }

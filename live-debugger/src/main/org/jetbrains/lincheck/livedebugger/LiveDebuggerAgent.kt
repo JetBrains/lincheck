@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_HEARTBEAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTraceDebugging
@@ -42,8 +43,6 @@ import java.net.InetSocketAddress
  * Live debugging allows the insertion of non-suspending breakpoints
  * that capture a snapshot of the program's state at the specified code location.
  */
-private const val DEFAULT_TRACING_PORT = 9997
-
 internal object LiveDebuggerAgent {
 
     // Allowed additional arguments
@@ -53,6 +52,7 @@ internal object LiveDebuggerAgent {
         ARGUMENT_BREAKPOINTS_FILE,
         ARGUMENT_HEARTBEAT,
         ARGUMENT_START_SERVER,
+        ARGUMENT_SERVER_PORT,
     )
     
     private var server: TracingServer? = null
@@ -80,7 +80,8 @@ internal object LiveDebuggerAgent {
 
     private fun createTracingServer(): TracingServer? {
         try {
-            val server = object : TracingWebSocketServer(InetSocketAddress(DEFAULT_TRACING_PORT)) {
+            val port = TraceAgentParameters.serverPort
+            val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
                 override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
                     LiveDebugger.startRecording(
                         TraceOutputMode.BinaryFileStream(traceDumpFilePath),
@@ -111,7 +112,7 @@ internal object LiveDebuggerAgent {
                     BreakpointStorage.clear()
                 }
             }
-            Logger.info { "Started trace streaming server on port $DEFAULT_TRACING_PORT" }
+            Logger.info { "Started trace streaming server on port $port" }
             LiveDebugger.installNotificationListener { notification -> 
                 when (notification) {
                     is LiveDebuggerNotification.BreakpointHitLimitReached ->

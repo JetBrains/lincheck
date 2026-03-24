@@ -14,7 +14,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.trace.INDEX_FILENAME_EXT
 import org.jetbrains.lincheck.trace.PACK_FILENAME_EXT
 import org.jetbrains.lincheck.trace.TraceMetaInfo
-import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.printPostProcessedTrace
 import org.jetbrains.lincheck.trace.packRecordedTrace
 import org.jetbrains.lincheck.trace.saveRecorderTrace
@@ -114,13 +113,9 @@ class TracingSession(
         )
         Logger.debug { "Trace collected in ${endTime - currentState.startTime} ms" }
 
-        stopNetworkServer()
         finishHook.get()?.invoke(this)
     }
 
-    private fun stopNetworkServer() {
-        // TODO is this needed?
-    }
 
     fun installOnFinishHook(hook: TracingSession.() -> Unit) {
         val wasAlreadySet = !finishHook.compareAndSet(null, hook)

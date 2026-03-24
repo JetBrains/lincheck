@@ -10,15 +10,11 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.java_websocket.client.WebSocketClient
-import org.java_websocket.handshake.ServerHandshake
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.trace.network.TracingClientApi
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.util.Logger
 import java.io.*
-import java.net.URI
-import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -310,9 +306,6 @@ internal typealias SnapshotLineBreakpointListener = (TRSnapshotLineBreakpointTra
  * binary data is pushed into it via [processMessage], and disconnection is
  * signalled via [handleDisconnect].
  *
- * For standalone usage with a dedicated WebSocket connection (e.g. from JMX controllers),
- * use the [connectTo] factory method.
- *
  * Limitations:
  * - supports only [TRSnapshotLineBreakpointTracePoint] trace points;
  * - trace points are streamed as a flat list (no tree structure).
@@ -352,49 +345,6 @@ class NetworkTraceReader : Closeable {
         _state.set(State.Eof)
     }
 
-    companion object {
-        /**
-         * Creates a [NetworkTraceReader] with its own dedicated WebSocket connection.
-         * Used by JMX controllers where the command channel (JMX) is separate from data (WebSocket).
-         */
-        internal fun connectTo(serverUri: URI, onDisconnect: (() -> Unit)? = null): NetworkTraceReader {
-            val reader = NetworkTraceReader()
-            val wsClient = object : WebSocketClient(serverUri) {
-                override fun onOpen(handshakedata: ServerHandshake?) {
-                    Logger.info { "WebSocket trace reader connected to $serverUri" }
-                }
-
-                override fun onMessage(message: String) {
-                    Logger.warn { "Unexpected text message received in WebSocket trace reader" }
-                }
-
-                override fun onMessage(bytes: ByteBuffer) {
-                    try {
-                        val data = ByteArray(bytes.remaining())
-                        bytes.get(data)
-                        reader.processMessage(data)
-                    } catch (e: Exception) {
-                        Logger.error { "Error processing WebSocket message: ${e.message}" }
-                    }
-                }
-
-                override fun onClose(code: Int, reason: String?, remote: Boolean) {
-                    Logger.info { "WebSocket trace reader closed: code=$code, reason=$reason, remote=$remote" }
-                    reader.handleDisconnect()
-                    onDisconnect?.invoke()
-                }
-
-                override fun onError(ex: Exception?) {
-                    Logger.error { "WebSocket trace reader error: ${ex?.message}" }
-                }
-            }
-            val connected = wsClient.connectBlocking(10, TimeUnit.SECONDS)
-            if (!connected) {
-                Logger.error { "Failed to connect WebSocket trace reader to $serverUri within 10 seconds" }
-            }
-            return reader
-        }
-    }
 
     fun getThreadTracePoints(threadId: Int): List<TRSnapshotLineBreakpointTracePoint> {
         synchronized(threadTracePoints) {

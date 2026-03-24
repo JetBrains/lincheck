@@ -156,7 +156,7 @@ internal object LiveDebugger {
 
     /**
      * Called when a breakpoint's hit count reaches its configured limit.
-     * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
+     * Sends a notification to the connected client, then removes the breakpoint, and retransforms the class.
      */
     private fun onHitLimitReached(breakpoint: SnapshotBreakpoint) {
         val timestamp = System.currentTimeMillis()

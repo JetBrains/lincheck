@@ -21,9 +21,8 @@ import java.lang.instrument.Instrumentation
 /**
  * Abstract class for managing the lifecycle of a tracing JMV agent.
  *
- * This class provides entry points for both statically and dynamically attached agents,
- * handles initialization procedures, and manages the optional
- * registration of JMX MBeans for monitoring purposes.
+ * This class provides entry points for both statically and dynamically attached agents
+ * and handles initialization procedures.
  */
 abstract class TracerAgent {
 

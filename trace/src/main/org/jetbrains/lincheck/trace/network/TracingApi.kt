@@ -55,11 +55,17 @@ interface DisconnectAware {
     fun onDisconnected()
 }
 
+/**
+ * A tracing client that can send commands to the server, receive notifications, and read binary trace data.
+ */
 interface TracingClient: TracingClientApi, DisconnectAware {
     val server: TracingServerApi
     val networkTraceReader: NetworkTraceReader
 }
 
+/**
+ * A tracing server that accepts commands and sends notifications to the connected client.
+ */
 interface TracingServer: TracingServerApi, DisconnectAware {
     val client: TracingClientApi
 }

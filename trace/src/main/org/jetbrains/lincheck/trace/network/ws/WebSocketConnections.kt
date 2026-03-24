@@ -15,6 +15,7 @@ import org.java_websocket.client.WebSocketClient
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingClientApi
 import org.jetbrains.lincheck.trace.network.TracingServerApi
+import org.jetbrains.lincheck.util.Logger
 import java.io.Closeable
 
 /**
@@ -45,7 +46,7 @@ class WebSocketTracingController(private val webSocketConnection: WebSocketClien
 }
 
 /**
- * WebSocket implementation of [ClientConnection] on the server side.
+ * Server-side [TracingClientApi] that sends notifications and binary trace data to the connected client over WebSocket.
  */
 class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingClientApi {
     override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
@@ -65,9 +66,18 @@ class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingClientApi {
     override fun close() = webSocket.close()
 }
 
+/**
+ * No-op [TracingClientApi] used as a placeholder when no client is connected.
+ */
 class ClientSink: Closeable, TracingClientApi {
-    override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {}
-    override fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {}
-    override fun binaryTraceData(data: ByteArray) {}
+    override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
+        Logger.warn { "hitLimitReached dropped: no client connected (breakpoint=$breakpointData)" }
+    }
+    override fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
+        Logger.warn { "conditionUnsafe dropped: no client connected (breakpoint=$breakpointData)" }
+    }
+    override fun binaryTraceData(data: ByteArray) {
+        Logger.warn { "binaryTraceData dropped: no client connected (${data.size} bytes)" }
+    }
     override fun close() {}
 }

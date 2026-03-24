@@ -10,7 +10,9 @@
 
 package org.jetbrains.lincheck.trace.network
 
+/** Callback for receiving [TracingNotification] events. */
 typealias TracingNotificationListener = (TracingNotification) -> Unit
 
+/** Base class for timestamped notifications emitted during tracing. */
 open class TracingNotification(open val timestamp: Long) {}
 

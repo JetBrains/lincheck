@@ -21,6 +21,7 @@ import org.jetbrains.lincheck.trace.network.TracingClient
 import org.jetbrains.lincheck.trace.network.TracingClientApi
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.network.TracingServerApi
+import org.jetbrains.lincheck.util.Logger
 import java.lang.Exception
 import java.net.InetSocketAddress
 import java.net.URI
@@ -45,11 +46,19 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
 
             when (type) {
                 TracingClientApi.HIT_LIMIT_REACHED -> {
-                    val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data) ?: return
+                    val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
+                    if (breakpointData == null) {
+                        Logger.warn { "Failed to parse breakpoint data from hitLimitReached notification: $data" }
+                        return
+                    }
                     hitLimitReached(breakpointData, timestamp)
                 }
                 TracingClientApi.CONDITION_UNSAFE -> {
-                    val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data) ?: return
+                    val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
+                    if (breakpointData == null) {
+                        Logger.warn { "Failed to parse breakpoint data from conditionUnsafe notification: $data" }
+                        return
+                    }
                     conditionUnsafe(breakpointData, timestamp)
                 }
             }
@@ -63,12 +72,18 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
         }
 
         override fun onClose(code: Int, reason: String?, remote: Boolean) {
+            networkTraceReader.handleDisconnect()
             onDisconnected()
         }
 
         override fun onError(ex: Exception?) {
-            // TODO log this
+            if (ex != null) Logger.error(ex) { "WebSocket client error" }
+            else Logger.error { "WebSocket client error" }
         }
+    }
+    
+    init {
+        webSocketConnection.connect()
     }
 
     final override fun binaryTraceData(data: ByteArray) {}
@@ -104,36 +119,51 @@ abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServe
 
         override fun onMessage(conn: WebSocket?, message: String?) {
             if (message == null) return
-            val parts = message.split(":", limit = 2)
-            val command = parts[0]
-            when (command) {
-                TracingServerApi.START_FILE_TRACING -> {
-                    if (parts.size < 2) return
-                    val args = parts[1].split(":")
-                    if (args.size >= 2) {
-                        startFileTracing(args[0], args[1].toBoolean())
+            try {
+                val parts = message.split(":", limit = 2)
+                val command = parts[0]
+                when (command) {
+                    TracingServerApi.START_FILE_TRACING -> {
+                        if (parts.size < 2) return
+                        val args = parts[1].split(":")
+                        if (args.size >= 2) {
+                            startFileTracing(args[0], args[1].toBoolean())
+                        }
                     }
-                }
 
-                TracingServerApi.START_NETWORK_TRACING -> startNetworkTracing()
-                TracingServerApi.STOP_TRACING -> stopTracing()
-                TracingServerApi.ADD_BREAKPOINTS -> {
-                    val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
-                    addBreakpoints(breakpoints)
-                }
+                    TracingServerApi.START_NETWORK_TRACING -> startNetworkTracing()
+                    TracingServerApi.STOP_TRACING -> stopTracing()
+                    TracingServerApi.ADD_BREAKPOINTS -> {
+                        val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
+                        addBreakpoints(breakpoints)
+                    }
 
-                TracingServerApi.REMOVE_BREAKPOINTS -> {
-                    val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
-                    removeBreakpoints(breakpoints)
+                    TracingServerApi.REMOVE_BREAKPOINTS -> {
+                        val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
+                        removeBreakpoints(breakpoints)
+                    }
+
+                    else -> Logger.warn { "Unknown command received: $command" }
                 }
+            } catch (e: Exception) {
+                Logger.error(e) { "Error handling WebSocket command: $message" }
             }
         }
 
         override fun onError(conn: WebSocket?, ex: Exception?) {
-            // TODO log it
+            if (ex != null) Logger.error(ex) { "WebSocket server error" }
+            else Logger.error { "WebSocket server error" }
         }
 
         override fun onStart() {}
+    }
+    
+    init {
+        try {
+            webSocketServer.start()
+        } catch (e: Exception) {
+            Logger.error(e) { "Failed to start WebSocket server" }
+        }
     }
     
     private var _client: TracingClientApi = ClientSink()
