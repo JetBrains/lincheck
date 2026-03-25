@@ -67,9 +67,7 @@ internal class SnapshotBreakpointTransformer(
 
         // Check condition safety before emitting any breakpoint code.
         // Must happen before bytecode emission so we can cleanly skip the breakpoint if unsafe.
-        if (breakpoint.conditionClassName != null && !isConditionSafe(breakpoint)) {
-            return@run
-        }
+        if (!isConditionSafe(breakpoint)) return@run
 
         // Mark this line as instrumented in the current block
         instrumentedLinesInCurrentBlock.add(line)

@@ -169,6 +169,7 @@ internal object LiveDebugger {
         BreakpointStorage.setOnHitLimitReached { userData ->
             onHitLimitReached(userData as SnapshotBreakpoint)
         }
+        Logger.debug { "Hit limit callback installed" }
     }
 
     /**
@@ -216,6 +217,7 @@ internal object LiveDebugger {
         BreakpointStorage.setOnConditionUnsafetyDetected { userData, safetyViolation ->
             onConditionUnsafetyDetected(userData as SnapshotBreakpoint, safetyViolation as SafetyViolation)
         }
+        Logger.debug { "Condition unsafety callback installed" }
     }
 
     /**
