@@ -22,8 +22,8 @@ private class SimpleContextSavingState: ContextSavingState {
     private var seenMethodDescriptors = BooleanArray(1024)
     private var seenFieldDescriptors = BooleanArray(1024)
     private var seenVariableDescriptors = BooleanArray(1024)
+    private var seenStringDescriptors = BooleanArray(1024)
     private var seenCodeLocations = BooleanArray(65536)
-    private val stringCache = Enumerator<String>()
     private val accessPathCache = Enumerator<AccessPath>()
 
     private class Enumerator<T : Any> {
@@ -82,6 +82,15 @@ private class SimpleContextSavingState: ContextSavingState {
         seenVariableDescriptors[id] = true
     }
 
+    override fun isStringDescriptorSaved(id: Int): Boolean {
+        return id < seenStringDescriptors.size && seenStringDescriptors[id]
+    }
+
+    override fun markStringDescriptorSaved(id: Int) {
+        seenStringDescriptors = ensureSize(seenStringDescriptors, id)
+        seenStringDescriptors[id] = true
+    }
+
     override fun isCodeLocationSaved(id: Int): Boolean {
         return id < seenCodeLocations.size && seenCodeLocations[id]
     }
@@ -89,14 +98,6 @@ private class SimpleContextSavingState: ContextSavingState {
     override fun markCodeLocationSaved(id: Int) {
         seenCodeLocations = ensureSize(seenCodeLocations, id)
         seenCodeLocations[id] = true
-    }
-
-    override fun isStringSaved(value: String): Int {
-        return stringCache.isSaved(value)
-    }
-
-    override fun markStringSaved(value: String) {
-        stringCache.makeSaved(value)
     }
 
     override fun isAccessPathSaved(value: AccessPath): Int {

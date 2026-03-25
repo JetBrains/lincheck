@@ -268,7 +268,7 @@ internal fun loadObjects(
             ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(input, context, restore)
             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
-            ObjectKind.STRING -> loadString(input, codeLocs, restore)
+            ObjectKind.STRING -> loadString(input, context, codeLocs, restore)
             ObjectKind.ACCESS_PATH -> loadAccessPath(input, codeLocs, restore)
             ObjectKind.CODE_LOCATION -> loadCodeLocation(input, codeLocs, restore)
             // Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block
@@ -348,13 +348,15 @@ internal fun loadVariableDescriptor(
 
 internal fun loadString(
     input: DataInput,
+    context: TraceContext,
     codeLocs: CodeLocationsContext,
     restore: Boolean
 ): Int {
     val id = input.readInt()
-    val value = input.readUTF()
+    val descriptor = input.readStringDescriptor(context)
     if (restore) {
-        codeLocs.loadString(id, value)
+        context.stringPool.restore(id, descriptor)
+        codeLocs.loadString(id, descriptor.value)
     }
     return id
 }

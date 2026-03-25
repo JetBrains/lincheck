@@ -147,19 +147,10 @@ internal interface ContextSavingState {
     fun markFieldDescriptorSaved(id: Int)
     fun isVariableDescriptorSaved(id: Int): Boolean
     fun markVariableDescriptorSaved(id: Int)
+    fun isStringDescriptorSaved(id: Int): Boolean
+    fun markStringDescriptorSaved(id: Int)
     fun isCodeLocationSaved(id: Int): Boolean
     fun markCodeLocationSaved(id: Int)
-
-    /**
-     * Return positive string id, if it was stored already, and negative, if it should be stored
-     *  with the absolute value of this id.
-     */
-    fun isStringSaved(value: String): Int
-
-    /**
-     * Mark string as stored. Do nothing if it was not passed to [isStringSaved].
-     */
-    fun markStringSaved(value: String)
 
     /**
      * Return positive access path id, if it was stored already, and negative, if it should be stored
@@ -383,19 +374,19 @@ internal sealed class TraceWriterBase(
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
         if (value == null) return -1
 
-        val id = contextState.isStringSaved(value)
-        if (id > 0) return id
+        val id = context.stringPool.register(StringDescriptor(context, value))
+        if (contextState.isStringDescriptorSaved(id)) return id
 
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.STRING)
-        dataOutput.writeInt(-id)
+        dataOutput.writeInt(id)
         dataOutput.writeUTF(value)
-        contextState.markStringSaved(value)
+        contextState.markStringDescriptorSaved(id)
 
         // It cannot fail
-        writeIndexCell(ObjectKind.STRING, -id, position, -1)
+        writeIndexCell(ObjectKind.STRING, id, position, -1)
 
-        return -id
+        return id
     }
 
     /**

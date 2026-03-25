@@ -139,6 +139,16 @@ data class VariableDescriptor(
     override val key: Descriptor.Key get() = Key(name, type)
 }
 
+data class StringDescriptor(
+    private val context: TraceContext,
+    val value: String
+) : Descriptor {
+    data class Key(val value: String) : Descriptor.Key()
+
+    override val id: Int get() = context.stringPool.getId(key)
+    override val key: Descriptor.Key get() = Key(value)
+}
+
 data class ActiveLocal(
     val localName: String,
     val localKind: LocalKind,

@@ -506,14 +506,14 @@ class LazyTraceReader private constructor(
                             "Object $objNum: expected $kind but datafile has $dataKind"
                         }
                         val dataId = when (kind) {
-                            ObjectKind.THREAD_NAME -> loadThreadName(data, context, true)
-                            ObjectKind.CLASS_DESCRIPTOR -> loadClassDescriptor(data, context, true)
-                            ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(data, context, true)
-                            ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(data, context, true)
-                            ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(data, context, true)
-                            ObjectKind.STRING -> loadString(data, codeLocs, true)
-                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, codeLocs, true)
-                            ObjectKind.CODE_LOCATION -> loadCodeLocation(data, codeLocs, true)
+                            ObjectKind.THREAD_NAME -> loadThreadName(data, context, restore = true)
+                            ObjectKind.CLASS_DESCRIPTOR -> loadClassDescriptor(data, context, restore = true)
+                            ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(data, context, restore = true)
+                            ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(data, context, restore = true)
+                            ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(data, context, restore = true)
+                            ObjectKind.STRING -> loadString(data, context, codeLocs, restore = true)
+                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, codeLocs, restore = true)
+                            ObjectKind.CODE_LOCATION -> loadCodeLocation(data, codeLocs, restore = true)
                             ObjectKind.BLOCK_START -> {
                                 val list = dataBlocks.computeIfAbsent(id) { mutableListOf() }
                                 list.addNewBlock(start, end)
