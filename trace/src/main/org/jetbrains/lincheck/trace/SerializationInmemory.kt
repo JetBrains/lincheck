@@ -11,11 +11,13 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.Logger
 import java.io.DataOutput
 import java.io.DataOutputStream
 import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.reflect.KClass
 
 private class SimpleContextSavingState: ContextSavingState {
     private var seenClassDescriptors = BooleanArray(1024)
@@ -46,49 +48,43 @@ private class SimpleContextSavingState: ContextSavingState {
         }
     }
 
-    override fun isClassDescriptorSaved(id: Int): Boolean {
-        return id < seenClassDescriptors.size && seenClassDescriptors[id]
+    override fun isDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int): Boolean {
+        val array = getDescriptorsArray(descriptorClass) ?: return false
+        return id < array.size && array[id]
     }
 
-    override fun markClassDescriptorSaved(id: Int) {
-        seenClassDescriptors = ensureSize(seenClassDescriptors, id)
-        seenClassDescriptors[id] = true
+    override fun markDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int) {
+        val array = getDescriptorsArray(descriptorClass) ?: return
+        val newArray = ensureSize(array, id)
+        newArray[id] = true
+        assignDescriptorsArray(descriptorClass, newArray)
     }
 
-    override fun isMethodDescriptorSaved(id: Int): Boolean {
-        return id < seenMethodDescriptors.size && seenMethodDescriptors[id]
+    private fun getDescriptorsArray(descriptorClass: KClass<out Descriptor>): BooleanArray? {
+        return when (descriptorClass) {
+            ClassDescriptor::class -> seenClassDescriptors
+            MethodDescriptor::class -> seenMethodDescriptors
+            FieldDescriptor::class -> seenFieldDescriptors
+            VariableDescriptor::class -> seenVariableDescriptors
+            StringDescriptor::class -> seenStringDescriptors
+            else -> {
+                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
+                null
+            }
+        }
     }
 
-    override fun markMethodDescriptorSaved(id: Int) {
-        seenMethodDescriptors = ensureSize(seenMethodDescriptors, id)
-        seenMethodDescriptors[id] = true
-    }
-
-    override fun isFieldDescriptorSaved(id: Int): Boolean {
-        return id < seenFieldDescriptors.size && seenFieldDescriptors[id]
-    }
-
-    override fun markFieldDescriptorSaved(id: Int) {
-        seenFieldDescriptors = ensureSize(seenFieldDescriptors, id)
-        seenFieldDescriptors[id] = true
-    }
-
-    override fun isVariableDescriptorSaved(id: Int): Boolean {
-        return id < seenVariableDescriptors.size && seenVariableDescriptors[id]
-    }
-
-    override fun markVariableDescriptorSaved(id: Int) {
-        seenVariableDescriptors = ensureSize(seenVariableDescriptors, id)
-        seenVariableDescriptors[id] = true
-    }
-
-    override fun isStringDescriptorSaved(id: Int): Boolean {
-        return id < seenStringDescriptors.size && seenStringDescriptors[id]
-    }
-
-    override fun markStringDescriptorSaved(id: Int) {
-        seenStringDescriptors = ensureSize(seenStringDescriptors, id)
-        seenStringDescriptors[id] = true
+    private fun assignDescriptorsArray(descriptorClass: KClass<out Descriptor>, array: BooleanArray) {
+        when (descriptorClass) {
+            ClassDescriptor::class -> seenClassDescriptors = array
+            MethodDescriptor::class -> seenMethodDescriptors = array
+            FieldDescriptor::class -> seenFieldDescriptors = array
+            VariableDescriptor::class -> seenVariableDescriptors = array
+            StringDescriptor::class -> seenStringDescriptors = array
+            else -> {
+                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
+            }
+        }
     }
 
     override fun isCodeLocationSaved(id: Int): Boolean {

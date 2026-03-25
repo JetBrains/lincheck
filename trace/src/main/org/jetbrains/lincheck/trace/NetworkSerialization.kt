@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.trace
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.trace.network.TracingCallbacks
 import org.jetbrains.lincheck.trace.network.TracingServer
+import org.jetbrains.lincheck.descriptors.Descriptor
 import org.jetbrains.lincheck.util.Logger
 import java.io.*
 import java.util.concurrent.ArrayBlockingQueue
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
+import kotlin.reflect.KClass
 
 /**
  * Network-based trace collecting strategy that streams trace data to a single subscriber.
@@ -252,19 +254,10 @@ private class SubscriberContextState : ContextSavingState {
     //       just store all data in-place whenever requested.
     //       See JBRes-7900 for details.
 
-    private val stringId = AtomicInteger(1)
     private val accessPathId = AtomicInteger(1)
 
-    override fun isClassDescriptorSaved(id: Int): Boolean = false
-    override fun markClassDescriptorSaved(id: Int): Unit = Unit
-    override fun isMethodDescriptorSaved(id: Int): Boolean = false
-    override fun markMethodDescriptorSaved(id: Int): Unit = Unit
-    override fun isFieldDescriptorSaved(id: Int): Boolean = false
-    override fun markFieldDescriptorSaved(id: Int): Unit = Unit
-    override fun isVariableDescriptorSaved(id: Int): Boolean = false
-    override fun markVariableDescriptorSaved(id: Int): Unit = Unit
-    override fun isStringDescriptorSaved(id: Int): Boolean = false
-    override fun markStringDescriptorSaved(id: Int): Unit = Unit
+    override fun isDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int): Boolean = false
+    override fun markDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int): Unit = Unit
     override fun isCodeLocationSaved(id: Int): Boolean = false
     override fun markCodeLocationSaved(id: Int): Unit = Unit
 
