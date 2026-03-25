@@ -294,12 +294,12 @@ class FileStreamingTraceCollecting(
 
     private val points = AtomicInteger(0)
 
+    private var seenStringDescriptors = AtomicBitmap()
     private var seenClassDescriptors = AtomicBitmap()
     private var seenMethodDescriptors = AtomicBitmap()
     private var seenFieldDescriptors = AtomicBitmap()
     private var seenVariableDescriptors = AtomicBitmap()
     private var seenCodeLocations = AtomicBitmap()
-    private val stringEnumerator = Enumerator<String>()
     private val accessPathEnumerator = Enumerator<AccessPath>()
 
     private val writers = ConcurrentHashMap<Thread, BufferedTraceWriter>()
@@ -402,13 +402,13 @@ class FileStreamingTraceCollecting(
 
     override fun markVariableDescriptorSaved(id: Int): Unit = seenVariableDescriptors.set(id)
 
+    override fun isStringDescriptorSaved(id: Int): Boolean = seenStringDescriptors.isSet(id)
+
+    override fun markStringDescriptorSaved(id: Int): Unit = seenStringDescriptors.set(id)
+
     override fun isCodeLocationSaved(id: Int): Boolean = seenCodeLocations.isSet(id)
 
     override fun markCodeLocationSaved(id: Int): Unit = seenCodeLocations.set(id)
-
-    override fun isStringSaved(value: String): Int = stringEnumerator.isSaved(value)
-
-    override fun markStringSaved(value: String): Unit = stringEnumerator.makeSaved(value)
 
     override fun isAccessPathSaved(value: AccessPath): Int = accessPathEnumerator.isSaved(value)
 

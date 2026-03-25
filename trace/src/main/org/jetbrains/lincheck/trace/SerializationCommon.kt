@@ -452,6 +452,10 @@ internal fun DataInput.readVariableDescriptor(context: TraceContext): VariableDe
     return VariableDescriptor(context, readUTF(), readType())
 }
 
+internal fun DataInput.readStringDescriptor(context: TraceContext): StringDescriptor {
+    return StringDescriptor(context, readUTF())
+}
+
 internal fun DataInput.readAccessLocation(): ShallowAccessLocation {
     val type = readByte().toInt()
     val kind = if (type >= 0 && type < AccessLocationKind.entries.size) AccessLocationKind.entries[type]

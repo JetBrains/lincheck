@@ -319,11 +319,11 @@ private class SubscriberContextState : ContextSavingState {
     override fun markFieldDescriptorSaved(id: Int): Unit = Unit
     override fun isVariableDescriptorSaved(id: Int): Boolean = false
     override fun markVariableDescriptorSaved(id: Int): Unit = Unit
+    override fun isStringDescriptorSaved(id: Int): Boolean = false
+    override fun markStringDescriptorSaved(id: Int): Unit = Unit
     override fun isCodeLocationSaved(id: Int): Boolean = false
     override fun markCodeLocationSaved(id: Int): Unit = Unit
 
-    override fun isStringSaved(value: String): Int = -(stringId.getAndIncrement())
-    override fun markStringSaved(value: String): Unit = Unit
 
     override fun isAccessPathSaved(value: AccessPath): Int = -(accessPathId.getAndIncrement())
     override fun markAccessPathSaved(value: AccessPath): Unit = Unit
@@ -589,7 +589,7 @@ class NetworkTraceReader(private val serverUri: URI) : Closeable {
                     }
 
                     ObjectKind.STRING -> {
-                        loadString(dataInput, codeLocationsContext, restore = true)
+                        loadString(dataInput, context, codeLocationsContext, restore = true)
                     }
 
                     ObjectKind.ACCESS_PATH -> {
