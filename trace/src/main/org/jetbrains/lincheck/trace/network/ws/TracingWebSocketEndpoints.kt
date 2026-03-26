@@ -28,6 +28,79 @@ import java.net.URI
 import java.nio.ByteBuffer
 
 /**
+ * Parses and dispatches an incoming WebSocket command message to the appropriate [TracingServerApi] method.
+ */
+fun TracingServerApi.handleMessage(message: String?) {
+    if (message == null) return
+    try {
+        val parts = message.split(":", limit = 2)
+        val command = parts[0]
+        when (command) {
+            TracingServerApi.START_FILE_TRACING -> {
+                if (parts.size < 2) return
+                val args = parts[1].split(":")
+                if (args.size >= 2) {
+                    startFileTracing(args[0], args[1].toBoolean())
+                }
+            }
+
+            TracingServerApi.START_NETWORK_TRACING -> startNetworkTracing()
+            TracingServerApi.STOP_TRACING -> stopTracing()
+            TracingServerApi.ADD_BREAKPOINTS -> {
+                val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
+                addBreakpoints(breakpoints)
+            }
+
+            TracingServerApi.REMOVE_BREAKPOINTS -> {
+                val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
+                removeBreakpoints(breakpoints)
+            }
+
+            else -> Logger.warn { "Unknown command received: $command" }
+        }
+    } catch (e: Exception) {
+        Logger.error(e) { "Error handling WebSocket command: $message" }
+    }
+}
+
+/**
+ * Parses and dispatches an incoming WebSocket notification message to the appropriate [TracingClientApi] method.
+ */
+fun TracingClientApi.handleMessage(message: String?) {
+    if (message == null) return
+    try {
+        val parts = message.split(":", limit = 3)
+        if (parts.size < 3) return
+
+        val type = parts[0]
+        val timestamp = parts[1].toLongOrNull() ?: return
+        val data = parts[2]
+
+        when (type) {
+            TracingClientApi.HIT_LIMIT_REACHED -> {
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
+                if (breakpointData == null) {
+                    Logger.warn { "Failed to parse breakpoint data from hitLimitReached notification: $data" }
+                    return
+                }
+                hitLimitReached(breakpointData, timestamp)
+            }
+            TracingClientApi.CONDITION_UNSAFE -> {
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
+                if (breakpointData == null) {
+                    Logger.warn { "Failed to parse breakpoint data from conditionUnsafe notification: $data" }
+                    return
+                }
+                conditionUnsafe(breakpointData, timestamp)
+            }
+            else -> Logger.warn { "Unknown notification received: $type" }
+        }
+    } catch (e: Exception) {
+        Logger.error(e) { "Error handling WebSocket notification: $message" }
+    }
+}
+
+/**
  * Base class for WebSocket clients that implement [TracingClientApi].
  * It handles incoming WebSocket messages and dispatches them to the corresponding API methods.
  */
@@ -35,40 +108,14 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
     private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri) {
         override fun onOpen(handshakedata: ServerHandshake?) = onConnectionReady()
 
-        override fun onMessage(message: String?) {
-            if (message == null) return
-            val parts = message.split(":", limit = 3)
-            if (parts.size < 3) return
-
-            val type = parts[0]
-            val timestamp = parts[1].toLongOrNull() ?: return
-            val data = parts[2]
-
-            when (type) {
-                TracingClientApi.HIT_LIMIT_REACHED -> {
-                    val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
-                    if (breakpointData == null) {
-                        Logger.warn { "Failed to parse breakpoint data from hitLimitReached notification: $data" }
-                        return
-                    }
-                    hitLimitReached(breakpointData, timestamp)
-                }
-                TracingClientApi.CONDITION_UNSAFE -> {
-                    val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
-                    if (breakpointData == null) {
-                        Logger.warn { "Failed to parse breakpoint data from conditionUnsafe notification: $data" }
-                        return
-                    }
-                    conditionUnsafe(breakpointData, timestamp)
-                }
-            }
-        }
+        override fun onMessage(message: String?) = this@TracingWebSocketClient.handleMessage(message)
 
         override fun onMessage(bytes: ByteBuffer?) {
             if (bytes == null) return
             val data = ByteArray(bytes.remaining())
             bytes.get(data)
             networkTraceReader.processMessage(data)
+            binaryTraceData(data)
         }
 
         override fun onClose(code: Int, reason: String?, remote: Boolean) {
@@ -89,7 +136,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
         webSocketConnection.connect()
     }
 
-    final override fun binaryTraceData(data: ByteArray) {}
+    override fun binaryTraceData(data: ByteArray) {}
 
     override fun close() = webSocketConnection.close()
 }
@@ -119,38 +166,7 @@ abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServe
             }
         }
 
-        override fun onMessage(conn: WebSocket?, message: String?) {
-            if (message == null) return
-            try {
-                val parts = message.split(":", limit = 2)
-                val command = parts[0]
-                when (command) {
-                    TracingServerApi.START_FILE_TRACING -> {
-                        if (parts.size < 2) return
-                        val args = parts[1].split(":")
-                        if (args.size >= 2) {
-                            startFileTracing(args[0], args[1].toBoolean())
-                        }
-                    }
-
-                    TracingServerApi.START_NETWORK_TRACING -> startNetworkTracing()
-                    TracingServerApi.STOP_TRACING -> stopTracing()
-                    TracingServerApi.ADD_BREAKPOINTS -> {
-                        val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
-                        addBreakpoints(breakpoints)
-                    }
-
-                    TracingServerApi.REMOVE_BREAKPOINTS -> {
-                        val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
-                        removeBreakpoints(breakpoints)
-                    }
-
-                    else -> Logger.warn { "Unknown command received: $command" }
-                }
-            } catch (e: Exception) {
-                Logger.error(e) { "Error handling WebSocket command: $message" }
-            }
-        }
+        override fun onMessage(conn: WebSocket?, message: String?) = handleMessage(message)
 
         override fun onError(conn: WebSocket?, ex: Exception?) {
             if (ex != null) Logger.error(ex) { "WebSocket server error" }
