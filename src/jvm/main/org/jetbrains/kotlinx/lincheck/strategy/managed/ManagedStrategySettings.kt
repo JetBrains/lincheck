@@ -23,11 +23,22 @@ internal data class ManagedStrategySettings(
     val timeoutMs: Long,
 
     /**
-     * @property hangingDetectionThreshold the parameter used to tune the spin-loop detector.
-     *   Defines the number of times a code location should be hit after which the loop detector
-     *   decides that an execution has hit an active spin-loop.
+     * @property loopThreadSwitchBound The number of loop iterations a thread can take
+     *   before switching to another thread.
      */
-    val hangingDetectionThreshold: Int,
+    val loopThreadSwitchBound: Int,
+
+    /**
+     * @property loopBound The maximum number of iterations a loop can perform
+     *   before it is considered stuck.
+     */
+    val loopBound: Int,
+
+    /**
+     * @property recursionBound The maximum number of recursive calls a method can make
+     *   before it is considered stuck.
+     */
+    val recursionBound: Int,
 
     /**
      * @property checkObstructionFreedom Indicates whether obstruction freedom checks should be performed.

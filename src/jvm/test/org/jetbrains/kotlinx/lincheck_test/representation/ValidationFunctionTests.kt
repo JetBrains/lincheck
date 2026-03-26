@@ -116,7 +116,7 @@ class ValidationFunctionLongLoopTest {
     val loopCount = 1024
 
     init {
-        check(loopCount > ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD)
+        check(loopCount > ManagedCTestConfiguration.DEFAULT_LOOP_BOUND)
         check(loopCount < ManagedCTestConfiguration.DEFAULT_LIVELOCK_EVENTS_THRESHOLD)
     }
 

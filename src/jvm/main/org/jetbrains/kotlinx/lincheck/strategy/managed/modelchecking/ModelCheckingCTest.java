@@ -94,7 +94,7 @@ public @interface ModelCheckingCTest {
      * In this case, the strategy is either forced to switch the current thread, or report
      * the obstruction-freedom violation if {@link ModelCheckingCTest#checkObstructionFreedom} is enabled.
      */
-    int hangingDetectionThreshold() default DEFAULT_HANGING_DETECTION_THRESHOLD;
+    int hangingDetectionThreshold() default DEFAULT_LOOP_BOUND;
 
     /**
      * The maximal number of invocations that the managed strategy can use to search for finding an incorrect execution.

@@ -24,8 +24,14 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var checkObstructionFreedom =
         ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
 
-    protected var hangingDetectionThreshold =
-        ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD
+    protected var loopThreadSwitchBound =
+        ManagedCTestConfiguration.DEFAULT_LOOP_THREAD_SWITCH_BOUND
+
+    protected var loopBound =
+        ManagedCTestConfiguration.DEFAULT_LOOP_BOUND
+
+    protected var recursionBound =
+        ManagedCTestConfiguration.DEFAULT_RECURSION_BOUND
 
     internal var stdLibAnalysisEnabled: Boolean =
         ManagedCTestConfiguration.DEFAULT_STDLIB_ANALYSIS_ENABLED
@@ -42,12 +48,24 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     }
 
     /**
-     * Use the specified maximum number of repetitions to detect endless loops (hangs).
-     * A found loop will force managed execution to switch the executing thread or report
-     * ab obstruction-freedom violation if [checkObstructionFreedom] is set.
+     * The number of loop iterations a thread can take before switching to another thread.
      */
-    fun hangingDetectionThreshold(hangingDetectionThreshold: Int): OPT = applyAndCast {
-        this.hangingDetectionThreshold = hangingDetectionThreshold
+    fun loopThreadSwitchBound(loopThreadSwitchBound: Int): OPT = applyAndCast {
+        this.loopThreadSwitchBound = loopThreadSwitchBound
+    }
+
+    /**
+     * The maximum number of iterations a loop can perform before it is considered stuck.
+     */
+    fun loopBound(loopBound: Int): OPT = applyAndCast {
+        this.loopBound = loopBound
+    }
+
+    /**
+     * The maximum number of recursive calls a method can make before it is considered stuck.
+     */
+    fun recursionBound(recursionBound: Int): OPT = applyAndCast {
+        this.recursionBound = recursionBound
     }
 
     /**
@@ -99,7 +117,9 @@ abstract class ManagedCTestConfiguration(
     generatorClass: Class<out ExecutionGenerator>,
     verifierClass: Class<out Verifier>,
     val checkObstructionFreedom: Boolean,
-    val hangingDetectionThreshold: Int,
+    val loopThreadSwitchBound: Int,
+    val loopBound: Int,
+    val recursionBound: Int,
     invocationsPerIteration: Int,
     val guarantees: List<ManagedStrategyGuarantee>,
     minimizeFailedScenario: Boolean,
@@ -122,10 +142,13 @@ abstract class ManagedCTestConfiguration(
     timeoutMs = timeoutMs,
     customScenarios = customScenarios
 ) {
+
     internal fun createSettings(): ManagedStrategySettings =
         ManagedStrategySettings(
             timeoutMs = this.timeoutMs,
-            hangingDetectionThreshold = this.hangingDetectionThreshold,
+            loopThreadSwitchBound = this.loopThreadSwitchBound,
+            loopBound = this.loopBound,
+            recursionBound = this.recursionBound,
             checkObstructionFreedom = this.checkObstructionFreedom,
             analyzeStdLib = this.stdLibAnalysisEnabled,
             guarantees = this.guarantees.ifEmpty { null },
@@ -142,7 +165,10 @@ abstract class ManagedCTestConfiguration(
     companion object {
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
 
-        const val DEFAULT_HANGING_DETECTION_THRESHOLD = 201
+        const val DEFAULT_LOOP_THREAD_SWITCH_BOUND = 10
+        const val DEFAULT_LOOP_BOUND = 200
+        const val DEFAULT_RECURSION_BOUND = 50
+
         const val DEFAULT_LIVELOCK_EVENTS_THRESHOLD = 10001
 
         val DEFAULT_STDLIB_ANALYSIS_ENABLED = AnalysisProfile.DEFAULT.analyzeStdLib

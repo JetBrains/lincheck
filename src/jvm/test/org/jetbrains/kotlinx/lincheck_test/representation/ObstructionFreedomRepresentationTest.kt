@@ -40,7 +40,7 @@ class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTe
     private fun incrementManyTimes() {
         counter.get()
         // repeat exactly the maximum number of times that does not cause obstruction freedom violation
-        repeat(ManagedCTestConfiguration.DEFAULT_HANGING_DETECTION_THRESHOLD) {
+        repeat(ManagedCTestConfiguration.DEFAULT_LOOP_BOUND) {
             counter.incrementAndGet()
         }
     }
