@@ -52,6 +52,7 @@ internal abstract class ManagedStrategy(
 
     val executionMode: ExecutionMode = when {
         (runner is LambdaRunner) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
+        (runner is LambdaResultRunner<*>) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
         (runner is ExecutionScenarioRunner) -> ExecutionMode.DATA_STRUCTURES
 
         else -> error("Unexpected runner type: ${runner.javaClass.name}")

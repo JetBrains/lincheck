@@ -20,13 +20,16 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
+import org.junit.Assert
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import java.util.concurrent.atomic.*
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.lincheck.datastructures.actor
 import org.jetbrains.lincheck.datastructures.scenario
 
 import org.junit.Test
+import kotlin.concurrent.thread
 
 /**
  * These tests check that [EventStructureStrategy] adheres to the weak memory model.
@@ -98,6 +101,66 @@ class MemoryModelTest {
         litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
             val r1 = getValue<Int>(results.parallelResults[0][1]!!)
             val r2 = getValue<Int>(results.parallelResults[1][1]!!)
+            (r1 to r2)
+        }
+    }
+
+    //OG version
+    @Ignore
+    @Test
+    fun testRRWWOpaque2() {
+        class TestRRRW {
+            val x = AtomicInteger(0)
+            fun  one(): Pair<Int,Int> {
+                val r1 = x.getOpaque()
+                val r2 = x.getOpaque()
+                return r1 to r2
+            }
+            fun two() {
+                x.setOpaque(1)
+            }
+        }
+        val testScenario = scenario {
+            thread {
+                actor(TestRRRW::one)
+            }
+            thread {
+                actor(TestRRRW::two)
+            }
+        }
+        // Do not focus on the expected outcomes too much. You can leave them empty if confused
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
+            Pair(0, 0),
+            Pair(0, 1),
+            Pair(1, 0),
+            Pair(1, 1),
+        )
+        litmusTest(SharedMemory::class.java, testScenario, expectedOutcomes) { results ->
+            val r1 = getValue<Pair<Int, Int>>(results.parallelResults[0][0]!!).first
+            val r2 = getValue<Pair<Int, Int>>(results.parallelResults[0][0]!!).first
+            Pair(r1,r2)
+        }
+    }
+
+    // New version
+    @Test
+    fun testRRWOpaque() {
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
+            (0 to 0),
+            (0 to 1),
+            (1 to 0),
+//            (1 to 1), TODO: fix exploration strat to unlock this outcome
+        )
+        litmustTestv2(expectedOutcomes) {
+            val x = AtomicInteger(0)
+            var r1 = 0;
+            var r2 = 0;
+            val t1 = thread { r1 = x.getOpaque() }
+            val t2 = thread { r2 = x.getOpaque() }
+            val t3 = thread { x.setOpaque(1) }
+            t1.join()
+            t2.join()
+            t3.join()
             (r1 to r2)
         }
     }
