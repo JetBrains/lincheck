@@ -82,7 +82,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
         }
     }
     
-    override val server: TracingServerApi = WebSocketTracingController(webSocketConnection)
+    override val connection: TracingServerApi = WebSocketTracingController(webSocketConnection)
     override val networkTraceReader: NetworkTraceReader = NetworkTraceReader()
     
     init {
@@ -180,7 +180,7 @@ abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServe
     
     private var _client: TracingClientApi = ClientSink()
 
-    override val client: TracingClientApi
+    override val connection: TracingClientApi
         get() = synchronized(this) { _client }
 
 }

@@ -194,7 +194,7 @@ class NetworkStreamingTraceCollecting(
     private fun writeTracePointToSubscriber(tracePoint: TRSnapshotLineBreakpointTracePoint) {
         try {
             // Detect client change and reset writer if needed
-            val currentClient = tracingServer.client
+            val currentClient = tracingServer.connection
             if (currentClient !== lastClient) {
                 resetWriter()
                 lastClient = currentClient
@@ -205,7 +205,7 @@ class NetworkStreamingTraceCollecting(
                 outputStream.writeLong(TRACE_MAGIC)
                 outputStream.writeLong(TRACE_VERSION)
                 outputStream.flush()
-                tracingServer.client.binaryTraceData(byteStream.toByteArray())
+                tracingServer.connection.binaryTraceData(byteStream.toByteArray())
                 headerSent = true
             }
 
@@ -232,7 +232,7 @@ class NetworkStreamingTraceCollecting(
             outputStream.flush()
 
             // Send the accumulated bytes via the notifier
-            tracingServer.client.binaryTraceData(byteStream.toByteArray())
+            tracingServer.connection.binaryTraceData(byteStream.toByteArray())
         } catch (e: Exception) {
             Logger.error(e) { "Error writing trace point to client" }
         }

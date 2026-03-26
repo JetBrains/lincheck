@@ -66,7 +66,7 @@ interface ConnectedAware {
  * A tracing client that can send commands to the server, receive notifications, and read binary trace data.
  */
 interface TracingClient: TracingClientApi, DisconnectAware, ConnectedAware {
-    val server: TracingServerApi
+    val connection: TracingServerApi
     val networkTraceReader: NetworkTraceReader
 }
 
@@ -74,5 +74,5 @@ interface TracingClient: TracingClientApi, DisconnectAware, ConnectedAware {
  * A tracing server that accepts commands and sends notifications to the connected client.
  */
 interface TracingServer: TracingServerApi, DisconnectAware, Closeable {
-    val client: TracingClientApi
+    val connection: TracingClientApi
 }

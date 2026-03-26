@@ -110,9 +110,9 @@ internal object LiveDebuggerAgent {
                 LiveDebugger.installNotificationListener { notification ->
                     when (notification) {
                         is LiveDebuggerNotification.BreakpointHitLimitReached ->
-                            server.client.hitLimitReached(notification.breakpointData, notification.timestamp)
+                            server.connection.hitLimitReached(notification.breakpointData, notification.timestamp)
                         is LiveDebuggerNotification.BreakpointConditionUnsafetyDetected ->
-                            server.client.conditionUnsafe(notification.breakpointData, notification.timestamp)
+                            server.connection.conditionUnsafe(notification.breakpointData, notification.timestamp)
                     }
                 }
                 return server
