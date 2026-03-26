@@ -10,6 +10,10 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.annotations.*
+import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
+import org.jetbrains.lincheck.trace.TraceContext
+import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
 import java.lang.reflect.Method
 import kotlin.coroutines.*
 import kotlin.reflect.jvm.*
@@ -49,4 +53,13 @@ fun Method.isSuspendable(): Boolean {
     if (paramTypes.isEmpty()) return false
     if (paramTypes.last() != Continuation::class.java) return false
     return kotlinFunction?.isSuspend ?: false
+}
+
+fun TraceContext.getActorMethodId(actor: Actor): Int {
+    val methodDescriptor = getAsmMethod(actor.method).descriptor
+    return this.getOrCreateMethodId(
+        className = actor.method.declaringClass.name.toCanonicalClassName(),
+        methodName = actor.method.name,
+        methodType = Types.convertAsmMethodType(methodDescriptor)
+    )
 }
