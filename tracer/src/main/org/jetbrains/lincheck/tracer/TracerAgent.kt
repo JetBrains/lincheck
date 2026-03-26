@@ -14,8 +14,10 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
+import org.jetbrains.lincheck.trace.network.TracingServer
 import java.lang.instrument.Instrumentation
 
 /**
@@ -25,6 +27,9 @@ import java.lang.instrument.Instrumentation
  * and handles initialization procedures.
  */
 abstract class TracerAgent {
+
+    protected var server: TracingServer? = null
+        private set
 
     // entry point for a statically attached java agent
     fun premain(agentArgs: String?, inst: Instrumentation) {
@@ -42,6 +47,12 @@ abstract class TracerAgent {
 
         // install instrumentation
         installInstrumentation()
+
+        // create tracing server if requested
+        if (TraceAgentParameters.getArg(ARGUMENT_START_SERVER)?.lowercase() == "true") {
+            server = createTracingServer()
+            server?.let { Runtime.getRuntime().addShutdownHook(Thread { it.close() }) }
+        }
     }
 
     // entry point for a dynamically attached java agent
@@ -57,6 +68,12 @@ abstract class TracerAgent {
 
         // install instrumentation and re-transform already loaded classes
         installInstrumentation()
+
+        // create tracing server if requested
+        if (TraceAgentParameters.getArg(ARGUMENT_START_SERVER)?.lowercase() == "true") {
+            server = createTracingServer()
+            server?.let { Runtime.getRuntime().addShutdownHook(Thread { it.close() }) }
+        }
     }
 
     protected abstract val modeSystemPropertyName: String
@@ -89,4 +106,6 @@ abstract class TracerAgent {
     private fun installInstrumentation() {
         LincheckInstrumentation.install(instrumentationMode)
     }
+
+    protected abstract fun createTracingServer(): TracingServer?
 }

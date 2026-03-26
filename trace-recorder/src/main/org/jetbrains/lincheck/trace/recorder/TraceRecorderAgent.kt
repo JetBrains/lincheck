@@ -51,9 +51,6 @@ internal object TraceRecorderAgent {
         ARGUMENT_START_SERVER,
         ARGUMENT_SERVER_PORT,
     )
-    
-    private var server: TracingServer? = null
-
     private val agent = object : TracerAgent() {
         override val modeSystemPropertyName: String = TRACE_RECORDER_MODE_PROPERTY
 
@@ -73,47 +70,47 @@ internal object TraceRecorderAgent {
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider
             get() = ::TraceRecorderMethodTransformer
-    }
 
-    private fun createTracingServer(): TracingServer? {
-        try {
-            val port = TraceAgentParameters.serverPort
-            val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
-                override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
-                    val session = Tracer.startTracing(
-                        TraceOutputMode.BinaryFileStream(traceDumpFilePath),
-                        TracingSession.StartMode.Dynamic,
-                    )
-                    session.installOnFinishHook {
-                        dumpTrace(traceDumpFilePath, packTrace)
+        override fun createTracingServer(): TracingServer? {
+            try {
+                val port = TraceAgentParameters.serverPort
+                val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
+                    override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
+                        val session = Tracer.startTracing(
+                            TraceOutputMode.BinaryFileStream(traceDumpFilePath),
+                            TracingSession.StartMode.Dynamic,
+                        )
+                        session.installOnFinishHook {
+                            dumpTrace(traceDumpFilePath, packTrace)
+                        }
+                    }
+
+                    override fun startNetworkTracing() {
+                        Tracer.startTracing(TraceOutputMode.BinaryNetworkStream(this), TracingSession.StartMode.Dynamic)
+                    }
+
+                    override fun stopTracing() {
+                        Tracer.stopTracing()
+                    }
+
+                    override fun addBreakpoints(breakpoints: List<String>) {
+                        // Not supported in trace recorder mode
+                    }
+
+                    override fun removeBreakpoints(breakpoints: List<String>) {
+                        // Not supported in trace recorder mode
+                    }
+
+                    override fun onDisconnected() {
+                        // No cleanup needed for trace recorder
                     }
                 }
-
-                override fun startNetworkTracing() {
-                    Tracer.startTracing(TraceOutputMode.BinaryNetworkStream(this), TracingSession.StartMode.Dynamic)
-                }
-
-                override fun stopTracing() {
-                    Tracer.stopTracing()
-                }
-
-                override fun addBreakpoints(breakpoints: List<String>) {
-                    // Not supported in trace recorder mode
-                }
-
-                override fun removeBreakpoints(breakpoints: List<String>) {
-                    // Not supported in trace recorder mode
-                }
-
-                override fun onDisconnected() {
-                    // No cleanup needed for trace recorder
-                }
+                Logger.info { "Started trace streaming server on port $port" }
+                return server
+            } catch (t: Throwable) {
+                Logger.error(t) { "Cannot start trace server" }
+                return null
             }
-            Logger.info { "Started trace streaming server on port $port" }
-            return server
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot start trace server" }
-            return null
         }
     }
 
@@ -121,9 +118,6 @@ internal object TraceRecorderAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         agent.premain(agentArgs, inst)
-        if (TraceAgentParameters.getArg(ARGUMENT_START_SERVER)?.lowercase() == "true") {
-            server = createTracingServer()
-        }
     }
 
     // entry point for a dynamically attached java agent

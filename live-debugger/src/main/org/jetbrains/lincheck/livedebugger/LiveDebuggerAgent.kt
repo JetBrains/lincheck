@@ -54,9 +54,6 @@ internal object LiveDebuggerAgent {
         ARGUMENT_START_SERVER,
         ARGUMENT_SERVER_PORT,
     )
-    
-    private var server: TracingServer? = null
-
     private val agent = object : TracerAgent() {
         override val modeSystemPropertyName: String = LIVE_DEBUGGER_MODE_PROPERTY
 
@@ -76,92 +73,92 @@ internal object LiveDebuggerAgent {
         }
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider? = null
-    }
 
-    private fun createTracingServer(): TracingServer? {
-        try {
-            val port = TraceAgentParameters.serverPort
-            val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
-                override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
-                    LiveDebugger.startRecording(
-                        TraceOutputMode.BinaryFileStream(traceDumpFilePath),
-                        traceDumpFilePath,
-                        packTrace,
-                    )
-                }
+        override fun createTracingServer(): TracingServer? {
+            try {
+                val port = TraceAgentParameters.serverPort
+                val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
+                    override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
+                        LiveDebugger.startRecording(
+                            TraceOutputMode.BinaryFileStream(traceDumpFilePath),
+                            traceDumpFilePath,
+                            packTrace,
+                        )
+                    }
 
-                override fun startNetworkTracing() {
-                    LiveDebugger.startRecording(TraceOutputMode.BinaryNetworkStream(this))
-                }
+                    override fun startNetworkTracing() {
+                        LiveDebugger.startRecording(TraceOutputMode.BinaryNetworkStream(this))
+                    }
 
-                override fun stopTracing() {
-                    Tracer.stopTracing()
-                }
+                    override fun stopTracing() {
+                        Tracer.stopTracing()
+                    }
 
-                override fun addBreakpoints(breakpoints: List<String>) {
-                    LiveDebugger.addBreakpoints(breakpoints)
-                }
+                    override fun addBreakpoints(breakpoints: List<String>) {
+                        LiveDebugger.addBreakpoints(breakpoints)
+                    }
 
-                override fun removeBreakpoints(breakpoints: List<String>) {
-                    LiveDebugger.removeBreakpoints(breakpoints)
-                }
+                    override fun removeBreakpoints(breakpoints: List<String>) {
+                        LiveDebugger.removeBreakpoints(breakpoints)
+                    }
 
-                override fun onDisconnected() {
-                    LiveDebugger.removeAllBreakpoints()
-                    cleanupUnsafeCaches()
-                    BreakpointStorage.clear()
+                    override fun onDisconnected() {
+                        LiveDebugger.removeAllBreakpoints()
+                        cleanupUnsafeCaches()
+                        BreakpointStorage.clear()
+                    }
                 }
+                Logger.info { "Started trace server on port $port" }
+                LiveDebugger.installNotificationListener { notification ->
+                    when (notification) {
+                        is LiveDebuggerNotification.BreakpointHitLimitReached ->
+                            server.client.hitLimitReached(notification.breakpointData, notification.timestamp)
+                        is LiveDebuggerNotification.BreakpointConditionUnsafetyDetected ->
+                            server.client.conditionUnsafe(notification.breakpointData, notification.timestamp)
+                    }
+                }
+                return server
+            } catch (t: Throwable) {
+                Logger.error(t) { "Cannot start trace server" }
+                return null
             }
-            Logger.info { "Started trace streaming server on port $port" }
-            LiveDebugger.installNotificationListener { notification -> 
-                when (notification) {
-                    is LiveDebuggerNotification.BreakpointHitLimitReached ->
-                        server.client.hitLimitReached(notification.breakpointData, notification.timestamp)
-                    is LiveDebuggerNotification.BreakpointConditionUnsafetyDetected ->
-                        server.client.conditionUnsafe(notification.breakpointData, notification.timestamp)
-                }
-            }
-            return server
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot start trace server" }
-            return null
         }
+
     }
 
     // entry point for a statically attached java agent
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         agent.premain(agentArgs, inst)
-        installCallbacks()
-
-        if (TraceAgentParameters.getArg(ARGUMENT_START_SERVER)?.lowercase() == "true") {
-            server = createTracingServer()
-        }
-
-        val mode = TraceOutputMode.parse(
-            outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
-            outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
-            outputFilePath = traceDumpFilePath,
-        )
-        val packTrace = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
-
-        // start immediately at premain only if the trace dump file was specified,
-        // otherwise tracing will be requested later dynamically by the client calling startNetworkTracing()
-        if (traceDumpFilePath != null) {
-            LiveDebugger.startRecording(mode, traceDumpFilePath, packTrace)
-        }
-
-        // start phone-home heartbeat if enabled
-        if (TraceAgentParameters.heartBeatEnabled) {
-            PhoneHomeHeartbeat.start()
-        }
+        postInstallSetup()
     }
 
     // entry point for a dynamically attached java agent
     @JvmStatic
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         agent.agentmain(agentArgs, inst)
+        postInstallSetup()
+    }
+
+    private fun postInstallSetup() {
         installCallbacks()
+
+        if (TraceAgentParameters.heartBeatEnabled) {
+            PhoneHomeHeartbeat.start()
+        }
+        
+        if (traceDumpFilePath != null) {
+            
+            val mode = TraceOutputMode.parse(
+                outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
+                outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
+                outputFilePath = traceDumpFilePath,
+            )
+            val packTrace = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
+
+            LiveDebugger.startRecording(mode, traceDumpFilePath, packTrace)
+        }
+
     }
 
     @JvmStatic

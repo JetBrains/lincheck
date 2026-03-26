@@ -33,7 +33,7 @@ import java.nio.ByteBuffer
  */
 abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
     private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri) {
-        override fun onOpen(handshakedata: ServerHandshake?) {}
+        override fun onOpen(handshakedata: ServerHandshake?) = onConnectionReady()
 
         override fun onMessage(message: String?) {
             if (message == null) return
@@ -77,10 +77,13 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
         }
 
         override fun onError(ex: Exception?) {
-            if (ex != null) Logger.error(ex) { "WebSocket client error" }
-            else Logger.error { "WebSocket client error" }
+            if (ex != null) Logger.warn(ex) { "WebSocket client error" }
+            else Logger.warn { "WebSocket client error" }
         }
     }
+    
+    override val server: TracingServerApi = WebSocketTracingController(webSocketConnection)
+    override val networkTraceReader: NetworkTraceReader = NetworkTraceReader()
     
     init {
         webSocketConnection.connect()
@@ -88,8 +91,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
 
     final override fun binaryTraceData(data: ByteArray) {}
 
-    override val server: TracingServerApi = WebSocketTracingController(webSocketConnection)
-    override val networkTraceReader: NetworkTraceReader = NetworkTraceReader()
+    override fun close() = webSocketConnection.close()
 }
 
 /**
@@ -160,9 +162,19 @@ abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServe
     
     init {
         try {
+            webSocketServer.isDaemon = true
+            webSocketServer.isReuseAddr = true
             webSocketServer.start()
         } catch (e: Exception) {
             Logger.error(e) { "Failed to start WebSocket server" }
+        }
+    }
+
+    override fun close() {
+        try {
+            webSocketServer.stop()
+        } catch (e: Exception) {
+            Logger.error(e) { "Failed to stop WebSocket server" }
         }
     }
     

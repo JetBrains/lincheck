@@ -56,9 +56,16 @@ interface DisconnectAware {
 }
 
 /**
+ * Interface for components that need to be notified when a connection is opened.
+ */
+interface ConnectedAware {
+    fun onConnectionReady() {}
+}
+
+/**
  * A tracing client that can send commands to the server, receive notifications, and read binary trace data.
  */
-interface TracingClient: TracingClientApi, DisconnectAware {
+interface TracingClient: TracingClientApi, DisconnectAware, ConnectedAware {
     val server: TracingServerApi
     val networkTraceReader: NetworkTraceReader
 }
@@ -66,6 +73,6 @@ interface TracingClient: TracingClientApi, DisconnectAware {
 /**
  * A tracing server that accepts commands and sends notifications to the connected client.
  */
-interface TracingServer: TracingServerApi, DisconnectAware {
+interface TracingServer: TracingServerApi, DisconnectAware, Closeable {
     val client: TracingClientApi
 }
