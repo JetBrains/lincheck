@@ -617,13 +617,13 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         startingThread: Thread,
         startingThreadDescriptor: ThreadDescriptor
-    ): Unit = threadDescriptor.runInsideIgnoredSection {
+    ): ThreadId = threadDescriptor.runInsideIgnoredSection {
         val currentThreadId = threadScheduler.getCurrentThreadId()
         // do not track threads forked from unregistered threads
-        if (currentThreadId < 0) return
+        if (currentThreadId < 0) return -1
         // scenario threads are handled separately by the runner itself
-        if (startingThread is TestThread) return
-        registerThread(startingThread, startingThreadDescriptor)
+        if (startingThread is TestThread) return -1
+        return registerThread(startingThread, startingThreadDescriptor)
     }
 
     override fun beforeThreadRun(
