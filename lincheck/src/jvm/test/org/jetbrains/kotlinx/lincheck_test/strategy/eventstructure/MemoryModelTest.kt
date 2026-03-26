@@ -39,7 +39,7 @@ class MemoryModelTest {
             (1 to 0),
             (1 to 1)
         )
-        litmusTest(outcomes) {
+        litmusTest(assertAlways(outcomes)) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -71,7 +71,7 @@ class MemoryModelTest {
             (1 to 0),
             (1 to 1),
         )
-        litmusTest(expectedOutcomes) {
+        litmusTest(assertAlways(expectedOutcomes)) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;

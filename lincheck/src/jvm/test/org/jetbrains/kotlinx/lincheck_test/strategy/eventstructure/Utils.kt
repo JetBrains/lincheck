@@ -38,6 +38,36 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
 internal const val UNIQUE = -1
 internal const val UNKNOWN = -2
 
+
+//TODO: Maybe we can make a class out of this, instead of this function nonsense
+typealias OutcomeVerifier<Outcome> = (Set<Outcome>, Int) -> Unit
+internal fun <Outcome> assertNever(forbiddenOutcomes: Set<Outcome>): OutcomeVerifier<Outcome> = { actualOutcomes, invocations ->
+    val overlap = forbiddenOutcomes.intersect(actualOutcomes)
+    Assert.assertEquals("Forbidden outcomes detected: $overlap", overlap.size, 0)
+}
+
+internal fun <Outcome> assertSometimes(expectedOutcomes: Set<Outcome>): OutcomeVerifier<Outcome> = { actualOutcomes, invocations ->
+    val missing = expectedOutcomes - actualOutcomes
+    Assert.assertEquals("Some outcomes not detected:\n$missing\nGot:$actualOutcomes", missing.size, 0)
+}
+
+internal fun <Outcome> assertAlways(expectedOutcomes: Set<Outcome>, executionCount: Int = UNIQUE): OutcomeVerifier<Outcome> {
+    require(executionCount >= 0 || executionCount == UNIQUE || executionCount == UNKNOWN)
+    return { actualOutcomes, invocations ->
+        val missing = expectedOutcomes - actualOutcomes
+        val unexpected = actualOutcomes - expectedOutcomes
+        val msg = "Some outcomes not detected.\nMissing:$missing\nUnexpected:$unexpected:\n"
+        Assert.assertEquals(msg, expectedOutcomes, actualOutcomes)
+
+        val expectedCount = when (executionCount) {
+            UNIQUE -> expectedOutcomes.size
+            UNKNOWN -> invocations
+            else -> executionCount
+        }
+        Assert.assertEquals(expectedCount, invocations)
+    }
+}
+
 /**
  * Litmus testing function for [EventStructureStrategy] that uses [ExecutionScenarioRunner].
  *
@@ -53,11 +83,9 @@ internal const val UNKNOWN = -2
 internal fun<Outcome> litmusTest(
     testClass: Class<*>,
     testScenario: ExecutionScenario,
-    expectedOutcomes: Set<Outcome>,
-    executionCount: Int = UNIQUE,
+    outcomeVerifier: OutcomeVerifier<Outcome>,
     getOutcome: (ExecutionResult) -> Outcome,
 ) {
-    require(executionCount >= 0 || executionCount == UNIQUE || executionCount == UNKNOWN)
     val outcomes: MutableSet<Outcome> = mutableSetOf()
     val verifier = getResultsVerifier { results ->
         outcomes.add(getOutcome(results))
@@ -67,17 +95,7 @@ internal fun<Outcome> litmusTest(
         val strategy = createStrategy(testClass, testScenario)
         val failure = strategy.runIteration(INVOCATIONS, verifier)
         assert(failure == null) { failure.toString() }
-        val missingOutcomes = expectedOutcomes - outcomes;
-        val extraOutomes = outcomes - expectedOutcomes;
-        val message = "Litmus test outcomes are different:\nMissing $missingOutcomes\nExtra: $extraOutomes\n"
-        Assert.assertEquals(message, expectedOutcomes, outcomes)
-
-        val expectedCount = when (executionCount) {
-            UNIQUE -> expectedOutcomes.size
-            UNKNOWN -> strategy.stats.consistentInvocations
-            else -> executionCount
-        }
-        Assert.assertEquals(expectedCount, strategy.stats.consistentInvocations)
+        outcomeVerifier(outcomes, strategy.stats.consistentInvocations)
     }
 }
 
@@ -147,8 +165,7 @@ internal fun <T> createStrategy(
  * @param block the block of code that is going to be tested
  */
 internal inline fun<reified Outcome> litmusTest(
-    expectedOutcomes: Set<Outcome>,
-    executionCount: Int = UNIQUE,
+    outcomeVerifier: OutcomeVerifier<Outcome>,
     noinline block: () -> Outcome,
 ) {
     val INVOCATIONS = 10000
@@ -165,18 +182,7 @@ internal inline fun<reified Outcome> litmusTest(
         createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, block).use { strategy ->
             val failure = strategy.runIteration(INVOCATIONS, verifier)
             assert(failure == null) { failure.toString() }
-            val missingOutcomes = expectedOutcomes - outcomes;
-            val extraOutomes = outcomes - expectedOutcomes;
-            val message = "Litmus test outcomes are different:\nMissing $missingOutcomes\nExtra: $extraOutomes\n"
-            Assert.assertEquals(message, expectedOutcomes, outcomes)
-
-            val expectedCount = when (executionCount) {
-                UNIQUE -> expectedOutcomes.size
-                UNKNOWN -> strategy.stats.consistentInvocations
-                else -> executionCount
-            }
-            Assert.assertEquals(expectedCount, strategy.stats.consistentInvocations)
-
+            outcomeVerifier(outcomes, strategy.stats.consistentInvocations)
         }
     }
 }
