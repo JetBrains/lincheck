@@ -296,7 +296,7 @@ internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConf
                     generatorClass = ann.generator.java,
                     verifierClass = ann.verifier.java,
                     checkObstructionFreedom = ann.checkObstructionFreedom,
-                    loopThreadSwitchBound = ManagedCTestConfiguration.DEFAULT_LOOP_THREAD_SWITCH_BOUND,
+                    loopIterationsBeforeThreadSwitch = ManagedCTestConfiguration.DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH,
                     loopBound = ann.hangingDetectionThreshold,
                     recursionBound = ann.hangingDetectionThreshold,
                     invocationsPerIteration = ann.invocationsPerIteration,

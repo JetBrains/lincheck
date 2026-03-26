@@ -77,7 +77,7 @@ internal abstract class ManagedStrategy(
 
     // Detector of loops or hangs (i.e. active locks).
     internal val loopDetector: LoopDetector = BoundedLoopDetector(
-        iterationsBeforeThreadSwitch = settings.loopThreadSwitchBound,
+        iterationsBeforeThreadSwitch = settings.loopIterationsBeforeThreadSwitch,
         iterationsBound = settings.loopBound,
         recursiveCallsBound = settings.recursionBound,
     )

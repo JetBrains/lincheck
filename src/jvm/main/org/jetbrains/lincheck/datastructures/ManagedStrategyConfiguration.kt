@@ -24,8 +24,8 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var checkObstructionFreedom =
         ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
 
-    protected var loopThreadSwitchBound =
-        ManagedCTestConfiguration.DEFAULT_LOOP_THREAD_SWITCH_BOUND
+    protected var loopIterationsBeforeThreadSwitch =
+        ManagedCTestConfiguration.DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH
 
     protected var loopBound =
         ManagedCTestConfiguration.DEFAULT_LOOP_BOUND
@@ -50,8 +50,8 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     /**
      * The number of loop iterations a thread can take before switching to another thread.
      */
-    fun loopThreadSwitchBound(loopThreadSwitchBound: Int): OPT = applyAndCast {
-        this.loopThreadSwitchBound = loopThreadSwitchBound
+    fun loopIterationsBeforeThreadSwitch(loopIterationsBeforeThreadSwitch: Int): OPT = applyAndCast {
+        this.loopIterationsBeforeThreadSwitch = loopIterationsBeforeThreadSwitch
     }
 
     /**
@@ -117,7 +117,7 @@ abstract class ManagedCTestConfiguration(
     generatorClass: Class<out ExecutionGenerator>,
     verifierClass: Class<out Verifier>,
     val checkObstructionFreedom: Boolean,
-    val loopThreadSwitchBound: Int,
+    val loopIterationsBeforeThreadSwitch: Int,
     val loopBound: Int,
     val recursionBound: Int,
     invocationsPerIteration: Int,
@@ -146,7 +146,7 @@ abstract class ManagedCTestConfiguration(
     internal fun createSettings(): ManagedStrategySettings =
         ManagedStrategySettings(
             timeoutMs = this.timeoutMs,
-            loopThreadSwitchBound = this.loopThreadSwitchBound,
+            loopIterationsBeforeThreadSwitch = this.loopIterationsBeforeThreadSwitch,
             loopBound = this.loopBound,
             recursionBound = this.recursionBound,
             checkObstructionFreedom = this.checkObstructionFreedom,
@@ -165,7 +165,7 @@ abstract class ManagedCTestConfiguration(
     companion object {
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
 
-        const val DEFAULT_LOOP_THREAD_SWITCH_BOUND = 10
+        const val DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH = 10
         const val DEFAULT_LOOP_BOUND = 200
         const val DEFAULT_RECURSION_BOUND = 50
 

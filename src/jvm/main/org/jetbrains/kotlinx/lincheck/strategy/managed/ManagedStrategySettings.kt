@@ -23,10 +23,10 @@ internal data class ManagedStrategySettings(
     val timeoutMs: Long,
 
     /**
-     * @property loopThreadSwitchBound The number of loop iterations a thread can take
+     * @property loopIterationsBeforeThreadSwitch The number of loop iterations a thread can take
      *   before switching to another thread.
      */
-    val loopThreadSwitchBound: Int,
+    val loopIterationsBeforeThreadSwitch: Int,
 
     /**
      * @property loopBound The maximum number of iterations a loop can perform
