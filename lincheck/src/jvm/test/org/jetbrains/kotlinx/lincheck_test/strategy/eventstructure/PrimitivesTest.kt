@@ -74,7 +74,7 @@ class PrimitivesTest {
         // TODO: when we will implement various access modes,
         //   we should probably report races on plain variables as errors (or warnings at least)
         val outcomes: Set<Int> = setOf(0, 1, 2)
-        litmusTest(PlainPrimitiveVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(PlainPrimitiveVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Int>(results.parallelResults[1][0]!!)
         }
     }
@@ -110,7 +110,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<String> = setOf("", "a", "b")
-        litmusTest(PlainReferenceVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(PlainReferenceVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<String>(results.parallelResults[1][0]!!)
         }
     }
@@ -147,7 +147,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Int> = setOf(0, 1, 2)
-        litmusTest(PrimitiveArray::class.java, testScenario, outcomes) { results ->
+        litmusTest(PrimitiveArray::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Int>(results.parallelResults[1][0]!!)
         }
     }
@@ -183,7 +183,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<String> = setOf("", "a", "b")
-        litmusTest(ReferenceArray::class.java, testScenario, outcomes) { results ->
+        litmusTest(ReferenceArray::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<String>(results.parallelResults[1][0]!!)
         }
     }
@@ -232,7 +232,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Int> = setOf(0, 1, 2)
-        litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(AtomicVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Int>(results.parallelResults[1][0]!!)
         }
     }
@@ -258,7 +258,7 @@ class PrimitivesTest {
             Triple(true, false, 1),
             Triple(false, true, 1)
         )
-        litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(AtomicVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             val r1 = getValue<Boolean>(results.parallelResults[0][0]!!)
             val r2 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val r3 = getValue<Int>(results.postResults[0]!!)
@@ -287,7 +287,7 @@ class PrimitivesTest {
             Triple(0, 1, 2),
             Triple(1, 0, 2)
         )
-        litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(AtomicVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             val r1 = getValue<Int>(results.parallelResults[0][0]!!)
             val r2 = getValue<Int>(results.parallelResults[1][0]!!)
             val r3 = getValue<Int>(results.postResults[0]!!)
@@ -316,7 +316,7 @@ class PrimitivesTest {
             Triple(1, 2, 2),
             Triple(2, 1, 2)
         )
-        litmusTest(AtomicVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(AtomicVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             val r1 = getValue<Int>(results.parallelResults[0][0]!!)
             val r2 = getValue<Int>(results.parallelResults[1][0]!!)
             val r3 = getValue<Int>(results.postResults[0]!!)
@@ -371,7 +371,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Int> = setOf(0, 1, 2)
-        litmusTest(GlobalAtomicVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(GlobalAtomicVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Int>(results.parallelResults[1][0]!!)
         }
     }
@@ -445,7 +445,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<String?> = setOf(null, "a", "b")
-        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue(results.parallelResults[1][0]!!)
         }
     }
@@ -468,7 +468,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<String?> = setOf(null, "a", "b")
-        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue(results.parallelResults[1][0]!!)
         }
     }
@@ -494,7 +494,7 @@ class PrimitivesTest {
             Triple(true, false, "a"),
             Triple(false, true, "a")
         )
-        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             val r1 = getValue<Boolean>(results.parallelResults[0][0]!!)
             val r2 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val r3 = getValue<String?>(results.postResults[0]!!)
@@ -523,7 +523,7 @@ class PrimitivesTest {
             Triple(true, false, "a"),
             Triple(false, true, "a")
         )
-        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             val r1 = getValue<Boolean>(results.parallelResults[0][0]!!)
             val r2 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val r3 = getValue<String?>(results.postResults[0]!!)
@@ -616,7 +616,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Byte> = setOf(0, 1, 2)
-        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+        litmusTest(UnsafeArrays::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Byte>(results.parallelResults[1][0]!!)
         }
     }
@@ -640,7 +640,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Short> = setOf(0, 1, 2)
-        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+        litmusTest(UnsafeArrays::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Short>(results.parallelResults[1][0]!!)
         }
     }
@@ -664,7 +664,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Int> = setOf(0, 1, 2)
-        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+        litmusTest(UnsafeArrays::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Int>(results.parallelResults[1][0]!!)
         }
     }
@@ -688,7 +688,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Long> = setOf(0, 1, 2)
-        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+        litmusTest(UnsafeArrays::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Long>(results.parallelResults[1][0]!!)
         }
     }
@@ -712,7 +712,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<String> = setOf("", "a", "b")
-        litmusTest(UnsafeArrays::class.java, testScenario, outcomes) { results ->
+        litmusTest(UnsafeArrays::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<String>(results.parallelResults[1][0]!!)
         }
     }
@@ -791,7 +791,7 @@ class PrimitivesTest {
             Triple(2, 1, 2)
         )
         // TODO: investigate why `executionCount = 3`
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(SynchronizedVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             val r1 = getValue<Int>(results.parallelResults[0][0]!!)
             val r2 = getValue<Int>(results.parallelResults[1][0]!!)
             val r3 = getValue<Int>(results.postResults[0]!!)
@@ -816,7 +816,7 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(1)
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
+        litmusTest(SynchronizedVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
             getValue<Int>(results.parallelResults[1][0]!!)
         }
     }
@@ -865,7 +865,7 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(null, 1)
-        litmusTest(ParkLatchedVariable::class.java, testScenario, outcomes, executionCount = 3) { results ->
+        litmusTest(ParkLatchedVariable::class.java, testScenario, assertAlways(outcomes, executionCount = 3)) { results ->
             getValue<Int?>(results.parallelResults[1][0]!!)
         }
     }
@@ -931,7 +931,7 @@ class PrimitivesTest {
             (SuspendedResult to false),
             (1 to true)
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertAlways(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b = getValue<Boolean>(results.parallelResults[1][0]!!)
             (r to b)
@@ -962,7 +962,7 @@ class PrimitivesTest {
             (SuspendedResult to false),
             (CancelledOperationException to true)
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertAlways(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b = getValue<Boolean>(results.parallelResults[1][0]!!)
             (r to b)
@@ -993,7 +993,7 @@ class PrimitivesTest {
             (CancelledResult to false),
             (1 to true)
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertAlways(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b = getValue<Boolean>(results.parallelResults[1][0]!!)
             (r to b)
@@ -1026,7 +1026,7 @@ class PrimitivesTest {
             (CancelledResult to true),
             // (1 to true),
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertAlways(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b = getValue<Boolean>(results.parallelResults[1][0]!!)
             (r to b)
@@ -1062,7 +1062,7 @@ class PrimitivesTest {
             Triple(1, true, false),
             Triple(CancelledOperationException, false, true)
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertAlways(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b1 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val b2 = getValue<Boolean>(results.parallelResults[2][0]!!)
@@ -1094,7 +1094,7 @@ class PrimitivesTest {
             Triple(SuspendedResult, 1, true),
             Triple(1, SuspendedResult, true),
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertAlways(outcomes, executionCount = UNKNOWN)) { results ->
             val r1 = getValueSuspended(results.parallelResults[0][0]!!)
             val r2 = getValueSuspended(results.parallelResults[1][0]!!)
             val b = getValue<Boolean>(results.parallelResults[2][0]!!)
@@ -1126,7 +1126,7 @@ class PrimitivesTest {
             Triple(1, true, false),
             Triple(2, false, true),
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertAlways(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b1 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val b2 = getValue<Boolean>(results.parallelResults[2][0]!!)
