@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.network.ws
+package org.jetbrains.lincheck.trace.network.websocket
 
 import org.java_websocket.WebSocket
 import org.java_websocket.client.WebSocketClient
@@ -18,9 +18,9 @@ import org.java_websocket.server.WebSocketServer
 import org.jetbrains.lincheck.trace.NetworkTraceReader
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingClient
-import org.jetbrains.lincheck.trace.network.TracingClientApi
+import org.jetbrains.lincheck.trace.network.TracingCallbacks
 import org.jetbrains.lincheck.trace.network.TracingServer
-import org.jetbrains.lincheck.trace.network.TracingServerApi
+import org.jetbrains.lincheck.trace.network.TracingCommands
 import org.jetbrains.lincheck.util.Logger
 import java.lang.Exception
 import java.net.InetSocketAddress
@@ -28,15 +28,15 @@ import java.net.URI
 import java.nio.ByteBuffer
 
 /**
- * Parses and dispatches an incoming WebSocket command message to the appropriate [TracingServerApi] method.
+ * Parses and dispatches an incoming WebSocket command message to the appropriate [TracingCommands] method.
  */
-fun TracingServerApi.handleMessage(message: String?) {
+fun TracingCommands.handleMessage(message: String?) {
     if (message == null) return
     try {
         val parts = message.split(":", limit = 2)
         val command = parts[0]
         when (command) {
-            TracingServerApi.START_FILE_TRACING -> {
+            TracingCommands.START_FILE_TRACING -> {
                 if (parts.size < 2) return
                 val args = parts[1].split(":")
                 if (args.size >= 2) {
@@ -44,14 +44,14 @@ fun TracingServerApi.handleMessage(message: String?) {
                 }
             }
 
-            TracingServerApi.START_NETWORK_TRACING -> startNetworkTracing()
-            TracingServerApi.STOP_TRACING -> stopTracing()
-            TracingServerApi.ADD_BREAKPOINTS -> {
+            TracingCommands.START_NETWORK_TRACING -> startNetworkTracing()
+            TracingCommands.STOP_TRACING -> stopTracing()
+            TracingCommands.ADD_BREAKPOINTS -> {
                 val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
                 addBreakpoints(breakpoints)
             }
 
-            TracingServerApi.REMOVE_BREAKPOINTS -> {
+            TracingCommands.REMOVE_BREAKPOINTS -> {
                 val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
                 removeBreakpoints(breakpoints)
             }
@@ -64,9 +64,9 @@ fun TracingServerApi.handleMessage(message: String?) {
 }
 
 /**
- * Parses and dispatches an incoming WebSocket notification message to the appropriate [TracingClientApi] method.
+ * Parses and dispatches an incoming WebSocket notification message to the appropriate [TracingCallbacks] method.
  */
-fun TracingClientApi.handleMessage(message: String?) {
+fun TracingCallbacks.handleMessage(message: String?) {
     if (message == null) return
     try {
         val parts = message.split(":", limit = 3)
@@ -77,7 +77,7 @@ fun TracingClientApi.handleMessage(message: String?) {
         val data = parts[2]
 
         when (type) {
-            TracingClientApi.HIT_LIMIT_REACHED -> {
+            TracingCallbacks.HIT_LIMIT_REACHED -> {
                 val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
                 if (breakpointData == null) {
                     Logger.warn { "Failed to parse breakpoint data from hitLimitReached notification: $data" }
@@ -85,7 +85,7 @@ fun TracingClientApi.handleMessage(message: String?) {
                 }
                 hitLimitReached(breakpointData, timestamp)
             }
-            TracingClientApi.CONDITION_UNSAFE -> {
+            TracingCallbacks.CONDITION_UNSAFE -> {
                 val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
                 if (breakpointData == null) {
                     Logger.warn { "Failed to parse breakpoint data from conditionUnsafe notification: $data" }
@@ -101,8 +101,9 @@ fun TracingClientApi.handleMessage(message: String?) {
 }
 
 /**
- * Base class for WebSocket clients that implement [TracingClientApi].
+ * Base class for WebSocket clients that implement [TracingCallbacks].
  * It handles incoming WebSocket messages and dispatches them to the corresponding API methods.
+ * Trace data is sent in binary format while notifications and commands are strings.
  */
 abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
     private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri) {
@@ -129,7 +130,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
         }
     }
     
-    override val connection: TracingServerApi = WebSocketTracingController(webSocketConnection)
+    override val connection: TracingCommands = WebSocketTracingController(webSocketConnection)
     override val networkTraceReader: NetworkTraceReader = NetworkTraceReader()
     
     init {
@@ -142,7 +143,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
 }
 
 /**
- * Base WebSocket server that receives commands from clients and delegates them to [TracingServerApi].
+ * Base WebSocket server that receives commands from clients and delegates them to [TracingCommands].
  */
 abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServer {
     private val webSocketServer = object: WebSocketServer(address) {
@@ -194,9 +195,9 @@ abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServe
         }
     }
     
-    private var _client: TracingClientApi = ClientSink()
+    private var _client: TracingCallbacks = ClientSink()
 
-    override val connection: TracingClientApi
+    override val connection: TracingCallbacks
         get() = synchronized(this) { _client }
 
 }

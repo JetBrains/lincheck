@@ -48,8 +48,11 @@ import java.lang.reflect.Modifier
  * - pack — boolean that enables zipping trace artifact files, it is false by default.
  *       Example: `pack=true`
  *
+ * - tracingServer — boolean that enables the WebSocket tracing server.
+ *       Example: `tracingServer=on` or `tracingServer=off`, it is off by default.
+ *
  * - serverPort — port for the WebSocket server used for remote monitoring and management.
- *       Example: `serverPort=9997` (default: 9997).
+ *       Example: `serverPort=9999` (default: 9999).
  *
  * - breakpointsFile — path to an INI file with live debugger breakpoints (optional, liveDebugger mode only);
  *       see [BreakpointsFileParser] for details on file format.
@@ -113,10 +116,10 @@ object TraceAgentParameters {
     const val ARGUMENT_PACK = "pack"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
     const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
-    const val ARGUMENT_START_SERVER = "startServer"
+    const val ARGUMENT_START_SERVER = "tracingServer"
     const val ARGUMENT_SERVER_PORT = "serverPort"
 
-    const val DEFAULT_SERVER_PORT = 9997
+    const val DEFAULT_SERVER_PORT = 9999
 
     @JvmStatic
     lateinit var rawArgs: String
@@ -137,6 +140,10 @@ object TraceAgentParameters {
     @JvmStatic
     val heartBeatEnabled: Boolean
         get() = getArg(ARGUMENT_HEARTBEAT)?.lowercase() == "on"
+
+    @JvmStatic
+    val serverEnabled: Boolean
+        get() = getArg(ARGUMENT_START_SERVER)?.lowercase() == "on"
 
     @JvmStatic
     val serverPort: Int

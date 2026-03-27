@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
-import org.jetbrains.lincheck.trace.network.TracingClientApi
+import org.jetbrains.lincheck.trace.network.TracingCallbacks
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.util.Logger
 import java.io.*
@@ -62,7 +62,7 @@ class NetworkStreamingTraceCollecting(
     private var headerSent = false
 
     // Tracks the last client reference we wrote to, so we can detect reconnects.
-    private var lastClient: TracingClientApi? = null
+    private var lastClient: TracingCallbacks? = null
 
     @Volatile
     private var running = true

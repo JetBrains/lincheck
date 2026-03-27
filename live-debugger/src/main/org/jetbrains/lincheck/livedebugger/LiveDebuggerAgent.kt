@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.livedebugger
 
 import org.jetbrains.lincheck.tracer.TracerAgent
-import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
@@ -28,7 +27,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingServer
-import org.jetbrains.lincheck.trace.network.ws.TracingWebSocketServer
+import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.Logger
@@ -90,7 +89,7 @@ internal object LiveDebuggerAgent {
                     }
 
                     override fun stopTracing() {
-                        Tracer.stopTracing()
+                        LiveDebugger.stopRecording()
                     }
 
                     override fun addBreakpoints(breakpoints: List<String>) {

@@ -14,7 +14,6 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
 import org.jetbrains.lincheck.trace.network.TracingServer
@@ -49,10 +48,7 @@ abstract class TracerAgent {
         installInstrumentation()
 
         // create tracing server if requested
-        if (TraceAgentParameters.getArg(ARGUMENT_START_SERVER)?.lowercase() == "true") {
-            server = createTracingServer()
-            server?.let { Runtime.getRuntime().addShutdownHook(Thread { it.close() }) }
-        }
+        startTracingServerIfRequested()
     }
 
     // entry point for a dynamically attached java agent
@@ -70,10 +66,7 @@ abstract class TracerAgent {
         installInstrumentation()
 
         // create tracing server if requested
-        if (TraceAgentParameters.getArg(ARGUMENT_START_SERVER)?.lowercase() == "true") {
-            server = createTracingServer()
-            server?.let { Runtime.getRuntime().addShutdownHook(Thread { it.close() }) }
-        }
+        startTracingServerIfRequested()
     }
 
     protected abstract val modeSystemPropertyName: String
@@ -105,6 +98,13 @@ abstract class TracerAgent {
 
     private fun installInstrumentation() {
         LincheckInstrumentation.install(instrumentationMode)
+    }
+    
+    private fun startTracingServerIfRequested() {
+        if (TraceAgentParameters.serverEnabled) {
+            server = createTracingServer()
+            server?.let { Runtime.getRuntime().addShutdownHook(Thread { it.close() }) }
+        }
     }
 
     protected abstract fun createTracingServer(): TracingServer?

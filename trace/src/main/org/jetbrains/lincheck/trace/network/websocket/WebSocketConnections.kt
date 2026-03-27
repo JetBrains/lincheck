@@ -8,53 +8,53 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.network.ws
+package org.jetbrains.lincheck.trace.network.websocket
 
 import org.java_websocket.WebSocket
 import org.java_websocket.client.WebSocketClient
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
-import org.jetbrains.lincheck.trace.network.TracingClientApi
-import org.jetbrains.lincheck.trace.network.TracingServerApi
+import org.jetbrains.lincheck.trace.network.TracingCallbacks
+import org.jetbrains.lincheck.trace.network.TracingCommands
 import org.jetbrains.lincheck.util.Logger
 import java.io.Closeable
 
 /**
- * Client-side implementation of [TracingServerApi] that sends commands to the server via WebSocket.
+ * Client-side implementation of [TracingCommands] that sends commands to the server via WebSocket.
  */
-class WebSocketTracingController(private val webSocketConnection: WebSocketClient) : Closeable, TracingServerApi {
+class WebSocketTracingController(private val webSocketConnection: WebSocketClient) : Closeable, TracingCommands {
     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
-        webSocketConnection.send("${TracingServerApi.START_FILE_TRACING}:$traceDumpFilePath:$packTrace")
+        webSocketConnection.send("${TracingCommands.START_FILE_TRACING}:$traceDumpFilePath:$packTrace")
     }
 
     override fun startNetworkTracing() {
-        webSocketConnection.send(TracingServerApi.START_NETWORK_TRACING)
+        webSocketConnection.send(TracingCommands.START_NETWORK_TRACING)
     }
 
     override fun stopTracing() {
-        webSocketConnection.send(TracingServerApi.STOP_TRACING)
+        webSocketConnection.send(TracingCommands.STOP_TRACING)
     }
 
     override fun addBreakpoints(breakpoints: List<String>) {
-        webSocketConnection.send("${TracingServerApi.ADD_BREAKPOINTS}:${breakpoints.joinToString(",")}")
+        webSocketConnection.send("${TracingCommands.ADD_BREAKPOINTS}:${breakpoints.joinToString(",")}")
     }
 
     override fun removeBreakpoints(breakpoints: List<String>) {
-        webSocketConnection.send("${TracingServerApi.REMOVE_BREAKPOINTS}:${breakpoints.joinToString(",")}")
+        webSocketConnection.send("${TracingCommands.REMOVE_BREAKPOINTS}:${breakpoints.joinToString(",")}")
     }
 
     override fun close() = webSocketConnection.close()
 }
 
 /**
- * Server-side [TracingClientApi] that sends notifications and binary trace data to the connected client over WebSocket.
+ * Server-side [TracingCallbacks] that sends notifications and binary trace data to the connected client over WebSocket.
  */
-class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingClientApi {
+class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
     override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
-        webSocket.send("${TracingClientApi.HIT_LIMIT_REACHED}:$timestamp:$breakpointData")
+        webSocket.send("${TracingCallbacks.HIT_LIMIT_REACHED}:$timestamp:$breakpointData")
     }
 
     override fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
-        webSocket.send("${TracingClientApi.CONDITION_UNSAFE}:$timestamp:$breakpointData")
+        webSocket.send("${TracingCallbacks.CONDITION_UNSAFE}:$timestamp:$breakpointData")
     }
 
     override fun binaryTraceData(data: ByteArray) {
@@ -67,9 +67,9 @@ class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingClientApi {
 }
 
 /**
- * No-op [TracingClientApi] used as a placeholder when no client is connected.
+ * No-op [TracingCallbacks] used as a placeholder when no client is connected.
  */
-class ClientSink: Closeable, TracingClientApi {
+class ClientSink: Closeable, TracingCallbacks {
     override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
         Logger.warn { "hitLimitReached dropped: no client connected (breakpoint=$breakpointData)" }
     }
