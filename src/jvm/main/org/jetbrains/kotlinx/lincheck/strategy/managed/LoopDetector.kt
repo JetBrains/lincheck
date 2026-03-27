@@ -87,16 +87,6 @@ class BoundedLoopDetector(
     val iterationsBound: Int, // M limit
     val recursiveCallsBound: Int, // limit for recursive calls
 ) : LoopDetector {
-
-    // Maintain the following state:
-    //    threadId -> Stack<ActiveMethodCall>
-    //
-    //    ActiveMethodCall := (methodId, params?, Stack<ActiveLoop>)
-    //    ActiveLoop := (loopId, iterations)
-
-    // Questions: what methods we need to add to the interface to connect it with scheduling?
-    // shouldSwitch(): Boolean ???
-
     private val threadStates = mutableThreadMapOf<LoopDetectorThreadState>()
     // Per-thread stack of currently active loops
     private val activeLoopStack = mutableThreadMapOf<ArrayDeque<LoopContext>>()

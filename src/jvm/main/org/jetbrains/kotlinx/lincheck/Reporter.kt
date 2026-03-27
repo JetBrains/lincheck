@@ -386,7 +386,6 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
         }
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure, exceptionStackTraces)
         is ManagedDeadlockFailure -> appendManagedDeadlockWithDumpFailure(failure, exceptionStackTraces)
-//        TODO: verify livelock handling
         is ManagedLivelockFailure -> appendManagedDeadlockWithDumpFailure(failure, exceptionStackTraces)
     }
     if (failure.trace != null) {
@@ -734,7 +733,6 @@ private fun Appendable.appendDeadlockMessageIfRequired(failure: LincheckFailure)
     }
 }
 
-//TODO: check if usage is correct
 private fun Appendable.appendLivelockMessageIfRequired(failure: LincheckFailure) {
     if (failure is ManagedLivelockFailure) {
         appendLine(SPINLOOP_MESSAGE)
