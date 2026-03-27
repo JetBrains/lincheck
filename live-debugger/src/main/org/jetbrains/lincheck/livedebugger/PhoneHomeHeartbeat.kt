@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.livedebugger
 
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.util.Logger
 import java.net.HttpURLConnection
 import java.net.URI
@@ -20,7 +21,6 @@ private const val ENV_POD_IP = "POD_IP"
 private const val ENV_CONTROL_PLANE_URL = "LIVE_DEBUGGER_CONTROL_PLANE_URL"
 
 private const val DEFAULT_HEARTBEAT_INTERVAL_MS = 10_000L
-private const val DEFAULT_JMX_PORT = 9999
 private const val HTTP_TIMEOUT_MS = 5_000
 
 /**
@@ -29,7 +29,7 @@ private const val HTTP_TIMEOUT_MS = 5_000
  * 
  * Note: These heartbeats are not used to check if a connection is open, 
  * their only purpose is to show that this agent is live. 
- * Connection lost events are handled by [NetworkTraceServer].
+ * Connection lost events are handled by the WebSocket server.
  *
  * Requires the following environment variables to be set:
  * - `POD_NAME` — the Kubernetes pod name (typically via Downward API)
@@ -50,7 +50,8 @@ internal object PhoneHomeHeartbeat {
             ?: error("phoneHome=on requires the $ENV_CONTROL_PLANE_URL environment variable to be set")
 
         val heartbeatUrl = "${controlPlaneUrl.trimEnd('/')}/heartbeat"
-        val body = """{"podName":"$podName","namespace":"$namespace","podIp":"$podIp","jmxPort":$DEFAULT_JMX_PORT}"""
+        val serverPort = TraceAgentParameters.serverPort
+        val body = """{"podName":"$podName","namespace":"$namespace","podIp":"$podIp","serverPort":$serverPort}"""
 
         val thread = Thread({
             Logger.debug { "Phone-home heartbeat started: $heartbeatUrl" }

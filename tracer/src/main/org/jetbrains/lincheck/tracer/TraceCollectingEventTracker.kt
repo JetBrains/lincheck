@@ -182,7 +182,7 @@ class TraceCollectingEventTracker(
                 strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
             }
             is TraceOutputMode.BinaryNetworkStream -> {
-                strategy = NetworkStreamingTraceCollecting(context)
+                strategy = NetworkStreamingTraceCollecting(context, mode.tracingServer)
             }
             is TraceOutputMode.Null -> {
                 strategy = NullTraceCollecting(context)
@@ -193,9 +193,8 @@ class TraceCollectingEventTracker(
         }
     }
 
-    // Subscription service for the case when WebSocket trace streaming mode is used.
-    // Clients can subscribe to receive trace points.
-    val subscriptionService: NetworkTraceSubscriptionService? =
+    // The network streaming strategy, if active.
+    internal val networkStreamingStrategy: NetworkStreamingTraceCollecting? =
         (this.strategy as? NetworkStreamingTraceCollecting)
 
     // For proper completion of threads which are not tracked from the start of the agent,

@@ -8,9 +8,15 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.controller
+package org.jetbrains.lincheck.trace.network
 
+/**
+ * Notifications sent by the live debugger to the connected client.
+ */
 open class LiveDebuggerNotification(timestamp: Long) : TracingNotification(timestamp) {
+    /**
+     * Identifies a breakpoint by its source location.
+     */
     data class BreakpointData(
         // TODO: reconsider what data to include: maybe just breakpointId?
         val className: String,
@@ -33,11 +39,13 @@ open class LiveDebuggerNotification(timestamp: Long) : TracingNotification(times
         }
     }
 
+    /** Notification that a breakpoint condition was detected as unsafe. */
     data class BreakpointConditionUnsafetyDetected(
         val breakpointData: BreakpointData,
         override val timestamp: Long = System.currentTimeMillis(),
     ) : LiveDebuggerNotification(timestamp)
 
+    /** Notification that a breakpoint has reached its configured hit limit. */
     data class BreakpointHitLimitReached(
         val breakpointData: BreakpointData,
         override val timestamp: Long = System.currentTimeMillis(),

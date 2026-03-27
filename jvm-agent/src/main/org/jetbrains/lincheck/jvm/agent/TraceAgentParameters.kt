@@ -48,8 +48,11 @@ import java.lang.reflect.Modifier
  * - pack — boolean that enables zipping trace artifact files, it is false by default.
  *       Example: `pack=true`
  *
- * - jmxMBean — enables registration of JMX MBean for remote monitoring and management.
- *       Example: `jmxMBean=on` or `jmxMBean=off`, it is off by default.
+ * - tracingServer — boolean that enables the WebSocket tracing server.
+ *       Example: `tracingServer=on` or `tracingServer=off`, it is off by default.
+ *
+ * - serverPort — port for the WebSocket server used for remote monitoring and management.
+ *       Example: `serverPort=9999` (default: 9999).
  *
  * - breakpointsFile — path to an INI file with live debugger breakpoints (optional, liveDebugger mode only);
  *       see [BreakpointsFileParser] for details on file format.
@@ -111,9 +114,12 @@ object TraceAgentParameters {
     const val ARGUMENT_FORMAT = "format"
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
-    const val ARGUMENT_JMX_MBEAN = "jmxMBean"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
     const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
+    const val ARGUMENT_START_SERVER = "tracingServer"
+    const val ARGUMENT_SERVER_PORT = "serverPort"
+
+    const val DEFAULT_SERVER_PORT = 9999
 
     @JvmStatic
     lateinit var rawArgs: String
@@ -128,16 +134,20 @@ object TraceAgentParameters {
     var traceDumpFilePath: String? = null
 
     @JvmStatic
-    val jmxMBeanEnabled: Boolean
-        get() = getArg(ARGUMENT_JMX_MBEAN)?.lowercase() == "on"
-
-    @JvmStatic
     val breakpointsFilePath: String?
         get() = getArg(ARGUMENT_BREAKPOINTS_FILE)
 
     @JvmStatic
     val heartBeatEnabled: Boolean
         get() = getArg(ARGUMENT_HEARTBEAT)?.lowercase() == "on"
+
+    @JvmStatic
+    val serverEnabled: Boolean
+        get() = getArg(ARGUMENT_START_SERVER)?.lowercase() == "on"
+
+    @JvmStatic
+    val serverPort: Int
+        get() = getArg(ARGUMENT_SERVER_PORT)?.toIntOrNull() ?: DEFAULT_SERVER_PORT
 
     @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()

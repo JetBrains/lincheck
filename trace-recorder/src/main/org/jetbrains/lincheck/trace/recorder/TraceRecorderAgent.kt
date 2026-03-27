@@ -18,14 +18,20 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_JMX_MBEAN
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
-import org.jetbrains.lincheck.trace.jmx.TracingJmxMBean
+import org.jetbrains.lincheck.trace.network.TracingServer
+import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
+import org.jetbrains.lincheck.tracer.TraceOutputMode
+import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TracerAgent
-import org.jetbrains.lincheck.tracer.jmx.AbstractTracingJmxMBean
+import org.jetbrains.lincheck.tracer.TracingSession
+import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import java.lang.instrument.Instrumentation
+import java.net.InetSocketAddress
 
 /**
  * Trace recorder JVM agent.
@@ -41,10 +47,10 @@ internal object TraceRecorderAgent {
         ARGUMENT_INCLUDE,
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
-        ARGUMENT_JMX_MBEAN,
         ARGUMENT_BREAKPOINTS_FILE,
+        ARGUMENT_START_SERVER,
+        ARGUMENT_SERVER_PORT,
     )
-
     private val agent = object : TracerAgent() {
         override val modeSystemPropertyName: String = TRACE_RECORDER_MODE_PROPERTY
 
@@ -62,12 +68,50 @@ internal object TraceRecorderAgent {
             }
         }
 
-        override val jmxMBeanName: String = "org.jetbrains.lincheck:type=TraceRecorder"
-        override val jmxMBeanInterface: Class<out TracingJmxMBean> = TracingJmxMBean::class.java
-        override val jmxMBean: TracingJmxMBean = object : AbstractTracingJmxMBean(jmxMBeanName) {}
-
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider
             get() = ::TraceRecorderMethodTransformer
+
+        override fun createTracingServer(): TracingServer? {
+            try {
+                val port = TraceAgentParameters.serverPort
+                val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
+                    override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
+                        val session = Tracer.startTracing(
+                            TraceOutputMode.BinaryFileStream(traceDumpFilePath),
+                            TracingSession.StartMode.Dynamic,
+                        )
+                        session.installOnFinishHook {
+                            dumpTrace(traceDumpFilePath, packTrace)
+                        }
+                    }
+
+                    override fun startNetworkTracing() {
+                        Tracer.startTracing(TraceOutputMode.BinaryNetworkStream(this), TracingSession.StartMode.Dynamic)
+                    }
+
+                    override fun stopTracing() {
+                        Tracer.stopTracing()
+                    }
+
+                    override fun addBreakpoints(breakpoints: List<String>) {
+                        Logger.error { "Add breakpoints is not supported in trace recorder mode" }
+                    }
+
+                    override fun removeBreakpoints(breakpoints: List<String>) {
+                        Logger.error { "Remove breakpoints is not supported in trace recorder mode" }
+                    }
+
+                    override fun onDisconnected() {
+                        // No cleanup needed for trace recorder
+                    }
+                }
+                Logger.info { "Started trace streaming server on port $port" }
+                return server
+            } catch (t: Throwable) {
+                Logger.error(t) { "Cannot start trace server" }
+                return null
+            }
+        }
     }
 
     // entry point for a statically attached java agent

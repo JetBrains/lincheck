@@ -8,9 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace.controller
+package org.jetbrains.lincheck.trace.network
 
+/** Callback for receiving [TracingNotification] events. */
 typealias TracingNotificationListener = (TracingNotification) -> Unit
 
+/** Base class for timestamped notifications emitted during tracing. */
 open class TracingNotification(open val timestamp: Long) {}
 

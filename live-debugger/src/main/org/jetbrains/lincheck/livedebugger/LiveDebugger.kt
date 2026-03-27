@@ -14,8 +14,8 @@ import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
-import org.jetbrains.lincheck.trace.controller.LiveDebuggerNotification
-import org.jetbrains.lincheck.trace.controller.TracingNotificationListener
+import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
+import org.jetbrains.lincheck.trace.network.TracingNotificationListener
 import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.TracingSession
@@ -156,7 +156,7 @@ internal object LiveDebugger {
 
     /**
      * Called when a breakpoint's hit count reaches its configured limit.
-     * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
+     * Sends a notification to the connected client, then removes the breakpoint, and retransforms the class.
      */
     private fun onHitLimitReached(breakpoint: SnapshotBreakpoint) {
         val timestamp = System.currentTimeMillis()

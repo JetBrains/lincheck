@@ -44,7 +44,7 @@ class LiveDebuggerSettings(lineBreakPoints: List<SnapshotBreakpoint> = emptyList
 
     /**
      * Removes breakpoints matched by location (className / fileName / lineNumber).
-     * Used for explicit user-initiated removal (e.g. via JMX), where the caller supplies
+     * Used for explicit user-initiated removal (e.g. via WebSocket command), where the caller supplies
      * breakpoints parsed from strings and therefore [SnapshotBreakpoint.UNASSIGNED_ID].
      */
     fun removeBreakpoints(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
