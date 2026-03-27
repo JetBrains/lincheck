@@ -19,7 +19,7 @@ import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicLong
 import kotlin.reflect.KClass
 
-private class SimpleContextSavingState: ContextSavingState {
+private class SimpleTraceContextSavedState: TraceContextSavedState {
     private var seenClassDescriptors = BooleanArray(1024)
     private var seenMethodDescriptors = BooleanArray(1024)
     private var seenFieldDescriptors = BooleanArray(1024)
@@ -118,7 +118,7 @@ internal class DirectTraceWriter(
     private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream),
 ) : TraceWriterBase(
     context = context,
-    contextState = SimpleContextSavingState(),
+    contextState = SimpleTraceContextSavedState(),
     dataStream = pos,
     dataOutput = DataOutputStream(pos)
 ) {

@@ -13,7 +13,6 @@ package org.jetbrains.lincheck.trace
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.trace.network.TracingCallbacks
 import org.jetbrains.lincheck.trace.network.TracingServer
-import org.jetbrains.lincheck.descriptors.Descriptor
 import org.jetbrains.lincheck.util.Logger
 import java.io.*
 import java.util.concurrent.ArrayBlockingQueue
@@ -59,7 +58,7 @@ class NetworkStreamingTraceCollecting(
     // client reader has no prior context (descriptors, strings, etc.).
     private val byteStream = ByteArrayOutputStream(MESSAGE_BUFFER_SIZE)
     private val outputStream = DataOutputStream(byteStream)
-    private var contextState = SubscriberContextState()
+    private var contextState = SubscriberTraceContextSavedState()
     private var writer = NetworkTraceWriter(context, contextState, outputStream, outputStream)
     private var headerSent = false
 
@@ -187,7 +186,7 @@ class NetworkStreamingTraceCollecting(
      * does not have any of the previously sent context (descriptors, strings, etc.).
      */
     private fun resetWriter() {
-        contextState = SubscriberContextState()
+        contextState = SubscriberTraceContextSavedState()
         writer = NetworkTraceWriter(context, contextState, outputStream, outputStream)
         headerSent = false
         Logger.info { "Network trace writer reset for new client" }
@@ -249,7 +248,7 @@ class NetworkStreamingTraceCollecting(
  * Per-subscriber trace context state.
  * Each subscriber maintains its own state since we don't deduplicate across subscribers.
  */
-private class SubscriberContextState : ContextSavingState {
+private class SubscriberTraceContextSavedState : TraceContextSavedState {
     // TODO: for simplicity, we do not attempt deduplication or string interning;
     //       just store all data in-place whenever requested.
     //       See JBRes-7900 for details.
@@ -272,7 +271,7 @@ private class SubscriberContextState : ContextSavingState {
  */
 internal class NetworkTraceWriter(
     context: TraceContext,
-    contextState: ContextSavingState,
+    contextState: TraceContextSavedState,
     dataOutput: DataOutput,
     dataStream: OutputStream,
 ) : TraceWriterBase(

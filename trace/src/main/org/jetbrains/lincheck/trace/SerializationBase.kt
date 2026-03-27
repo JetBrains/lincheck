@@ -139,7 +139,7 @@ internal interface TraceWriter : DataOutput, Closeable {
 /**
  * Interface to check and mark if a given piece of reference data was already stored.
  */
-internal interface ContextSavingState {
+internal interface TraceContextSavedState {
     fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean
     fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int)
     fun isCodeLocationSaved(id: Int): Boolean
@@ -157,8 +157,8 @@ internal interface ContextSavingState {
     fun markAccessPathSaved(value: AccessPath)
 }
 
-internal inline fun <reified T> ContextSavingState.isDescriptorSaved(id: Int) = isDescriptorSaved(T::class, id)
-internal inline fun <reified T> ContextSavingState.markDescriptorSaved(id: Int) = markDescriptorSaved(T::class, id)
+internal inline fun <reified T> TraceContextSavedState.isDescriptorSaved(id: Int) = isDescriptorSaved(T::class, id)
+internal inline fun <reified T> TraceContextSavedState.markDescriptorSaved(id: Int) = markDescriptorSaved(T::class, id)
 
 /**
  * [dataStream] responsible for operations like `close()` and [dataOutput] for real data output.
@@ -171,7 +171,7 @@ internal inline fun <reified T> ContextSavingState.markDescriptorSaved(id: Int) 
  */
 internal sealed class TraceWriterBase(
     val context: TraceContext,
-    private val contextState: ContextSavingState,
+    private val contextState: TraceContextSavedState,
     protected val dataStream: OutputStream,
     protected val dataOutput: DataOutput
 ): TraceWriter, DataOutput by dataOutput {

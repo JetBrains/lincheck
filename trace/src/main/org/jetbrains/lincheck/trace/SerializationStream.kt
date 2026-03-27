@@ -46,7 +46,7 @@ private const val MAX_STRING_SIZE = PER_THREAD_DATA_BUFFER_SIZE - 1024
 internal class BufferedTraceWriter(
     override val writerId: Int,
     context: TraceContext,
-    contextState: ContextSavingState,
+    contextState: TraceContextSavedState,
     private val storage: BlockSaver,
     private val bufferStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
 ) : TraceWriterBase(
@@ -281,7 +281,7 @@ class FileStreamingTraceCollecting(
     dataStream: OutputStream,
     indexStream: OutputStream,
     val context: TraceContext
-): TraceCollectingStrategy, ContextSavingState {
+): TraceCollectingStrategy, TraceContextSavedState {
     constructor(baseFileName: String, context: TraceContext) :
             this(
                 dataStream = openNewFile(baseFileName),
