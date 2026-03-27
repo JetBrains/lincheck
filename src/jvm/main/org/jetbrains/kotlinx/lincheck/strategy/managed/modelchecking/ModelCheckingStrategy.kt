@@ -9,16 +9,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.Runner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
-import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import java.lang.ref.WeakReference
-import java.lang.reflect.*
 import java.util.*
 import kotlin.random.Random
 
@@ -202,6 +199,11 @@ internal class ModelCheckingStrategy(
             isFullyExplored = choices.all { it.node.isFullyExplored }
         }
 
+        protected fun isLeaf(interleavingBuilder: InterleavingBuilder): Boolean {
+            return choices.all { it.node.isFullyExplored } ||
+                   maxNumberOfSwitches == interleavingBuilder.numberOfSwitches
+        }
+
         protected fun chooseUnexploredNode(): Choice {
             if (choices.size == 1) return choices.first()
             // Choose a weighted random child.
@@ -231,6 +233,10 @@ internal class ModelCheckingStrategy(
         override val isInitialized: Boolean = true
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
+            if (isLeaf(interleavingBuilder)) {
+                finishExploration()
+                return interleavingBuilder.build()
+            }
             val child = chooseUnexploredNode()
             interleavingBuilder.addThreadSwitchChoice(child.value)
             val interleaving = child.node.nextInterleaving(interleavingBuilder)
@@ -287,8 +293,7 @@ internal class ModelCheckingStrategy(
         }
 
         override fun nextInterleaving(interleavingBuilder: InterleavingBuilder): Interleaving {
-            val isLeaf = maxNumberOfSwitches == interleavingBuilder.numberOfSwitches
-            if (isLeaf) {
+            if (isLeaf(interleavingBuilder)) {
                 finishExploration()
                 return interleavingBuilder.build()
             }
@@ -319,9 +324,12 @@ internal class ModelCheckingStrategy(
      * @param threadSwitchChoices Numbers of the threads where to switch if the [switchPositions].
      */
     private inner class Interleaving(
-        private val switchPositions: List<Int>,
-        private val threadSwitchChoices: List<Int>
+        switchPositions: List<Int>,
+        threadSwitchChoices: List<Int>,
     ) {
+        private val switchPositions = switchPositions.toMutableList()
+        private val threadSwitchChoices = threadSwitchChoices.toMutableList()
+
         // number of the current execution position
         private var executionPosition: Int = 0
 
@@ -359,38 +367,66 @@ internal class ModelCheckingStrategy(
 
         fun chooseThread(iThread: Int): Int {
             val availableThreads = availableThreads(iThread)
-            val nextThread = if (currentInterleavingPosition < threadSwitchChoices.size) {
-                // Use the predefined choice.
-                val nextThread = threadSwitchChoices[currentInterleavingPosition++]
-                // Update current node.
+
+            // Initialize `nextThread` to `INVALID_THREAD_ID == -1` by default,
+            // denoting the situation when no thread switch is available.
+            // When `INVALID_THREAD_ID` is returned, the strategy will either report an error or
+            // stay on the calling thread if the switch was not mandatory.
+            var nextThread = INVALID_THREAD_ID
+
+            // Try to use the predefined choice first.
+            if (currentInterleavingPosition < threadSwitchChoices.size) {
+                nextThread = threadSwitchChoices[currentInterleavingPosition]
+                // Try to update the current node.
                 if (shouldMoveCurrentNode && !loopDetector.replayModeEnabled) {
-                    currentInterleavingNode = currentInterleavingNode
-                        .getChildNode(executionPosition)!!
-                        .getChildNode(nextThread)!!
-                        as SwitchChoosingNode
-                    // we reached the next `SwitchChoosingNode` node, so mark it as initialized
-                    currentInterleavingNode.initialize()
+                     val nextInterleavingNode = currentInterleavingNode
+                         .getChildNode(executionPosition)
+                        ?.getChildNode(nextThread)
+                        as? SwitchChoosingNode
+
+                    if (nextInterleavingNode != null) {
+                        currentInterleavingNode = nextInterleavingNode
+                        // we reached the next `SwitchChoosingNode` node, so mark it as initialized
+                        currentInterleavingNode.initialize()
+                    } else {
+                        Logger.warn {
+                            "Cannot reproduce the interleaving: " +
+                            "cannot walk along the given interleaving path in the interleaving tree"
+                        }
+                        truncateInterleaving()
+                        return INVALID_THREAD_ID
+                    }
                 }
-                check(nextThread in availableThreads) {
-                    """
-                        Trying to switch the execution to thread $nextThread,
-                        but only the following threads are eligible to switch: $availableThreads
-                    """.trimIndent()
+
+                if (nextThread !in availableThreads) {
+                    Logger.warn {
+                        "Cannot reproduce the interleaving: " +
+                        "trying to switch the execution to thread $nextThread, " +
+                        "but only the following threads are eligible to switch: $availableThreads"
+                    }
+                    truncateInterleaving()
+                    return INVALID_THREAD_ID
                 }
-                nextThread
+
+                // If everything is OK and a thread switch is available, move to the next switch point.
+                currentInterleavingPosition++
             } else {
                 // There is no predefined choice.
                 // This can happen if there were forced thread switches after the last predefined one
                 // (e.g., thread end, coroutine suspension, acquiring an already acquired lock or monitor.wait).
                 // We use a deterministic random here to choose the next thread.
-                // end of tracked execution positions, so tell strategy not to generate switch points any further
+
+                // End of tracked execution positions, so tell strategy not to generate switch points any further
                 shouldAddNewSwitchPoints = false
-                // in case no switchable thread available we return -1, this way
-                // the strategy will either report an error or stay on the calling
-                // thread if the switch was not mandatory
-                if (availableThreads.isEmpty()) -1
-                else availableThreads.random(interleavingFinishingRandom)
+
+                if (availableThreads.isEmpty()) {
+                    Logger.debug { "No threads are available to switch" }
+                    return INVALID_THREAD_ID
+                }
+
+                nextThread = availableThreads.random(interleavingFinishingRandom)
             }
+
             if (currentInterleavingPosition == threadSwitchChoices.size) {
                 shouldMoveCurrentNode = false
             }
@@ -411,6 +447,11 @@ internal class ModelCheckingStrategy(
                 val choice = Choice(ThreadChoosingNode(availableThreads(iThread)), executionPosition)
                 currentInterleavingNode.addChoice(choice)
             }
+        }
+
+        private fun truncateInterleaving() {
+            threadSwitchChoices.truncateTo(currentInterleavingPosition)
+            switchPositions.truncateTo(currentInterleavingPosition)
         }
 
         fun copy() = Interleaving(switchPositions, threadSwitchChoices)
@@ -434,6 +475,8 @@ internal class ModelCheckingStrategy(
         fun build() = Interleaving(switchPositions, threadSwitchChoices)
     }
 }
+
+private const val INVALID_THREAD_ID = -1
 
 /**
  * Manages objects created within the local scope.
