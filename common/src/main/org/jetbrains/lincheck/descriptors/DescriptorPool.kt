@@ -13,19 +13,30 @@ package org.jetbrains.lincheck.descriptors
 import org.jetbrains.lincheck.util.ensureNotNull
 import org.jetbrains.lincheck.util.expandTo
 
+interface DescriptorPool<K, D> {
+    operator fun get(id: Int): D
+    operator fun get(key: K): D?
+    fun getId(key: K): Int
+    operator fun contains(key: K): Boolean
+
+    fun restore(id: Int, descriptor: D)
+    fun clear()
+    fun register(descriptor: D): Int
+}
+
 /**
  * Pool for interning descriptors and providing id-based and key-based lookups.
  */
-class DescriptorPool<D : Descriptor> {
+private abstract class AbstractDescriptorPool<K, D> : DescriptorPool<K, D> {
     private val descriptors = mutableListOf<D?>()
-    private val byKey = hashMapOf<Descriptor.Key, Int>()
+    private val byKey = hashMapOf<K, Int>()
 
     /**
      * @return descriptor by index [id] in the [descriptors] field.
      * @throws IllegalStateException if no descriptor with the specified id is present in the pool.
      */
     @Synchronized
-    operator fun get(id: Int): D =
+    override operator fun get(id: Int): D =
         descriptors[id].ensureNotNull {
             "Element $id is not found in pool"
         }
@@ -34,7 +45,7 @@ class DescriptorPool<D : Descriptor> {
      * @return descriptor by its [key], or null if no descriptor with the specified key is present in the pool.
      */
     @Synchronized
-    operator fun get(key: Descriptor.Key): D? =
+    override operator fun get(key: K): D? =
         byKey[key]?.let { descriptors[it] }
 
     /**
@@ -42,14 +53,14 @@ class DescriptorPool<D : Descriptor> {
      *   or [Descriptor.INVALID_ID] if no descriptor with the specified key is present in the pool.
      */
     @Synchronized
-    fun getId(key: Descriptor.Key): Int =
+    override fun getId(key: K): Int =
         byKey[key] ?: Descriptor.INVALID_ID
 
     /**
      * @return true if a descriptor with the specified [key] is present in the pool, false otherwise.
      */
     @Synchronized
-    operator fun contains(key: Descriptor.Key): Boolean =
+    override operator fun contains(key: K): Boolean =
         byKey.containsKey(key)
 
     /**
@@ -58,8 +69,7 @@ class DescriptorPool<D : Descriptor> {
      * and returns existing id; throws if they differ.
      */
     @Synchronized
-    fun register(descriptor: D): Int {
-        val key = descriptor.key
+    protected fun registerImpl(key: K, descriptor: D): Int {
         val existing = byKey[key]
         if (existing != null) {
             val current = descriptors[existing]
@@ -81,7 +91,7 @@ class DescriptorPool<D : Descriptor> {
      * Clears the pool. Used when [org.jetbrains.lincheck.trace.TraceContext] is cleared.
      */
     @Synchronized
-    fun clear() {
+    override fun clear() {
         descriptors.clear()
         byKey.clear()
     }
@@ -91,12 +101,26 @@ class DescriptorPool<D : Descriptor> {
      * Used by deserializers.
      */
     @Synchronized
-    fun restore(id: Int, value: D) {
+    protected fun restoreImpl(id: Int, key: K, value: D) {
         check(id >= descriptors.size || descriptors[id] == null || descriptors[id] == value) {
             "Item with id $id is already present in pool and differs from $value"
         }
         descriptors.expandTo(id + 1, null)
         descriptors[id] = value
-        byKey[value.key] = id
+        byKey[key] = id
     }
+}
+
+fun <D : Descriptor> DescriptorPool(): DescriptorPool<Descriptor.Key, D> = DescriptorPoolImpl()
+
+private class DescriptorPoolImpl<D : Descriptor> : AbstractDescriptorPool<Descriptor.Key, D>() {
+    override fun register(descriptor: D) = registerImpl(descriptor.key, descriptor)
+    override fun restore(id: Int, descriptor: D) = restoreImpl(id, descriptor.key, descriptor)
+}
+
+fun StringPool(): DescriptorPool<String, String> = StringPoolImpl()
+
+private class StringPoolImpl : AbstractDescriptorPool<String, String>() {
+    override fun register(descriptor: String) = registerImpl(descriptor, descriptor)
+    override fun restore(id: Int, descriptor: String) = restoreImpl(id, descriptor, descriptor)
 }

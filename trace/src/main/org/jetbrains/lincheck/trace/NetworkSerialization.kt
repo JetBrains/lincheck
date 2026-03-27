@@ -256,8 +256,8 @@ private class SubscriberContextState : ContextSavingState {
 
     private val accessPathId = AtomicInteger(1)
 
-    override fun isDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int): Boolean = false
-    override fun markDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int): Unit = Unit
+    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean = false
+    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int): Unit = Unit
     override fun isCodeLocationSaved(id: Int): Boolean = false
     override fun markCodeLocationSaved(id: Int): Unit = Unit
 

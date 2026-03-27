@@ -19,7 +19,7 @@ import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.FieldKind
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
-import org.jetbrains.lincheck.descriptors.StringDescriptor
+import org.jetbrains.lincheck.descriptors.StringPool
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
 import java.util.concurrent.ConcurrentHashMap
@@ -41,7 +41,7 @@ class TraceContext {
     val methodPool = DescriptorPool<MethodDescriptor>()
     val fieldPool = DescriptorPool<FieldDescriptor>()
     val variablePool = DescriptorPool<VariableDescriptor>()
-    val stringPool = DescriptorPool<StringDescriptor>()
+    val stringPool = StringPool()
 
     fun setThreadName(id: Int, name: String) { threadNames[id] = name }
 

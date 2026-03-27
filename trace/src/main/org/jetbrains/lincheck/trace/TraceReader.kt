@@ -353,10 +353,10 @@ internal fun loadString(
     restore: Boolean
 ): Int {
     val id = input.readInt()
-    val descriptor = input.readStringDescriptor(context)
+    val string = input.readUTF()
     if (restore) {
-        context.stringPool.restore(id, descriptor)
-        codeLocs.loadString(id, descriptor.value)
+        context.stringPool.restore(id, string)
+        codeLocs.loadString(id, string)
     }
     return id
 }

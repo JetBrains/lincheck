@@ -140,8 +140,8 @@ internal interface TraceWriter : DataOutput, Closeable {
  * Interface to check and mark if a given piece of reference data was already stored.
  */
 internal interface ContextSavingState {
-    fun isDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int): Boolean
-    fun markDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int)
+    fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean
+    fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int)
     fun isCodeLocationSaved(id: Int): Boolean
     fun markCodeLocationSaved(id: Int)
 
@@ -367,14 +367,14 @@ internal sealed class TraceWriterBase(
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
         if (value == null) return -1
 
-        val id = context.stringPool.register(StringDescriptor(context, value))
-        if (contextState.isDescriptorSaved(StringDescriptor::class, id)) return id
+        val id = context.stringPool.register(value)
+        if (contextState.isDescriptorSaved(String::class, id)) return id
 
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.STRING)
         dataOutput.writeInt(id)
         dataOutput.writeUTF(value)
-        contextState.markDescriptorSaved(StringDescriptor::class, id)
+        contextState.markDescriptorSaved(String::class, id)
 
         // It cannot fail
         writeIndexCell(ObjectKind.STRING, id, position, -1)

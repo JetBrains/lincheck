@@ -388,23 +388,23 @@ class FileStreamingTraceCollecting(
         Logger.info { "Index size: ${ioThread.indexBytes} bytes" }
     }
 
-    override fun isDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int): Boolean {
+    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
         val bitmap = getDescriptorBitmap(descriptorClass) ?: return false
         return bitmap.isSet(id)
     }
 
-    override fun markDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int) {
+    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
         val bitmap = getDescriptorBitmap(descriptorClass) ?: return
         bitmap.set(id)
     }
 
-    private fun getDescriptorBitmap(descriptorClass: KClass<out Descriptor>): AtomicBitmap? {
+    private fun getDescriptorBitmap(descriptorClass: KClass<*>): AtomicBitmap? {
         return when (descriptorClass::class) {
             ClassDescriptor::class -> seenClassDescriptors
             MethodDescriptor::class -> seenMethodDescriptors
             FieldDescriptor::class -> seenFieldDescriptors
             VariableDescriptor::class -> seenVariableDescriptors
-            StringDescriptor::class -> seenStringDescriptors
+            String::class -> seenStringDescriptors
             else -> {
                 Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
                 null

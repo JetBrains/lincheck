@@ -48,25 +48,25 @@ private class SimpleContextSavingState: ContextSavingState {
         }
     }
 
-    override fun isDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int): Boolean {
+    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
         val array = getDescriptorsArray(descriptorClass) ?: return false
         return id < array.size && array[id]
     }
 
-    override fun markDescriptorSaved(descriptorClass: KClass<out Descriptor>, id: Int) {
+    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
         val array = getDescriptorsArray(descriptorClass) ?: return
         val newArray = ensureSize(array, id)
         newArray[id] = true
         assignDescriptorsArray(descriptorClass, newArray)
     }
 
-    private fun getDescriptorsArray(descriptorClass: KClass<out Descriptor>): BooleanArray? {
+    private fun getDescriptorsArray(descriptorClass: KClass<*>): BooleanArray? {
         return when (descriptorClass) {
             ClassDescriptor::class -> seenClassDescriptors
             MethodDescriptor::class -> seenMethodDescriptors
             FieldDescriptor::class -> seenFieldDescriptors
             VariableDescriptor::class -> seenVariableDescriptors
-            StringDescriptor::class -> seenStringDescriptors
+            String::class -> seenStringDescriptors
             else -> {
                 Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
                 null
@@ -74,13 +74,13 @@ private class SimpleContextSavingState: ContextSavingState {
         }
     }
 
-    private fun assignDescriptorsArray(descriptorClass: KClass<out Descriptor>, array: BooleanArray) {
+    private fun assignDescriptorsArray(descriptorClass: KClass<*>, array: BooleanArray) {
         when (descriptorClass) {
             ClassDescriptor::class -> seenClassDescriptors = array
             MethodDescriptor::class -> seenMethodDescriptors = array
             FieldDescriptor::class -> seenFieldDescriptors = array
             VariableDescriptor::class -> seenVariableDescriptors = array
-            StringDescriptor::class -> seenStringDescriptors = array
+            String::class -> seenStringDescriptors = array
             else -> {
                 Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
             }
