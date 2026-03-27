@@ -24,7 +24,7 @@ import kotlin.annotation.AnnotationTarget.*
 @Retention(RUNTIME)
 @Target(FUNCTION)
 @Deprecated(
-    level = DeprecationLevel.WARNING,
+    level = DeprecationLevel.ERROR,
     message = "Use org.jetbrains.lincheck.datastructures.Validate instead.",
 )
 annotation class Validate
