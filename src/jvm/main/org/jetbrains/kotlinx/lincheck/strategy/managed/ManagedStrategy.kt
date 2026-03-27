@@ -2150,6 +2150,29 @@ internal abstract class ManagedStrategy(
         }
     }
 
+    override fun onIrreducibleLoopIteration(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int
+    ): Unit = threadDescriptor.runInsideIgnoredSection {
+        val threadId = threadScheduler.getCurrentThreadId()
+
+        if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
+            val decision = loopDetector.onIrreducibleLoopIteration(threadId, codeLocation)
+            // we skip trace collection here since we don't have stable boundaries
+            when (decision) {
+                LoopDetector.Decision.IDLE -> {}
+                LoopDetector.Decision.SWITCH_THREAD -> {
+                    tryAbortingUserThreads(threadId, BlockingReason.LiveLocked)
+                    onSwitchPoint(threadId)
+                    switchCurrentThread(threadId, BlockingReason.LiveLocked)
+                }
+                LoopDetector.Decision.STUCK -> {
+                    failDueToLivelock()
+                }
+            }
+        }
+    }
+
     override fun afterLoopExit(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
@@ -2178,29 +2201,6 @@ internal abstract class ManagedStrategy(
                     )
                 )
                 traceCollector?.addStateRepresentation()
-            }
-        }
-    }
-
-    override fun onIrreducibleLoop(
-        threadDescriptor: ThreadDescriptor,
-        codeLocation: Int
-    ): Unit = threadDescriptor.runInsideIgnoredSection {
-        val threadId = threadScheduler.getCurrentThreadId()
-
-        if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
-            val decision = loopDetector.onIrreducibleLoop(threadId, codeLocation)
-            // we skip trace collection here since we don't have stable boundaries
-            when (decision) {
-                LoopDetector.Decision.IDLE -> {}
-                LoopDetector.Decision.SWITCH_THREAD -> {
-                    tryAbortingUserThreads(threadId, BlockingReason.LiveLocked)
-                    onSwitchPoint(threadId)
-                    switchCurrentThread(threadId, BlockingReason.LiveLocked)
-                }
-                LoopDetector.Decision.STUCK -> {
-                    failDueToLivelock()
-                }
             }
         }
     }

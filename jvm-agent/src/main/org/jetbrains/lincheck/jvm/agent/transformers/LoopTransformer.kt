@@ -82,6 +82,7 @@ internal class LoopTransformer(
         methodInfo.basicControlFlowGraph!!.computeReachabilityFromOutsideLoops(insnIndexRemapping, loopInfo)
 
     private val isReducible = methodInfo.basicControlFlowGraph!!.isReducible ?: true
+
     private val irreducibleHitSites: Set<InstructionIndex> = if (!isReducible) {
         methodInfo.basicControlFlowGraph!!.computeIrreducibleLoopEntries(insnIndexRemapping)
     } else {
@@ -147,7 +148,7 @@ internal class LoopTransformer(
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             loadNewCodeLocationId()
             // STACK: descriptor, codeLocation
-            adapter.invokeStatic(Injections::onIrreducibleLoop)
+            adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
             // STACK: <empty>
         }
     }
