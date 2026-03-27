@@ -47,7 +47,7 @@ interface LoopDetector {
     fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int) : Int
 
     fun currentMethodId(threadId: Int): Int
-    fun loopIsInStack(threadId: Int, loopId: Int) : Boolean
+    fun isLoopInStack(threadId: Int, loopId: Int) : Boolean
 
 //  TODO: Implement in next iteration, find where to call (beforeWriteField, beforeWriteArrayElement, afterLocalWrite)
 //    fun onStageChange(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, valueHash: Int)
@@ -113,7 +113,7 @@ class BoundedLoopDetector(
         return st.callStack.lastOrNull()?.methodId ?: -1
     }
 
-    override fun loopIsInStack(threadId: Int, loopId: Int): Boolean {
+    override fun isLoopInStack(threadId: Int, loopId: Int): Boolean {
         val stack = activeLoopStack[threadId] ?: return false
         return stack.any { it.loopId == loopId }
     }
@@ -166,7 +166,7 @@ class BoundedLoopDetector(
         loopId: Int,
         isReachableFromOutsideLoop: Boolean
     ): Int? {
-        if (!isReachableFromOutsideLoop || loopIsInStack(threadId, loopId)) {
+        if (!isReachableFromOutsideLoop || isLoopInStack(threadId, loopId)) {
             val methodId = currentMethodId(threadId)
             val stack = loopStack(threadId)
 
