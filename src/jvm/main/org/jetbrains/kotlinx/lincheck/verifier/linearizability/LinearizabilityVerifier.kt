@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.datastructures.verifier.Verifier
 
 @Deprecated(
     message = "Use org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier instead.",
-    level = DeprecationLevel.WARNING
+    level = DeprecationLevel.ERROR
 )
 class LinearizabilityVerifier
     private constructor(val delegate: LinearizabilityVerifier) : Verifier by delegate
