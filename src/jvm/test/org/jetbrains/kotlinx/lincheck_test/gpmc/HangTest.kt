@@ -43,10 +43,24 @@ class HangIsolatedTest {
         }
     }
 
+    // After adding tryAbortingUserThreads in ManagedStrategy, spinning threads may be aborted
+    // instead of reported as ManagedLivelockFailure.
+    // This is expected for now, since such threads do not block the main test operation.
     @Test(timeout = TIMEOUT)
     fun testHangWithoutThreadJoin() = modelCheckerTest(
         testClass = this::class,
         testOperation = this::hangWithoutThreadJoin,
+//        expectedFailure = ManagedLivelockFailure::class,
+    )
+
+    fun hangInMainThread() {
+        while (true) { }
+    }
+
+    @Test(timeout = TIMEOUT)
+    fun testHangInMainThread() = modelCheckerTest(
+        testClass = this::class,
+        testOperation = this::hangInMainThread,
         expectedFailure = ManagedLivelockFailure::class,
     )
 }
