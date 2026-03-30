@@ -116,7 +116,7 @@ internal class DirectTraceWriter(
     indexStream: OutputStream,
     context: TraceContext,
     private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream),
-) : TraceWriterBase(
+) : ContextAwareTraceWriter(
     context = context,
     contextState = SimpleTraceContextSavedState(),
     dataStream = pos,

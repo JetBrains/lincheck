@@ -274,7 +274,7 @@ internal class NetworkTraceWriter(
     contextState: TraceContextSavedState,
     dataOutput: DataOutput,
     dataStream: OutputStream,
-) : TraceWriterBase(
+) : ContextAwareTraceWriter(
     context = context,
     contextState = contextState,
     dataStream = dataStream,

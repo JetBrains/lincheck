@@ -85,7 +85,7 @@ internal interface TraceWriter : DataOutput, Closeable {
     fun endWriteLeafTracepoint()
 
     /**
-     * Mark the end of the container tracepoint's header (now only TRMethodCallTracepoint is a container one).
+     * Mark the end of the container tracepoint's header (now only TRMethodCallTracepoint, TRLoopTracePoint, and TRLoopIterationTracePoint are container ones).
      */
     fun endWriteContainerTracepointHeader(id: Int)
 
@@ -169,7 +169,7 @@ internal inline fun <reified T> TraceContextSavedState.markDescriptorSaved(id: I
  *
  * `dataStream` can be relaxed to [Closeable], but it will hide its intention even more.
  */
-internal sealed class TraceWriterBase(
+internal sealed class ContextAwareTraceWriter(
     val context: TraceContext,
     private val contextState: TraceContextSavedState,
     protected val dataStream: OutputStream,
@@ -183,6 +183,63 @@ internal sealed class TraceWriterBase(
 
     protected abstract val currentDataPosition: Long
     abstract val writerId: Int
+
+    private inline fun <reified T> isDescriptorSaved(id: Int) = isDescriptorSavedInContext(T::class, id)
+    private inline fun <reified T> markDescriptorSaved(id: Int) = markDescriptorSavedInContext(T::class, id)
+
+    /**
+     * Check if descriptor is already saved in the context.
+     * Default implementation delegates to [contextState].
+     * Override to customize the check logic (e.g., include current block snapshot).
+     */
+    protected open fun isDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int): Boolean {
+        return contextState.isDescriptorSaved(descriptorClass, id)
+    }
+
+    /**
+     * Mark descriptor as saved in the context.
+     * Default implementation marks immediately via [contextState].
+     * Override to defer marking (e.g., until block is persisted to disk).
+     */
+    protected open fun markDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int) {
+        contextState.markDescriptorSaved(descriptorClass, id)
+    }
+
+    /**
+     * Check if code location is already saved in the context.
+     * Default implementation delegates to [contextState].
+     * Override to customize the check logic.
+     */
+    protected open fun isCodeLocationSavedInContext(id: Int): Boolean {
+        return contextState.isCodeLocationSaved(id)
+    }
+
+    /**
+     * Mark code location as saved in the context.
+     * Default implementation marks immediately via [contextState].
+     * Override to defer marking.
+     */
+    protected open fun markCodeLocationSavedInContext(id: Int) {
+        contextState.markCodeLocationSaved(id)
+    }
+
+    /**
+     * Check if access path is already saved in the context.
+     * Default implementation delegates to [contextState].
+     * Override to customize the check logic.
+     */
+    protected open fun isAccessPathSavedInContext(value: AccessPath): Int {
+        return contextState.isAccessPathSaved(value)
+    }
+
+    /**
+     * Mark access path as saved in the context.
+     * Default implementation marks immediately via [contextState].
+     * Override to defer marking.
+     */
+    protected open fun markAccessPathSavedInContext(value: AccessPath) {
+        contextState.markAccessPathSaved(value)
+    }
 
     override fun close() {
         dataOutput.writeKind(ObjectKind.EOF)
@@ -272,20 +329,20 @@ internal sealed class TraceWriterBase(
 
     override fun writeClassDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (contextState.isDescriptorSaved<ClassDescriptor>(id)) return
+        if (isDescriptorSaved<ClassDescriptor>(id)) return
         // Write class descriptor into data and position into index
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.CLASS_DESCRIPTOR)
         dataOutput.writeInt(id)
         dataOutput.writeClassDescriptor(context.classPool[id])
-        contextState.markDescriptorSaved<ClassDescriptor>(id)
+        markDescriptorSaved<ClassDescriptor>(id)
 
         writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeMethodDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (contextState.isDescriptorSaved<MethodDescriptor>(id)) return
+        if (isDescriptorSaved<MethodDescriptor>(id)) return
         val descriptor = context.methodPool[id]
         writeClassDescriptor(descriptor.classId)
 
@@ -294,14 +351,14 @@ internal sealed class TraceWriterBase(
         dataOutput.writeKind(ObjectKind.METHOD_DESCRIPTOR)
         dataOutput.writeInt(id)
         dataOutput.writeMethodDescriptor(descriptor)
-        contextState.markDescriptorSaved<MethodDescriptor>(id)
+        markDescriptorSaved<MethodDescriptor>(id)
 
         writeIndexCell(ObjectKind.METHOD_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeFieldDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (contextState.isDescriptorSaved<FieldDescriptor>(id)) return
+        if (isDescriptorSaved<FieldDescriptor>(id)) return
         val descriptor = context.fieldPool[id]
         writeClassDescriptor(descriptor.classId)
         // Write field descriptor into data and position into index
@@ -309,20 +366,20 @@ internal sealed class TraceWriterBase(
         dataOutput.writeKind(ObjectKind.FIELD_DESCRIPTOR)
         dataOutput.writeInt(id)
         dataOutput.writeFieldDescriptor(descriptor)
-        contextState.markDescriptorSaved<FieldDescriptor>(id)
+        markDescriptorSaved<FieldDescriptor>(id)
 
         writeIndexCell(ObjectKind.FIELD_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeVariableDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (contextState.isDescriptorSaved<VariableDescriptor>(id)) return
+        if (isDescriptorSaved<VariableDescriptor>(id)) return
         // Write variable descriptor into data and position into index
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.VARIABLE_DESCRIPTOR)
         dataOutput.writeInt(id)
         dataOutput.writeVariableDescriptor(context.variablePool[id])
-        contextState.markDescriptorSaved<VariableDescriptor>(id)
+        markDescriptorSaved<VariableDescriptor>(id)
 
         writeIndexCell(ObjectKind.VARIABLE_DESCRIPTOR, id, position, -1)
     }
@@ -332,7 +389,7 @@ internal sealed class TraceWriterBase(
             "Cannot save reference data inside tracepoint"
         }
         if (id == UNKNOWN_CODE_LOCATION_ID) return
-        if (contextState.isCodeLocationSaved(id)) return
+        if (isCodeLocationSavedInContext(id)) return
 
         val codeLocation = context.stackTrace(id)
         val accessPath = context.accessPath(id)
@@ -361,7 +418,7 @@ internal sealed class TraceWriterBase(
         dataOutput.writeInt(activeLocalNameIds?.size ?: 0)
         activeLocalNameIds?.forEach { dataOutput.writeInt(it) }
         activeLocals?.forEach { dataOutput.writeInt(it.localKind.ordinal) }
-        contextState.markCodeLocationSaved(id)
+        markCodeLocationSavedInContext(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
     }
@@ -371,13 +428,13 @@ internal sealed class TraceWriterBase(
         if (value == null) return -1
 
         val id = context.stringPool.register(value)
-        if (contextState.isDescriptorSaved<String>(id)) return id
+        if (isDescriptorSaved<String>(id)) return id
 
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.STRING)
         dataOutput.writeInt(id)
         dataOutput.writeUTF(value)
-        contextState.markDescriptorSaved<String>(id)
+        markDescriptorSaved<String>(id)
 
         // It cannot fail
         writeIndexCell(ObjectKind.STRING, id, position, -1)
@@ -435,7 +492,7 @@ internal sealed class TraceWriterBase(
             // then, save the access paths in correct order
             .onEach { value ->
                 val position = currentDataPosition
-                val id = contextState.isAccessPathSaved(value)
+                val id = isAccessPathSavedInContext(value)
                 if (value == root) rootId = id.absoluteValue
                 if (id > 0) return@onEach // already saved
 
@@ -447,7 +504,7 @@ internal sealed class TraceWriterBase(
                     location.save(this, context, contextState)
                 }
 
-                contextState.markAccessPathSaved(value)
+                markAccessPathSavedInContext(value)
                 writeIndexCell(ObjectKind.ACCESS_PATH, -id, position, -1)
             }
 

@@ -35,8 +35,23 @@ internal data class IndexCell(
     val endPos: Long
 )
 
+/**
+ * Snapshot of the trace context portion contained in a specific data block.
+ * Tracks which descriptors, code locations, and other context elements are written in this block.
+ * Used to defer marking these elements as "saved" until the block is persisted to disk.
+ */
+internal data class BlockContextSnapshot(
+    val classDescriptorIds: Set<Int> = emptySet(),
+    val methodDescriptorIds: Set<Int> = emptySet(),
+    val fieldDescriptorIds: Set<Int> = emptySet(),
+    val variableDescriptorIds: Set<Int> = emptySet(),
+    val stringIds: Set<Int> = emptySet(),
+    val codeLocationIds: Set<Int> = emptySet(),
+    val accessPaths: Set<AccessPath> = emptySet()
+)
+
 internal interface BlockSaver {
-    fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>)
+    fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>, contextSnapshot: BlockContextSnapshot)
 }
 
 
@@ -49,7 +64,7 @@ internal class BufferedTraceWriter(
     contextState: TraceContextSavedState,
     private val storage: BlockSaver,
     private val bufferStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
-) : TraceWriterBase(
+) : ContextAwareTraceWriter(
     context = context,
     contextState = contextState,
     dataStream = bufferStream,
@@ -58,7 +73,63 @@ internal class BufferedTraceWriter(
     private var currentStartDataPosition: Long = 0
     private var index = mutableListOf<IndexCell>()
 
+    // Track what's written in the current block for the snapshot
+    private val classDescriptorIdsInBlock = mutableSetOf<Int>()
+    private val methodDescriptorIdsInBlock = mutableSetOf<Int>()
+    private val fieldDescriptorIdsInBlock = mutableSetOf<Int>()
+    private val variableDescriptorIdsInBlock = mutableSetOf<Int>()
+    private val stringIdsInBlock = mutableSetOf<Int>()
+    private val codeLocationIdsInBlock = mutableSetOf<Int>()
+    private val accessPathsInBlock = mutableSetOf<AccessPath>()
+
     override val currentDataPosition: Long get() = currentStartDataPosition + bufferStream.position()
+
+    override fun isDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int): Boolean {
+        // Check if already globally saved OR written in the current block
+        val inBlock = when (descriptorClass) {
+            ClassDescriptor::class -> id in classDescriptorIdsInBlock
+            MethodDescriptor::class -> id in methodDescriptorIdsInBlock
+            FieldDescriptor::class -> id in fieldDescriptorIdsInBlock
+            VariableDescriptor::class -> id in variableDescriptorIdsInBlock
+            String::class -> id in stringIdsInBlock
+            else -> false
+        }
+        return inBlock || super.isDescriptorSavedInContext(descriptorClass, id)
+    }
+
+    override fun markDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int) {
+        // Don't mark globally; accumulate in the block snapshot instead.
+        // Actual global marking happens in FileStreamingThread after disk writing
+        when (descriptorClass) {
+            ClassDescriptor::class -> classDescriptorIdsInBlock.add(id)
+            MethodDescriptor::class -> methodDescriptorIdsInBlock.add(id)
+            FieldDescriptor::class -> fieldDescriptorIdsInBlock.add(id)
+            VariableDescriptor::class -> variableDescriptorIdsInBlock.add(id)
+            String::class -> stringIdsInBlock.add(id)
+        }
+    }
+
+    override fun isCodeLocationSavedInContext(id: Int): Boolean {
+        return (id in codeLocationIdsInBlock) || super.isCodeLocationSavedInContext(id)
+    }
+
+    override fun markCodeLocationSavedInContext(id: Int) {
+        // Marking is deferred until FileStreamingThread persists block to disk
+        codeLocationIdsInBlock.add(id)
+    }
+
+    override fun isAccessPathSavedInContext(value: AccessPath): Int {
+        if (value in accessPathsInBlock) {
+            // Already in the current block, return positive (saved)
+            return super.isAccessPathSavedInContext(value).absoluteValue
+        }
+        return super.isAccessPathSavedInContext(value)
+    }
+
+    override fun markAccessPathSavedInContext(value: AccessPath) {
+        // Marking is deferred until FileStreamingThread persists block to disk
+        accessPathsInBlock.add(value)
+    }
 
     override fun close() {
         flush()
@@ -108,7 +179,28 @@ internal class BufferedTraceWriter(
             index = mutableListOf()
             oldIndex
         }
-        storage.saveDataAndIndexBlock(writerId, logicalStart, bufferStream.detachBuffer(), indexToSave)
+
+        // Create snapshot of what's being saved in this block
+        val snapshot = BlockContextSnapshot(
+            classDescriptorIds = classDescriptorIdsInBlock.toSet(),
+            methodDescriptorIds = methodDescriptorIdsInBlock.toSet(),
+            fieldDescriptorIds = fieldDescriptorIdsInBlock.toSet(),
+            variableDescriptorIds = variableDescriptorIdsInBlock.toSet(),
+            stringIds = stringIdsInBlock.toSet(),
+            codeLocationIds = codeLocationIdsInBlock.toSet(),
+            accessPaths = accessPathsInBlock.toSet()
+        )
+
+        // Clear for next block
+        classDescriptorIdsInBlock.clear()
+        methodDescriptorIdsInBlock.clear()
+        fieldDescriptorIdsInBlock.clear()
+        variableDescriptorIdsInBlock.clear()
+        stringIdsInBlock.clear()
+        codeLocationIdsInBlock.clear()
+        accessPathsInBlock.clear()
+
+        storage.saveDataAndIndexBlock(writerId, logicalStart, bufferStream.detachBuffer(), indexToSave, snapshot)
     }
 
     private fun maybeFlushData() {
@@ -121,9 +213,10 @@ internal class BufferedTraceWriter(
 private class FileStreamingThread(
     dataStream: OutputStream,
     indexStream: OutputStream,
+    private val savedState: TraceContextSavedState
 ): Thread() {
     private sealed class Job()
-    private data class SaveBlockJob(val writerId: Int, val logicalBlockStart: Long, val dataBlock: ByteBuffer, val indexList: List<IndexCell>): Job()
+    private data class SaveBlockJob(val writerId: Int, val logicalBlockStart: Long, val dataBlock: ByteBuffer, val indexList: List<IndexCell>, val contextSnapshot: BlockContextSnapshot): Job()
     private class ExitJob(): Job()
 
     private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
@@ -173,8 +266,8 @@ private class FileStreamingThread(
         indexBytes += Long.SIZE_BYTES * 2
     }
 
-    fun addBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
-        queue.put(SaveBlockJob(writerId, logicalBlockStart, dataBlock, indexList))
+    fun addBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>, contextSnapshot: BlockContextSnapshot) {
+        queue.put(SaveBlockJob(writerId, logicalBlockStart, dataBlock, indexList, contextSnapshot))
     }
 
     fun exit() {
@@ -227,6 +320,18 @@ private class FileStreamingThread(
         indexBytes += buffer.limit()
         index.write(buffer.array(), 0, buffer.limit())
         index.flush()
+
+        // TODO: this could be done before writing to the disk, because the order in which this data will be written is already fixed, should I do it?
+        // Mark all items in this block as saved after successful disk write
+        job.contextSnapshot.apply {
+            classDescriptorIds.forEach { savedState.markDescriptorSaved<ClassDescriptor>(it) }
+            methodDescriptorIds.forEach { savedState.markDescriptorSaved<MethodDescriptor>(it) }
+            fieldDescriptorIds.forEach { savedState.markDescriptorSaved<FieldDescriptor>(it) }
+            variableDescriptorIds.forEach { savedState.markDescriptorSaved<VariableDescriptor>(it) }
+            stringIds.forEach { savedState.markDescriptorSaved<String>(it) }
+            codeLocationIds.forEach { savedState.markCodeLocationSaved(it) }
+            accessPaths.forEach { savedState.markAccessPathSaved(it) }
+        }
     }
 
     private fun closeStreams() {
@@ -289,7 +394,7 @@ class FileStreamingTraceCollecting(
                 context = context
             )
 
-    private val ioThread = FileStreamingThread(dataStream, indexStream)
+    private val ioThread = FileStreamingThread(dataStream, indexStream, savedState = this)
     init {
         ioThread.start()
     }
@@ -330,8 +435,13 @@ class FileStreamingTraceCollecting(
             contextState = this,
             // This is needed to work around visibility problems
             storage = object : BlockSaver {
-                override fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) =
-                    ioThread.addBlock(writerId, logicalBlockStart, dataBlock, indexList)
+                override fun saveDataAndIndexBlock(
+                    writerId: Int,
+                    logicalBlockStart: Long,
+                    dataBlock: ByteBuffer,
+                    indexList: List<IndexCell>,
+                    contextSnapshot: BlockContextSnapshot
+                ) = ioThread.addBlock(writerId, logicalBlockStart, dataBlock, indexList, contextSnapshot)
             }
         )
         context.setThreadName(threadId, thread.name)
