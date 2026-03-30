@@ -199,29 +199,13 @@ private class TraceColumnPrinter(
             _lines.add(TraceLine.EMPTY)
             return
         }
-//        TODO: Iterations with ranges do not show up. In those cases the node is CallNode.
+
         if ((node is LoopNode || node is CallNode) && !verbose) {
             val loopLine = node.toString(withLocation = false)
-            var loopTitle = loopLine.substringBefore("::")
-            var iterations = loopLine.substringAfter("::").split(";").map { it.trim() }.dropLast(1) // drop last empty element after split
+            val loopTitle = loopLine.substringBefore("::")
+            val iterations = loopLine.substringAfter("::").split(";").map { it.trim() }.dropLast(1) // drop last empty element after split
 
-            var prefixIterations = getPrefix() + " "
-
-            if (iterations.any { it.contains("switch (reason: active lock detected)") }) {
-                val switchIndex = iterations.indexOfFirst { it.contains("switch (reason: active lock detected)") }
-
-                loopTitle = "┌╶> $loopTitle"
-
-                iterations = iterations.mapIndexed { index, iteration ->
-                    val arrow = when {
-                        index < switchIndex -> "|    "
-                        index == switchIndex -> "└╶╶ "
-                        else -> "     "
-                    }
-                    arrow + iteration
-                }
-                prefixIterations = prefixIterations.dropLast(1)
-            }
+            val prefixIterations = getPrefix() + " "
             val loopTitleLine = TraceLine(node.eventNumber, node.iThread, getPrefix() + loopTitle)
             _lines.add(loopTitleLine)
 
