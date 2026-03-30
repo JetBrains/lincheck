@@ -2,7 +2,7 @@
 | ---------------------------------------- |
 |    Thread 1     |        Thread 2        |
 | ---------------------------------------- |
-| trigger(): void | operation(): Suspended |
+| trigger(): void | operation(): SUSPENDED |
 | ---------------------------------------- |
 
 The following interleaving leads to the error:
@@ -12,7 +12,7 @@ The following interleaving leads to the error:
 | trigger()         |                                                                                                      |
 |   allowed = true  |                                                                                                      |
 |   switch          |                                                                                                      |
-|                   | operation(): Suspended                                                                               |
+|                   | operation(): SUSPENDED                                                                               |
 |                   |   allowed ➜ true                                                                                     |
 |                   |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED                    |
 |                   |     receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED                      |
@@ -59,7 +59,7 @@ The following interleaving leads to the error:
 |                   |     switch (reason: coroutine is suspended)                                                          |
 |   allowed = false |                                                                                                      |
 |   result: void    |                                                                                                      |
-|                   |   result: Suspended                                                                                  |
+|                   |   result: SUSPENDED                                                                                  |
 | ------------------------------------------------------------------------------------------------------------------------ |
 
 Detailed trace:
@@ -69,7 +69,7 @@ Detailed trace:
 | trigger()                                                                       |                                                                                                                                                                                                                        |
 |   allowed = true at SuspendedNotAwokeTest.trigger(SuspendedNotAwokeTest.kt:32)  |                                                                                                                                                                                                                        |
 |   switch                                                                        |                                                                                                                                                                                                                        |
-|                                                                                 | operation(): Suspended                                                                                                                                                                                                 |
+|                                                                                 | operation(): SUSPENDED                                                                                                                                                                                                 |
 |                                                                                 |   allowed ➜ true at SuspendedNotAwokeTest.operation(SuspendedNotAwokeTest.kt:38)                                                                                                                                       |
 |                                                                                 |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED at SuspendedNotAwokeTest.operation(SuspendedNotAwokeTest.kt:39)                                                                      |
 |                                                                                 |     receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED at BufferedChannel.receive(BufferedChannel.kt:0)                                                                                       |
@@ -151,5 +151,5 @@ Detailed trace:
 |                                                                                 |     switch (reason: coroutine is suspended)                                                                                                                                                                            |
 |   allowed = false at SuspendedNotAwokeTest.trigger(SuspendedNotAwokeTest.kt:33) |                                                                                                                                                                                                                        |
 |   result: void                                                                  |                                                                                                                                                                                                                        |
-|                                                                                 |   result: Suspended                                                                                                                                                                                                    |
+|                                                                                 |   result: SUSPENDED                                                                                                                                                                                                    |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

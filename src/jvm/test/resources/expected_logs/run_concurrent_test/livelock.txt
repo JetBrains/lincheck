@@ -1,58 +1,52 @@
 = Concurrent test has hung =
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                      Main Thread                       |                       Thread 1                        |                       Thread 2                        |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block()                              |                                                       |                                                       |
-|   block()                                              |                                                       |                                                       |
-|     CollectionsKt.listOf(Array<Thread>#1): ArrayList#1 |                                                       |                                                       |
-|     ArrayList#1.forEach()                              |                                                       |                                                       |
-|       iterator(): ArrayItr#1                           |                                                       |                                                       |
-|       loop(3 iterations)                               |                                                       |                                                       |
-|        ArrayItr#1.hasNext(): true                      |                                                       |                                                       |
-|        ArrayItr#1.next(): Thread#1                     |                                                       |                                                       |
-|        forEach$Lambda()                                |                                                       |                                                       |
-|        ArrayItr#1.next(): Thread#2                     |                                                       |                                                       |
-|        ArrayItr#1.hasNext(): false                     |                                                       |                                                       |
-|     ArrayList#1.forEach()                              |                                                       |                                                       |
-|       iterator(): ArrayItr#2                           |                                                       |                                                       |
-|       loop(1 iterations)                               |                                                       |                                                       |
-|        ArrayItr#2.hasNext(): true                      |                                                       |                                                       |
-|        ArrayItr#2.next(): Thread#1                     |                                                       |                                                       |
-|        switch (reason: waiting for Thread 1 to finish) |                                                       |                                                       |
-|                                                        |                                                       | run()                                                 |
-|                                                        |                                                       |   SpinLockTestKt.withLock(SpinLock#2, Lambda#1)       |
-|                                                        |                                                       |     $this$withLock.lock()                             |
-|                                                        |                                                       |       loop(1 iterations)                              |
-|                                                        |                                                       |        lock.compareAndSet(false, true): true          |
-|                                                        |                                                       |     block.invoke()                                    |
-|                                                        |                                                       |       SpinLockTestKt.withLock(SpinLock#1, Lambda#2)   |
-|                                                        |                                                       |         $this$withLock.lock()                         |
-|                                                        |                                                       |           ┌╶> loop(200 iterations)                    |
-|                                                        |                                                       |           |    switch                                 |
-|                                                        | run()                                                 |                                                       |
-|                                                        |   SpinLockTestKt.withLock(SpinLock#1, Lambda#3)       |                                                       |
-|                                                        |     $this$withLock.lock()                             |                                                       |
-|                                                        |       loop(1 iterations)                              |                                                       |
-|                                                        |        lock.compareAndSet(false, true): true          |                                                       |
-|                                                        |     block.invoke()                                    |                                                       |
-|                                                        |       SpinLockTestKt.withLock(SpinLock#2, Lambda#4)   |                                                       |
-|                                                        |         $this$withLock.lock()                         |                                                       |
-|                                                        |           ┌╶> loop(201 iterations)                    |                                                       |
-|                                                        |           |    lock.compareAndSet(false, true): false |                                                       |
-|                                                        |           |    Thread.yield()                         |                                                       |
-|                                                        |           └╶╶ switch (reason: active lock detected)   |                                                       |
-|                                                        |                                                       |           |    lock.compareAndSet(false, true): false |
-|                                                        |                                                       |           |    Thread.yield()                         |
-|                                                        |                                                       |           └╶╶ switch (reason: active lock detected)   |
-|                                                        |                lock.compareAndSet(false, true): false |                                                       |
-|                                                        |                Thread.yield()                         |                                                       |
-|                                                        |                                                       |                lock.compareAndSet(false, true): false |
-|                                                        |                                                       |                Thread.yield()                         |
-|                                                        |                switch (reason: active lock detected)  |                                                       |
-|                                                        |                                                       |                switch (reason: active lock detected)  |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                      Main Thread                       |                      Thread 1                       |                      Thread 2                       |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| $this_runCatching.block()                              |                                                     |                                                     |
+|   block()                                              |                                                     |                                                     |
+|     CollectionsKt.listOf(Array<Thread>#1): ArrayList#1 |                                                     |                                                     |
+|     ArrayList#1.forEach()                              |                                                     |                                                     |
+|       iterator(): ArrayItr#1                           |                                                     |                                                     |
+|       loop(3 iterations)                               |                                                     |                                                     |
+|        ArrayItr#1.hasNext(): true                      |                                                     |                                                     |
+|        ArrayItr#1.next(): Thread#1                     |                                                     |                                                     |
+|        forEach$Lambda()                                |                                                     |                                                     |
+|        ArrayItr#1.next(): Thread#2                     |                                                     |                                                     |
+|        ArrayItr#1.hasNext(): false                     |                                                     |                                                     |
+|     ArrayList#1.forEach()                              |                                                     |                                                     |
+|       iterator(): ArrayItr#2                           |                                                     |                                                     |
+|       loop(1 iterations)                               |                                                     |                                                     |
+|        ArrayItr#2.hasNext(): true                      |                                                     |                                                     |
+|        ArrayItr#2.next(): Thread#1                     |                                                     |                                                     |
+|        switch (reason: waiting for Thread 1 to finish) |                                                     |                                                     |
+|                                                        |                                                     | run()                                               |
+|                                                        |                                                     |   SpinLockTestKt.withLock(SpinLock#2, Lambda#1)     |
+|                                                        |                                                     |     $this$withLock.lock()                           |
+|                                                        |                                                     |       loop(1 iterations)                            |
+|                                                        |                                                     |        lock.compareAndSet(false, true): true        |
+|                                                        |                                                     |     block.invoke()                                  |
+|                                                        |                                                     |       SpinLockTestKt.withLock(SpinLock#1, Lambda#2) |
+|                                                        |                                                     |         $this$withLock.lock()                       |
+|                                                        |                                                     |           loop(200 iterations)                      |
+|                                                        |                                                     |            switch                                   |
+|                                                        | run()                                               |                                                     |
+|                                                        |   SpinLockTestKt.withLock(SpinLock#1, Lambda#3)     |                                                     |
+|                                                        |     $this$withLock.lock()                           |                                                     |
+|                                                        |       loop(1 iterations)                            |                                                     |
+|                                                        |        lock.compareAndSet(false, true): true        |                                                     |
+|                                                        |     block.invoke()                                  |                                                     |
+|                                                        |       SpinLockTestKt.withLock(SpinLock#2, Lambda#4) |                                                     |
+|                                                        |         $this$withLock.lock()                       |                                                     |
+|                                                        |           loop(201 iterations)                      |                                                     |
+|                                                        |            lock.compareAndSet(false, true): false   |                                                     |
+|                                                        |            Thread.yield()                           |                                                     |
+|                                                        |            switch (reason: active lock detected)    |                                                     |
+|                                                        |                                                     |            lock.compareAndSet(false, true): false   |
+|                                                        |                                                     |            Thread.yield()                           |
+|                                                        |                                                     |            switch (reason: active lock detected)    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
 Detailed trace:
