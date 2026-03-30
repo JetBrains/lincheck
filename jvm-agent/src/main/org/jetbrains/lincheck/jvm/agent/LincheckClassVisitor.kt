@@ -201,7 +201,7 @@ internal class LincheckClassVisitor(
         //   But apparently this assumption is currently violated,
         //   and most likely we have some bug in one of the transformers.
         chain.addTransformer { adapter, mv ->
-            LoopTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+            LoopTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config.trackIrreducibleLoops)
         }
         
         // ======== SnapshotBreakpoints ========

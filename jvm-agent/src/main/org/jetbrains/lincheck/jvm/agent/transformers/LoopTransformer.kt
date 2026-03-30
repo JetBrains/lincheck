@@ -31,6 +31,7 @@ internal class LoopTransformer(
     context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
+    shouldTrackIrreducibleLoops: Boolean,
 ) : InstructionMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     // Retrieve loop sites planned from the precomputed basic-block CFG.
@@ -83,7 +84,7 @@ internal class LoopTransformer(
 
     private val isReducible = methodInfo.basicControlFlowGraph!!.isReducible ?: true
 
-    private val irreducibleHitSites: Set<InstructionIndex> = if (!isReducible) {
+    private val irreducibleHitSites: Set<InstructionIndex> = if (!isReducible && shouldTrackIrreducibleLoops) {
         methodInfo.basicControlFlowGraph!!.computeIrreducibleLoopEntries(insnIndexRemapping)
     } else {
         emptySet()
