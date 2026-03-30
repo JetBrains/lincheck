@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
+import kotlin.reflect.KClass
 
 /**
  * Network-based trace collecting strategy that streams trace data to a single subscriber.
@@ -57,7 +58,7 @@ class NetworkStreamingTraceCollecting(
     // client reader has no prior context (descriptors, strings, etc.).
     private val byteStream = ByteArrayOutputStream(MESSAGE_BUFFER_SIZE)
     private val outputStream = DataOutputStream(byteStream)
-    private var contextState = SubscriberContextState()
+    private var contextState = SubscriberTraceContextSavedState()
     private var writer = NetworkTraceWriter(context, contextState, outputStream, outputStream)
     private var headerSent = false
 
@@ -185,7 +186,7 @@ class NetworkStreamingTraceCollecting(
      * does not have any of the previously sent context (descriptors, strings, etc.).
      */
     private fun resetWriter() {
-        contextState = SubscriberContextState()
+        contextState = SubscriberTraceContextSavedState()
         writer = NetworkTraceWriter(context, contextState, outputStream, outputStream)
         headerSent = false
         Logger.info { "Network trace writer reset for new client" }
@@ -247,27 +248,18 @@ class NetworkStreamingTraceCollecting(
  * Per-subscriber trace context state.
  * Each subscriber maintains its own state since we don't deduplicate across subscribers.
  */
-private class SubscriberContextState : ContextSavingState {
+private class SubscriberTraceContextSavedState : TraceContextSavedState {
     // TODO: for simplicity, we do not attempt deduplication or string interning;
     //       just store all data in-place whenever requested.
     //       See JBRes-7900 for details.
 
-    private val stringId = AtomicInteger(1)
     private val accessPathId = AtomicInteger(1)
 
-    override fun isClassDescriptorSaved(id: Int): Boolean = false
-    override fun markClassDescriptorSaved(id: Int): Unit = Unit
-    override fun isMethodDescriptorSaved(id: Int): Boolean = false
-    override fun markMethodDescriptorSaved(id: Int): Unit = Unit
-    override fun isFieldDescriptorSaved(id: Int): Boolean = false
-    override fun markFieldDescriptorSaved(id: Int): Unit = Unit
-    override fun isVariableDescriptorSaved(id: Int): Boolean = false
-    override fun markVariableDescriptorSaved(id: Int): Unit = Unit
+    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean = false
+    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int): Unit = Unit
     override fun isCodeLocationSaved(id: Int): Boolean = false
     override fun markCodeLocationSaved(id: Int): Unit = Unit
 
-    override fun isStringSaved(value: String): Int = -(stringId.getAndIncrement())
-    override fun markStringSaved(value: String): Unit = Unit
 
     override fun isAccessPathSaved(value: AccessPath): Int = -(accessPathId.getAndIncrement())
     override fun markAccessPathSaved(value: AccessPath): Unit = Unit
@@ -279,7 +271,7 @@ private class SubscriberContextState : ContextSavingState {
  */
 internal class NetworkTraceWriter(
     context: TraceContext,
-    contextState: ContextSavingState,
+    contextState: TraceContextSavedState,
     dataOutput: DataOutput,
     dataStream: OutputStream,
 ) : TraceWriterBase(
@@ -465,7 +457,7 @@ class NetworkTraceReader : Closeable {
                     }
 
                     ObjectKind.STRING -> {
-                        loadString(dataInput, codeLocationsContext, restore = true)
+                        loadString(dataInput, context, codeLocationsContext, restore = true)
                     }
 
                     ObjectKind.ACCESS_PATH -> {

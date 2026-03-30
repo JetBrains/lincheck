@@ -17,7 +17,7 @@ import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
 import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
 
-internal fun AccessLocation.save(out: TraceWriter, traceContext: TraceContext, savingState: ContextSavingState) {
+internal fun AccessLocation.save(out: TraceWriter, traceContext: TraceContext, savingState: TraceContextSavedState) {
     when (this) {
         is LocalVariableAccessLocation       -> save(out, traceContext)
         is StaticFieldAccessLocation         -> save(out, traceContext)
@@ -65,7 +65,7 @@ private fun ArrayElementByIndexAccessLocation.save(out: TraceWriter) {
     out.writeInt(index)
 }
 
-private fun ArrayElementByNameAccessLocation.save(out: TraceWriter, savingState: ContextSavingState) {
+private fun ArrayElementByNameAccessLocation.save(out: TraceWriter, savingState: TraceContextSavedState) {
     // register or get existing access path and write its id to output stream
     val indexId = savingState.isAccessPathSaved(indexAccessPath)
     check(indexId > 0) { "Access paths saving order must guarantee that inner access paths are already saved" }

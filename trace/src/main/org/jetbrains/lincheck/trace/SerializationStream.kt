@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.Logger
 import java.io.OutputStream
 import java.nio.ByteBuffer
@@ -19,6 +20,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.absoluteValue
 import kotlin.math.max
+import kotlin.reflect.KClass
 
 // 1 MiB
 private const val PER_THREAD_DATA_BUFFER_SIZE: Int = 1024 * 1024
@@ -44,7 +46,7 @@ private const val MAX_STRING_SIZE = PER_THREAD_DATA_BUFFER_SIZE - 1024
 internal class BufferedTraceWriter(
     override val writerId: Int,
     context: TraceContext,
-    contextState: ContextSavingState,
+    contextState: TraceContextSavedState,
     private val storage: BlockSaver,
     private val bufferStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
 ) : TraceWriterBase(
@@ -279,7 +281,7 @@ class FileStreamingTraceCollecting(
     dataStream: OutputStream,
     indexStream: OutputStream,
     val context: TraceContext
-): TraceCollectingStrategy, ContextSavingState {
+): TraceCollectingStrategy, TraceContextSavedState {
     constructor(baseFileName: String, context: TraceContext) :
             this(
                 dataStream = openNewFile(baseFileName),
@@ -294,12 +296,12 @@ class FileStreamingTraceCollecting(
 
     private val points = AtomicInteger(0)
 
+    private var seenStringDescriptors = AtomicBitmap()
     private var seenClassDescriptors = AtomicBitmap()
     private var seenMethodDescriptors = AtomicBitmap()
     private var seenFieldDescriptors = AtomicBitmap()
     private var seenVariableDescriptors = AtomicBitmap()
     private var seenCodeLocations = AtomicBitmap()
-    private val stringEnumerator = Enumerator<String>()
     private val accessPathEnumerator = Enumerator<AccessPath>()
 
     private val writers = ConcurrentHashMap<Thread, BufferedTraceWriter>()
@@ -386,29 +388,33 @@ class FileStreamingTraceCollecting(
         Logger.info { "Index size: ${ioThread.indexBytes} bytes" }
     }
 
-    override fun isClassDescriptorSaved(id: Int): Boolean = seenClassDescriptors.isSet(id)
+    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
+        val bitmap = getDescriptorBitmap(descriptorClass) ?: return false
+        return bitmap.isSet(id)
+    }
 
-    override fun markClassDescriptorSaved(id: Int): Unit = seenClassDescriptors.set(id)
+    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
+        val bitmap = getDescriptorBitmap(descriptorClass) ?: return
+        bitmap.set(id)
+    }
 
-    override fun isMethodDescriptorSaved(id: Int): Boolean = seenMethodDescriptors.isSet(id)
-
-    override fun markMethodDescriptorSaved(id: Int): Unit = seenMethodDescriptors.set(id)
-
-    override fun isFieldDescriptorSaved(id: Int): Boolean = seenFieldDescriptors.isSet(id)
-
-    override fun markFieldDescriptorSaved(id: Int): Unit = seenFieldDescriptors.set(id)
-
-    override fun isVariableDescriptorSaved(id: Int): Boolean = seenVariableDescriptors.isSet(id)
-
-    override fun markVariableDescriptorSaved(id: Int): Unit = seenVariableDescriptors.set(id)
+    private fun getDescriptorBitmap(descriptorClass: KClass<*>): AtomicBitmap? {
+        return when (descriptorClass::class) {
+            ClassDescriptor::class -> seenClassDescriptors
+            MethodDescriptor::class -> seenMethodDescriptors
+            FieldDescriptor::class -> seenFieldDescriptors
+            VariableDescriptor::class -> seenVariableDescriptors
+            String::class -> seenStringDescriptors
+            else -> {
+                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
+                null
+            }
+        }
+    }
 
     override fun isCodeLocationSaved(id: Int): Boolean = seenCodeLocations.isSet(id)
 
     override fun markCodeLocationSaved(id: Int): Unit = seenCodeLocations.set(id)
-
-    override fun isStringSaved(value: String): Int = stringEnumerator.isSaved(value)
-
-    override fun markStringSaved(value: String): Unit = stringEnumerator.makeSaved(value)
 
     override fun isAccessPathSaved(value: AccessPath): Int = accessPathEnumerator.isSaved(value)
 
