@@ -1371,9 +1371,7 @@ internal abstract class ManagedStrategy(
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(value.javaClass)
         }
-        if (value !== null && objectTracker.shouldTrackObject(value)) {
-            objectTracker.registerObjectIfAbsent(value)
-        }
+        // TODO: add assertion that the value is registered in the object tracker if it needs toj
         if (collectTrace) {
             val valueRepresentation = objectTracker.getObjectRepresentation(value)
             val typeRepresentation = objectFqTypeName(value)
@@ -1402,9 +1400,7 @@ internal abstract class ManagedStrategy(
         index: Int,
         value: Any?
     ) = threadDescriptor.runInsideIgnoredSection {
-        if (value != null && objectTracker.shouldTrackObject(value)) {
-            objectTracker.registerObjectIfAbsent(value)
-        }
+        // TODO: add assertion that the value is registered in the object tracker if it needs to (but I guess that it could break some other object tracker stuff)
         if (collectTrace) {
             val eventId = getNextEventId()
             val threadId = threadScheduler.getCurrentThreadId()
