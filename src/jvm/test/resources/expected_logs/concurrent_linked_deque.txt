@@ -13,68 +13,15 @@ All operations above the horizontal line | ----- | happen before those below the
 ---
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------- |
-|                       Thread 1                        |         Thread 2         |
-| -------------------------------------------------------------------------------- |
-| addLast(1)                                            |                          |
-|   deque.addLast(1)                                    |                          |
-|     linkLast(1)                                       |                          |
-|       newNode(1): Node#1                              |                          |
-|       loop(1 iterations)                              |                          |
-|        tail ➜ Node#2                                  |                          |
-|   result: void                                        |                          |
-| -------------------------------------------------------------------------------- |
-| pollFirst(): 1                                        |                          |
-|   deque.pollFirst(): 1                                |                          |
-|     loop(1 iterations)                                |                          |
-|      first(): Node#2                                  |                          |
-|                                                       | addFirst(0)              |
-|                                                       |   deque.addFirst(0)      |
-|                                                       |     linkFirst(0)         |
-|                                                       |       newNode(0): Node#3 |
-|                                                       |       loop(1 iterations) |
-|                                                       |        head ➜ Node#2     |
-|                                                       |   result: void           |
-|                                                       | peekLast(): 1            |
-|                                                       |   deque.peekLast(): 1    |
-|                                                       |     loop(1 iterations)   |
-|                                                       |      last(): Node#1      |
-|                                                       |      last.next ➜ null    |
-|                                                       |   result: 1              |
-|     unlink(Node#1)                                    |                          |
-|       x.prev ➜ Node#2                                 |                          |
-|       x.next ➜ null                                   |                          |
-|       unlinkLast(Node#1, Node#2)                      |                          |
-|         loop(2 iterations)                            |                          |
-|          p.item ➜ null                                |                          |
-|          p.prev ➜ Node#3                              |                          |
-|          p.item ➜ 0                                   |                          |
-|         p.next ➜ Node#2                               |                          |
-|         last.prev.compareAndSet(Node#2, Node#3): true |                          |
-|         skipDeletedSuccessors(Node#3)                 |                          |
-|           loop(1 iterations)                          |                          |
-|            x.next ➜ Node#2                            |                          |
-|            p.prev ➜ Node#3                            |                          |
-|            x.next.compareAndSet(Node#2, Node#1): true |                          |
-|         last.next ➜ null                              |                          |
-|         p.prev ➜ null                                 |                          |
-|         p.next ➜ Node#1                               |                          |
-|         updateHead()                                  |                          |
-|           loop(1 iterations)                          |                          |
-|            head ➜ Node#2                              |                          |
-|            head.item ➜ null                           |                          |
-|            h.prev ➜ Node#3                            |                          |
-|            head.compareAndSet(Node#2, Node#3): true   |                          |
-|         updateTail()                                  |                          |
-|           loop(1 iterations)                          |                          |
-|            tail ➜ Node#1                              |                          |
-|            tail.item ➜ null                           |                          |
-|            t.next ➜ null                              |                          |
-|         o.prev.setRelease(Node#2)                     |                          |
-|         nextTerminator(): Node#4                      |                          |
-|         o.next.setRelease(Node#4)                     |                          |
-|   result: 1                                           |                          |
-| -------------------------------------------------------------------------------- |
+| ------------------------------ |
+|    Thread 1    |   Thread 2    |
+| ------------------------------ |
+| addLast(1)     |               |
+| ------------------------------ |
+| pollFirst(): 1 |               |
+|                | addFirst(0)   |
+|                | peekLast(): 1 |
+| ------------------------------ |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

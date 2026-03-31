@@ -6,37 +6,34 @@
 | ---------------------------------------- |
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------------------------------- |
-|                            Thread 1                             |                          Thread 2                           |
-| ----------------------------------------------------------------------------------------------------------------------------- |
-| triggerAndCheck(): true                                         |                                                             |
-|   continueAndCheckIfFailed(): true                              |                                                             |
-|     counter ➜ AtomicInteger#1                                   |                                                             |
-|     counter.set(1)                                              |                                                             |
-|     switch                                                      |                                                             |
-|                                                                 | operation(): 0                                              |
-|                                                                 |   suspendAndCauseFailure() [suspendable: Continuation#1]: 0 |
-|                                                                 |     ResultKt.throwOnFailure(null)                           |
-|                                                                 |     counter ➜ AtomicInteger#1                               |
-|                                                                 |     counter.get(): 1                                        |
-|                                                                 |     continuation1 = Continuation#3                          |
-|                                                                 |     continuation1.getOrThrow(): COROUTINE_SUSPENDED         |
-|                                                                 |     DebugProbesKt.probeCoroutineSuspended(Continuation#2)   |
-|                                                                 |     switch (reason: coroutine is suspended)                 |
-|     continuation1 ➜ Continuation#3                              |                                                             |
-|     Result.constructor-impl(Unit)                               |                                                             |
-|     continuation1.resumeWith(Unit) [recursion x 2]              |                                                             |
-|       loop(1 iterations)                                        |                                                             |
-|        result ➜ COROUTINE_SUSPENDED                             |                                                             |
-|        result.compareAndSet(COROUTINE_SUSPENDED, RESUMED): true |                                                             |
-|     switch                                                      |                                                             |
-|                                                                 |     ResultKt.throwOnFailure(Unit)                           |
-|                                                                 |     fail = true                                             |
-|                                                                 |     Boxing.boxInt(0): 0                                     |
-|                                                                 |   result: 0                                                 |
-|     fail ➜ true                                                 |                                                             |
-|   result: true                                                  |                                                             |
-| ----------------------------------------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------------- |
+|                      Thread 1                      |                          Thread 2                           |
+| ---------------------------------------------------------------------------------------------------------------- |
+| triggerAndCheck(): true                            |                                                             |
+|   continueAndCheckIfFailed(): true                 |                                                             |
+|     counter ➜ AtomicInteger#1                      |                                                             |
+|     counter.set(1)                                 |                                                             |
+|     switch                                         |                                                             |
+|                                                    | operation(): 0                                              |
+|                                                    |   suspendAndCauseFailure() [suspendable: Continuation#1]: 0 |
+|                                                    |     ResultKt.throwOnFailure(null)                           |
+|                                                    |     counter ➜ AtomicInteger#1                               |
+|                                                    |     counter.get(): 1                                        |
+|                                                    |     continuation1 = Continuation#3                          |
+|                                                    |     continuation1.getOrThrow(): COROUTINE_SUSPENDED         |
+|                                                    |     DebugProbesKt.probeCoroutineSuspended(Continuation#2)   |
+|                                                    |     switch (reason: coroutine is suspended)                 |
+|     continuation1 ➜ Continuation#3                 |                                                             |
+|     Result.constructor-impl(Unit)                  |                                                             |
+|     continuation1.resumeWith(Unit) [recursion x 2] |                                                             |
+|     switch                                         |                                                             |
+|                                                    |     ResultKt.throwOnFailure(Unit)                           |
+|                                                    |     fail = true                                             |
+|                                                    |     Boxing.boxInt(0): 0                                     |
+|                                                    |   result: 0                                                 |
+|     fail ➜ true                                    |                                                             |
+|   result: true                                     |                                                             |
+| ---------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

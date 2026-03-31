@@ -7,85 +7,28 @@ java.lang.IllegalStateException: Check failed.
 	at java.base/java.lang.Thread.run(Unknown Source)
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------------------------------------------- |
-|                      Main Thread                       |                       Thread 1                        |         Thread 2         |
-| ----------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException |                                                       |                          |
-|   block(): threw IllegalStateException                 |                                                       |                          |
-|     deque.addLast(1)                                   |                                                       |                          |
-|       linkLast(1)                                      |                                                       |                          |
-|         newNode(1): Node#2                             |                                                       |                          |
-|         loop(1 iterations)                             |                                                       |                          |
-|     CollectionsKt.listOf(Array<Thread>#1): ArrayList#1 |                                                       |                          |
-|     ArrayList#1.forEach()                              |                                                       |                          |
-|       iterator(): ArrayItr#1                           |                                                       |                          |
-|       loop(3 iterations)                               |                                                       |                          |
-|        ArrayItr#1.hasNext(): true                      |                                                       |                          |
-|        ArrayItr#1.next(): Thread#1                     |                                                       |                          |
-|        forEach$Lambda()                                |                                                       |                          |
-|        ArrayItr#1.next(): Thread#2                     |                                                       |                          |
-|        ArrayItr#1.hasNext(): false                     |                                                       |                          |
-|     ArrayList#1.forEach()                              |                                                       |                          |
-|       iterator(): ArrayItr#2                           |                                                       |                          |
-|       loop(3 iterations)                               |                                                       |                          |
-|        ArrayItr#2.hasNext(): true                      |                                                       |                          |
-|        ArrayItr#2.next(): Thread#1                     |                                                       |                          |
-|        switch (reason: waiting for Thread 1 to finish) |                                                       |                          |
-|                                                        | run()                                                 |                          |
-|                                                        |   $deque.pollFirst(): 1                               |                          |
-|                                                        |     loop(1 iterations)                                |                          |
-|                                                        |      first(): Node#1                                  |                          |
-|                                                        |                                                       | run()                    |
-|                                                        |                                                       |   $deque.addFirst(0)     |
-|                                                        |                                                       |     linkFirst(0)         |
-|                                                        |                                                       |       newNode(0): Node#3 |
-|                                                        |                                                       |       loop(1 iterations) |
-|                                                        |                                                       |        head ➜ Node#1     |
-|                                                        |                                                       |   $deque.peekLast(): 1   |
-|                                                        |                                                       |     loop(1 iterations)   |
-|                                                        |                                                       |      last(): Node#2      |
-|                                                        |                                                       |      last.next ➜ null    |
-|                                                        |                                                       |   r2 = 1                 |
-|                                                        |     unlink(Node#2)                                    |                          |
-|                                                        |       x.prev ➜ Node#1                                 |                          |
-|                                                        |       x.next ➜ null                                   |                          |
-|                                                        |       unlinkLast(Node#2, Node#1)                      |                          |
-|                                                        |         loop(2 iterations)                            |                          |
-|                                                        |          p.item ➜ null                                |                          |
-|                                                        |          p.prev ➜ Node#3                              |                          |
-|                                                        |          p.item ➜ 0                                   |                          |
-|                                                        |         p.next ➜ Node#1                               |                          |
-|                                                        |         last.prev.compareAndSet(Node#1, Node#3): true |                          |
-|                                                        |         skipDeletedSuccessors(Node#3)                 |                          |
-|                                                        |           loop(1 iterations)                          |                          |
-|                                                        |            x.next ➜ Node#1                            |                          |
-|                                                        |            p.prev ➜ Node#3                            |                          |
-|                                                        |            x.next.compareAndSet(Node#1, Node#2): true |                          |
-|                                                        |         last.next ➜ null                              |                          |
-|                                                        |         p.prev ➜ null                                 |                          |
-|                                                        |         p.next ➜ Node#2                               |                          |
-|                                                        |         updateHead()                                  |                          |
-|                                                        |           loop(1 iterations)                          |                          |
-|                                                        |            head ➜ Node#1                              |                          |
-|                                                        |            head.item ➜ null                           |                          |
-|                                                        |            h.prev ➜ Node#3                            |                          |
-|                                                        |            head.compareAndSet(Node#1, Node#3): true   |                          |
-|                                                        |         updateTail()                                  |                          |
-|                                                        |           loop(1 iterations)                          |                          |
-|                                                        |            tail ➜ Node#2                              |                          |
-|                                                        |            tail.item ➜ null                           |                          |
-|                                                        |            t.next ➜ null                              |                          |
-|                                                        |         o.prev.setRelease(Node#1)                     |                          |
-|                                                        |         nextTerminator(): Node#4                      |                          |
-|                                                        |         o.next.setRelease(Node#4)                     |                          |
-|                                                        |   r1 = 1                                              |                          |
-|        forEach$Lambda()                                |                                                       |                          |
-|        ArrayItr#2.next(): Thread#2                     |                                                       |                          |
-|        ArrayItr#2.hasNext(): false                     |                                                       |                          |
-|     r1.element ➜ 1                                     |                                                       |                          |
-|     r2.element ➜ 1                                     |                                                       |                          |
-|   result: IllegalStateException #1                     |                                                       |                          |
-| ----------------------------------------------------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                           Main Thread                                            |        Thread 1         |        Thread 2        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException                                           |                         |                        |
+|   block(): threw IllegalStateException                                                           |                         |                        |
+|     deque.addLast(1)                                                                             |                         |                        |
+|     CollectionsKt.listOf(Array<Thread>#1): ArrayList#1                                           |                         |                        |
+|     ArrayList#1.forEach()                                                                        |                         |                        |
+|     ArrayList#1.forEach()                                                                        |                         |                        |
+|       iterator(): ArrayItr#2                                                                     |                         |                        |
+|       loop(3 iterations) at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:1869) |                         |                        |
+|                                                                                                  | run()                   |                        |
+|                                                                                                  |   $deque.pollFirst(): 1 |                        |
+|                                                                                                  |                         | run()                  |
+|                                                                                                  |                         |   $deque.addFirst(0)   |
+|                                                                                                  |                         |   $deque.peekLast(): 1 |
+|                                                                                                  |                         |   r2 = 1               |
+|                                                                                                  |   r1 = 1                |                        |
+|     r1.element ➜ 1                                                                               |                         |                        |
+|     r2.element ➜ 1                                                                               |                         |                        |
+|   result: IllegalStateException #1                                                               |                         |                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

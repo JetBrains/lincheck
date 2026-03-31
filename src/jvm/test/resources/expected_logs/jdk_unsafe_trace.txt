@@ -6,26 +6,11 @@
 | ----------------- |
 
 The following interleaving leads to the error:
-| ----------------------------------------------------- |
-|                       Thread 1                        |
-| ----------------------------------------------------- |
-| operation()                                           |
-|   hashMap.put(1, 2): null                             |
-|     putVal(1, 2, false): null                         |
-|       spread(1): 1                                    |
-|       table ➜ null                                    |
-|       loop(2 iterations)                              |
-|        initTable(): Array<Node>#1                     |
-|        tabAt(Array<Node>#1, 1): null                  |
-|        casTabAt(Array<Node>#1, 1, null, Node#1): true |
-|       addCount(1, 0)                                  |
-|         counterCells ➜ null                           |
-|         baseCount ➜ 0                                 |
-|         baseCount.compareAndSetLong(0, 1): true       |
-|         loop(1 iterations)                            |
-|          sizeCtl ➜ 12                                 |
-|   result: void                                        |
-| ----------------------------------------------------- |
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------- |

@@ -7,22 +7,18 @@ java.lang.IllegalStateException: Check failed.
 	at java.base/java.lang.Thread.run(Unknown Source)
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------------------- |
-|                      Main Thread                       |                         Thread 1                         |
-| ----------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException |                                                          |
-|   block(): threw IllegalStateException                 |                                                          |
-|     thread(block = Lambda#1): Thread#1                 |                                                          |
-|     switch (reason: waiting for Thread 1 to finish)    |                                                          |
-|                                                        | run()                                                    |
-|                                                        |   loop(4 iterations)                                     |
-|                                                        |    KotlinThreadRunConcurrentRepresentationTest.value ➜ 0 |
-|                                                        |    KotlinThreadRunConcurrentRepresentationTest.value = 1 |
-|                                                        |    KotlinThreadRunConcurrentRepresentationTest.value ➜ 2 |
-|                                                        |    KotlinThreadRunConcurrentRepresentationTest.value = 3 |
-|     Thread#1.join()                                    |                                                          |
-|   result: IllegalStateException #1                     |                                                          |
-| ----------------------------------------------------------------------------------------------------------------- |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                      Main Thread                       |                                                           Thread 1                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| $this_runCatching.block(): threw IllegalStateException |                                                                                                                               |
+|   block(): threw IllegalStateException                 |                                                                                                                               |
+|     thread(block = Lambda#1): Thread#1                 |                                                                                                                               |
+|     switch (reason: waiting for Thread 1 to finish)    |                                                                                                                               |
+|                                                        | run()                                                                                                                         |
+|                                                        |   loop(4 iterations) at KotlinThreadRunConcurrentRepresentationTest.<unknown method>(RunConcurrentRepresentationTests.kt:322) |
+|     Thread#1.join()                                    |                                                                                                                               |
+|   result: IllegalStateException #1                     |                                                                                                                               |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

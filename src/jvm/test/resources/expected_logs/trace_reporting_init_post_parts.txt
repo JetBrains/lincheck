@@ -14,35 +14,26 @@ All operations above the horizontal line | ----- | happen before those below the
 ---
 
 The following interleaving leads to the error:
-| ---------------------------------------------------- |
-|  Thread 1   |                Thread 2                |
-| ---------------------------------------------------- |
-| enterInit() |                                        |
-| ---------------------------------------------------- |
-|             | bar()                                  |
-|             |   loop(3 iterations)                   |
-|             |    a ➜ 0                               |
-|             |    a = 1                               |
-|             |    a ➜ 1                               |
-|             |    a = 2                               |
-|             |   uselessIncrements(2): false          |
-|             |     loop(3 iterations)                 |
-|             |      b ➜ 0                             |
-|             |      b = 1                             |
-|             |      b ➜ 1                             |
-|             |      b = 2                             |
-|             |   intermediateMethod()                 |
-|             |     resetFlag()                        |
-|             |       MONITORENTER                     |
-|             |       canEnterForbiddenSection = true  |
-|             |       switch                           |
-| foo(): 1    |                                        |
-|             |       canEnterForbiddenSection = false |
-|             |       MONITOREXIT                      |
-|             |   result: void                         |
-| ---------------------------------------------------- |
-| enterPost() |                                        |
-| ---------------------------------------------------- |
+| -------------------------------------------------------------------------------------- |
+|  Thread 1   |                                 Thread 2                                 |
+| -------------------------------------------------------------------------------------- |
+| enterInit() |                                                                          |
+| -------------------------------------------------------------------------------------- |
+|             | bar()                                                                    |
+|             |   loop(3 iterations) at TraceReportingTest.bar(TraceReportingTest.kt:40) |
+|             |   uselessIncrements(2): false                                            |
+|             |   intermediateMethod()                                                   |
+|             |     resetFlag()                                                          |
+|             |       MONITORENTER                                                       |
+|             |       canEnterForbiddenSection = true                                    |
+|             |       switch                                                             |
+| foo(): 1    |                                                                          |
+|             |       canEnterForbiddenSection = false                                   |
+|             |       MONITOREXIT                                                        |
+|             |   result: void                                                           |
+| -------------------------------------------------------------------------------------- |
+| enterPost() |                                                                          |
+| -------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

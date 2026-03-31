@@ -6,72 +6,25 @@
 | ----------------------- |
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                              Thread 1                                              |                     Thread 2                     |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                    | bar(): -1                                        |
-|                                                                                                    |   ResultKt.throwOnFailure(null)                  |
-|                                                                                                    |   barStarted = true                              |
-|                                                                                                    |   lock(null) [suspendable: Continuation#1]       |
-|                                                                                                    |   counter ➜ 0                                    |
-|                                                                                                    |   counter = 1                                    |
-|                                                                                                    |   unlock(null)                                   |
-|                                                                                                    |     loop(1 iterations)                           |
-|                                                                                                    |      isLocked(): true                            |
-|                                                                                                    |      owner.get(): null                           |
-|                                                                                                    |      MutexKt.getNO_OWNER(): <NO_OWNER>           |
-|                                                                                                    |      switch                                      |
-| foo()                                                                                              |                                                  |
-|   ResultKt.throwOnFailure(null)                                                                    |                                                  |
-|   barStarted ➜ true                                                                                |                                                  |
-|   canEnterForbiddenBlock = true                                                                    |                                                  |
-|   lock(null) [suspendable: Continuation#2]: COROUTINE_SUSPENDED                                    |                                                  |
-|     tryLock(null): false                                                                           |                                                  |
-|       tryLockImpl(null): 1                                                                         |                                                  |
-|         loop(1 iterations)                                                                         |                                                  |
-|          tryAcquire(): false                                                                       |                                                  |
-|     lockSuspend(null) [suspendable: Continuation#2]: COROUTINE_SUSPENDED                           |                                                  |
-|       CancellableContinuationKt.getOrCreateCancellableContinuation(Continuation#3): Continuation#4 |                                                  |
-|       acquire() [suspendable: Continuation#5]                                                      |                                                  |
-|         loop(1 iterations)                                                                         |                                                  |
-|          decPermits(): 0                                                                           |                                                  |
-|          addAcquireToQueue(Continuation#5): true                                                   |                                                  |
-|       cancellable.getResult(): COROUTINE_SUSPENDED                                                 |                                                  |
-|         isReusable(): false                                                                        |                                                  |
-|         trySuspend(): true                                                                         |                                                  |
-|           loop(1 iterations)                                                                       |                                                  |
-|            _decisionAndIndex.get(): 0                                                              |                                                  |
-|            getDecision()                                                                           |                                                  |
-|            getIndex()                                                                              |                                                  |
-|            decisionAndIndex()                                                                      |                                                  |
-|            _decisionAndIndex.compareAndSet(0, 536870912): true                                     |                                                  |
-|         getParentHandle(): null                                                                    |                                                  |
-|         installParentHandle(): ChildContinuation#1                                                 |                                                  |
-|       DebugProbesKt.probeCoroutineSuspended(Continuation#2)                                        |                                                  |
-|     switch (reason: coroutine is suspended)                                                        |                                                  |
-|                                                                                                    |      owner.compareAndSet(null, <NO_OWNER>): true |
-|                                                                                                    |     release()                                    |
-|                                                                                                    |       loop(1 iterations)                         |
-|                                                                                                    |        _availablePermits.getAndIncrement(): -1   |
-|                                                                                                    |        tryResumeNextFromQueue(): true            |
-|                                                                                                    |   canEnterForbiddenBlock ➜ true                  |
-|                                                                                                    |   Boxing.boxInt(-1): -1                          |
-|                                                                                                    |   result: -1                                     |
-|   ResultKt.throwOnFailure(Unit)                                                                    |                                                  |
-|   counter ➜ 1                                                                                      |                                                  |
-|   counter = 2                                                                                      |                                                  |
-|   unlock(null)                                                                                     |                                                  |
-|     loop(1 iterations)                                                                             |                                                  |
-|      isLocked(): true                                                                              |                                                  |
-|      owner.get(): null                                                                             |                                                  |
-|      MutexKt.getNO_OWNER(): <NO_OWNER>                                                             |                                                  |
-|      owner.compareAndSet(null, <NO_OWNER>): true                                                   |                                                  |
-|     release()                                                                                      |                                                  |
-|       loop(1 iterations)                                                                           |                                                  |
-|        _availablePermits.getAndIncrement(): 0                                                      |                                                  |
-|   canEnterForbiddenBlock = false                                                                   |                                                  |
-|   result: void                                                                                     |                                                  |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------ |
+|                                 Thread 1                                 | Thread 2  |
+| ------------------------------------------------------------------------------------ |
+|                                                                          | bar(): -1 |
+| foo()                                                                    |           |
+|   ResultKt.throwOnFailure(null)                                          |           |
+|   barStarted ➜ true                                                      |           |
+|   canEnterForbiddenBlock = true                                          |           |
+|   lock(null) [suspendable: Continuation#2]: COROUTINE_SUSPENDED          |           |
+|     tryLock(null): false                                                 |           |
+|     lockSuspend(null) [suspendable: Continuation#2]: COROUTINE_SUSPENDED |           |
+|     switch (reason: coroutine is suspended)                              |           |
+|   ResultKt.throwOnFailure(Unit)                                          |           |
+|   counter ➜ 1                                                            |           |
+|   counter = 2                                                            |           |
+|   unlock(null)                                                           |           |
+|   canEnterForbiddenBlock = false                                         |           |
+|   result: void                                                           |           |
+| ------------------------------------------------------------------------------------ |
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

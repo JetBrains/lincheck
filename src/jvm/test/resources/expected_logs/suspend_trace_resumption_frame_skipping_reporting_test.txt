@@ -6,46 +6,43 @@
 | ----------------------- |
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------------------ |
-|                               Thread 1                               |                           Thread 2                            |
-| ------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                      | bar(): -1                                                     |
-|                                                                      |   barStarted = true                                           |
-|                                                                      |   switch                                                      |
-| foo()                                                                |                                                               |
-|   ResultKt.throwOnFailure(null)                                      |                                                               |
-|   barStarted ➜ true                                                  |                                                               |
-|   canEnterForbiddenBlock = true                                      |                                                               |
-|   function1() [suspendable: Continuation#1]                          |                                                               |
-|     ResultKt.throwOnFailure(null)                                    |                                                               |
-|     counter ➜ 0                                                      |                                                               |
-|     counter = 1                                                      |                                                               |
-|     function2() [suspendable: Continuation#2]: COROUTINE_SUSPENDED   |                                                               |
-|       counter ➜ 1                                                    |                                                               |
-|       counter = 2                                                    |                                                               |
-|       function3() [suspendable: Continuation#2]: COROUTINE_SUSPENDED |                                                               |
-|         counter ➜ 2                                                  |                                                               |
-|         counter = 3                                                  |                                                               |
-|         continuation = Continuation#3                                |                                                               |
-|         continuation.getOrThrow(): COROUTINE_SUSPENDED               |                                                               |
-|         DebugProbesKt.probeCoroutineSuspended(Continuation#2)        |                                                               |
-|         switch (reason: coroutine is suspended)                      |                                                               |
-|                                                                      |   continuation ➜ Continuation#3                               |
-|                                                                      |   continuation ➜ Continuation#3                               |
-|                                                                      |   Result.constructor-impl(Unit)                               |
-|                                                                      |   continuation.resumeWith(Unit) [recursion x 2]               |
-|                                                                      |     loop(1 iterations)                                        |
-|                                                                      |      result ➜ COROUTINE_SUSPENDED                             |
-|                                                                      |      result.compareAndSet(COROUTINE_SUSPENDED, RESUMED): true |
-|                                                                      |   canEnterForbiddenBlock ➜ true                               |
-|                                                                      |   result: -1                                                  |
-|     ResultKt.throwOnFailure(Unit)                                    |                                                               |
-|     counter ➜ 3                                                      |                                                               |
-|     counter = 4                                                      |                                                               |
-|   ResultKt.throwOnFailure(Unit)                                      |                                                               |
-|   canEnterForbiddenBlock = false                                     |                                                               |
-|   result: void                                                       |                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------ |
+| ---------------------------------------------------------------------------------------------------------------------- |
+|                               Thread 1                               |                    Thread 2                     |
+| ---------------------------------------------------------------------------------------------------------------------- |
+|                                                                      | bar(): -1                                       |
+|                                                                      |   barStarted = true                             |
+|                                                                      |   switch                                        |
+| foo()                                                                |                                                 |
+|   ResultKt.throwOnFailure(null)                                      |                                                 |
+|   barStarted ➜ true                                                  |                                                 |
+|   canEnterForbiddenBlock = true                                      |                                                 |
+|   function1() [suspendable: Continuation#1]                          |                                                 |
+|     ResultKt.throwOnFailure(null)                                    |                                                 |
+|     counter ➜ 0                                                      |                                                 |
+|     counter = 1                                                      |                                                 |
+|     function2() [suspendable: Continuation#2]: COROUTINE_SUSPENDED   |                                                 |
+|       counter ➜ 1                                                    |                                                 |
+|       counter = 2                                                    |                                                 |
+|       function3() [suspendable: Continuation#2]: COROUTINE_SUSPENDED |                                                 |
+|         counter ➜ 2                                                  |                                                 |
+|         counter = 3                                                  |                                                 |
+|         continuation = Continuation#3                                |                                                 |
+|         continuation.getOrThrow(): COROUTINE_SUSPENDED               |                                                 |
+|         DebugProbesKt.probeCoroutineSuspended(Continuation#2)        |                                                 |
+|         switch (reason: coroutine is suspended)                      |                                                 |
+|                                                                      |   continuation ➜ Continuation#3                 |
+|                                                                      |   continuation ➜ Continuation#3                 |
+|                                                                      |   Result.constructor-impl(Unit)                 |
+|                                                                      |   continuation.resumeWith(Unit) [recursion x 2] |
+|                                                                      |   canEnterForbiddenBlock ➜ true                 |
+|                                                                      |   result: -1                                    |
+|     ResultKt.throwOnFailure(Unit)                                    |                                                 |
+|     counter ➜ 3                                                      |                                                 |
+|     counter = 4                                                      |                                                 |
+|   ResultKt.throwOnFailure(Unit)                                      |                                                 |
+|   canEnterForbiddenBlock = false                                     |                                                 |
+|   result: void                                                       |                                                 |
+| ---------------------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

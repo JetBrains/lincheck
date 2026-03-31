@@ -7,22 +7,14 @@
 
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------------------------- |
-|            Thread 1            |                           Thread 2                           |
-| --------------------------------------------------------------------------------------------- |
-| trigger(): <hung>              |                                                              |
-|   counter.incrementAndGet(): 1 |                                                              |
-|   switch                       |                                                              |
-|                                | causesSpinLock(): <hung>                                     |
-|                                |   counter.get(): 1                                           |
-|                                |   deadSpinCycleRecursive(true) [recursion x 51]              |
-|                                |     flag.set(true)                                           |
-|                                |     loop(5 iterations)                                       |
-|                                |      getSharedVariable(): false                              |
-|                                |      someUselessSharedState.compareAndSet(false, true): true |
-|                                |      getSharedVariable(): true                               |
-|                                |      someUselessSharedState.compareAndSet(true, false): true |
-| --------------------------------------------------------------------------------------------- |
+| --------------------------------------------------------- |
+|            Thread 1            |         Thread 2         |
+| --------------------------------------------------------- |
+| trigger(): <hung>              |                          |
+|   counter.incrementAndGet(): 1 |                          |
+|   switch                       |                          |
+|                                | causesSpinLock(): <hung> |
+| --------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
 Detailed trace:

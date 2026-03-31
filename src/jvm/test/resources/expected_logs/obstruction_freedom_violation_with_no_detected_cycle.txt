@@ -7,16 +7,11 @@
 
 
 The following interleaving leads to the error:
-| ----------------------------------- |
-|              Thread 1               |
-| ----------------------------------- |
-| operation(): <hung>                 |
-|   incrementManyTimes()              |
-|     counter.get(): 0                |
-|     loop(201 iterations)            |
-|      counter.incrementAndGet(): 1   |
-|      counter.incrementAndGet(): 200 |
-| ----------------------------------- |
+| ------------------- |
+|      Thread 1       |
+| ------------------- |
+| operation(): <hung> |
+| ------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
 Detailed trace:

@@ -7,13 +7,11 @@
 
 
 The following interleaving leads to the error:
-| -------------------------- |
-|          Thread 1          |
-| -------------------------- |
-| actorMethod(): <hung>      |
-|   b(false)                 |
-|   b(true) [recursion x 51] |
-| -------------------------- |
+| --------------------- |
+|       Thread 1        |
+| --------------------- |
+| actorMethod(): <hung> |
+| --------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
 Detailed trace:
@@ -21,13 +19,13 @@ Detailed trace:
 |                                                        Thread 1                                                         |
 | ----------------------------------------------------------------------------------------------------------------------- |
 | actorMethod(): <hung>                                                                                                   |
-|   b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:294)                        |
-|     value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:300)  |
-|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:301)                               |
-|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:307)                     |
-|   b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:295) [recursion x 51]        |
-|     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:300) |
-|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:301)                               |
-|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:307)                     |
+|   b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:292)                        |
+|     value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298)  |
+|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
+|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                     |
+|   b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293) [recursion x 51]        |
+|     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298) |
+|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
+|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                     |
 | ----------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)

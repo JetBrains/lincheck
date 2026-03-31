@@ -7,24 +7,19 @@
 
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------- |
-|            Thread 1            |                  Thread 2                  |
-| --------------------------------------------------------------------------- |
-| trigger()                      |                                            |
-|   counter.incrementAndGet(): 1 |                                            |
-|   switch                       |                                            |
-|                                | causesSpinLock(): <hung>                   |
-|                                |   counter.get(): 1                         |
-|                                |   deadSpinCycle()                          |
-|                                |     loop(201 iterations)                   |
-|                                |      getSharedVariable(): false            |
-|                                |      action(false): true                   |
-|                                |      getSharedVariable(): true             |
-|                                |      action(true): true                    |
-|                                |      switch (reason: active lock detected) |
-|   counter.decrementAndGet(): 0 |                                            |
-|   result: void                 |                                            |
-| --------------------------------------------------------------------------- |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|            Thread 1            |                                                      Thread 2                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trigger()                      |                                                                                                                    |
+|   counter.incrementAndGet(): 1 |                                                                                                                    |
+|   switch                       |                                                                                                                    |
+|                                | causesSpinLock(): <hung>                                                                                           |
+|                                |   counter.get(): 1                                                                                                 |
+|                                |   deadSpinCycle()                                                                                                  |
+|                                |     loop(201 iterations) at SpinLockWithAllEventsWrappedInMethodsTest.deadSpinCycle(SpinlockEventsCutTests.kt:486) |
+|   counter.decrementAndGet(): 0 |                                                                                                                    |
+|   result: void                 |                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
 Detailed trace:

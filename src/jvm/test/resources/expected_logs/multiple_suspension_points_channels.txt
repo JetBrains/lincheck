@@ -10,246 +10,64 @@ The number next to an exception name helps you find its stack trace provided aft
 ---
 
 The following interleaving leads to the error:
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                               Thread 1                                               |                                               Thread 2                                               |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                                      | operation2(): IllegalStateException #2                                                               |
-|                                                                                                      |   ResultKt.throwOnFailure(null)                                                                      |
-|                                                                                                      |   channel1.receive() [suspendable: Continuation#1]: 1                                                |
-| operation1(): IllegalStateException #1                                                               |                                                                                                      |
-|   ResultKt.throwOnFailure(null)                                                                      |                                                                                                      |
-|   Boxing.boxInt(1): 1                                                                                |                                                                                                      |
-|   channel1.send(1) [suspendable: Continuation#2]                                                     |                                                                                                      |
-|     BufferedChannel.getSendSegment$FU(): AtomicReferenceFieldUpdaterImpl#2                           |                                                                                                      |
-|     sendSegment.get(): ChannelSegment#1                                                              |                                                                                                      |
-|     loop(1 iterations)                                                                               |                                                                                                      |
-|      BufferedChannel.getSendersAndCloseStatus$FU(): CASUpdater#1                                     |                                                                                                      |
-|      sendersAndCloseStatus.getAndIncrement(): 0                                                      |                                                                                                      |
-|      BufferedChannel.isClosedForSend0(0): false                                                      |                                                                                                      |
-|      BufferedChannel.updateCellSend(ChannelSegment#1, 0, 1, 0, null, false): 1                       |                                                                                                      |
-|   counter ➜ 0                                                                                        |                                                                                                      |
-|   switch                                                                                             |                                                                                                      |
-|                                                                                                      |   counter ➜ 0                                                                                        |
-|                                                                                                      |   counter = 1                                                                                        |
-|                                                                                                      |   Boxing.boxInt(1): 1                                                                                |
-|                                                                                                      |   channel2.send(1) [suspendable: Continuation#1]: COROUTINE_SUSPENDED                                |
-|                                                                                                      |     send$suspendImpl(BufferedChannel#2, 1, Continuation#1): COROUTINE_SUSPENDED                      |
-|                                                                                                      |       BufferedChannel.getSendSegment$FU(): AtomicReferenceFieldUpdaterImpl#2                         |
-|                                                                                                      |       sendSegment.get(): ChannelSegment#2                                                            |
-|                                                                                                      |       loop(1 iterations)                                                                             |
-|                                                                                                      |        BufferedChannel.getSendersAndCloseStatus$FU(): CASUpdater#1                                   |
-|                                                                                                      |        sendersAndCloseStatus.getAndIncrement(): 0                                                    |
-|                                                                                                      |        BufferedChannel.isClosedForSend0(0): false                                                    |
-|                                                                                                      |        BufferedChannel.updateCellSend(ChannelSegment#2, 0, 1, 0, null, false): 3                     |
-|                                                                                                      |       sendOnNoWaiterSuspend(ChannelSegment#2, 0, 1, 0, Continuation#1): COROUTINE_SUSPENDED          |
-|                                                                                                      |         CancellableContinuationKt.getOrCreateCancellableContinuation(Continuation#3): Continuation#4 |
-|                                                                                                      |         updateCellSend(ChannelSegment#2, 0, 1, 0, Continuation#4, false): 2                          |
-|                                                                                                      |         prepareSenderForSuspension(Continuation#4, ChannelSegment#2, 0)                              |
-|                                                                                                      |           $this$prepareSenderForSuspension.invokeOnCancellation(ChannelSegment#2, 32)                |
-|                                                                                                      |             loop(1 iterations)                                                                       |
-|                                                                                                      |              _decisionAndIndex.get(): 536870911                                                      |
-|                                                                                                      |              getIndex()                                                                              |
-|                                                                                                      |              getDecision()                                                                           |
-|                                                                                                      |              decisionAndIndex()                                                                      |
-|                                                                                                      |              _decisionAndIndex.compareAndSet(536870911, 32): true                                    |
-|                                                                                                      |             invokeOnCancellationImpl(ChannelSegment#2)                                               |
-|                                                                                                      |               DebugKt.getASSERTIONS_ENABLED(): true                                                  |
-|                                                                                                      |               loop(1 iterations)                                                                     |
-|                                                                                                      |                _state.get(): Active#1                                                                |
-|                                                                                                      |                _state.compareAndSet(Active#1, ChannelSegment#2): true                                |
-|                                                                                                      |         cancellable.getResult(): COROUTINE_SUSPENDED                                                 |
-|                                                                                                      |           isReusable(): false                                                                        |
-|                                                                                                      |           trySuspend(): true                                                                         |
-|                                                                                                      |             loop(1 iterations)                                                                       |
-|                                                                                                      |              _decisionAndIndex.get(): 32                                                             |
-|                                                                                                      |              getDecision()                                                                           |
-|                                                                                                      |              getIndex()                                                                              |
-|                                                                                                      |              decisionAndIndex()                                                                      |
-|                                                                                                      |              _decisionAndIndex.compareAndSet(32, 536870944): true                                    |
-|                                                                                                      |           getParentHandle(): null                                                                    |
-|                                                                                                      |           installParentHandle(): ChildContinuation#1                                                 |
-|                                                                                                      |         DebugProbesKt.probeCoroutineSuspended(Continuation#1)                                        |
-|                                                                                                      |     switch (reason: coroutine is suspended)                                                          |
-|   counter = 1                                                                                        |                                                                                                      |
-|   channel2.receive() [suspendable: Continuation#2]: 1                                                |                                                                                                      |
-|   Boxing.boxInt(2): 2                                                                                |                                                                                                      |
-|   channel1.send(2) [suspendable: Continuation#2]: COROUTINE_SUSPENDED                                |                                                                                                      |
-|     send$suspendImpl(BufferedChannel#1, 2, Continuation#2): COROUTINE_SUSPENDED                      |                                                                                                      |
-|       BufferedChannel.getSendSegment$FU(): AtomicReferenceFieldUpdaterImpl#2                         |                                                                                                      |
-|       sendSegment.get(): ChannelSegment#1                                                            |                                                                                                      |
-|       loop(1 iterations)                                                                             |                                                                                                      |
-|        BufferedChannel.getSendersAndCloseStatus$FU(): CASUpdater#1                                   |                                                                                                      |
-|        sendersAndCloseStatus.getAndIncrement(): 1                                                    |                                                                                                      |
-|        BufferedChannel.isClosedForSend0(1): false                                                    |                                                                                                      |
-|        BufferedChannel.updateCellSend(ChannelSegment#1, 1, 2, 1, null, false): 3                     |                                                                                                      |
-|       sendOnNoWaiterSuspend(ChannelSegment#1, 1, 2, 1, Continuation#2): COROUTINE_SUSPENDED          |                                                                                                      |
-|         CancellableContinuationKt.getOrCreateCancellableContinuation(Continuation#5): Continuation#6 |                                                                                                      |
-|         updateCellSend(ChannelSegment#1, 1, 2, 1, Continuation#6, false): 2                          |                                                                                                      |
-|         prepareSenderForSuspension(Continuation#6, ChannelSegment#1, 1)                              |                                                                                                      |
-|           $this$prepareSenderForSuspension.invokeOnCancellation(ChannelSegment#1, 33)                |                                                                                                      |
-|             loop(1 iterations)                                                                       |                                                                                                      |
-|              _decisionAndIndex.get(): 536870911                                                      |                                                                                                      |
-|              getIndex()                                                                              |                                                                                                      |
-|              getDecision()                                                                           |                                                                                                      |
-|              decisionAndIndex()                                                                      |                                                                                                      |
-|              _decisionAndIndex.compareAndSet(536870911, 33): true                                    |                                                                                                      |
-|             invokeOnCancellationImpl(ChannelSegment#1)                                               |                                                                                                      |
-|               DebugKt.getASSERTIONS_ENABLED(): true                                                  |                                                                                                      |
-|               loop(1 iterations)                                                                     |                                                                                                      |
-|                _state.get(): Active#1                                                                |                                                                                                      |
-|                _state.compareAndSet(Active#1, ChannelSegment#1): true                                |                                                                                                      |
-|         cancellable.getResult(): COROUTINE_SUSPENDED                                                 |                                                                                                      |
-|           isReusable(): false                                                                        |                                                                                                      |
-|           trySuspend(): true                                                                         |                                                                                                      |
-|             loop(1 iterations)                                                                       |                                                                                                      |
-|              _decisionAndIndex.get(): 33                                                             |                                                                                                      |
-|              getDecision()                                                                           |                                                                                                      |
-|              getIndex()                                                                              |                                                                                                      |
-|              decisionAndIndex()                                                                      |                                                                                                      |
-|              _decisionAndIndex.compareAndSet(33, 536870945): true                                    |                                                                                                      |
-|           getParentHandle(): null                                                                    |                                                                                                      |
-|           installParentHandle(): ChildContinuation#2                                                 |                                                                                                      |
-|         DebugProbesKt.probeCoroutineSuspended(Continuation#2)                                        |                                                                                                      |
-|     switch (reason: coroutine is suspended)                                                          |                                                                                                      |
-|                                                                                                      |   ResultKt.throwOnFailure(Unit)                                                                      |
-|                                                                                                      |   channel1.receive() [suspendable: Continuation#1]: 2                                                |
-|                                                                                                      |   counter ➜ 1                                                                                        |
-|                                                                                                      |   counter = 2                                                                                        |
-|                                                                                                      |   Boxing.boxInt(2): 2                                                                                |
-|                                                                                                      |   channel2.send(2) [suspendable: Continuation#1]: COROUTINE_SUSPENDED                                |
-|                                                                                                      |     send$suspendImpl(BufferedChannel#2, 2, Continuation#1): COROUTINE_SUSPENDED                      |
-|                                                                                                      |       BufferedChannel.getSendSegment$FU(): AtomicReferenceFieldUpdaterImpl#2                         |
-|                                                                                                      |       sendSegment.get(): ChannelSegment#2                                                            |
-|                                                                                                      |       loop(1 iterations)                                                                             |
-|                                                                                                      |        BufferedChannel.getSendersAndCloseStatus$FU(): CASUpdater#1                                   |
-|                                                                                                      |        sendersAndCloseStatus.getAndIncrement(): 1                                                    |
-|                                                                                                      |        BufferedChannel.isClosedForSend0(1): false                                                    |
-|                                                                                                      |        BufferedChannel.updateCellSend(ChannelSegment#2, 1, 2, 1, null, false): 3                     |
-|                                                                                                      |       sendOnNoWaiterSuspend(ChannelSegment#2, 1, 2, 1, Continuation#1): COROUTINE_SUSPENDED          |
-|                                                                                                      |         CancellableContinuationKt.getOrCreateCancellableContinuation(Continuation#3): Continuation#7 |
-|                                                                                                      |         updateCellSend(ChannelSegment#2, 1, 2, 1, Continuation#7, false): 2                          |
-|                                                                                                      |         prepareSenderForSuspension(Continuation#7, ChannelSegment#2, 1)                              |
-|                                                                                                      |           $this$prepareSenderForSuspension.invokeOnCancellation(ChannelSegment#2, 33)                |
-|                                                                                                      |             loop(1 iterations)                                                                       |
-|                                                                                                      |              _decisionAndIndex.get(): 536870911                                                      |
-|                                                                                                      |              getIndex()                                                                              |
-|                                                                                                      |              getDecision()                                                                           |
-|                                                                                                      |              decisionAndIndex()                                                                      |
-|                                                                                                      |              _decisionAndIndex.compareAndSet(536870911, 33): true                                    |
-|                                                                                                      |             invokeOnCancellationImpl(ChannelSegment#2)                                               |
-|                                                                                                      |               DebugKt.getASSERTIONS_ENABLED(): true                                                  |
-|                                                                                                      |               loop(1 iterations)                                                                     |
-|                                                                                                      |                _state.get(): Active#1                                                                |
-|                                                                                                      |                _state.compareAndSet(Active#1, ChannelSegment#2): true                                |
-|                                                                                                      |         cancellable.getResult(): COROUTINE_SUSPENDED                                                 |
-|                                                                                                      |           isReusable(): false                                                                        |
-|                                                                                                      |           trySuspend(): true                                                                         |
-|                                                                                                      |             loop(1 iterations)                                                                       |
-|                                                                                                      |              _decisionAndIndex.get(): 33                                                             |
-|                                                                                                      |              getDecision()                                                                           |
-|                                                                                                      |              getIndex()                                                                              |
-|                                                                                                      |              decisionAndIndex()                                                                      |
-|                                                                                                      |              _decisionAndIndex.compareAndSet(33, 536870945): true                                    |
-|                                                                                                      |           getParentHandle(): null                                                                    |
-|                                                                                                      |           installParentHandle(): ChildContinuation#3                                                 |
-|                                                                                                      |         DebugProbesKt.probeCoroutineSuspended(Continuation#1)                                        |
-|                                                                                                      |     switch (reason: coroutine is suspended)                                                          |
-|   ResultKt.throwOnFailure(Unit)                                                                      |                                                                                                      |
-|   counter ➜ 2                                                                                        |                                                                                                      |
-|   counter = 3                                                                                        |                                                                                                      |
-|   channel2.receive() [suspendable: Continuation#2]: 2                                                |                                                                                                      |
-|   Boxing.boxInt(3): 3                                                                                |                                                                                                      |
-|   channel1.send(3) [suspendable: Continuation#2]: COROUTINE_SUSPENDED                                |                                                                                                      |
-|     send$suspendImpl(BufferedChannel#1, 3, Continuation#2): COROUTINE_SUSPENDED                      |                                                                                                      |
-|       BufferedChannel.getSendSegment$FU(): AtomicReferenceFieldUpdaterImpl#2                         |                                                                                                      |
-|       sendSegment.get(): ChannelSegment#1                                                            |                                                                                                      |
-|       loop(1 iterations)                                                                             |                                                                                                      |
-|        BufferedChannel.getSendersAndCloseStatus$FU(): CASUpdater#1                                   |                                                                                                      |
-|        sendersAndCloseStatus.getAndIncrement(): 2                                                    |                                                                                                      |
-|        BufferedChannel.isClosedForSend0(2): false                                                    |                                                                                                      |
-|        BufferedChannel.updateCellSend(ChannelSegment#1, 2, 3, 2, null, false): 3                     |                                                                                                      |
-|       sendOnNoWaiterSuspend(ChannelSegment#1, 2, 3, 2, Continuation#2): COROUTINE_SUSPENDED          |                                                                                                      |
-|         CancellableContinuationKt.getOrCreateCancellableContinuation(Continuation#5): Continuation#8 |                                                                                                      |
-|         updateCellSend(ChannelSegment#1, 2, 3, 2, Continuation#8, false): 2                          |                                                                                                      |
-|         prepareSenderForSuspension(Continuation#8, ChannelSegment#1, 2)                              |                                                                                                      |
-|           $this$prepareSenderForSuspension.invokeOnCancellation(ChannelSegment#1, 34)                |                                                                                                      |
-|             loop(1 iterations)                                                                       |                                                                                                      |
-|              _decisionAndIndex.get(): 536870911                                                      |                                                                                                      |
-|              getIndex()                                                                              |                                                                                                      |
-|              getDecision()                                                                           |                                                                                                      |
-|              decisionAndIndex()                                                                      |                                                                                                      |
-|              _decisionAndIndex.compareAndSet(536870911, 34): true                                    |                                                                                                      |
-|             invokeOnCancellationImpl(ChannelSegment#1)                                               |                                                                                                      |
-|               DebugKt.getASSERTIONS_ENABLED(): true                                                  |                                                                                                      |
-|               loop(1 iterations)                                                                     |                                                                                                      |
-|                _state.get(): Active#1                                                                |                                                                                                      |
-|                _state.compareAndSet(Active#1, ChannelSegment#1): true                                |                                                                                                      |
-|         cancellable.getResult(): COROUTINE_SUSPENDED                                                 |                                                                                                      |
-|           isReusable(): false                                                                        |                                                                                                      |
-|           trySuspend(): true                                                                         |                                                                                                      |
-|             loop(1 iterations)                                                                       |                                                                                                      |
-|              _decisionAndIndex.get(): 34                                                             |                                                                                                      |
-|              getDecision()                                                                           |                                                                                                      |
-|              getIndex()                                                                              |                                                                                                      |
-|              decisionAndIndex()                                                                      |                                                                                                      |
-|              _decisionAndIndex.compareAndSet(34, 536870946): true                                    |                                                                                                      |
-|           getParentHandle(): null                                                                    |                                                                                                      |
-|           installParentHandle(): ChildContinuation#4                                                 |                                                                                                      |
-|         DebugProbesKt.probeCoroutineSuspended(Continuation#2)                                        |                                                                                                      |
-|     switch (reason: coroutine is suspended)                                                          |                                                                                                      |
-|                                                                                                      |   ResultKt.throwOnFailure(Unit)                                                                      |
-|                                                                                                      |   channel1.receive() [suspendable: Continuation#1]: 3                                                |
-|                                                                                                      |   counter ➜ 3                                                                                        |
-|                                                                                                      |   counter = 4                                                                                        |
-|                                                                                                      |   Boxing.boxInt(3): 3                                                                                |
-|                                                                                                      |   channel2.send(3) [suspendable: Continuation#1]: COROUTINE_SUSPENDED                                |
-|                                                                                                      |     send$suspendImpl(BufferedChannel#2, 3, Continuation#1): COROUTINE_SUSPENDED                      |
-|                                                                                                      |       BufferedChannel.getSendSegment$FU(): AtomicReferenceFieldUpdaterImpl#2                         |
-|                                                                                                      |       sendSegment.get(): ChannelSegment#2                                                            |
-|                                                                                                      |       loop(1 iterations)                                                                             |
-|                                                                                                      |        BufferedChannel.getSendersAndCloseStatus$FU(): CASUpdater#1                                   |
-|                                                                                                      |        sendersAndCloseStatus.getAndIncrement(): 2                                                    |
-|                                                                                                      |        BufferedChannel.isClosedForSend0(2): false                                                    |
-|                                                                                                      |        BufferedChannel.updateCellSend(ChannelSegment#2, 2, 3, 2, null, false): 3                     |
-|                                                                                                      |       sendOnNoWaiterSuspend(ChannelSegment#2, 2, 3, 2, Continuation#1): COROUTINE_SUSPENDED          |
-|                                                                                                      |         CancellableContinuationKt.getOrCreateCancellableContinuation(Continuation#3): Continuation#9 |
-|                                                                                                      |         updateCellSend(ChannelSegment#2, 2, 3, 2, Continuation#9, false): 2                          |
-|                                                                                                      |         prepareSenderForSuspension(Continuation#9, ChannelSegment#2, 2)                              |
-|                                                                                                      |           $this$prepareSenderForSuspension.invokeOnCancellation(ChannelSegment#2, 34)                |
-|                                                                                                      |             loop(1 iterations)                                                                       |
-|                                                                                                      |              _decisionAndIndex.get(): 536870911                                                      |
-|                                                                                                      |              getIndex()                                                                              |
-|                                                                                                      |              getDecision()                                                                           |
-|                                                                                                      |              decisionAndIndex()                                                                      |
-|                                                                                                      |              _decisionAndIndex.compareAndSet(536870911, 34): true                                    |
-|                                                                                                      |             invokeOnCancellationImpl(ChannelSegment#2)                                               |
-|                                                                                                      |               DebugKt.getASSERTIONS_ENABLED(): true                                                  |
-|                                                                                                      |               loop(1 iterations)                                                                     |
-|                                                                                                      |                _state.get(): Active#1                                                                |
-|                                                                                                      |                _state.compareAndSet(Active#1, ChannelSegment#2): true                                |
-|                                                                                                      |         cancellable.getResult(): COROUTINE_SUSPENDED                                                 |
-|                                                                                                      |           isReusable(): false                                                                        |
-|                                                                                                      |           trySuspend(): true                                                                         |
-|                                                                                                      |             loop(1 iterations)                                                                       |
-|                                                                                                      |              _decisionAndIndex.get(): 34                                                             |
-|                                                                                                      |              getDecision()                                                                           |
-|                                                                                                      |              getIndex()                                                                              |
-|                                                                                                      |              decisionAndIndex()                                                                      |
-|                                                                                                      |              _decisionAndIndex.compareAndSet(34, 536870946): true                                    |
-|                                                                                                      |           getParentHandle(): null                                                                    |
-|                                                                                                      |           installParentHandle(): ChildContinuation#5                                                 |
-|                                                                                                      |         DebugProbesKt.probeCoroutineSuspended(Continuation#1)                                        |
-|                                                                                                      |     switch (reason: coroutine is suspended)                                                          |
-|   ResultKt.throwOnFailure(Unit)                                                                      |                                                                                                      |
-|   counter ➜ 4                                                                                        |                                                                                                      |
-|   counter = 5                                                                                        |                                                                                                      |
-|   channel2.receive() [suspendable: Continuation#2]: 3                                                |                                                                                                      |
-|   counter ➜ 5                                                                                        |                                                                                                      |
-|   result: IllegalStateException #1                                                                   |                                                                                                      |
-|                                                                                                      |   ResultKt.throwOnFailure(Unit)                                                                      |
-|                                                                                                      |   counter ➜ 5                                                                                        |
-|                                                                                                      |   result: IllegalStateException #2                                                                   |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                    Thread 1                                     |                                    Thread 2                                     |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                 | operation2(): IllegalStateException #2                                          |
+|                                                                                 |   ResultKt.throwOnFailure(null)                                                 |
+|                                                                                 |   channel1.receive() [suspendable: Continuation#1]: 1                           |
+| operation1(): IllegalStateException #1                                          |                                                                                 |
+|   ResultKt.throwOnFailure(null)                                                 |                                                                                 |
+|   Boxing.boxInt(1): 1                                                           |                                                                                 |
+|   channel1.send(1) [suspendable: Continuation#2]                                |                                                                                 |
+|   counter ➜ 0                                                                   |                                                                                 |
+|   switch                                                                        |                                                                                 |
+|                                                                                 |   counter ➜ 0                                                                   |
+|                                                                                 |   counter = 1                                                                   |
+|                                                                                 |   Boxing.boxInt(1): 1                                                           |
+|                                                                                 |   channel2.send(1) [suspendable: Continuation#1]: COROUTINE_SUSPENDED           |
+|                                                                                 |     send$suspendImpl(BufferedChannel#2, 1, Continuation#1): COROUTINE_SUSPENDED |
+|                                                                                 |     switch (reason: coroutine is suspended)                                     |
+|   counter = 1                                                                   |                                                                                 |
+|   channel2.receive() [suspendable: Continuation#2]: 1                           |                                                                                 |
+|   Boxing.boxInt(2): 2                                                           |                                                                                 |
+|   channel1.send(2) [suspendable: Continuation#2]: COROUTINE_SUSPENDED           |                                                                                 |
+|     send$suspendImpl(BufferedChannel#1, 2, Continuation#2): COROUTINE_SUSPENDED |                                                                                 |
+|     switch (reason: coroutine is suspended)                                     |                                                                                 |
+|                                                                                 |   ResultKt.throwOnFailure(Unit)                                                 |
+|                                                                                 |   channel1.receive() [suspendable: Continuation#1]: 2                           |
+|                                                                                 |   counter ➜ 1                                                                   |
+|                                                                                 |   counter = 2                                                                   |
+|                                                                                 |   Boxing.boxInt(2): 2                                                           |
+|                                                                                 |   channel2.send(2) [suspendable: Continuation#1]: COROUTINE_SUSPENDED           |
+|                                                                                 |     send$suspendImpl(BufferedChannel#2, 2, Continuation#1): COROUTINE_SUSPENDED |
+|                                                                                 |     switch (reason: coroutine is suspended)                                     |
+|   ResultKt.throwOnFailure(Unit)                                                 |                                                                                 |
+|   counter ➜ 2                                                                   |                                                                                 |
+|   counter = 3                                                                   |                                                                                 |
+|   channel2.receive() [suspendable: Continuation#2]: 2                           |                                                                                 |
+|   Boxing.boxInt(3): 3                                                           |                                                                                 |
+|   channel1.send(3) [suspendable: Continuation#2]: COROUTINE_SUSPENDED           |                                                                                 |
+|     send$suspendImpl(BufferedChannel#1, 3, Continuation#2): COROUTINE_SUSPENDED |                                                                                 |
+|     switch (reason: coroutine is suspended)                                     |                                                                                 |
+|                                                                                 |   ResultKt.throwOnFailure(Unit)                                                 |
+|                                                                                 |   channel1.receive() [suspendable: Continuation#1]: 3                           |
+|                                                                                 |   counter ➜ 3                                                                   |
+|                                                                                 |   counter = 4                                                                   |
+|                                                                                 |   Boxing.boxInt(3): 3                                                           |
+|                                                                                 |   channel2.send(3) [suspendable: Continuation#1]: COROUTINE_SUSPENDED           |
+|                                                                                 |     send$suspendImpl(BufferedChannel#2, 3, Continuation#1): COROUTINE_SUSPENDED |
+|                                                                                 |     switch (reason: coroutine is suspended)                                     |
+|   ResultKt.throwOnFailure(Unit)                                                 |                                                                                 |
+|   counter ➜ 4                                                                   |                                                                                 |
+|   counter = 5                                                                   |                                                                                 |
+|   channel2.receive() [suspendable: Continuation#2]: 3                           |                                                                                 |
+|   counter ➜ 5                                                                   |                                                                                 |
+|   result: IllegalStateException #1                                              |                                                                                 |
+|                                                                                 |   ResultKt.throwOnFailure(Unit)                                                 |
+|                                                                                 |   counter ➜ 5                                                                   |
+|                                                                                 |   result: IllegalStateException #2                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Check failed.

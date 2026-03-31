@@ -7,38 +7,18 @@
 
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                       Thread 1                                       |                                       Thread 2                                       |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                                      | cas2_1(0, 0, 4, 1, 0, 5): <hung>                                                     |
-|                                                                                      |   array.cas2(0, 0, 4, 1, 0, 5, 1)                                                    |
-|                                                                                      |     AtomicArrayWithCAS2.Descriptor.apply(true, 1, false)                             |
-|                                                                                      |       getStatus$volatile$FU(): AtomicReferenceFieldUpdaterImpl#1                     |
-|                                                                                      |       status.get(): UNDECIDED                                                        |
-|                                                                                      |       installOrHelp(true, 1, false)                                                  |
-|                                                                                      |         loop(1 iterations)                                                           |
-|                                                                                      |          AtomicArrayWithCAS2.getArray(): AtomicReferenceArray#1                      |
-|                                                                                      |          AtomicReferenceArray#1[0].get(): Descriptor#2                               |
-|                                                                                      |          AtomicArrayWithCAS2.getGate0$volatile$FU(): AtomicIntegerFieldUpdaterImpl#1 |
-|                                                                                      |          gate0.set(1)                                                                |
-|                                                                                      |          AtomicArrayWithCAS2.getGate1$volatile$FU(): AtomicIntegerFieldUpdaterImpl#2 |
-|                                                                                      |          gate1.get(): 0                                                              |
-|                                                                                      |          switch                                                                      |
-| cas2_0(0, 0, 2, 1, 0, 3): <hung>                                                     |                                                                                      |
-|   array.cas2(0, 0, 2, 1, 0, 3, 0)                                                    |                                                                                      |
-|     AtomicArrayWithCAS2.Descriptor.apply(true, 0, false)                             |                                                                                      |
-|       getStatus$volatile$FU(): AtomicReferenceFieldUpdaterImpl#1                     |                                                                                      |
-|       status.get(): UNDECIDED                                                        |                                                                                      |
-|       installOrHelp(true, 0, false)                                                  |                                                                                      |
-|         loop(1 iterations)                                                           |                                                                                      |
-|          AtomicArrayWithCAS2.getArray(): AtomicReferenceArray#1                      |                                                                                      |
-|          AtomicReferenceArray#1[0].get(): Descriptor#2                               |                                                                                      |
-|          AtomicArrayWithCAS2.getGate1$volatile$FU(): AtomicIntegerFieldUpdaterImpl#2 |                                                                                      |
-|          gate1.set(1)                                                                |                                                                                      |
-|          AtomicArrayWithCAS2.getGate0$volatile$FU(): AtomicIntegerFieldUpdaterImpl#1 |                                                                                      |
-|          gate0.get(): 1                                                              |                                                                                      |
-|          current.apply(false, 0, true)                                               |                                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+|             Thread 1             |                                                      Thread 2                                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                  | cas2_1(0, 0, 4, 1, 0, 5): <hung>                                                                                   |
+|                                  |   array.cas2(0, 0, 4, 1, 0, 5, 1)                                                                                  |
+|                                  |     AtomicArrayWithCAS2.Descriptor.apply(true, 1, false)                                                           |
+|                                  |       getStatus$volatile$FU(): AtomicReferenceFieldUpdaterImpl#1                                                   |
+|                                  |       status.get(): UNDECIDED                                                                                      |
+|                                  |       installOrHelp(true, 1, false)                                                                                |
+|                                  |         loop(1 iterations) at AtomicArrayWithCAS2.Descriptor.installOrHelp(AtomicArrayWithCAS2LiveLockTest.kt:140) |
+| cas2_0(0, 0, 2, 1, 0, 3): <hung> |                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
 Detailed trace:

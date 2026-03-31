@@ -6,61 +6,21 @@
 | ---------------------------------------- |
 
 The following interleaving leads to the error:
-| ------------------------------------------------------------------------------------------------------------------------ |
-|     Thread 1      |                                               Thread 2                                               |
-| ------------------------------------------------------------------------------------------------------------------------ |
-| trigger()         |                                                                                                      |
-|   allowed = true  |                                                                                                      |
-|   switch          |                                                                                                      |
-|                   | operation(): SUSPENDED                                                                               |
-|                   |   allowed ➜ true                                                                                     |
-|                   |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED                    |
-|                   |     receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED                      |
-|                   |       BufferedChannel.getReceiveSegment$FU(): AtomicReferenceFieldUpdaterImpl#1                      |
-|                   |       receiveSegment.get(): ChannelSegment#1                                                         |
-|                   |       loop(1 iterations)                                                                             |
-|                   |        isClosedForReceive(): false                                                                   |
-|                   |        BufferedChannel.getReceivers$FU(): CASUpdater#2                                               |
-|                   |        receivers.getAndIncrement(): 0                                                                |
-|                   |        BufferedChannel.updateCellReceive(ChannelSegment#1, 0, 0, null): <SUSPEND_NO_WAITER>          |
-|                   |        BufferedChannelKt.getSUSPEND(): <SUSPEND>                                                     |
-|                   |        BufferedChannelKt.getFAILED(): <FAILED>                                                       |
-|                   |       BufferedChannelKt.getSUSPEND_NO_WAITER(): <SUSPEND_NO_WAITER>                                  |
-|                   |       receiveOnNoWaiterSuspend(ChannelSegment#1, 0, 0, Continuation#1): COROUTINE_SUSPENDED          |
-|                   |         CancellableContinuationKt.getOrCreateCancellableContinuation(Continuation#1): Continuation#2 |
-|                   |         updateCellReceive(ChannelSegment#1, 0, 0, Continuation#2): <SUSPEND>                         |
-|                   |         BufferedChannelKt.getSUSPEND(): <SUSPEND>                                                    |
-|                   |         prepareReceiverForSuspension(Continuation#2, ChannelSegment#1, 0)                            |
-|                   |           onReceiveEnqueued()                                                                        |
-|                   |           $this$prepareReceiverForSuspension.invokeOnCancellation(ChannelSegment#1, 0)               |
-|                   |             loop(1 iterations)                                                                       |
-|                   |              _decisionAndIndex.get(): 536870911                                                      |
-|                   |              getIndex()                                                                              |
-|                   |              getDecision()                                                                           |
-|                   |              decisionAndIndex()                                                                      |
-|                   |              _decisionAndIndex.compareAndSet(536870911, 0): true                                     |
-|                   |             invokeOnCancellationImpl(ChannelSegment#1)                                               |
-|                   |               DebugKt.getASSERTIONS_ENABLED(): true                                                  |
-|                   |               loop(1 iterations)                                                                     |
-|                   |                _state.get(): Active#1                                                                |
-|                   |                _state.compareAndSet(Active#1, ChannelSegment#1): true                                |
-|                   |         cancellable.getResult(): COROUTINE_SUSPENDED                                                 |
-|                   |           isReusable(): false                                                                        |
-|                   |           trySuspend(): true                                                                         |
-|                   |             loop(1 iterations)                                                                       |
-|                   |              _decisionAndIndex.get(): 0                                                              |
-|                   |              getDecision()                                                                           |
-|                   |              getIndex()                                                                              |
-|                   |              decisionAndIndex()                                                                      |
-|                   |              _decisionAndIndex.compareAndSet(0, 536870912): true                                     |
-|                   |           getParentHandle(): null                                                                    |
-|                   |           installParentHandle(): ChildContinuation#1                                                 |
-|                   |         DebugProbesKt.probeCoroutineSuspended(Continuation#1)                                        |
-|                   |     switch (reason: coroutine is suspended)                                                          |
-|   allowed = false |                                                                                                      |
-|   result: void    |                                                                                                      |
-|                   |   result: SUSPENDED                                                                                  |
-| ------------------------------------------------------------------------------------------------------------------------ |
+| ----------------------------------------------------------------------------------------------------- |
+|     Thread 1      |                                     Thread 2                                      |
+| ----------------------------------------------------------------------------------------------------- |
+| trigger()         |                                                                                   |
+|   allowed = true  |                                                                                   |
+|   switch          |                                                                                   |
+|                   | operation(): SUSPENDED                                                            |
+|                   |   allowed ➜ true                                                                  |
+|                   |   neverWakeUpChannel.receive() [suspendable: Continuation#1]: COROUTINE_SUSPENDED |
+|                   |     receive$suspendImpl(BufferedChannel#1, Continuation#1): COROUTINE_SUSPENDED   |
+|                   |     switch (reason: coroutine is suspended)                                       |
+|   allowed = false |                                                                                   |
+|   result: void    |                                                                                   |
+|                   |   result: SUSPENDED                                                               |
+| ----------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

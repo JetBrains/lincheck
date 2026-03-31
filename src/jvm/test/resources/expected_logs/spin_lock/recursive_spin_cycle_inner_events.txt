@@ -7,21 +7,14 @@
 
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------- |
-|            Thread 1            |                  Thread 2                   |
-| ---------------------------------------------------------------------------- |
-| trigger(): <hung>              |                                             |
-|   counter.incrementAndGet(): 1 |                                             |
-|   switch                       |                                             |
-|                                | causesSpinLock(): <hung>                    |
-|                                |   counter.get(): 1                          |
-|                                |   deadSpinCycleRecursive() [recursion x 51] |
-|                                |     loop(5 iterations)                      |
-|                                |      getSharedVariable(): false             |
-|                                |      action(false): true                    |
-|                                |      getSharedVariable(): true              |
-|                                |      action(true): true                     |
-| ---------------------------------------------------------------------------- |
+| --------------------------------------------------------- |
+|            Thread 1            |         Thread 2         |
+| --------------------------------------------------------- |
+| trigger(): <hung>              |                          |
+|   counter.incrementAndGet(): 1 |                          |
+|   switch                       |                          |
+|                                | causesSpinLock(): <hung> |
+| --------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops (spinloops)
 
 Detailed trace:

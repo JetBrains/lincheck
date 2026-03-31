@@ -6,48 +6,16 @@
 | ---------------------------------------------------- |
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------------------- |
-|     Thread 1      |                                 Thread 2                                 |
-| -------------------------------------------------------------------------------------------- |
-| isAbsurd(): true  |                                                                          |
-|   correct ➜ true  |                                                                          |
-|   switch          |                                                                          |
-|                   | cancelledOp(): CANCELLED                                                 |
-|                   |   cancellable.initCancellability()                                       |
-|                   |   cont.invokeOnCancellation(cancelledOp$2$1)                             |
-|                   |     makeCancelHandler(cancelledOp$2$1): InvokeOnCancel#1                 |
-|                   |     invokeOnCancellationImpl(InvokeOnCancel#1)                           |
-|                   |       DebugKt.getASSERTIONS_ENABLED(): true                              |
-|                   |       loop(1 iterations)                                                 |
-|                   |        _state.get(): Active#1                                            |
-|                   |        _state.compareAndSet(Active#1, InvokeOnCancel#1): true            |
-|                   |   cancellable.getResult(): COROUTINE_SUSPENDED                           |
-|                   |     isReusable(): false                                                  |
-|                   |     trySuspend(): true                                                   |
-|                   |       loop(1 iterations)                                                 |
-|                   |        _decisionAndIndex.get(): 536870911                                |
-|                   |        getDecision()                                                     |
-|                   |        getIndex()                                                        |
-|                   |        decisionAndIndex()                                                |
-|                   |        _decisionAndIndex.compareAndSet(536870911, 1073741823): true      |
-|                   |     getParentHandle(): ChildContinuation#1                               |
-|                   |   DebugProbesKt.probeCoroutineSuspended(Continuation#2)                  |
-|                   |   CANCELLED BEFORE RESUMPTION                                            |
-|                   |   loop(1 iterations)                                                     |
-|                   |    _state.get(): InvokeOnCancel#1                                        |
-|                   |    _state.compareAndSet(InvokeOnCancel#1, CancelledContinuation#1): true |
-|                   |   callCancelHandler(InvokeOnCancel#1, Exception#1)                       |
-|                   |   detachChildIfNonResuable()                                             |
-|                   |   dispatchResume(1)                                                      |
-|                   |     tryResume(): false                                                   |
-|                   |       loop(1 iterations)                                                 |
-|                   |        _decisionAndIndex.get(): 1073741823                               |
-|                   |        getDecision()                                                     |
-|                   |     DispatchedTaskKt.dispatch(Continuation#1, 1)                         |
-|                   |   result: CANCELLED                                                      |
-|   correct ➜ false |                                                                          |
-|   result: true    |                                                                          |
-| -------------------------------------------------------------------------------------------- |
+| -------------------------------------------- |
+|     Thread 1      |         Thread 2         |
+| -------------------------------------------- |
+| isAbsurd(): true  |                          |
+|   correct ➜ true  |                          |
+|   switch          |                          |
+|                   | cancelledOp(): CANCELLED |
+|   correct ➜ false |                          |
+|   result: true    |                          |
+| -------------------------------------------- |
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

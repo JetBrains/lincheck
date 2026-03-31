@@ -7,29 +7,11 @@ java.lang.IllegalStateException: Check failed.
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
-| ------------------------------------------------------- |
-|                       Main Thread                       |
-| ------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException  |
-|   block(): threw IllegalStateException                  |
-|     concurrentMap.put(1, 1): null                       |
-|       putVal(1, 1, false): null                         |
-|         spread(1): 1                                    |
-|         table ➜ null                                    |
-|         loop(2 iterations)                              |
-|          initTable(): Array<Node>#1                     |
-|          tabAt(Array<Node>#1, 1): null                  |
-|          casTabAt(Array<Node>#1, 1, null, Node#1): true |
-|         addCount(1, 0)                                  |
-|           counterCells ➜ null                           |
-|           baseCount ➜ 0                                 |
-|           baseCount.compareAndSetLong(0, 1): true       |
-|           loop(1 iterations)                            |
-|            sizeCtl ➜ 12                                 |
-|     a ➜ 1                                               |
-|     a = 2                                               |
-|   result: IllegalStateException #1                      |
-| ------------------------------------------------------- |
+| ------------------------------------------------------ |
+|                      Main Thread                       |
+| ------------------------------------------------------ |
+| $this_runCatching.block(): threw IllegalStateException |
+| ------------------------------------------------------ |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -7,32 +7,11 @@ java.lang.IllegalStateException: Check failed.
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------- |
-|                           Main Thread                            |
-| ---------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException           |
-|   block(): threw IllegalStateException                           |
-|     concurrentMap.computeIfAbsent(1, Lambda#1): 7                |
-|       spread(1): 1                                               |
-|       table ➜ null                                               |
-|       loop(2 iterations)                                         |
-|        initTable(): Array<Node>#1                                |
-|        tabAt(Array<Node>#1, 1): null                             |
-|        MONITORENTER                                              |
-|        casTabAt(Array<Node>#1, 1, null, ReservationNode#1): true |
-|        mappingFunction.apply(1): 7                               |
-|        setTabAt(Array<Node>#1, 1, Node#2)                        |
-|        MONITOREXIT                                               |
-|       addCount(1, 1)                                             |
-|         counterCells ➜ null                                      |
-|         baseCount ➜ 0                                            |
-|         baseCount.compareAndSetLong(0, 1): true                  |
-|         loop(1 iterations)                                       |
-|          sizeCtl ➜ 12                                            |
-|     a ➜ 7                                                        |
-|     a = 8                                                        |
-|   result: IllegalStateException #1                               |
-| ---------------------------------------------------------------- |
+| ------------------------------------------------------ |
+|                      Main Thread                       |
+| ------------------------------------------------------ |
+| $this_runCatching.block(): threw IllegalStateException |
+| ------------------------------------------------------ |
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
