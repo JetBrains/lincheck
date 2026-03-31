@@ -43,6 +43,7 @@ typealias LoopId = Int
  *
  * @property headers All basic blocks that serve as entries into this looping region.
  *   Contains a single element for reducible loops; may contain multiple elements for irreducible loops.
+ *   For reducible loops, `headers == [header]`.
  *
  * @property body The set of basic blocks that form the loop body (the strongly connected component of the graph).
  *   Every path that performs one or more iterations stays within this set until it
@@ -226,7 +227,7 @@ internal fun BasicBlockControlFlowGraph.computeBackEdges(): Set<Edge> {
  */
 internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoopsInformation {
     require(isReducible != null) { "CFG reducibility was not checked before computing the loops" }
-    require(isReducible!!) { "Cannot compute loops on irreducible CFG" }
+    // require(isReducible!!) { "Cannot compute loops on irreducible CFG" }
 
     val dominators = dominators
     val backEdges = backEdges

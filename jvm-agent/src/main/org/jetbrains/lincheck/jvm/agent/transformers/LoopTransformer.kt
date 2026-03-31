@@ -67,7 +67,7 @@ internal class LoopTransformer(
      */
 
     // Map from the first loop header non-phony instruction index to loopId.
-    private val iterationEntrySites: Map<InstructionIndex, LoopId> =
+    private val iterationEntrySites: Map<InstructionIndex, LoopInformation> =
         methodInfo.basicControlFlowGraph!!.computeIterationEntrySites(insnIndexRemapping, loopInfo)
 
     // Map from a normal exit non-phony instruction index to the set of exited loopIds.
@@ -84,23 +84,21 @@ internal class LoopTransformer(
 
     private val isReducible = methodInfo.basicControlFlowGraph!!.isReducible ?: true
 
-    private val irreducibleHitSites: Set<InstructionIndex> = if (!isReducible && shouldTrackIrreducibleLoops) {
-        methodInfo.basicControlFlowGraph!!.computeIrreducibleLoopEntries(insnIndexRemapping)
-    } else {
-        emptySet()
-    }
-
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
         // Inject `onLoopIteration` at the loop header on every iteration (including the first).
-        iterationEntrySites[nonPhonyIndex]?.let { loopId ->
+        iterationEntrySites[nonPhonyIndex]?.let { loopInfo ->
             // STACK: <empty>
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             loadNewCodeLocationId()
-            adapter.push(loopId)
+            adapter.push(loopInfo.id)
             // STACK: descriptor, codeLocation, loopId
-            adapter.invokeStatic(Injections::onLoopIteration)
+            if (loopInfo.isReducible) {
+                adapter.invokeStatic(Injections::onLoopIteration)
+            } else {
+                adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
+            }
             // STACK: <empty>
         }
 
@@ -145,13 +143,13 @@ internal class LoopTransformer(
             loadLocal(exceptionLocal)
         }
 
-        if (nonPhonyIndex in irreducibleHitSites) {
-            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-            loadNewCodeLocationId()
-            // STACK: descriptor, codeLocation
-            adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
-            // STACK: <empty>
-        }
+        // if (nonPhonyIndex in irreducibleHitSites) {
+        //     invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+        //     loadNewCodeLocationId()
+        //     // STACK: descriptor, codeLocation, loopId
+        //     adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
+        //     // STACK: <empty>
+        // }
     }
 }
 
@@ -173,15 +171,22 @@ private fun BasicBlockControlFlowGraph.computeInstructionIndicesRemapping(): Int
 private fun BasicBlockControlFlowGraph.computeIterationEntrySites(
     insnIndexRemapping: IntArray,
     loopInfo: MethodLoopsInformation,
-): Map<InstructionIndex, Int> {
+): Map<InstructionIndex, LoopInformation> {
     if (!loopInfo.hasLoops()) return emptyMap()
     val cfg = this
-    val result = mutableMapOf<InstructionIndex, Int>()
+    val result = mutableMapOf<InstructionIndex, LoopInformation>()
     for (loop in loopInfo.loops) {
-        val idx = cfg.firstOpcodeIndexOf(loop.header) ?: continue
+        for (header in loop.headers) {
+            val idx = cfg.firstOpcodeIndexOf(header) ?: continue
+            // If multiple loops share the same header opcode index (rare),
+            // prefer the inner loop by letting the later put override only if absent.
+            result.putIfAbsent(insnIndexRemapping[idx], loop)
+        }
+
+        // val idx = cfg.firstOpcodeIndexOf(loop.header) ?: continue
         // If multiple loops share the same header opcode index (rare),
         // prefer the inner loop by letting the later put override only if absent.
-        result.putIfAbsent(insnIndexRemapping[idx], loop.id)
+        // result.putIfAbsent(insnIndexRemapping[idx], loop.id)
     }
     return result
 }

@@ -175,7 +175,14 @@ class BasicBlockControlFlowGraph(
                 // so we report that fact and compute limited loop information
                 Logger.warn { "Irreducible CFG detected, loop information will be limited for $className::$method" }
                 Logger.debug { "CFG:\n${toFormattedString()}" }
-                loopInfo = MethodLoopsInformation()
+                // loopInfo = MethodLoopsInformation()
+
+                loopInfo = computeLoopsFromDominators().also { info ->
+                    info.validateBasicBlocksLoopsMapping()
+                    info.loops.forEach {
+                        it.validateLoopEdgesInvariants()
+                    }
+                }
             }
         }
         return loopInfo!!
