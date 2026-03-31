@@ -37,7 +37,8 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         objHashCode: Int,
         objDisplayNumber: Int,
         objReference: WeakReference<Any>,
-        val allocation: AtomicThreadEvent
+        val allocation: AtomicThreadEvent,
+        val external: Boolean,
     ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
 
 
@@ -47,6 +48,13 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         require(initEvent.label is InitializationLabel)
         this.initEvent = initEvent
     }
+
+    //NOTE: as in the oringinal ObjectRegistry, if an external object is already registered
+    // we do not register it again.
+    // This is because the external object may already exist, which messes up the objectIDs
+    override fun registerExternalObject(obj: Any): ObjectEntry =
+       get(obj) ?: super.registerExternalObject(obj)
+
 
     override fun createObjectEntry(
         objNumber: Int,
@@ -58,11 +66,16 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         val obj = objReference.get()!!
         if (kind == ObjectKind.EXTERNAL) {
             (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objNumber)
-            return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, initEvent!!)
+            return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, initEvent!!, true)
         } else {
-            val iThread = (Thread.currentThread() as? TestThread)?.threadId
+            val iThread = (Thread.currentThread() as? TestThread)?.threadId ?: eventStructure.mainThreadId
+            // We create a new object allocation event and we "suggest" an objNumber
+            // If we are in the replay phase however, the object allocation may have a different id
+            // In that case we just take the id from the object allocation
             val allocationEvent = eventStructure.addObjectAllocationEvent(iThread!!,obj.opaque(), objNumber)
-            return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocationEvent)
+            val actualObjectNumber = (allocationEvent.label as ObjectAllocationLabel).objectID
+            check(actualObjectNumber <= objNumber)
+            return EventStructureObjectEntry(actualObjectNumber, objHashCode, objDisplayNumber, objReference, allocationEvent, false)
         }
     }
 
@@ -77,6 +90,9 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
 
     fun getObject(id: ObjectNumber): OpaqueValue? {
         return lookupByNumber(id)?.objectReference?.get()?.opaque()
+    }
+    override fun reset() {
+        retain { (it as EventStructureObjectEntry).external }
     }
 }
 

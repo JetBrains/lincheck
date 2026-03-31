@@ -788,9 +788,10 @@ internal class EventStructure(
     private fun addResponseEvents(requestEvent: AtomicThreadEvent): Pair<AtomicThreadEvent?, List<AtomicThreadEvent>> {
         require(requestEvent.label.isRequest)
         tryReplayEvent(requestEvent.threadId)?.let { event ->
+            val resync = event.resynchronize(syncAlgebra)
             check(event.label.isResponse)
             check(event.parent == requestEvent)
-            check(event.label == event.resynchronize(syncAlgebra))
+            check(event.label == resync)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
@@ -948,11 +949,7 @@ internal class EventStructure(
     fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue, objectID: ObjectNumber): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
             check(event.label is ObjectAllocationLabel)
-            // TODO: Is this a reasonable check?
-            check(event.label.objectID == objectID)
-            val id = event.label.objectID
-//            val entry = RegistryObjectEntry(id, value, event)
-//            objectRegistry.register(entry)
+            check(event.label.objectID <= objectID)
             addEventToCurrentExecution(event)
             return event
         }

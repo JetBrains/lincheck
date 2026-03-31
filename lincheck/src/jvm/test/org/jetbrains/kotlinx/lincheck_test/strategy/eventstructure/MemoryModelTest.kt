@@ -103,6 +103,71 @@ class MemoryModelTest {
         }
     }
 
+    @Test
+    fun testHashMap() {
+        class Foo {
+            var x = AtomicInteger(0)
+            fun one() {
+                 val map = mutableMapOf<Int, Int>()
+                map[0] = x.get()
+            }
+
+            fun two() {
+                val flarb = Object()
+                x.set(1)
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(Foo::one)
+                }
+                thread {
+                    actor(Foo::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(Foo::class.java, testScenario, outcomes) { results ->
+            Unit
+        }
+    }
+
+    @Test
+    fun testIf() {
+        class Foo {
+            var x = AtomicInteger(0)
+            fun one() {
+                x.get() == 0
+                val blarb = Object()
+            }
+
+            fun two() {
+                val flarb = Object()
+                x.set(1)
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(Foo::one)
+                }
+                thread {
+                    actor(Foo::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(Foo::class.java, testScenario, outcomes) { results ->
+            Unit
+        }
+
+    }
+
 }
 
 internal class SharedMemory(size: Int = 16) {
