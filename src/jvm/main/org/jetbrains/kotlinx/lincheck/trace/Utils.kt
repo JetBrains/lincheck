@@ -561,23 +561,8 @@ private fun detectRecursionChain(head: CallNode): List<CallNode> {
     return chain
 }
 
-
 private fun isRecursiveChild(parent: CallNode, child: TraceNode): Boolean {
     return child is CallNode &&
             child.tracePoint.methodName == parent.tracePoint.methodName &&
             child.tracePoint.className == parent.tracePoint.className
-}
-
-internal fun computeInterleavingErrorLoops(node: TraceNode): String {
-    val sb = StringBuilder()
-    node.children.forEach { node ->
-        val codeFragmentChildren = node.children.map { child ->
-            child.toString(false) + "(${child.eventNumber})"
-        }
-        codeFragmentChildren.forEach { child ->
-            if (!child.contains("loop(") && !sb.contains(child))
-                sb.append(child).append(";")
-        }
-    }
-    return sb.toString()
 }

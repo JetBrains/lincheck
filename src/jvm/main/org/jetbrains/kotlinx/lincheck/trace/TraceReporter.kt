@@ -200,46 +200,10 @@ private class TraceColumnPrinter(
             return
         }
 
-        if ((node is LoopNode || node is CallNode) && !verbose) {
-            val loopLine = node.toString(withLocation = false)
-            val loopTitle = loopLine.substringBefore("::")
-            val iterations = loopLine.substringAfter("::").split(";").map { it.trim() }.dropLast(1) // drop last empty element after split
+        val nodeLine = getPrefix() + node.toString(withLocation = verbose)
 
-            val prefixIterations = getPrefix() + " "
-            val loopTitleLine = TraceLine(node.eventNumber, node.iThread, getPrefix() + loopTitle)
-            _lines.add(loopTitleLine)
-
-            val traceLines = iterations.filter { !it.isEmpty() }
-
-            // Each traceLine contains the operation and the event number. Here we split them and keep only unique operations
-            val seenTraceLines = mutableSetOf<String>()
-            val eventNumbers = mutableSetOf<Int>()
-            traceLines.forEach { iteration ->
-                val iterationWithoutEventNumber = iteration.substringBeforeLast("(").trimEnd()
-                val eventNumber = iteration.substringAfterLast("(").substringBefore(")").toInt()
-                if (iterationWithoutEventNumber.contains("switch")) {
-                    seenTraceLines.add(iterationWithoutEventNumber)
-                    eventNumbers.add(eventNumber)
-                }
-                if (iterationWithoutEventNumber !in seenTraceLines) {
-                    seenTraceLines.add(iterationWithoutEventNumber)
-                    eventNumbers.add(eventNumber)
-                }
-            }
-
-            seenTraceLines.zip(eventNumbers).map { (iteration, eventNumber) ->
-                TraceLine(eventNumber, node.iThread, prefixIterations + iteration)
-            }.forEach { traceLine ->
-                _lines.add(traceLine)
-            }
-        }
-
-        else {
-            val nodeLine = getPrefix() + node.toString(withLocation = verbose)
-
-            val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
-            _lines.add(traceLine)
-        }
+        val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
+        _lines.add(traceLine)
 
         val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode || node is RecursionNode
         if (isUnfoldableNode && (filter?.shouldUnfold(node) ?: true)) {

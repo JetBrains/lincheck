@@ -162,13 +162,7 @@ internal class LoopNode(
     override fun toString(withLocation: Boolean): String {
         val iters = totalIterations()
         val base = "loop($iters iterations)"
-        if (withLocation) return "$base at ${tracePoint.toString(withLocation = true, withValues = true).substringAfter(" at ")}"
-        else {
-            val sb = StringBuilder()
-            sb.append("$base::")
-            sb.append(computeInterleavingErrorLoops(this))
-            return sb.toString()
-        }
+        return "$base at ${tracePoint.toString(withLocation = true, withValues = true).substringAfter(" at ")}"
     }
 
     override fun copy(): TraceNode = LoopNode(tracePoint, eventNumber).also {

@@ -29,10 +29,11 @@ internal class ShortenTraceFilter : TraceFilter {
         if (node is CallNode && node.isRootCall && node.tracePoint.isThreadStart) return true
         unfoldableNodes[node]?.let { return it }
 
-        // if (callNode.children.lastOrNull() is LoopNode || callNode.children.lastOrNull() is RecursionNode) {
-        //     unfoldableNodes[callNode] = true
-        //     return true
-        // }
+        if ((node.children.lastOrNull() is LoopNode || node.children.lastOrNull() is RecursionNode) &&
+                node.children.any { it.containsSwitchInsideIterationRecursively() }) {
+            unfoldableNodes[node] = true
+            return true
+        }
 
         return node.children.any { child ->
             when (child) {
@@ -88,3 +89,17 @@ internal val TracePoint.isBlocking: Boolean get() = when (this) {
     is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
     else -> false
 }
+
+private fun TraceNode.containsSwitchEventRecursively(): Boolean =
+    when (this) {
+        is EventNode -> tracePoint is SwitchEventTracePoint
+        is CallNode, is LoopNode, is RecursionNode, is IterationNode -> children.any { it.containsSwitchEventRecursively() }
+        else -> false
+    }
+
+private fun TraceNode.containsSwitchInsideIterationRecursively(): Boolean =
+    when (this) {
+        is IterationNode -> children.any { it.containsSwitchEventRecursively() }
+        is CallNode, is LoopNode, is RecursionNode -> children.any { it.containsSwitchInsideIterationRecursively() }
+        else -> false
+    }
