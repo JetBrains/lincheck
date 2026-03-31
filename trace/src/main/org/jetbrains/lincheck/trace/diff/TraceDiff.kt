@@ -463,7 +463,7 @@ private fun copyTracepointSubtree(
 ) {
     val outputPoint = cloner(point)
     outputPoint.diffStatus = diffStatus
-    outputParent?.addChild(outputPoint)
+    addCopiedChild(outputParent, outputPoint)
     outputPoint.save(output)
     // Save all children recursively, if needed
     if (outputPoint is TRContainerTracePoint && point is TRContainerTracePoint) {
@@ -477,6 +477,13 @@ private fun copyTracepointSubtree(
         // Free memory
         point.unloadAllChildren()
         outputPoint.unloadAllChildren()
+    }
+}
+
+private fun addCopiedChild(parent: TRContainerTracePoint?, child: TRTracePoint) {
+    parent?.addChild(child)
+    if (parent is TRLoopTracePoint) {
+        parent.incrementIterations()
     }
 }
 
@@ -504,7 +511,7 @@ private fun diffTracepointSubtree(
                     // "Remove" left and make it without children
                     val oldPoint = cloner.cloneLeftTracePoint(lp, rp.eventId)
                     oldPoint.diffStatus = DiffStatus.EDITED_OLD
-                    outputRoot?.addChild(oldPoint)
+                    addCopiedChild(outputRoot, oldPoint)
                     oldPoint.save(output)
                     if (oldPoint is TRContainerTracePoint) {
                         oldPoint.saveFooter(output)
@@ -513,7 +520,7 @@ private fun diffTracepointSubtree(
                 // Copy tracepoint itself from right subtree for now
                 val outputPoint = cloner.cloneRightTracePoint(rp, lp.eventId)
                 outputPoint.diffStatus = if (strict) DiffStatus.UNCHANGED else DiffStatus.EDITED_NEW
-                outputRoot?.addChild(outputPoint)
+                addCopiedChild(outputRoot, outputPoint)
                 outputPoint.save(output)
 
                 // Maybe, we need to go deeper?
