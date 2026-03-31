@@ -14,8 +14,8 @@ import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 
 internal interface TraceFilter {
-    fun shouldUnfold(callNode: TraceNode): Boolean
-    fun filterChildren(callNode: TraceNode): List<TraceNode>
+    fun shouldUnfold(node: TraceNode): Boolean
+    fun filterChildren(node: TraceNode): List<TraceNode>
     fun shouldFilter(tracePoint: TracePoint): Boolean
 }
 
@@ -25,16 +25,16 @@ internal class ShortenTraceFilter : TraceFilter {
     private val unfoldableNodes = mutableMapOf<TraceNode, Boolean>()
 
 //    TODO: see what else can be used to decide unfolding (LoopNode for example)
-    override fun shouldUnfold(callNode: TraceNode): Boolean {
-        if (callNode is CallNode && callNode.isRootCall && callNode.tracePoint.isThreadStart) return true
-        unfoldableNodes[callNode]?.let { return it }
+    override fun shouldUnfold(node: TraceNode): Boolean {
+        if (node is CallNode && node.isRootCall && node.tracePoint.isThreadStart) return true
+        unfoldableNodes[node]?.let { return it }
 
-        if (callNode.children.lastOrNull() is LoopNode || callNode.children.lastOrNull() is RecursionNode) {
-            unfoldableNodes[callNode] = true
-            return true
-        }
+        // if (callNode.children.lastOrNull() is LoopNode || callNode.children.lastOrNull() is RecursionNode) {
+        //     unfoldableNodes[callNode] = true
+        //     return true
+        // }
 
-        return callNode.children.any { child ->
+        return node.children.any { child ->
             when (child) {
                 is EventNode -> with(child) {
                     !tracePoint.isVirtual && (
@@ -50,12 +50,12 @@ internal class ShortenTraceFilter : TraceFilter {
                 else -> false
             }
         }.also { decision ->
-            unfoldableNodes[callNode] = decision
+            unfoldableNodes[node] = decision
         }
     }
 
-    override fun filterChildren(callNode: TraceNode): List<TraceNode> {
-        return callNode.children.filterNot { shouldFilter(it.tracePoint) }
+    override fun filterChildren(node: TraceNode): List<TraceNode> {
+        return node.children.filterNot { shouldFilter(it.tracePoint) }
     }
 
     override fun shouldFilter(tracePoint: TracePoint): Boolean =
@@ -63,10 +63,10 @@ internal class ShortenTraceFilter : TraceFilter {
 }
 
 internal class VerboseTraceFilter : TraceFilter {
-    override fun shouldUnfold(callNode: TraceNode): Boolean = true
+    override fun shouldUnfold(node: TraceNode): Boolean = true
 
-    override fun filterChildren(callNode: TraceNode): List<TraceNode> {
-        return callNode.children.filterNot { shouldFilter(it.tracePoint) }
+    override fun filterChildren(node: TraceNode): List<TraceNode> {
+        return node.children.filterNot { shouldFilter(it.tracePoint) }
     }
 
     override fun shouldFilter(tracePoint: TracePoint): Boolean =
