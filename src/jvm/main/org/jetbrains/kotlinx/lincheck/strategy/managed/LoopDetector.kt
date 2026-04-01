@@ -24,7 +24,7 @@ interface LoopDetector {
 
     fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int)
     fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Pair<Boolean, Decision>
-    fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int): Decision
+    fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Decision
     fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, isReachableFromOutsideLoop: Boolean): Int?
 
     // TODO: at the moment params are only passed, but not used
@@ -146,14 +146,12 @@ class BoundedLoopDetector(
     }
 
     // --- IRREDUCIBLE LOOPS ---
-    override fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int): LoopDetector.Decision {
+    override fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
         val state = threadStates[threadId] ?: return LoopDetector.Decision.IDLE
         val frame = state.callStack.lastOrNull() ?: return LoopDetector.Decision.IDLE
 
-        // For irreducible loops we can use the placeholder loop ID -2, to make sure that they are not mixed with
-        // regular loops. We also don't need to track them in the loop stack, as they are not nested and don't have enter and exit events.
-        val loop = frame.loops.lastOrNull { it.key.loopId == -2 && it.key.codeLocation == codeLocation }
-            ?: ActiveLoopInfo(LoopKey(-2, codeLocation)).also { frame.loops.addLast(it) }
+        val loop = frame.loops.lastOrNull { it.key.loopId == loopId && it.key.codeLocation == codeLocation }
+            ?: ActiveLoopInfo(LoopKey(loopId, codeLocation)).also { frame.loops.addLast(it) }
 
         return computeLoopDecision(loop)
     }

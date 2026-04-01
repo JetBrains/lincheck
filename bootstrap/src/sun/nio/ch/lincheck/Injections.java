@@ -1001,7 +1001,7 @@ public class Injections {
     public static void onIrreducibleLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId) {
         EventTracker tracker = getEventTracker(descriptor);
         if (tracker == null || descriptor == null) return;
-        tracker.onIrreducibleLoopIteration(descriptor, codeLocation);
+        tracker.onIrreducibleLoopIteration(descriptor, codeLocation, loopId);
     }
 
     /**

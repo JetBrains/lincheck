@@ -2162,12 +2162,13 @@ internal abstract class ManagedStrategy(
 
     override fun onIrreducibleLoopIteration(
         threadDescriptor: ThreadDescriptor,
-        codeLocation: Int
+        codeLocation: Int,
+        loopId: Int
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
 
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
-            val decision = loopDetector.onIrreducibleLoopIteration(threadId, codeLocation)
+            val decision = loopDetector.onIrreducibleLoopIteration(threadId, codeLocation, loopId)
             // we skip trace collection here since we don't have stable boundaries
             when (decision) {
                 LoopDetector.Decision.IDLE -> {}
