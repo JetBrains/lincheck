@@ -399,7 +399,7 @@ class FileStreamingTraceCollecting(
     }
 
     private fun getDescriptorBitmap(descriptorClass: KClass<*>): AtomicBitmap? {
-        return when (descriptorClass::class) {
+        return when (descriptorClass) {
             ClassDescriptor::class -> seenClassDescriptors
             MethodDescriptor::class -> seenMethodDescriptors
             FieldDescriptor::class -> seenFieldDescriptors
