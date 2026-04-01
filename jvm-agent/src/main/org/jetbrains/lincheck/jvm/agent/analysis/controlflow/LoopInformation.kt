@@ -227,7 +227,6 @@ internal fun BasicBlockControlFlowGraph.computeBackEdges(): Set<Edge> {
  */
 internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoopsInformation {
     require(isReducible != null) { "CFG reducibility was not checked before computing the loops" }
-    // require(isReducible!!) { "Cannot compute loops on irreducible CFG" }
 
     val dominators = dominators
     val backEdges = backEdges
@@ -246,7 +245,9 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
     val backEdgesByHeader = backEdges.groupBy { it.target }
     val loops = mutableListOf<LoopInformation>()
     var nextLoopId = 0
-    val loopBodiesWithHeader = mutableListOf<Pair<BasicBlockIndex, Set<BasicBlockIndex>>>()
+    val loopBodiesWithHeaders = mutableListOf<Pair<Set<BasicBlockIndex>, Set<BasicBlockIndex>>>()
+
+    // Compute Reducible loops
     for ((h, adjacentBackEdges) in backEdgesByHeader) {
         val body = mutableSetOf<BasicBlockIndex>()
         body.add(h)
@@ -263,21 +264,65 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
                 }
             }
         }
-        loopBodiesWithHeader.add(h to body.toSet())
+        loopBodiesWithHeaders.add(setOf(h) to body.toSet())
     }
+
+    // Compute Irreducible loops (SCCs remaining after removing dominator back edges)
+    if (isReducible == false) {
+        // Build a residual graph by removing dominator-identified back edges
+        val residualSuccessors: (BasicBlockIndex) -> Iterable<BasicBlockIndex> = { v ->
+            allSuccessors.neighbours(v).filter { u ->
+                val edge = normalEdges.find { it.source == v && it.target == u }
+                edge == null || edge !in backEdges
+            }
+        }
+        val allNodes = (0 until n).toSet()
+        val sccs = computeSCCs(allNodes, residualSuccessors)
+        for (scc in sccs) {
+            // Skip SCCs that are fully contained in an already-found reducible loop body
+            val isAlreadyCovered = loopBodiesWithHeaders.any { (_, body) -> body.containsAll(scc) }
+            if (isAlreadyCovered) continue
+
+            // Headers = SCC nodes reachable from outside the SCC
+            val headers = scc.filterTo(mutableSetOf()) { node ->
+                allPredecessors.neighbours(node).any { pred -> pred !in scc }
+            }
+            if (headers.isEmpty()) {
+                // If no external entry, the entry block is a header
+                if (0 in scc) headers.add(0)
+                else headers.add(scc.min())
+            }
+
+            // The body is the full SCC
+            val body = scc.toSet()
+
+            loopBodiesWithHeaders.add(headers to body)
+        }
+    }
+
 
     // Sort loop bodies by containment and header values, so that for any two loops a and b we could say that
     // if b is an inner loop of a, then id(a) < id(b), so "outer" loops have smaller ids than "inner" loops
-    loopBodiesWithHeader.sortWith { a, b ->
+    loopBodiesWithHeaders.sortWith { a, b ->
         val aBody = a.second
         val bBody = b.second
         // the "outer" loops will come before their "inner" loops
         if (aBody.size >= bBody.size && aBody.containsAll(bBody)) -1
         else if (aBody.size < bBody.size && bBody.containsAll(aBody)) 1
-        else a.first.compareTo(b.first)
+        else a.first.min().compareTo(b.first.min())
     }
 
-    for ((h, body) in loopBodiesWithHeader) {
+    for ((headers, body) in loopBodiesWithHeaders) {
+        val header = headers.min()
+
+        // Collect back edges for this loop: edges targeting any of its headers from within the body
+        val loopBackEdges = buildSet {
+            for (e in normalEdges) {
+                if (e.source in body && e.target in headers) {
+                    add(e)
+                }
+            }
+        }
         // Normal exits: edges from body to outside, non-exception
         val normalExits = buildSet {
             for (e in normalEdges) {
@@ -298,10 +343,10 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
 
         loops += LoopInformation(
             id = nextLoopId++,
-            header = h,
-            headers = setOf(h),
+            header = header,
+            headers = headers,
             body = body,
-            backEdges = backEdgesByHeader[h]!!.toSet(),
+            backEdges = loopBackEdges,
             normalExits = normalExits,
             exceptionalExitHandlers = exceptionalExitHandlers,
             exclusiveExits = exclusiveExits
@@ -316,6 +361,65 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
         }
     }
     return MethodLoopsInformation(loops = loops, loopsByBlock = loopsByBlock)
+}
+
+private fun computeSCCs(
+    nodes: Set<BasicBlockIndex>,
+    successors: (BasicBlockIndex) -> Iterable<BasicBlockIndex>
+): List<Set<BasicBlockIndex>> {
+    var nextIndex = 0
+    val index = mutableMapOf<BasicBlockIndex, Int>()
+    val lowLink = mutableMapOf<BasicBlockIndex, Int>()
+    val stack = ArrayDeque<BasicBlockIndex>()
+    val onStack = mutableSetOf<BasicBlockIndex>()
+    val result = mutableListOf<Set<BasicBlockIndex>>()
+
+    fun strongConnect(v: BasicBlockIndex) {
+        index[v] = nextIndex
+        lowLink[v] = nextIndex
+        nextIndex++
+
+        stack.addLast(v)
+        onStack.add(v)
+
+        for (w in successors(v).filter { it in nodes }.sorted()) {
+            if (w !in index) {
+                strongConnect(w)
+                lowLink[v] = minOf(lowLink.getValue(v), lowLink.getValue(w))
+            } else if (w in onStack) {
+                lowLink[v] = minOf(lowLink.getValue(v), index.getValue(w))
+            }
+        }
+
+        if (lowLink.getValue(v) == index.getValue(v)) {
+            val component = mutableSetOf<BasicBlockIndex>()
+            while (true) {
+                val w = stack.removeLast()
+                onStack.remove(w)
+                component.add(w)
+                if (w == v) break
+            }
+
+            // Keep only cyclic SCCs:
+            // - size > 1, or
+            // - singleton with a self-loop
+            val isCyclic =
+                component.size > 1 ||
+                        successors(v).any { it == v }
+
+            if (isCyclic) {
+                result += component
+            }
+        }
+    }
+
+    for (v in nodes.sorted()) {
+        if (v !in index) {
+            strongConnect(v)
+        }
+    }
+
+    return result
 }
 
 /**
