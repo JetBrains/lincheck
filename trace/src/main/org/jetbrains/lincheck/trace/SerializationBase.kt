@@ -459,7 +459,7 @@ internal sealed class ContextAwareTraceWriter(
      * Such order is required, because [AccessPath] is a recursive structure, which may contain another access paths inside.
      * They should come first in the serialization order for easier deserialization later. So when we need to construct
      * an [AccessLocation] which expects [AccessPath] as an argument, we would be sure that it is
-     * present in the trace context and can be retrieved via id. So such locations are serialized the folowwing way:
+     * present in the trace context and can be retrieved via id. So such locations are serialized the following way:
      * ```
      * [location type] [another access path id]
      * ```
