@@ -22,10 +22,10 @@ import kotlin.reflect.KClass
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.CLASS)
-@JvmRepeatable(Param.Params::class)
+// @JvmRepeatable(Param.Params::class) // commented due to ERROR deprecation level compilation error
 @Inherited
 @Deprecated(
-    level = DeprecationLevel.WARNING,
+    level = DeprecationLevel.ERROR,
     message = "Use org.jetbrains.lincheck.datastructures.Param instead.",
 )
 annotation class Param(

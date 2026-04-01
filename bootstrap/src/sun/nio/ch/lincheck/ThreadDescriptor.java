@@ -96,6 +96,19 @@ public class ThreadDescriptor {
     private int ignoredSectionDepth = 0;
 
     /**
+     * Thread-local variable to track if we are currently evaluating a breakpoint condition.
+     * When true, breakpoint hits inside the condition evaluation should not be reported.
+     */
+    private boolean insideBreakpointCondition = false;
+
+    /**
+     * Per-thread stack-based pool of {@link ResultInterceptor} objects.
+     *
+     * @see ResultInterceptorPool
+     */
+    private final ResultInterceptorPool resultInterceptorPool = new ResultInterceptorPool();
+
+    /**
      * Creates a new thread descriptor for the given thread.
      */
     public ThreadDescriptor(Thread thread) {
@@ -247,6 +260,38 @@ public class ThreadDescriptor {
      */
     public void restoreIgnoredSectionDepth(int depth) {
         ignoredSectionDepth = depth;
+    }
+
+    public void enterBreakpointCondition() {
+        insideBreakpointCondition = true;
+    }
+
+    public void leaveBreakpointCondition() {
+        insideBreakpointCondition = false;
+    }
+
+    public boolean isInsideBreakpointCondition() {
+        return insideBreakpointCondition;
+    }
+
+    /**
+     * Takes a {@link ResultInterceptor} from the per-thread pool.
+     * If the pool is full, it is expanded to 2x its current capacity.
+     *
+     * @return a recycled {@link ResultInterceptor} instance, or {@code null} if no recycled instance is available.
+     */
+    public ResultInterceptor takeResultInterceptor() {
+        return resultInterceptorPool.take();
+    }
+
+    /**
+     * Returns a {@link ResultInterceptor} to the per-thread pool for re-use.
+     * The interceptor is {@linkplain ResultInterceptor#reset() reset} before being returned to the pool.
+     *
+     * @param interceptor the interceptor to return to the pool.
+     */
+    public void giveResultInterceptor(ResultInterceptor interceptor) {
+        resultInterceptorPool.give(interceptor);
     }
 
     /**

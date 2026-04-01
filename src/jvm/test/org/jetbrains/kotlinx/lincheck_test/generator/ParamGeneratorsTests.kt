@@ -11,11 +11,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.generator
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Param
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.kotlinx.lincheck_test.verifier.linearizability.SpinLockBasedSet

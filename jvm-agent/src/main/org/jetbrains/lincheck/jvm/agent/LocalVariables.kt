@@ -10,7 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.descriptors.ActiveLocal
+import org.jetbrains.lincheck.descriptors.LocalKind
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
 
@@ -34,7 +35,8 @@ data class LocalVariableInfo(
     val name: String,
     val index: Int,
     val type: Type,
-    val labelIndexRange: Pair<Label, Label>
+    val labelIndexRange: Pair<Label, Label>,
+    val localKind: LocalKind
 ) {
     val isInlineCallMarker = name.startsWith(INLINE_FUNC_PREFIX)
     val isInlineLambdaMarker = name.startsWith(INLINE_LAMBDA_PREFIX)
@@ -106,3 +108,5 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
         val EMPTY = MethodVariables()
     }
 }
+
+internal fun LocalVariableInfo.toActiveLocal(): ActiveLocal = ActiveLocal(name, localKind)

@@ -25,7 +25,7 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.TRACE_DEBUGGING
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.datastructures.getTimeOutMs
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
 
@@ -33,13 +33,16 @@ import java.lang.reflect.Method
  * Options for the model checking strategy.
  */
 @Deprecated(
-    level = DeprecationLevel.WARNING,
+    level = DeprecationLevel.ERROR,
     message = "Use org.jetbrains.lincheck.datastructures.ModelCheckingOptions instead.",
 )
 @Suppress("DEPRECATION")
-class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
-    override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
-        return ModelCheckingCTestConfiguration(
+class ModelCheckingOptions : ManagedOptions<
+    org.jetbrains.lincheck.datastructures.ModelCheckingOptions,
+    org.jetbrains.lincheck.datastructures.ModelCheckingCTestConfiguration
+>() {
+    override fun createTestConfigurations(testClass: Class<*>): org.jetbrains.lincheck.datastructures.ModelCheckingCTestConfiguration {
+        return org.jetbrains.lincheck.datastructures.ModelCheckingCTestConfiguration(
             testClass = testClass,
             iterations = iterations,
             threads = threads,
@@ -57,6 +60,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             timeoutMs = timeoutMs,
             customScenarios = customScenarios,
             stdLibAnalysisEnabled = stdLibAnalysisEnabled,
+            experimentalModelChecking = false,
         )
     }
 }
@@ -119,7 +123,7 @@ class ModelCheckingCTestConfiguration(
             timeoutMs = getTimeOutMs(inIdeaPluginReplayMode, timeoutMs),
             useClocks = UseClocks.ALWAYS
         )
-        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckJavaAgent.context).also {
+        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
             runner.initializeStrategy(it)
         }
     }

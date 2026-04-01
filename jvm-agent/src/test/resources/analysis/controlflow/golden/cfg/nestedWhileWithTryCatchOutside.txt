@@ -72,6 +72,5 @@ EDGES
   B4 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
   B5 -> B1 : JUMP(opcode=GOTO)
   B5 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
-  B6 -> B7 : CATCH(type=java/lang/IllegalArgumentException)
   B6 -> B8 : JUMP(opcode=GOTO)
   B7 -> B8

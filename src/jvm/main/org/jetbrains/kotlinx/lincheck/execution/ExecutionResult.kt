@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.util.LincheckResult
 
 /**
  * This class represents a result of [ExecutionScenario] execution.
@@ -20,7 +20,7 @@ data class ExecutionResult(
      * Results of the initial sequential part of the execution.
      * @see ExecutionScenario.initExecution
      */
-    val initResults: List<Result?>,
+    val initResults: List<LincheckResult?>,
     /**
      * State representation at the end of the init part.
      */
@@ -38,13 +38,13 @@ data class ExecutionResult(
      * Results of the last sequential part of the execution.
      * @see ExecutionScenario.postExecution
      */
-    val postResults: List<Result?>,
+    val postResults: List<LincheckResult?>,
     /**
      * State representation at the end of the scenario.
      */
     val afterPostStateRepresentation: String?
 ) {
-    constructor(initResults: List<Result?>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<Result?>) :
+    constructor(initResults: List<LincheckResult?>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<LincheckResult?>) :
         this(initResults, null, parallelResultsWithClock, null, postResults, null)
 
     /**
@@ -142,13 +142,13 @@ val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
     this.afterPostStateRepresentation
 )
 
-val ExecutionResult.parallelResults: List<List<Result?>> get() =
+val ExecutionResult.parallelResults: List<List<LincheckResult?>> get() =
     parallelResultsWithClock.map { it.map { r -> r.result } }
 
-val ExecutionResult.threadsResults: List<List<Result?>> get() =
+val ExecutionResult.threadsResults: List<List<LincheckResult?>> get() =
     threadsResultsWithClock.map { it.map { r -> r.result } }
 
-val ExecutionResult.allResults: List<Result?> get() =
+val ExecutionResult.allResults: List<LincheckResult?> get() =
     initResults + parallelResults.flatten() + postResults
 
 // for tests

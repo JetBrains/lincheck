@@ -12,6 +12,11 @@ package org.jetbrains.lincheck.descriptors
 
 import org.objectweb.asm.commons.Method
 
+data class MethodSignature(val name: String, val methodType: Types.MethodType) {
+    override fun toString(): String {
+        return "$name$methodType"
+    }
+}
 
 fun Method.toMethodSignature() = MethodSignature(this.name, Types.convertAsmMethodType(this.descriptor))
 fun java.lang.reflect.Method.toMethodSignature() = Method.getMethod(this).toMethodSignature()

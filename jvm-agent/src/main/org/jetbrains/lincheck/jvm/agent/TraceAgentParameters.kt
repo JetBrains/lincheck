@@ -12,6 +12,9 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.isInLiveDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceDebuggerMode
+import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
@@ -26,6 +29,7 @@ import java.lang.reflect.Modifier
  * - java -javaagent:path/to/agent.jar=class=org.example.MyTest,method=run,output="/tmp/trace.bin" -jar yourApp.jar
  *
  * Supported arguments:
+ *
  * - class — fully qualified class name to run/transform (required).
  *       Example: `class=org.example.MyTest`
  *
@@ -44,6 +48,19 @@ import java.lang.reflect.Modifier
  * - pack — boolean that enables zipping trace artifact files, it is false by default.
  *       Example: `pack=true`
  *
+ * - tracingServer — boolean that enables the WebSocket tracing server.
+ *       Example: `tracingServer=on` or `tracingServer=off`, it is off by default.
+ *
+ * - serverPort — port for the WebSocket server used for remote monitoring and management.
+ *       Example: `serverPort=9999` (default: 9999).
+ *
+ * - breakpointsFile — path to an INI file with live debugger breakpoints (optional, liveDebugger mode only);
+ *       see [BreakpointsFileParser] for details on file format.
+ *       Example: `breakpointsFile="/tmp/breakpoints.ini"`
+ *       
+ * - liveDebuggerHeartbeat — boolean that enables heartbeat messages when used in kubernetes setup.
+ *       Example: `liveDebuggerHeartbeat=on` or `liveDebuggerHeartbeat=off`, it is off by default.
+ *
  * - format — output format for trace recorder dumps. Possible options are:
  *       * `binary` --- serialized binary format;
  *       * `text` --- text output;
@@ -53,8 +70,8 @@ import java.lang.reflect.Modifier
  * - formatOption — extra options for the selected format. Possible options are:
  *       * for `binary`:
  *           * `dump` --- keeps the whole trace in-memory and dumps it to the file at the end;
- *           * `stream` --- writes the trace points incrementally during the execution;
- *       * for `text`: `verbose` --- enables verbose output.
+ *           * `stream` --- writes the trace points incrementally during the execution (default);
+ *       * for `text`: `verbose` --- enables verbose output (disabled by default).
  *       Example: `formatOption=dump`
  *
  * Quotation rules:
@@ -94,6 +111,15 @@ object TraceAgentParameters {
     const val ARGUMENT_OUTPUT = "output"
     const val ARGUMENT_INCLUDE = "include"
     const val ARGUMENT_EXCLUDE = "exclude"
+    const val ARGUMENT_FORMAT = "format"
+    const val ARGUMENT_FOPTION = "formatOption"
+    const val ARGUMENT_PACK = "pack"
+    const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
+    const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
+    const val ARGUMENT_START_SERVER = "tracingServer"
+    const val ARGUMENT_SERVER_PORT = "serverPort"
+
+    const val DEFAULT_SERVER_PORT = 9999
 
     @JvmStatic
     lateinit var rawArgs: String
@@ -108,27 +134,45 @@ object TraceAgentParameters {
     var traceDumpFilePath: String? = null
 
     @JvmStatic
+    val breakpointsFilePath: String?
+        get() = getArg(ARGUMENT_BREAKPOINTS_FILE)
+
+    @JvmStatic
+    val heartBeatEnabled: Boolean
+        get() = getArg(ARGUMENT_HEARTBEAT)?.lowercase() == "on"
+
+    @JvmStatic
+    val serverEnabled: Boolean
+        get() = getArg(ARGUMENT_START_SERVER)?.lowercase() == "on"
+
+    @JvmStatic
+    val serverPort: Int
+        get() = getArg(ARGUMENT_SERVER_PORT)?.toIntOrNull() ?: DEFAULT_SERVER_PORT
+
+    @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()
 
     @JvmStatic
     fun parseArgs(args: String?, validAdditionalArgs: List<String>) {
-        if (args == null) {
-            error("Please provide class and method names as arguments")
-        }
+        namedArgs.clear()
+        val actualArgs = args ?: ""
         // Store for metainformation
-        rawArgs = args
+        rawArgs = actualArgs
 
         // Try to parse key=value format
-        val kvArguments = parseKVArgs(args)
+        val kvArguments = parseKVArgs(actualArgs)
         if (kvArguments == null) {
             Logger.warn { "Looks like old-style arguments found, consider migrate to key-value arguments" }
-            val actualArguments = splitArgs(args)
+            val actualArguments = splitArgs(actualArgs)
 
-            classUnderTraceDebugging = actualArguments.getOrNull(0) ?: error("Class name was not provided")
+            classUnderTraceDebugging = actualArguments.getOrNull(0) ?: ""
+            methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: ""
             namedArgs[ARGUMENT_CLASS] = classUnderTraceDebugging
-            methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: error("Method name was not provided")
             namedArgs[ARGUMENT_METHOD] = methodUnderTraceDebugging
+
+            validateClassAndMethodArgumentsAreProvided()
             setClassUnderTraceDebuggingToMethodOwner()
+
             traceDumpFilePath = actualArguments.getOrNull(2)
             namedArgs[ARGUMENT_OUTPUT] = traceDumpFilePath
 
@@ -140,11 +184,12 @@ object TraceAgentParameters {
                 namedArgs[validAdditionalArgs[idx - 3]] = actualArguments[idx]
             }
         } else {
-            classUnderTraceDebugging = kvArguments[ARGUMENT_CLASS]
-                ?: error("Class name argument \"$ARGUMENT_CLASS\" was not provided")
-            methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD]
-                ?: error("Method name argument \"$ARGUMENT_METHOD\" was not provided")
-            setClassUnderTraceDebuggingToMethodOwner()
+            classUnderTraceDebugging = kvArguments[ARGUMENT_CLASS] ?: ""
+            methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD] ?: ""
+            if (!classUnderTraceDebugging.isEmpty() && !methodUnderTraceDebugging.isEmpty()) {
+                setClassUnderTraceDebuggingToMethodOwner()
+            }
+
             traceDumpFilePath = kvArguments[ARGUMENT_OUTPUT]
 
             val allowedKeys = mutableSetOf(ARGUMENT_CLASS, ARGUMENT_METHOD, ARGUMENT_OUTPUT)
@@ -158,9 +203,56 @@ object TraceAgentParameters {
             namedArgs.putAll(kvArguments)
         }
     }
-    
+
+    @JvmStatic
+    fun validateClassAndMethodArgumentsAreProvided() {
+        if (classUnderTraceDebugging.isBlank()) {
+            error("Class name was not provided")
+        }
+        if (methodUnderTraceDebugging.isBlank()) {
+            error("Method name was not provided")
+        }
+    }
+
+    @JvmStatic
+    fun validateMode() {
+        // Check if one of the required parameters is set.
+        check(isInTraceRecorderMode || isInTraceDebuggerMode || isInLiveDebuggerMode) {
+            """
+            When lincheck agent is attached to process,
+            mode should be selected by agent parameter `mode` or by VM parameter:
+            `lincheck.traceRecorderMode`, `lincheck.traceDebuggerMode`, or `lincheck.liveDebuggerMode`.
+            One of them is expected to be set.
+            
+            Rerun with: 
+            - `-Dlincheck.traceRecorderMode=true` or `mode=traceRecorder` as agent argument;
+            - `-Dlincheck.traceDebuggerMode=true` or `mode=traceDebugger` as agent argument;
+            - `-Dlincheck.liveDebuggerMode=true` or `mode=liveDebugger` as agent argument.
+            """
+            .trimIndent()
+        }
+        
+        // Check that only one parameter is set
+        val modesEnabled = listOf(isInTraceRecorderMode, isInTraceDebuggerMode, isInLiveDebuggerMode).count { it }
+        check(modesEnabled == 1) {
+            """
+            When lincheck agent is attached to process,
+            mode should be selected by one of agent parameter `mode` or VM parameters:
+            `lincheck.traceRecorderMode`, `lincheck.traceDebuggerMode`, or `lincheck.liveDebuggerMode`.
+            Only one of them expected to be set.
+            
+            Rerun with exactly one mode flag set:
+            - `-Dlincheck.traceRecorderMode=true` or `mode=traceRecorder` as agent argument;
+            - `-Dlincheck.traceDebuggerMode=true` or `mode=traceDebugger` as agent argument;
+            - `-Dlincheck.liveDebuggerMode=true` or `mode=liveDebugger` as agent argument.
+            """
+            .trimIndent()
+        }
+    }
+
     private fun setClassUnderTraceDebuggingToMethodOwner(
-        startClass: String = classUnderTraceDebugging, method: String = methodUnderTraceDebugging
+        startClass: String = classUnderTraceDebugging,
+        method: String = methodUnderTraceDebugging,
     ) {
         classUnderTraceDebugging =
             runCatching { Class.forName(startClass) }.getOrNull()
@@ -191,7 +283,7 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun getExcludePatterns(): List<String> = splitPatterns(namedArgs[ARGUMENT_EXCLUDE])
-
+    
     private fun splitPatterns(value: String?): List<String> {
         if (value.isNullOrBlank()) return emptyList()
         return value.split(';')

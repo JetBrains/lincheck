@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.trace.debugger
 
-import org.jetbrains.kotlinx.lincheck.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
@@ -19,7 +19,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.datastructures.scenario
 import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.LoggingLevel
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import java.io.File
@@ -91,7 +91,7 @@ object TraceDebuggerInjections {
 
     class TraceDebuggerStaticMethodWrapper {
         fun callStaticMethod(clazz: Class<*>, method: Method) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(clazz.name)
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(clazz.name)
             method.invoke(null)
         }
     }

@@ -23,6 +23,5 @@ fun <T> threadMapOf(vararg pairs: Pair<ThreadId, T>): ThreadMap<T> =
 fun <T> mutableThreadMapOf(): MutableThreadMap<T> =
     mutableMapOf()
 
-fun <T> mutableThreadMapOf(vararg pairs: Pair<ThreadId, T>): ThreadMap<T> =
+fun <T> mutableThreadMapOf(vararg pairs: Pair<ThreadId, T>): MutableThreadMap<T> =
     mutableMapOf(*pairs)
-

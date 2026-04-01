@@ -51,7 +51,7 @@ data class ObjectFieldAccessLocation(
 
     companion object {
         fun createArrayLengthLocation(context: TraceContext) = ObjectFieldAccessLocation(
-            context.getFieldDescriptor(
+            context.createAndRegisterFieldDescriptor(
                 /* NOTE: `java.lang.Array` does not actually exist in Java.
                  *   We added it here to handle `.length` accesses uniformly with regular instance field accesses,
                  *   and to avoid introducing special sub-class only for `.length` accesses.
@@ -61,7 +61,8 @@ data class ObjectFieldAccessLocation(
                  */
                 className = "java.lang.Array",
                 fieldName = "length",
-                isStatic = false,
+                type = Types.INT_TYPE,
+                fieldKind = FieldKind.INSTANCE,
                 isFinal = true,
             )
         )
@@ -155,12 +156,12 @@ fun Field.toAccessLocation(context: TraceContext): FieldAccessLocation {
     val fieldName = name
     val isStatic = Modifier.isStatic(modifiers)
     val isFinal = Modifier.isFinal(modifiers)
-    val descriptorId = context.getOrCreateFieldId(className, fieldName,
-        isStatic = isStatic,
+    val descriptor = context.createAndRegisterFieldDescriptor(className, fieldName,
+        type = type.kotlin.getType(),
+        fieldKind = FieldKind.fromIsStatic(isStatic),
         isFinal = isFinal,
     )
-    val descriptor = context.getFieldDescriptor(descriptorId)
-    return if (Modifier.isStatic(modifiers)) {
+    return if (isStatic) {
         StaticFieldAccessLocation(descriptor)
     } else {
         ObjectFieldAccessLocation(descriptor)

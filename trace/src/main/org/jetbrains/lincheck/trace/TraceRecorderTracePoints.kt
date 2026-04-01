@@ -10,24 +10,21 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.AccessPath
-import org.jetbrains.lincheck.descriptors.ClassDescriptor
-import org.jetbrains.lincheck.descriptors.CodeLocations
-import org.jetbrains.lincheck.descriptors.FieldDescriptor
-import org.jetbrains.lincheck.descriptors.MethodDescriptor
-import org.jetbrains.lincheck.descriptors.VariableDescriptor
-import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRCatchTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRLineBreakpointSnapshotTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLocalVariableTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLoopIterationTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRLoopTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRMethodCallTracePointPrinter.append
+import org.jetbrains.lincheck.trace.DefaultTRThrowTracePointPrinter.append
 import java.io.DataInput
 import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
-import java.util.EnumSet
+import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
 
@@ -55,17 +52,42 @@ enum class DiffStatus {
     ADDED,
 
     /**
-     * Tracepoint was edited.
+     * Tracepoint is tracepoint from left (old) trace which was edited in right (new) trace.
+     *
+     * It can be seen as "removed" if no editing information is needed. This tracepoint must be followed
+     * with tracepoint of same type with status [EDITED_NEW].
+     * Container tracepoint with this status will not have children, as children are linked to next
+     * [EDITED_NEW] tracepoint.
      *
      * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
      */
-    EDITED,
+    EDITED_OLD,
+
+    /**
+     * Tracepoint is tracepoint from right (new) trace which was edited in respect with left (old) trace.
+     *
+     * It can be seen as "added" if no editing information is needed, and is pair for previous sibling which should be
+     * [EDITED_OLD]. Difference between subtrees started from tracepoints which was compared to created here
+     * will be attached to this tracepoint, and its partner with [EDITED_OLD] status will not have any children.
+     *
+     * For example, if it is a method called tracepoint, it has the same method in both traces but differs in arguments values.
+     */
+    EDITED_NEW;
+
+    fun toLeaf(): DiffStatus =
+        when (this) {
+            UNCHANGED -> UNCHANGED
+            REMOVED -> REMOVED
+            ADDED -> ADDED
+            EDITED_OLD -> REMOVED
+            EDITED_NEW -> ADDED
+        }
 }
 
 sealed class TRTracePoint(
     internal val context: TraceContext,
-    val codeLocationId: Int,
     val threadId: Int,
+    val codeLocationId: Int,
     val eventId: Int
 ) {
     /**
@@ -79,6 +101,16 @@ sealed class TRTracePoint(
             check(field == null) { "Diff status can be changed only once" }
             field = value
         }
+
+    internal fun copyDiffStatus(other: TRTracePoint) {
+        check(diffStatus == null) { "Diff status can be changed only once" }
+        if (other.diffStatus == null) return
+        if (this is TRContainerTracePoint) {
+            diffStatus = other.diffStatus
+        } else {
+            diffStatus = other.diffStatus?.toLeaf()
+        }
+    }
 
     internal open fun save(out: TraceWriter) {
         saveReferences(out)
@@ -96,7 +128,8 @@ sealed class TRTracePoint(
     }
 
     val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(context, codeLocationId)
-    val activeLocals: List<String> get() = CodeLocations.activeLocals(context, codeLocationId) ?: emptyList() // used in plugin
+    val activeLocals: List<ActiveLocal> get() = CodeLocations.activeLocals(context, codeLocationId) ?: emptyList() // used in plugin
+    val accessPath: AccessPath? get() = CodeLocations.accessPath(context, codeLocationId)
 
     fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
@@ -113,7 +146,7 @@ sealed class TRContainerTracePoint(
     codeLocationId: Int,
     var parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int
-) : TRTracePoint(context, codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
     protected var children: ChunkedList<TRTracePoint> = ChunkedList()
         private set
 
@@ -125,19 +158,27 @@ sealed class TRContainerTracePoint(
     // We need this to have unmodifiable list here, ad "children" list needs some bookkeeping
     val events: List<TRTracePoint?> get() = children
 
-    val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: emptySet()
+    val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: SUBTREE_STATUS_UNCHANGED
 
     private fun TRTracePoint.setParentIfContainer(parent: TRContainerTracePoint) {
         if (this !is TRContainerTracePoint) return
         parentTracePoint = parent
     }
 
-    internal fun addChildAddress(address: Long) {
+    internal open fun addChildAddress(address: Long) {
         childrenAddresses.add(address)
         children.add(null)
     }
 
-    internal fun addChild(child: TRTracePoint, address: Long = -1) {
+    // These two methods are left public intentionally to allow external post-processors
+    // to clone traecepoint with children
+    fun copyChildrenAddresses(other: TRContainerTracePoint) {
+        for (i in 0 ..< other.childrenAddresses.size) {
+            addChildAddress(other.childrenAddresses[i])
+        }
+    }
+
+    open fun addChild(child: TRTracePoint, address: Long = -1) {
         childrenAddresses.add(address)
         children.add(child)
 
@@ -156,12 +197,14 @@ sealed class TRContainerTracePoint(
         children = from.children
         childrenAddresses = from.childrenAddresses
         childrenDiffStatuses = null
+        // Copy this, as all children could be null in case of compressing post-processor
+        val cds = from.childrenDiffStatuses
+        if (cds != null) {
+            childrenDiffStatuses = EnumSet<DiffStatus>.copyOf(cds)
+        }
         // .filter can be very expensive in case of huge children list
         from.children.forEach {
-            if (it != null) {
-                addChildStatus(it)
-                it.setParentIfContainer(this)
-            }
+            it?.setParentIfContainer(this)
         }
     }
 
@@ -225,6 +268,8 @@ sealed class TRContainerTracePoint(
             }
             return set
         }
+
+        private val SUBTREE_STATUS_UNCHANGED = EnumSet.of(DiffStatus.UNCHANGED)
     }
 }
 
@@ -233,17 +278,17 @@ class TRMethodCallTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val methodId: Int,
-    val obj: TRObject?,
-    val parameters: List<TRObject?>,
+    val obj: TRValue?,
+    val parameters: List<TRValue?>,
     val flags: Short = 0,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
-    var result: TRObject? = null
+    var result: TRValue? = null
     var exceptionClassName: String? = null
 
     // TODO Make parametrized
-    val methodDescriptor: MethodDescriptor get() = context.getMethodDescriptor(methodId)
+    val methodDescriptor: MethodDescriptor get() = context.methodPool[methodId]
     val classDescriptor: ClassDescriptor get() = methodDescriptor.classDescriptor
 
     // Shortcuts
@@ -290,10 +335,10 @@ class TRMethodCallTracePoint(
     override fun save(out: TraceWriter) {
         super.save(out)
         out.writeInt(methodId)
-        out.writeTRObject(obj)
+        out.writeTRValue(obj)
         out.writeInt(parameters.size)
         parameters.forEach {
-            out.writeTRObject(it)
+            out.writeTRValue(it)
         }
         out.writeShort(flags.toInt())
         // Mark this as container tracepoint which could have children and will have footer
@@ -303,18 +348,18 @@ class TRMethodCallTracePoint(
     override fun saveReferences(out: TraceWriter) {
         super.saveReferences(out)
         out.writeMethodDescriptor(methodId)
-        out.preWriteTRObject(obj)
+        out.preWriteTRValue(obj)
         parameters.forEach {
-            out.preWriteTRObject(it)
+            out.preWriteTRValue(it)
         }
     }
 
     override fun saveFooter(out: TraceWriter) {
-        out.preWriteTRObject(result)
+        out.preWriteTRValue(result)
 
         // Mark this as a container tracepoint footer
         out.startWriteContainerTracepointFooter()
-        out.writeTRObject(result)
+        out.writeTRValue(result)
         out.writeUTF(exceptionClassName ?: "")
         out.endWriteContainerTracepointFooter(eventId)
     }
@@ -342,7 +387,7 @@ class TRMethodCallTracePoint(
             val methodId = inp.readInt()
             val obj = inp.readTRObject(context)
             val pcount = inp.readInt()
-            val parameters = mutableListOf<TRObject?>()
+            val parameters = mutableListOf<TRValue?>()
             repeat(pcount) {
                 parameters.add(inp.readTRObject(context))
             }
@@ -391,8 +436,16 @@ class TRLoopTracePoint(
     var iterations: Int = 0
         private set
 
-    fun incrementIterations(): Int {
-        return iterations++
+    override fun addChild(child: TRTracePoint, address: Long) {
+        require(child is TRLoopIterationTracePoint) { "Only loop iterations can be children of loops" }
+        super.addChild(child, address)
+        iterations++
+    }
+
+    override fun addChildAddress(address: Long) {
+        super.addChildAddress(address)
+        // We believe that it is address of iteration
+        iterations++
     }
 
     override fun save(out: TraceWriter) {
@@ -498,15 +551,15 @@ sealed class TRFieldTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val fieldId: Int,
-    val obj: TRObject?,
-    val value: TRObject?,
+    val obj: TRValue?,
+    val value: TRValue?,
     eventId: Int
-) : TRTracePoint(context, codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
     // TODO Make parametrized
-    val fieldDescriptor: FieldDescriptor get() = context.getFieldDescriptor(fieldId)
+    val fieldDescriptor: FieldDescriptor get() = context.fieldPool[fieldId]
     val classDescriptor: ClassDescriptor get() = fieldDescriptor.classDescriptor
 
     // Shortcuts
@@ -518,16 +571,16 @@ sealed class TRFieldTracePoint(
     override fun save(out: TraceWriter) {
         super.save(out)
         out.writeInt(fieldId)
-        out.writeTRObject(obj)
-        out.writeTRObject(value)
+        out.writeTRValue(obj)
+        out.writeTRValue(value)
         out.endWriteLeafTracepoint()
     }
 
     override fun saveReferences(out: TraceWriter) {
         super.saveReferences(out)
         out.writeFieldDescriptor(fieldId)
-        out.preWriteTRObject(obj)
-        out.preWriteTRObject(value)
+        out.preWriteTRValue(obj)
+        out.preWriteTRValue(value)
     }
 
     override fun toText(appendable: TRAppendable) {
@@ -540,8 +593,8 @@ class TRReadTracePoint(
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
-    obj: TRObject?,
-    value: TRObject?,
+    obj: TRValue?,
+    value: TRValue?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
@@ -567,8 +620,8 @@ class TRWriteTracePoint(
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
-    obj: TRObject?,
-    value: TRObject?,
+    obj: TRValue?,
+    value: TRValue?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
@@ -594,27 +647,27 @@ sealed class TRLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val localVariableId: Int,
-    val value: TRObject?,
+    val value: TRValue?,
     eventId: Int
-) : TRTracePoint(context, codeLocationId, threadId, eventId) {
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
     // TODO Make parametrized
-    val variableDescriptor: VariableDescriptor get() = context.getVariableDescriptor(localVariableId)
+    val variableDescriptor: VariableDescriptor get() = context.variablePool[localVariableId]
     val name: String get() = variableDescriptor.name
 
     override fun save(out: TraceWriter) {
         super.save(out)
         out.writeInt(localVariableId)
-        out.writeTRObject(value)
+        out.writeTRValue(value)
         out.endWriteLeafTracepoint()
     }
 
     override fun saveReferences(out: TraceWriter) {
         super.saveReferences(out)
         out.writeVariableDescriptor(localVariableId)
-        out.preWriteTRObject(value)
+        out.preWriteTRValue(value)
     }
 
     override fun toText(appendable: TRAppendable) {
@@ -627,7 +680,7 @@ class TRReadLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
-    value: TRObject?,
+    value: TRValue?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
@@ -652,7 +705,7 @@ class TRWriteLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
-    value: TRObject?,
+    value: TRValue?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
@@ -672,30 +725,95 @@ class TRWriteLocalVariableTracePoint(
     }
 }
 
-sealed class TRArrayTracePoint(
+class TRSnapshotLineBreakpointTracePoint(
     context: TraceContext,
-    threadId: Int,
     codeLocationId: Int,
-    val array: TRObject,
-    val index: Int,
-    val value: TRObject?,
-    eventId: Int
-) : TRTracePoint(context, codeLocationId, threadId, eventId) {
+    threadId: Int,
+    val stackTraceCodeLocationIds: List<Int>,
+    val currentTimeMillis: Long,
+    val locals: List<TRValue?>,
+    val traceId: String?,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+): TRTracePoint(context, threadId, codeLocationId, eventId) {
+    
+    val threadName: String 
+        get() = context.getThreadName(threadId)
 
-    internal abstract fun accessSymbol(): String
+    val stackTrace: List<StackTraceElement>
+        get() = stackTraceCodeLocationIds.map { CodeLocations.stackTrace(context, it) }
 
     override fun save(out: TraceWriter) {
         super.save(out)
-        out.writeTRObject(array)
-        out.writeInt(index)
-        out.writeTRObject(value)
+        out.writeInt(stackTraceCodeLocationIds.size)
+        stackTraceCodeLocationIds.forEach { id ->
+            out.writeInt(id)
+        }
+        out.writeLong(currentTimeMillis)
+        out.writeInt(locals.size)
+        locals.forEach { out.writeTRValue(it) }
+        out.writeNullableUTF(traceId)
         out.endWriteLeafTracepoint()
     }
 
     override fun saveReferences(out: TraceWriter) {
         super.saveReferences(out)
-        out.preWriteTRObject(array)
-        out.preWriteTRObject(value)
+        stackTraceCodeLocationIds.forEach { id ->
+            out.writeCodeLocation(id)
+        }
+        locals.forEach { out.preWriteTRValue(it) }
+    }
+
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
+    }
+    
+    internal companion object {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRSnapshotLineBreakpointTracePoint {
+            val size = inp.readInt()
+            val stackTraceCodeLocationIds = List(size) { inp.readInt() }
+            val currentTimeMillis = inp.readLong()
+            val localsSize = inp.readInt()
+            val locals = List(localsSize) { inp.readTRObject(context) }
+            val traceId = inp.readNullableUTF()
+            
+            return TRSnapshotLineBreakpointTracePoint(
+                context = context,
+                codeLocationId = codeLocationId,
+                threadId = threadId,
+                stackTraceCodeLocationIds = stackTraceCodeLocationIds,
+                currentTimeMillis = currentTimeMillis,
+                locals = locals,
+                traceId = traceId,
+                eventId = eventId,
+            )
+        }
+    }
+}
+
+sealed class TRArrayTracePoint(
+    context: TraceContext,
+    threadId: Int,
+    codeLocationId: Int,
+    val array: TRValue,
+    val index: Int,
+    val value: TRValue?,
+    eventId: Int
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
+
+    internal abstract fun accessSymbol(): String
+
+    override fun save(out: TraceWriter) {
+        super.save(out)
+        out.writeTRValue(array)
+        out.writeInt(index)
+        out.writeTRValue(value)
+        out.endWriteLeafTracepoint()
+    }
+
+    override fun saveReferences(out: TraceWriter) {
+        super.saveReferences(out)
+        out.preWriteTRValue(array)
+        out.preWriteTRValue(value)
     }
 
     override fun toText(appendable: TRAppendable) {
@@ -707,9 +825,9 @@ class TRReadArrayTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    array: TRObject,
+    array: TRValue,
     index: Int,
-    value: TRObject?,
+    value: TRValue?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 
@@ -734,9 +852,9 @@ class TRWriteArrayTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    array: TRObject,
+    array: TRValue,
     index: Int,
-    value: TRObject?,
+    value: TRValue?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 
@@ -757,6 +875,78 @@ class TRWriteArrayTracePoint(
     }
 }
 
+sealed class TRExceptionProcessingTracePoint(
+    context: TraceContext,
+    threadId: Int,
+    codeLocationId: Int,
+    val exception: TRValue,
+    eventId: Int
+) : TRTracePoint(context, threadId, codeLocationId, eventId) {
+
+    override fun save(out: TraceWriter) {
+        super.save(out)
+        out.writeTRValue(exception)
+        out.endWriteLeafTracepoint()
+    }
+
+    override fun saveReferences(out: TraceWriter) {
+        super.saveReferences(out)
+        out.preWriteTRValue(exception)
+    }
+}
+
+class TRThrowTracePoint(
+    context: TraceContext,
+    threadId: Int,
+    codeLocationId: Int,
+    exception: TRValue,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TRExceptionProcessingTracePoint(context, threadId, codeLocationId, exception, eventId) {
+
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
+    }
+
+    internal companion object {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRThrowTracePoint {
+            return TRThrowTracePoint(
+                context = context,
+                threadId = threadId,
+                codeLocationId = codeLocationId,
+                exception = inp.readTRObject(context) ?: TR_OBJECT_NULL,
+                eventId = eventId,
+            )
+        }
+    }
+
+}
+
+class TRCatchTracePoint(
+    context: TraceContext,
+    threadId: Int,
+    codeLocationId: Int,
+    exception: TRValue,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TRExceptionProcessingTracePoint(context, threadId, codeLocationId, exception, eventId) {
+
+    override fun toText(appendable: TRAppendable) {
+        appendable.append(tracePoint = this)
+    }
+
+    internal companion object {
+        fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRCatchTracePoint {
+            return TRCatchTracePoint(
+                context = context,
+                threadId = threadId,
+                codeLocationId = codeLocationId,
+                exception = inp.readTRObject(context) ?: TR_OBJECT_NULL,
+                eventId = eventId,
+            )
+        }
+    }
+
+}
+
 const val READ_ACCESS_SYMBOL  = "➜"
 const val WRITE_ACCESS_SYMBOL = "="
 
@@ -775,77 +965,102 @@ private fun String.escape() = this
     .replace("\r", "\\r")
     .replace("\t", "\\t")
 
+sealed class TRValue {
+    internal abstract val classNameId: Int
+    abstract val identityHashCode: Int
+    abstract val className: String
+    
+    open val isSpecial: Boolean get() = classNameId < 0
+}
+
 @ConsistentCopyVisibility
-data class TRObject private constructor (
-    internal val classNameId: Int,
-    val identityHashCode: Int,
-    internal val primitiveValue: Any?,
-    val className: String
-) {
-    // TODO Make parametrized
-    val isPrimitive: Boolean get() = primitiveValue != null
-    val isSpecial: Boolean get() = classNameId < 0
-    val value: Any? get() = primitiveValue
+data class TRObject internal constructor(
+    override val classNameId: Int,
+    override val identityHashCode: Int,
+    override val className: String,
+    val fields: Map<String, TRValue?> = emptyMap(),
+) : TRValue() {
+    internal constructor(classNameId: Int, identityHashCode: Int, cd: ClassDescriptor, fields: Map<String, TRValue?> = emptyMap()):
+            this(classNameId, identityHashCode, cd.name, fields)
 
-    internal constructor (classNameId: Int, identityHashCode: Int, primitiveValue: Any):
-            this(classNameId, identityHashCode, primitiveValue, primitiveValue.javaClass.name)
-
-    internal constructor(classNameId: Int, identityHashCode: Int, cd: ClassDescriptor):
-            this(classNameId, identityHashCode, null, cd.name)
-
-    // TODO: Unify with code like `ObjectLabelFactory.adornedStringRepresentation` placed in hypothetical `core` module
     override fun toString(): String {
-        return if (primitiveValue != null) {
-            when (primitiveValue) {
-                is String -> {
-                    when (classNameId) {
-                        TR_OBJECT_P_RAW_STRING, TR_OBJECT_P_JAVA_CLASS, TR_OBJECT_P_KOTLIN_CLASS -> primitiveValue
-                        TR_OBJECT_P_STRING_BUILDER -> "StringBuilder@$identityHashCode(\"${primitiveValue.escape()}\")"
-                        else -> "\"${primitiveValue.escape()}\""
-                    }
-                }
-                is Char -> "'$primitiveValue'"
-                is Unit -> "Unit"
-                else -> primitiveValue.toString()
-            }
-        } else if (classNameId == TR_OBJECT_NULL_CLASSNAME || classNameId == TR_OBJECT_VOID_CLASSNAME) {
-            className // already set to either 'null' or 'void'
-        } else {
-            className.adornedClassNameRepresentation() + "@" + identityHashCode
-        }
+        // already set to either 'null' or 'void'
+        if (classNameId == TR_OBJECT_NULL_CLASSNAME || classNameId == TR_OBJECT_VOID_CLASSNAME) return className 
+        return className.adornedClassNameRepresentation() + "@" + identityHashCode
     }
 }
 
-const val TR_OBJECT_NULL_CLASSNAME = -1
-val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, ClassDescriptor("null"))
+@ConsistentCopyVisibility
+data class TRPrimitive private constructor(
+    override val classNameId: Int,
+    override val identityHashCode: Int,
+    override val className: String,
+    val primitiveValue: Any
+) : TRValue() {
+    internal constructor(classNameId: Int, identityHashCode: Int, primitiveValue: Any):
+            this(classNameId, identityHashCode, primitiveValue.javaClass.name, primitiveValue)
+    
+    override fun toString(): String = when (primitiveValue) {
+        is String -> {
+            when (classNameId) {
+                TR_OBJECT_P_RAW_STRING, TR_OBJECT_P_JAVA_CLASS, TR_OBJECT_P_KOTLIN_CLASS -> primitiveValue
+                TR_OBJECT_P_STRING_BUILDER -> "StringBuilder@$identityHashCode(\"${primitiveValue.escape()}\")"
+                else -> "\"${primitiveValue.escape()}\""
+            }
+        }
+        is Char -> "'$primitiveValue'"
+        is Unit -> "Unit"
+        else -> primitiveValue.toString()
+    }
+}
 
-const val TR_OBJECT_VOID_CLASSNAME = -2
-val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, ClassDescriptor("void"))
+@ConsistentCopyVisibility
+data class TRArray private constructor(
+    override val classNameId: Int,
+    override val identityHashCode: Int,
+    override val className: String,
+    val totalSize: Int,
+    val capturedElements: List<TRValue?>,
+) : TRValue() {
+    override val isSpecial = false
+    
+    internal constructor(classNameId: Int, identityHashCode: Int, cd: ClassDescriptor, totalSize: Int, elements: List<TRValue?> = emptyList()):
+            this(classNameId, identityHashCode, cd.name, totalSize, elements)
+
+    override fun toString(): String {
+        return className.adornedClassNameRepresentation() + "@" + identityHashCode
+    }
+}
 
 const val UNFINISHED_METHOD_RESULT_SYMBOL = "<unfinished method>"
 const val UNTRACKED_METHOD_RESULT_SYMBOL = "<untracked result>"
-val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRObject(TR_OBJECT_P_STRING, 0, UNFINISHED_METHOD_RESULT_SYMBOL)
-val TR_OBJECT_UNTRACKED_METHOD_RESULT = TRObject(TR_OBJECT_P_STRING, 0, UNTRACKED_METHOD_RESULT_SYMBOL)
+val TR_OBJECT_UNFINISHED_METHOD_RESULT = TRPrimitive(TR_OBJECT_P_STRING, 0, UNFINISHED_METHOD_RESULT_SYMBOL)
+val TR_OBJECT_UNTRACKED_METHOD_RESULT = TRPrimitive(TR_OBJECT_P_STRING, 0, UNTRACKED_METHOD_RESULT_SYMBOL)
 
-const val TR_OBJECT_P_BYTE = TR_OBJECT_VOID_CLASSNAME - 1
-const val TR_OBJECT_P_SHORT = TR_OBJECT_P_BYTE - 1
-const val TR_OBJECT_P_INT = TR_OBJECT_P_SHORT - 1
-const val TR_OBJECT_P_LONG = TR_OBJECT_P_INT - 1
-const val TR_OBJECT_P_FLOAT = TR_OBJECT_P_LONG - 1
-const val TR_OBJECT_P_DOUBLE = TR_OBJECT_P_FLOAT - 1
-const val TR_OBJECT_P_CHAR = TR_OBJECT_P_DOUBLE - 1
-const val TR_OBJECT_P_STRING = TR_OBJECT_P_CHAR - 1
-const val TR_OBJECT_P_UNIT = TR_OBJECT_P_STRING - 1
-const val TR_OBJECT_P_RAW_STRING = TR_OBJECT_P_UNIT - 1
-const val TR_OBJECT_P_BOOLEAN = TR_OBJECT_P_RAW_STRING - 1
-const val TR_OBJECT_P_JAVA_CLASS = TR_OBJECT_P_BOOLEAN - 1
-const val TR_OBJECT_P_KOTLIN_CLASS = TR_OBJECT_P_JAVA_CLASS - 1
-const val TR_OBJECT_P_STRING_BUILDER = TR_OBJECT_P_KOTLIN_CLASS - 1
+const val TR_OBJECT_NULL_CLASSNAME = -1
+const val TR_OBJECT_VOID_CLASSNAME = -2
+const val TR_OBJECT_P_BYTE = -3
+const val TR_OBJECT_P_SHORT = -4
+const val TR_OBJECT_P_INT = -5
+const val TR_OBJECT_P_LONG = -6
+const val TR_OBJECT_P_FLOAT = -7
+const val TR_OBJECT_P_DOUBLE = -8
+const val TR_OBJECT_P_CHAR = -9
+const val TR_OBJECT_P_STRING = -10
+const val TR_OBJECT_P_UNIT = -11
+const val TR_OBJECT_P_RAW_STRING = -12
+const val TR_OBJECT_P_BOOLEAN = -13
+const val TR_OBJECT_P_JAVA_CLASS = -14
+const val TR_OBJECT_P_KOTLIN_CLASS = -15
+const val TR_OBJECT_P_STRING_BUILDER = -16
 
-fun TRObjectOrNull(context: TraceContext, obj: Any?): TRObject? =
-    obj?.let { TRObject(context, it) }
+val TR_OBJECT_NULL = TRObject(TR_OBJECT_NULL_CLASSNAME, 0, "null")
+val TR_OBJECT_VOID = TRObject(TR_OBJECT_VOID_CLASSNAME, 0, "void")
 
-fun TRObjectOrVoid(context: TraceContext, obj: Any?): TRObject? =
+fun TRObjectOrNull(context: TraceContext, obj: Any?): TRValue? =
+    obj?.let { TRValue(context, it) }
+
+fun TRObjectOrVoid(context: TraceContext, obj: Any?): TRValue? =
     if (obj === INJECTIONS_VOID_OBJECT) TR_OBJECT_VOID
     else TRObjectOrNull(context, obj)
 
@@ -874,22 +1089,39 @@ private fun classNameWhitelisted(obj: Any): Boolean {
     return WHITELIST_PACKAGES_FOR_TO_STRING.any { fullClassName.startsWith(it) }
 }
 
-fun TRObject(context: TraceContext, obj: Any): TRObject {
+fun TRObjectWithFields(context: TraceContext, obj: Any, fields: Map<String, Any?>): TRObject {
+    val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
+    val trObjectMap = fields.mapValues { (_, value) -> TRObjectOrNull(context, value) }
+    return TRObject(cd.id, System.identityHashCode(obj), cd, trObjectMap)
+}
+
+fun TRArrayWithElements(context: TraceContext, arr: Any, size: Int, elements: List<Any?>): TRArray {
+    val cd = context.createAndRegisterClassDescriptor(arr.javaClass.name)
+    val elementsAsTRValues = elements.map { value -> TRObjectOrNull(context, value) }
+    return TRArray(cd.id, System.identityHashCode(arr), cd, size, elementsAsTRValues)
+}
+
+fun TRValue(context: TraceContext, obj: Any): TRValue {
     val defaultTRObject = {
-        val classId = context.getOrCreateClassId(obj.javaClass.name)
-        TRObject(classId, System.identityHashCode(obj), context.getClassDescriptor(classId))
+        val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
+        TRObject(cd.id, System.identityHashCode(obj), cd)
+    }
+    
+    val defaultTRArray = { size: Int ->
+        val cd = context.createAndRegisterClassDescriptor(obj.javaClass.name)
+        TRArray(cd.id, System.identityHashCode(obj), cd, size)
     }
 
     return when (obj) {
-        is Byte -> TRObject(TR_OBJECT_P_BYTE, 0, obj)
-        is Short -> TRObject(TR_OBJECT_P_SHORT, 0, obj)
-        is Int -> TRObject(TR_OBJECT_P_INT, 0, obj)
-        is Long -> TRObject(TR_OBJECT_P_LONG, 0, obj)
-        is Float -> TRObject(TR_OBJECT_P_FLOAT, 0, obj)
-        is Double -> TRObject(TR_OBJECT_P_DOUBLE, 0, obj)
-        is Char -> TRObject(TR_OBJECT_P_CHAR, 0, obj)
-        is String -> TRObject(TR_OBJECT_P_STRING, 0, obj.trimToString())
-        is StringBuilder -> TRObject(
+        is Byte -> TRPrimitive(TR_OBJECT_P_BYTE, 0, obj)
+        is Short -> TRPrimitive(TR_OBJECT_P_SHORT, 0, obj)
+        is Int -> TRPrimitive(TR_OBJECT_P_INT, 0, obj)
+        is Long -> TRPrimitive(TR_OBJECT_P_LONG, 0, obj)
+        is Float -> TRPrimitive(TR_OBJECT_P_FLOAT, 0, obj)
+        is Double -> TRPrimitive(TR_OBJECT_P_DOUBLE, 0, obj)
+        is Char -> TRPrimitive(TR_OBJECT_P_CHAR, 0, obj)
+        is String -> TRPrimitive(TR_OBJECT_P_STRING, 0, obj.trimToString())
+        is StringBuilder -> TRPrimitive(
             TR_OBJECT_P_STRING_BUILDER, System.identityHashCode(obj), obj.trimToString()
         )
 
@@ -899,84 +1131,153 @@ fun TRObject(context: TraceContext, obj: Any): TRObject {
         is CharSequence if (classNameWhitelisted(obj)) -> runCatching { obj.trimToString() }.let {
             // Some implementations of CharSequence might throw when `subSequence` is invoked at some unexpected moment,
             // like when this sequence is considered "destroyed" at this point
-            if (it.isSuccess) TRObject(TR_OBJECT_P_STRING, 0, it.getOrThrow())
+            if (it.isSuccess) TRPrimitive(TR_OBJECT_P_STRING, 0, it.getOrThrow())
             else defaultTRObject()
         }
 
-        is Unit -> TRObject(TR_OBJECT_P_UNIT, 0, obj)
-        is Boolean -> TRObject(TR_OBJECT_P_BOOLEAN, 0, obj)
+        is Unit -> TRPrimitive(TR_OBJECT_P_UNIT, 0, obj)
+        is Boolean -> TRPrimitive(TR_OBJECT_P_BOOLEAN, 0, obj)
 
         // Render these types to strings for simplicity
-        is Enum<*> -> TRObject(TR_OBJECT_P_RAW_STRING, 0, "${obj.javaClass.simpleName}.${obj.name}")
-        is BigInteger -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
-        is BigDecimal -> TRObject(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
-        is Class<*> -> TRObject(TR_OBJECT_P_JAVA_CLASS, 0, "${obj.simpleName}.class")
-        is KClass<*> -> TRObject(TR_OBJECT_P_KOTLIN_CLASS, 0, "${obj.simpleName}.kclass")
+        is Enum<*> -> TRPrimitive(TR_OBJECT_P_RAW_STRING, 0, "${obj.javaClass.simpleName}.${obj.name}")
+        is BigInteger -> TRPrimitive(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
+        is BigDecimal -> TRPrimitive(TR_OBJECT_P_RAW_STRING, 0, obj.toString())
+        is Class<*> -> TRPrimitive(TR_OBJECT_P_JAVA_CLASS, 0, "${obj.simpleName}.class")
+        is KClass<*> -> TRPrimitive(TR_OBJECT_P_KOTLIN_CLASS, 0, "${obj.simpleName}.kclass")
+        
+        // Arrays
+        is Array<*> -> defaultTRArray(obj.size)
+        is IntArray -> defaultTRArray(obj.size)
+        is LongArray -> defaultTRArray(obj.size)
+        is ByteArray -> defaultTRArray(obj.size)
+        is ShortArray -> defaultTRArray(obj.size)
+        is CharArray -> defaultTRArray(obj.size)
+        is FloatArray -> defaultTRArray(obj.size)
+        is DoubleArray -> defaultTRArray(obj.size)
+        is BooleanArray -> defaultTRArray(obj.size)
+
         // Generic case
         // TODO Make parametrized
         else -> defaultTRObject()
     }
 }
 
-internal fun DataOutput.writeTRObject(value: TRObject?) {
-    // null
-    if (value == null) {
-        writeInt(TR_OBJECT_NULL_CLASSNAME)
-        return
-    }
-    // Negatives are special markers
-    writeInt(value.classNameId)
-    if (value.classNameId >= 0) {
-        writeInt(value.identityHashCode)
-        return
-    }
-    if (value.classNameId > TR_OBJECT_P_BYTE) {
-        return
-    }
-    when (value.primitiveValue) {
-        is Byte -> writeByte(value.primitiveValue.toInt())
-        is Short -> writeShort(value.primitiveValue.toInt())
-        is Int -> writeInt(value.primitiveValue)
-        is Long -> writeLong(value.primitiveValue)
-        is Float -> writeFloat(value.primitiveValue)
-        is Double -> writeDouble(value.primitiveValue)
-        is Char -> writeChar(value.primitiveValue.code)
-        is String if value.classNameId == TR_OBJECT_P_STRING_BUILDER -> {
-            writeInt(value.identityHashCode)
-            writeUTF(value.primitiveValue)
+internal fun DataOutput.writeTRValue(value: TRValue?) {
+    when (value) {
+        null -> {
+            writeInt(TR_OBJECT_NULL_CLASSNAME)
         }
-        is String -> writeUTF(value.primitiveValue) // Both STRING and RAW_STRING
-        is Boolean -> writeBoolean(value.primitiveValue)
-        is Unit -> {}
-        else -> error("Unknow primitive value ${value.primitiveValue}")
+
+        is TRObject -> {
+            // Negatives are special markers
+            writeInt(value.classNameId)
+            if (value.classNameId >= 0) {
+                writeInt(value.identityHashCode)
+
+                // Positive for objects
+                writeInt(value.fields.size)
+                value.fields.forEach { (fieldName, fieldValue) ->
+                    writeUTF(fieldName)
+                    this@writeTRValue.writeTRValue(fieldValue)
+                }
+            }
+        }
+
+        is TRPrimitive -> {
+            writeInt(value.classNameId)
+            when (value.primitiveValue) {
+                is Byte -> writeByte(value.primitiveValue.toInt())
+                is Short -> writeShort(value.primitiveValue.toInt())
+                is Int -> writeInt(value.primitiveValue)
+                is Long -> writeLong(value.primitiveValue)
+                is Float -> writeFloat(value.primitiveValue)
+                is Double -> writeDouble(value.primitiveValue)
+                is Char -> writeChar(value.primitiveValue.code)
+                is String if value.classNameId == TR_OBJECT_P_STRING_BUILDER -> {
+                    writeInt(value.identityHashCode)
+                    writeUTF(value.primitiveValue)
+                }
+
+                is String -> writeUTF(value.primitiveValue) // Both STRING and RAW_STRING
+                is Boolean -> writeBoolean(value.primitiveValue)
+                is Unit -> {}
+                else -> error("Unknow primitive value ${value.primitiveValue}")
+            }
+        }
+
+        is TRArray -> {
+            writeInt(value.classNameId)
+            if (value.classNameId >= 0) {
+                writeInt(value.identityHashCode)
+                
+                // Negative for arrays where -1 is empty array
+                val encodedElementsSize = (value.capturedElements.size + 1) * -1
+                writeInt(encodedElementsSize)
+                value.capturedElements.forEach { element -> this@writeTRValue.writeTRValue(element) }
+                writeInt(value.totalSize)
+            }
+        }
     }
 }
-
-internal fun DataInput.readTRObject(context: TraceContext): TRObject? {
+    
+internal fun DataInput.readTRObject(context: TraceContext): TRValue? {
     return when (val classNameId = readInt()) {
         TR_OBJECT_NULL_CLASSNAME -> null
         TR_OBJECT_VOID_CLASSNAME -> TR_OBJECT_VOID
-        TR_OBJECT_P_BYTE -> TRObject(classNameId, 0, readByte())
-        TR_OBJECT_P_SHORT -> TRObject(classNameId, 0, readShort())
-        TR_OBJECT_P_INT -> TRObject(classNameId, 0, readInt())
-        TR_OBJECT_P_LONG -> TRObject(classNameId, 0, readLong())
-        TR_OBJECT_P_FLOAT -> TRObject(classNameId, 0, readFloat())
-        TR_OBJECT_P_DOUBLE -> TRObject(classNameId, 0, readDouble())
-        TR_OBJECT_P_CHAR -> TRObject(classNameId, 0, readChar())
-        TR_OBJECT_P_STRING -> TRObject(classNameId, 0, readUTF())
-        TR_OBJECT_P_UNIT -> TRObject(classNameId, 0, Unit)
-        TR_OBJECT_P_RAW_STRING -> TRObject(classNameId, 0, readUTF())
-        TR_OBJECT_P_BOOLEAN -> TRObject(classNameId, 0, readBoolean())
-        TR_OBJECT_P_JAVA_CLASS -> TRObject(classNameId, 0, readUTF())
-        TR_OBJECT_P_KOTLIN_CLASS -> TRObject(classNameId, 0, readUTF())
-        TR_OBJECT_P_STRING_BUILDER -> TRObject(classNameId, readInt(), readUTF())
-        else -> {
-            if (classNameId >= 0) {
-                TRObject(classNameId, readInt(), context.getClassDescriptor(classNameId))
+        TR_OBJECT_P_BYTE -> TRPrimitive(classNameId, 0, readByte())
+        TR_OBJECT_P_SHORT -> TRPrimitive(classNameId, 0, readShort())
+        TR_OBJECT_P_INT -> TRPrimitive(classNameId, 0, readInt())
+        TR_OBJECT_P_LONG -> TRPrimitive(classNameId, 0, readLong())
+        TR_OBJECT_P_FLOAT -> TRPrimitive(classNameId, 0, readFloat())
+        TR_OBJECT_P_DOUBLE -> TRPrimitive(classNameId, 0, readDouble())
+        TR_OBJECT_P_CHAR -> TRPrimitive(classNameId, 0, readChar())
+        TR_OBJECT_P_STRING -> TRPrimitive(classNameId, 0, readUTF())
+        TR_OBJECT_P_UNIT -> TRPrimitive(classNameId, 0, Unit)
+        TR_OBJECT_P_RAW_STRING -> TRPrimitive(classNameId, 0, readUTF())
+        TR_OBJECT_P_BOOLEAN -> TRPrimitive(classNameId, 0, readBoolean())
+        TR_OBJECT_P_JAVA_CLASS -> TRPrimitive(classNameId, 0, readUTF())
+        TR_OBJECT_P_KOTLIN_CLASS -> TRPrimitive(classNameId, 0, readUTF())
+        TR_OBJECT_P_STRING_BUILDER -> TRPrimitive(classNameId, readInt(), readUTF())
+        else if (classNameId >= 0) -> {
+            val identityHashCode = readInt()
+            val childrenSize = readInt()
+            if (childrenSize < 0) {
+                val decodedElementsSize = childrenSize * -1 - 1
+                val capturedElements = buildList {
+                    repeat(decodedElementsSize) {
+                        add(readTRObject(context))
+                    }
+                }
+                val totalSize = readInt()
+                TRArray(classNameId, identityHashCode, context.classPool[classNameId], totalSize, capturedElements)
             } else {
-                error("TRObject: Unknown Class Id $classNameId")
+                val fields = buildMap {
+                    repeat(childrenSize) {
+                        val fieldName = readUTF()
+                        val fieldValue = readTRObject(context)
+                        put(fieldName, fieldValue)
+                    }
+                }
+                TRObject(classNameId, identityHashCode, context.classPool[classNameId], fields)
             }
         }
+        else -> error("TRObject: Unknown Class Id $classNameId")
+    }
+}
+
+internal fun DataOutput.writeNullableUTF(value: String?) {
+    writeBoolean(value != null)
+    if (value != null) {
+        writeUTF(value)
+    }
+}
+
+internal fun DataInput.readNullableUTF(): String? {
+    val hasString = readBoolean()
+    return if (hasString) {
+        readUTF()
+    } else {
+        null
     }
 }
 
@@ -993,6 +1294,9 @@ private fun getClassId(point: TRTracePoint): Int {
         is TRWriteTracePoint -> 6
         is TRLoopTracePoint -> 7
         is TRLoopIterationTracePoint -> 8
+        is TRSnapshotLineBreakpointTracePoint -> 9
+        is TRThrowTracePoint -> 10
+        is TRCatchTracePoint -> 11
     }
 }
 
@@ -1007,6 +1311,9 @@ private fun getLoaderByClassId(id: Byte): TRLoader {
         6 -> TRWriteTracePoint::load
         7 -> TRLoopTracePoint::load
         8 -> TRLoopIterationTracePoint::load
+        9 -> TRSnapshotLineBreakpointTracePoint::load
+        10 -> TRThrowTracePoint::load
+        11 -> TRCatchTracePoint::load
         else -> error("Unknown TRTracePoint class id $id")
     }
 }

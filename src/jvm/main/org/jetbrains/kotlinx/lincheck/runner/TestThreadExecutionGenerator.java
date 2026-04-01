@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.runner;
 
 import kotlin.coroutines.Continuation;
 import org.jetbrains.kotlinx.lincheck.*;
+import org.jetbrains.kotlinx.lincheck.util.*;
 import org.objectweb.asm.*;
 import org.objectweb.asm.commons.GeneratorAdapter;
 import org.objectweb.asm.commons.Method;
@@ -45,28 +46,26 @@ public class TestThreadExecutionGenerator {
     private static final Method TEST_THREAD_EXECUTION_INC_CLOCK = new Method("incClock", VOID_TYPE, NO_ARGS);
     private static final Method TEST_THREAD_EXECUTION_READ_CLOCKS = new Method("readClocks", VOID_TYPE, new Type[]{INT_TYPE});
 
-    private static final Type RESULT_TYPE = getType(Result.class);
-
-    private static final Type NO_RESULT_TYPE = getType(NoResult.class);
-    private static final String NO_RESULT_CLASS_NAME = NoResult.class.getCanonicalName().replace('.', '/');
-
-    private static final Type VOID_RESULT_TYPE = getType(VoidResult.class);
-    private static final String VOID_RESULT_CLASS_NAME = VoidResult.class.getCanonicalName().replace('.', '/');
-
     private static final String INSTANCE = "INSTANCE";
 
-    private static final Type VALUE_RESULT_TYPE = getType(ValueResult.class);
-    private static final Method VALUE_RESULT_TYPE_CONSTRUCTOR = new Method("<init>", VOID_TYPE, new Type[] {OBJECT_TYPE});
+    private static final Type ACTOR_RESULT_TYPE = getType(LincheckResult.class);
+    private static final Type ACTOR_RESULT_KT_TYPE = getType(LincheckResultKt.class);
 
-    private static final Type EXCEPTION_RESULT_TYPE = getType(ExceptionResult.class);
-    private static final Type RESULT_KT_TYPE = getType(ResultKt.class);
-    private static final Method RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD = new Method("createExceptionResult", EXCEPTION_RESULT_TYPE, new Type[]{THROWABLE_TYPE});
+    private static final Type VOID_ACTOR_RESULT_TYPE = getType(VoidResult.class);
+    private static final Method CREATE_VOID_ACTOR_RESULT_METHOD =
+            new Method("createVoidLincheckResult", VOID_ACTOR_RESULT_TYPE, NO_ARGS);
 
-    private static final Type RESULT_ARRAY_TYPE = getType(Result[].class);
+    private static final Type VALUE_ACTOR_RESULT_TYPE = getType(ValueResult.class);
+    private static final Method CREATE_VALUE_ACTOR_RESULT_METHOD =
+            new Method("createValueLincheckResult", VALUE_ACTOR_RESULT_TYPE, new Type[] {OBJECT_TYPE});
 
-    private static final Method RESULT_WAS_SUSPENDED_GETTER_METHOD = new Method("getWasSuspended", BOOLEAN_TYPE, new Type[]{});
+    private static final Type EXCEPTION_ACTOR_RESULT_TYPE = getType(ExceptionResult.class);
+    private static final Method CREATE_EXCEPTION_ACTOR_RESULT_METHOD =
+            new Method("createExceptionLincheckResult", EXCEPTION_ACTOR_RESULT_TYPE, new Type[]{THROWABLE_TYPE});
 
-    private static final Method RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
+    private static final Type ACTOR_RESULT_ARRAY_TYPE = getType(LincheckResult[].class);
+
+    private static final Method RUNNER_PROCESS_INVOCATION_RESULT_METHOD = new Method("processInvocationResult", ACTOR_RESULT_TYPE, new Type[]{ OBJECT_TYPE, INT_TYPE, INT_TYPE });
     private static final Method RUNNER_IS_PARALLEL_EXECUTION_COMPLETED_METHOD = new Method("isParallelExecutionCompleted", BOOLEAN_TYPE, new Type[]{});
 
     private static final Method RUNNER_ON_ACTOR_FAILURE_METHOD = new Method("onActorFailure", VOID_TYPE, new Type[]{INT_TYPE, THROWABLE_TYPE});
@@ -140,9 +139,9 @@ public class TestThreadExecutionGenerator {
         );
         mv.visitCode();
         // Load `results`
-        int resLocal = mv.newLocal(RESULT_ARRAY_TYPE);
+        int resLocal = mv.newLocal(ACTOR_RESULT_ARRAY_TYPE);
         mv.loadThis();
-        mv.getField(TEST_THREAD_EXECUTION_TYPE, "results", RESULT_ARRAY_TYPE);
+        mv.getField(TEST_THREAD_EXECUTION_TYPE, "results", ACTOR_RESULT_ARRAY_TYPE);
         mv.storeLocal(resLocal);
         // Call runner's onThreadStart(iThread) method
         mv.loadThis();
@@ -194,13 +193,6 @@ public class TestThreadExecutionGenerator {
                 mv.loadThis();
                 mv.getField(TEST_THREAD_EXECUTION_TYPE, "runner", RUNNER_TYPE);
                 mv.checkCast(RUNNER_TYPE);
-            } else {
-                // Prepare to create non-processed value result of actor invocation (in case of no suspendable actors in scenario)
-                // Load type of result
-                if (actor.getMethod().getReturnType() != void.class) {
-                    mv.newInstance(VALUE_RESULT_TYPE);
-                    mv.visitInsn(DUP);
-                }
             }
             // Load test instance
             mv.loadThis();
@@ -226,11 +218,11 @@ public class TestThreadExecutionGenerator {
                 if (actor.getMethod().getReturnType() == void.class) {
                     createVoidResult(actor, mv);
                 } else {
-                    mv.invokeConstructor(VALUE_RESULT_TYPE, VALUE_RESULT_TYPE_CONSTRUCTOR);
+                    mv.invokeStatic(ACTOR_RESULT_KT_TYPE, CREATE_VALUE_ACTOR_RESULT_METHOD);
                 }
             }
             // Store result to array
-            mv.arrayStore(RESULT_TYPE);
+            mv.arrayStore(ACTOR_RESULT_TYPE);
             // End of try-catch block for handled exceptions
             mv.visitLabel(actorCatchBlockEnd);
             Label skipHandlers = mv.newLabel();
@@ -273,13 +265,12 @@ public class TestThreadExecutionGenerator {
             Label launchNextActor = mv.newLabel();
             mv.visitJumpInsn(GOTO, launchNextActor);
 
-            // write NoResult if all threads were suspended or completed
+            // write NoResult (null) if all threads were suspended or completed
             mv.visitLabel(returnNoResult);
             mv.loadLocal(resLocal);
             mv.push(i);
-            // Load no result type to create new instance of NoResult
-            mv.visitFieldInsn(GETSTATIC, NO_RESULT_CLASS_NAME, INSTANCE, NO_RESULT_TYPE.getDescriptor());
-            mv.arrayStore(RESULT_TYPE);
+            mv.visitInsn(Opcodes.ACONST_NULL);
+            mv.arrayStore(ACTOR_RESULT_TYPE);
             mv.iinc(iLocal, 1);
             mv.visitLabel(launchNextActor);
         }
@@ -322,18 +313,8 @@ public class TestThreadExecutionGenerator {
     }
 
     private static void createVoidResult(Actor actor, GeneratorAdapter mv) {
-        if (actor.isSuspendable()) {
-            Label suspendedVoidResult = mv.newLabel();
-            mv.invokeVirtual(RESULT_TYPE, RESULT_WAS_SUSPENDED_GETTER_METHOD);
-            mv.push(true);
-            mv.ifCmp(BOOLEAN_TYPE, GeneratorAdapter.EQ, suspendedVoidResult);
-            mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
-            mv.visitLabel(suspendedVoidResult);
-            mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
-        } else {
-            mv.pop();
-            mv.visitFieldInsn(GETSTATIC, VOID_RESULT_CLASS_NAME, INSTANCE, VOID_RESULT_TYPE.getDescriptor());
-        }
+        mv.pop();
+        mv.invokeStatic(ACTOR_RESULT_KT_TYPE, CREATE_VOID_ACTOR_RESULT_METHOD);
     }
 
     // STACK: throwable
@@ -344,9 +325,9 @@ public class TestThreadExecutionGenerator {
         mv.loadLocal(iLocal);
         // Create exception result instance
         mv.loadLocal(eLocal);
-        mv.invokeStatic(RESULT_KT_TYPE, RESULT_KT_CREATE_EXCEPTION_RESULT_METHOD);
-        mv.checkCast(RESULT_TYPE);
-        mv.arrayStore(RESULT_TYPE);
+        mv.invokeStatic(ACTOR_RESULT_KT_TYPE, CREATE_EXCEPTION_ACTOR_RESULT_METHOD);
+        mv.checkCast(ACTOR_RESULT_TYPE);
+        mv.arrayStore(ACTOR_RESULT_TYPE);
     }
 
     // STACK: throwable
@@ -365,7 +346,7 @@ public class TestThreadExecutionGenerator {
         mv.push(actorId);
         // Process result
         mv.invokeVirtual(RUNNER_TYPE, RUNNER_PROCESS_INVOCATION_RESULT_METHOD);
-        mv.arrayStore(RESULT_TYPE);
+        mv.arrayStore(ACTOR_RESULT_TYPE);
     }
 
     private static void loadArguments(GeneratorAdapter mv, Actor actor, List<Object> objArgs, Continuation completion) {

@@ -10,42 +10,14 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.AccessLocation
-import org.jetbrains.lincheck.descriptors.AccessPath
-import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccessLocation
-import org.jetbrains.lincheck.descriptors.ArrayElementByNameAccessLocation
+import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.Logger
-import java.io.Closeable
-import java.io.DataInput
-import java.io.DataInputStream
-import java.io.IOException
-import java.io.InputStream
-import java.nio.file.Files
 import java.nio.file.StandardOpenOption
+import java.nio.file.Files
+import java.io.*
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.io.path.Path
-import org.jetbrains.lincheck.descriptors.CodeLocation
-import org.jetbrains.lincheck.descriptors.CodeLocations
-import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
-import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
-import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
-import java.io.File
-import java.nio.ByteBuffer
-import java.util.zip.ZipInputStream
-
-private const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
-
-private typealias TraceTree = MutableList<TRContainerTracePoint>
-private typealias TracePointReader = (DataInput, TraceContext, CodeLocationsContext) -> Boolean
-
-private interface TracepointConsumer {
-    fun tracePointRead(parent: TRContainerTracePoint?, tracePoint: TRTracePoint)
-    fun footerStarted(tracePoint: TRContainerTracePoint) {}
-}
-
-private interface BlockConsumer {
-    fun blockStarted(threadId: Int) {}
-    fun blockEnded(threadId: Int) {}
-}
 
 private class DataBlock(
     physicalStart: Long,
@@ -72,7 +44,7 @@ private class DataBlock(
 
     init {
         require(physicalStart >= 0) { "start must be non-negative" }
-        require(physicalStart < physicalEnd)  { "block cannot be empty" }
+        require(physicalStart < physicalEnd) { "block cannot be empty" }
         require(accDataSize >= 0) { "accumulated data size cannot be negative" }
         this.physicalStart = physicalStart
         this.physicalEnd = physicalEnd
@@ -101,8 +73,8 @@ private class DataBlock(
         else 0
 
     fun updateEnd(newPhysicalEnd: Long) {
-        require(physicalStart < newPhysicalEnd)  { "block cannot be empty" }
-        check(physicalEnd == Long.MAX_VALUE) { "block cannot be updated twice"}
+        require(physicalStart < newPhysicalEnd) { "block cannot be empty" }
+        check(physicalEnd == Long.MAX_VALUE) { "block cannot be updated twice" }
         physicalEnd = newPhysicalEnd
     }
 }
@@ -120,7 +92,7 @@ private fun BlockList.addNewBlock(start: Long, end: Long) {
     require(isEmpty() || last().physicalEnd < start) {
         "Start offsets of blocks in the list must increase: last block ends at ${last().physicalEnd}, new starts at $start "
     }
-    add(DataBlock(start, end,dataSize()))
+    add(DataBlock(start, end, dataSize()))
 }
 
 private fun BlockList.fixLastBlock(end: Long) {
@@ -140,7 +112,8 @@ internal data class ShallowCodeLocation(
     val lineNumber: Int,
     val accessPath: Int,
     val argumentNames: List<Int>?,
-    val activeLocalsNames: List<Int>?
+    val activeLocalsNames: List<Int>?,
+    val activeLocalsKinds: List<Int>?
 )
 
 internal class ShallowAccessPath(val locations: MutableList<ShallowAccessLocation>)
@@ -149,8 +122,8 @@ internal sealed class ShallowAccessLocation
 internal data class ShallowLocalVariableAccessLocation(val variableDescriptorId: Int) : ShallowAccessLocation()
 internal data class ShallowStaticFieldAccessLocation(val fieldDescriptorId: Int) : ShallowAccessLocation()
 internal data class ShallowObjectFieldAccessLocation(val fieldDescriptorId: Int) : ShallowAccessLocation()
-internal data class ShallowArrayElementByIndexAccessLocation(val index: Int): ShallowAccessLocation()
-internal data class ShallowArrayElementByNameAccessLocation(val accessPathId: Int): ShallowAccessLocation()
+internal data class ShallowArrayElementByIndexAccessLocation(val index: Int) : ShallowAccessLocation()
+internal data class ShallowArrayElementByNameAccessLocation(val accessPathId: Int) : ShallowAccessLocation()
 
 
 /**
@@ -177,45 +150,68 @@ internal class CodeLocationsContext {
     fun restoreAllCodeLocations(context: TraceContext) {
         restoreAllAccessPaths(context)
         shallowCodeLocations.forEachIndexed { id, value ->
-            if (value != null) {
-                val stackTraceElement = StackTraceElement(
-                    /* declaringClass = */ stringCache[value.className] ?: "<unknown class>",
-                    /* methodName = */ stringCache[value.methodName] ?: "<unknown method>",
-                    /* fileName = */ stringCache[value.fileName] ?: "<unknown file>",
-                    /* lineNumber = */ value.lineNumber
-                )
-                val accessPath = if (value.accessPath == -1) null else context.getAccessPath(value.accessPath)
-                val argumentNames = value.argumentNames?.map { if (it == -1) null else context.getAccessPath(it) }
-                val activeLocalsNames: List<String>? = value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
-                val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocalsNames)
-                context.restoreCodeLocation(id, location)
-            }
+            if (value == null) return@forEachIndexed
+            restoreCodeLocation(context, id, value)
         }
+    }
+
+    fun restoreCodeLocation(context: TraceContext, id: Int) {
+        val value = shallowCodeLocations[id] ?: return
+        restoreCodeLocation(context, id, value)
+    }
+
+    private fun restoreCodeLocation(context: TraceContext, id: Int, value: ShallowCodeLocation) {
+        val stackTraceElement = StackTraceElement(
+            /* declaringClass = */ stringCache.getOrNull(value.className) ?: "<unknown class>",
+            /* methodName = */ stringCache.getOrNull(value.methodName) ?: "<unknown method>",
+            /* fileName = */ stringCache.getOrNull(value.fileName) ?: "<unknown file>",
+            /* lineNumber = */ value.lineNumber
+        )
+        val accessPath = if (value.accessPath != -1) context.getAccessPath(value.accessPath) else null
+        val argumentNames = value.argumentNames?.map {
+            if (it != -1) context.getAccessPath(it) else null
+        }
+        val activeLocalsNames: List<String>? =
+            value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
+        val activeLocals = activeLocalsNames?.zip(value.activeLocalsKinds!!)?.map { (name, kind) -> ActiveLocal(name, LocalKind.entries[kind]) }
+                val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
+        context.restoreCodeLocation(id, location)
     }
 
     private fun restoreAllAccessPaths(context: TraceContext) {
         shallowAccessPathsCache.forEachIndexed { id, value ->
-            if (value != null) {
-                val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
-                    when (shallowLocation) {
-                        is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
-                            context.getVariableDescriptor(shallowLocation.variableDescriptorId)
-                        )
-                        is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
-                            context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
-                        )
-                        is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
-                            context.getFieldDescriptor(shallowLocation.fieldDescriptorId)
-                        )
-                        is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)
-                        is ShallowArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(
-                            context.getAccessPath(shallowLocation.accessPathId)
-                        )
-                    }
-                }
-                context.restoreAccessPath(id, AccessPath(locations))
+            if (value == null) return@forEachIndexed
+            restoreAccessPath(context, id, value)
+        }
+    }
+
+    fun restoreAccessPath(context: TraceContext, id: Int) {
+        val value = shallowAccessPathsCache[id] ?: return
+        restoreAccessPath(context, id, value)
+    }
+
+    private fun restoreAccessPath(context: TraceContext, id: Int, value: ShallowAccessPath) {
+        val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
+            when (shallowLocation) {
+                is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
+                    context.variablePool[shallowLocation.variableDescriptorId]
+                )
+
+                is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
+                    context.fieldPool[shallowLocation.fieldDescriptorId]
+                )
+
+                is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
+                    context.fieldPool[shallowLocation.fieldDescriptorId]
+                )
+
+                is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)
+                is ShallowArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(
+                    context.getAccessPath(shallowLocation.accessPathId)
+                )
             }
         }
+        context.restoreAccessPath(id, AccessPath(locations))
     }
 
     private fun <T> load(container: MutableList<T?>, id: Int, value: T) {
@@ -235,89 +231,6 @@ class LazyTraceReader private constructor(
     private val input: TraceDataProvider,
     private val postprocessor: TracePostprocessor
 ) : Closeable {
-
-    /**
-     * This class try to detect is provided path points to packed (ZIP) trace or
-     * raw data file.
-     *
-     * If provided file is packed trace, it unpacks data file as it needs to be seekable
-     * and packed file is not seekable, unfortunately.
-     *
-     * In any case it provides three data elements:
-     *
-     *  - [dataFileName] — name of file with main trace data. It is [traceFileName] if trace in question
-     *    is not packed and name of temporary file with data unpacked to temporary file which will be deleted
-     *    after trace is closed.
-     *  - [indexStream] — stream with index, if it exists. It can be separate file in case of unpacked trace
-     *    ot ZIP stream prepared for reading index entry. Index is only read sequential, so reading directly
-     *    from ZIP is Ok.
-     *  - [metaInfo] — Trace meta information, if it exists for provided trace.
-     */
-    private class TraceDataProvider(val baseFileName: String): AutoCloseable {
-        private var tmpDataFile: File? = null
-        private var zip: ZipInputStream? = null
-
-        var indexStream: DataInputStream? = null
-            private set
-
-        var metaInfo: TraceMetaInfo? = null
-            private set
-
-        init {
-            val input = openExistingFile(baseFileName)?.buffered(INPUT_BUFFER_SIZE) ?:
-                throw IllegalArgumentException("Trace file \"$baseFileName\" doesn't exist")
-           // Try to unpack zip
-            zip = ZipInputStream(input)
-            try {
-                run {
-                    val metaInfoEntry = zip?.nextEntry ?: return@run // null -> not a ZIP
-                    if (metaInfoEntry.name != PACKED_META_ITEM_NAME) throwZipError(baseFileName)
-                    metaInfo = TraceMetaInfo.read(zip!!)
-
-                    val dataEntry = zip?.nextEntry ?: throwZipError(baseFileName)
-                    if (dataEntry.name != PACKED_DATA_ITEM_NAME) throwZipError(baseFileName)
-                    val tmpDataFile = File.createTempFile("unpacked-trace-data", ".$DATA_FILENAME_EXT")
-                    tmpDataFile.deleteOnExit()
-
-                    try {
-                        val dataOutput = openNewFile(tmpDataFile.absolutePath)
-                        dataOutput.use {
-                            zip?.copyTo(it)
-                        }
-                        this.tmpDataFile = tmpDataFile
-                    } catch (e: IOException) {
-                        tmpDataFile.delete()
-                        throwZipError(baseFileName, e)
-                    }
-
-                    try {
-                        val indexEntry = zip?.nextEntry ?: throwZipError(baseFileName)
-                        if (indexEntry.name != PACKED_INDEX_ITEM_NAME) throwZipError(baseFileName)
-                        // zip as stream is positioned at index start now!
-                        indexStream = wrapStream(zip)
-                    } catch (e: Throwable) {
-                        tmpDataFile.delete()
-                        throw e
-                    }
-                }
-            } catch (e: Throwable) {
-                zip?.close()
-                throw e
-            }
-            if (indexStream == null) {
-                indexStream = wrapStream(openExistingFile("$baseFileName.$INDEX_FILENAME_EXT"))
-            }
-        }
-
-        val dataFileName: String = tmpDataFile?.absolutePath ?: baseFileName
-
-        override fun close() {
-            tmpDataFile?.delete()
-            indexStream?.close()
-            zip?.close()
-        }
-    }
-
     private fun interface TracepointRegistrator {
         fun register(indexInParent: Int, tracePoint: TRTracePoint?, physicalOffset: Long)
     }
@@ -329,19 +242,33 @@ class LazyTraceReader private constructor(
                 postprocessor = postprocessor
             )
 
+    private var contextLoaded = false
+
     val context: TraceContext = TraceContext()
 
     val metaInfo: TraceMetaInfo? get() = input.metaInfo
 
     val isDiff: Boolean get() = input.metaInfo?.isDiff ?: false
 
-    val leftTraceMetaInfo: TraceMetaInfo?
+    val diffThreadMap: Map<Int, Pair<Int, Int>>?
         get() {
-            check(isDiff) { "Cannot provide left trace meta info if trace is not a diff" }
+            check(isDiff) { "Cannot provide threads id map if trace is not a diff" }
+            return input.threadIdMap
+        }
+
+    val diffEventIdMap: List<Pair<Int, Int>>?
+        get() {
+            check(isDiff) { "Event ID map is only available for trace diffs" }
+            return input.eventIdMap
+        }
+
+    val diffLeftTraceMetaInfo: TraceMetaInfo?
+        get() {
+            check(isDiff) { "Cannot provide events id map if trace is not a diff" }
             return input.metaInfo?.leftTraceMetaInfo
         }
 
-    val rightTraceMetaInfo: TraceMetaInfo?
+    val diffRightTraceMetaInfo: TraceMetaInfo?
         get() {
             check(isDiff) { "Cannot provide right trace meta info if trace is not a diff" }
             return input.metaInfo?.rightTraceMetaInfo
@@ -351,6 +278,7 @@ class LazyTraceReader private constructor(
     private val data: SeekableDataInput
     private val dataBlocks = mutableMapOf<Int, MutableList<DataBlock>>()
     private val callTracepointChildren = RangeIndex.create()
+    private val lock = ReentrantLock()
 
     init {
         val channel = Files.newByteChannel(Path(input.dataFileName), StandardOpenOption.READ)
@@ -371,13 +299,17 @@ class LazyTraceReader private constructor(
         input.close()
     }
 
-    fun readRoots(): List<TRTracePoint> {
+    fun readTopLevelTracePoints(): List<List<TRTracePoint>> = lock.withLock {
         var start = System.currentTimeMillis()
-        loadContext()
-        Logger.debug { "Context loaded in ${System.currentTimeMillis() - start} ms" }
-        start = System.currentTimeMillis()
 
-        val roots = mutableMapOf<Int, TRTracePoint>()
+        if (!contextLoaded) {
+            loadContext()
+            Logger.debug { "Context loaded in ${System.currentTimeMillis() - start} ms" }
+            start = System.currentTimeMillis()
+            contextLoaded = true
+        }
+
+        val threadTracepoints = mutableMapOf<Int, List<TRTracePoint>>()
 
         dataBlocks.forEach {
             val (threadId, blocks) = it
@@ -396,21 +328,31 @@ class LazyTraceReader private constructor(
                     if (tracePoint != null) tracepoints.add(tracePoint)
                 }
             )
-            if (tracepoints.isEmpty()) {
-                Logger.warn { "Thread $threadId doesn't write any tracepoints" }
-            } else {
-                if (tracepoints.size > 1) {
-                    Logger.error { "Thread $threadId wrote too many root tracepoints: ${tracepoints.size}" }
-                }
-                roots[threadId] = tracepoints.first()
-            }
-        }
-        Logger.debug { "Roots loaded in ${System.currentTimeMillis() - start} ms" }
 
-        return roots.entries.sortedBy { it.key }.map { (_, tracePoint) -> tracePoint }
+            threadTracepoints[threadId] = tracepoints
+        }
+        Logger.debug { "Loaded top-level trace points in ${System.currentTimeMillis() - start} ms" }
+
+        return threadTracepoints.entries
+            .sortedBy { it.key }
+            .map { (_, tracepoints) -> tracepoints }
     }
 
-    fun loadAllChildren(parent: TRContainerTracePoint) {
+    fun readRoots(): List<TRTracePoint> = lock.withLock {
+        val threadTracepoints = readTopLevelTracePoints()
+        return threadTracepoints.mapIndexedNotNull { threadId, tracepoints ->
+            if (tracepoints.isEmpty()) {
+                Logger.warn { "Thread $threadId does not contain any tracepoints" }
+            } else if (tracepoints.size > 1) {
+                Logger.warn { "Thread $threadId has more than one root tracepoints: ${tracepoints.size}" }
+            }
+            tracepoints.firstOrNull()
+        }
+    }
+
+    fun loadAllChildren(parent: TRContainerTracePoint) = lock.withLock {
+        if (parent.events.isEmpty()) return
+
         val (start, end) = callTracepointChildren[parent.eventId]
             ?: error("TRContainerTracePoint ${parent.eventId} is not found in index")
 
@@ -431,11 +373,13 @@ class LazyTraceReader private constructor(
         }
     }
 
-    fun loadChild(parent: TRContainerTracePoint, childIdx: Int): Unit = loadChildrenRange(parent, childIdx, 1)
+    fun loadChild(parent: TRContainerTracePoint, childIdx: Int): Unit = lock.withLock {
+        loadChildrenRange(parent, childIdx, 1)
+    }
 
-    fun loadChildrenRange(parent: TRContainerTracePoint, from: Int, count: Int) {
-        require(from in 0 ..< parent.events.size) { "From index $from must be in range 0..<${parent.events.size}" }
-        require(count in 1 .. parent.events.size - from) { "Count $count must be in range 1..${parent.events.size - from}" }
+    fun loadChildrenRange(parent: TRContainerTracePoint, from: Int, count: Int) = lock.withLock {
+        require(from in 0 ..< parent.events.size) { "From index $from must be in range 0 ..< ${parent.events.size}" }
+        require(count in 1 ..parent.events.size - from) { "Count $count must be in range 1 .. ${parent.events.size - from}" }
 
         data.seek(calculatePhysicalOffset(parent.threadId, parent.getChildAddress(from)))
         loadTracePoints(
@@ -448,7 +392,7 @@ class LazyTraceReader private constructor(
         )
     }
 
-    fun getChildAndRestorePosition(parent: TRContainerTracePoint, childIdx: Int): TRTracePoint? {
+    fun getChildAndRestorePosition(parent: TRContainerTracePoint, childIdx: Int): TRTracePoint? = lock.withLock {
         val oldPosition = data.position()
         loadChild(parent, childIdx)
         data.seek(oldPosition)
@@ -461,7 +405,12 @@ class LazyTraceReader private constructor(
             tracePoint = readTracePointWithChildAddresses()
         )
 
-    private fun loadTracePoints(threadId: Int, maxRead: Int, reader: () -> TRTracePoint?, registrator: TracepointRegistrator) {
+    private fun loadTracePoints(
+        threadId: Int,
+        maxRead: Int,
+        reader: () -> TRTracePoint?,
+        registrator: TracepointRegistrator
+    ) {
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
         var idx = 0
         while (true) {
@@ -486,7 +435,7 @@ class LazyTraceReader private constructor(
             // point to last data byte of block, as current position points after BLOCK_END byte
             val physicalOffset = data.position() - 2
             val blockIdx = findBlockByPhysicalOffset(threadId, physicalOffset)
-            check(blockIdx != null) { "Thread $threadId doesn't contain physical offset $physicalOffset"}
+            check(blockIdx != null) { "Thread $threadId doesn't contain physical offset $physicalOffset" }
             if (blockIdx + 1 == blocks.size) {
                 // Thread ended, Ok
                 return
@@ -591,7 +540,7 @@ class LazyTraceReader private constructor(
                     error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
                 }
             } catch (t: IOException) {
-                Logger.error { "TraceRecorder: Error reading index for $traceFileName: ${t.message}" }
+                Logger.error(t) { "TraceRecorder: Error reading index for $traceFileName: ${t.message}" }
                 return false
             }
         }
@@ -611,14 +560,14 @@ class LazyTraceReader private constructor(
                 ) {
                     if (tracePoint is TRContainerTracePoint) {
                         // We are in the last saved block in
-                        val childrenStart = calculateLogicalOffset(tracePoint.threadId,data.position())
+                        val childrenStart = calculateLogicalOffset(tracePoint.threadId, data.position())
                         callTracepointChildren.addStart(tracePoint.eventId, childrenStart)
                     }
                 }
 
                 override fun footerStarted(tracePoint: TRContainerTracePoint) {
                     // -1 is here because Kind is already read
-                    val childrenEnd = calculateLogicalOffset(tracePoint.threadId,data.position() - 1)
+                    val childrenEnd = calculateLogicalOffset(tracePoint.threadId, data.position() - 1)
                     callTracepointChildren.setEnd(tracePoint.eventId, childrenEnd)
                 }
             },
@@ -720,431 +669,4 @@ class LazyTraceReader private constructor(
         val blockIdx = blocks.binarySearch { it.compareWithPhysicalOffset(physicalOffset) }
         return if (blockIdx < 0) null else blockIdx
     }
-
-    private companion object {
-        fun wrapStream(input: InputStream?): DataInputStream? {
-            if (input == null) return null
-            return DataInputStream(input.buffered(INPUT_BUFFER_SIZE))
-        }
-    }
-}
-
-/**
- * Class which describes fully loaded trace.
- */
-data class TraceWithContext(
-    /**
-     * Trace context with all descriptors belonging to given trace
-     */
-    val context: TraceContext,
-    /**
-     * Trace meta info. Can be `null` if trace is loaded from non-packed (single) data file.
-     */
-    val metaInfo: TraceMetaInfo?,
-    /**
-     * List of all root calls for all traced threads.
-     */
-    val roots: List<TRTracePoint>
-)
-
-/**
- * Load trace from file. File can contain unpacked binary trace (without index)
- * or packed trace with metainfo, data and index inside.
- *
- * If trace was loaded from packed file, [TraceWithContext.metaInfo] must be filled in,
- * it will be `null` otherwise.
- */
-fun loadRecordedTrace(traceFileName: String): TraceWithContext {
-    val input = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
-    require(input != null) { "Cannot open trace \"$traceFileName\"" }
-
-    input.use {
-        // Try as ZIP
-        val (stream, meta) = run {
-            val zip = ZipInputStream(input)
-            val metaEntry = zip.nextEntry ?: return@run null to null // Not ZIP
-            if (metaEntry.name != PACKED_META_ITEM_NAME) throwZipError(traceFileName)
-            // Try to load metainfo
-            val meta = TraceMetaInfo.read(zip)
-
-            // Check next entry
-            val dataEntry = zip.nextEntry ?: throwZipError(traceFileName)
-            if (dataEntry.name != PACKED_DATA_ITEM_NAME) throwZipError(traceFileName)
-
-            zip to meta
-        }
-
-        if (stream != null) {
-            stream.use {
-                return loadRecordedTrace(it, meta)
-            }
-        } else {
-            // Not ZIP at all, raw trace
-            input.close()
-            val rawInput = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
-            require(rawInput != null) { "Cannot open trace \"$traceFileName\"" }
-            rawInput.use {
-                return loadRecordedTrace(it, null)
-            }
-        }
-    }
-}
-
-private fun readMagic(input: InputStream): Long {
-    val buf = ByteBuffer.allocate(8)
-    if (input.read(buf.array()) != 8) return 0 // 0 is not magic for sure
-    return buf.getLong(0)
-}
-
-fun isPackedTrace(traceFileName: String): Boolean {
-    val input = openExistingFile(traceFileName) ?: return false
-    return try {
-        ZipInputStream(input).use { zip ->
-            val metaInfoEntry = zip.nextEntry ?: return false
-            if (metaInfoEntry.name != PACKED_META_ITEM_NAME) return false
-
-            val dataEntry = zip.nextEntry ?: return false
-            if (dataEntry.name != PACKED_DATA_ITEM_NAME) return false
-            if (readMagic(zip) != TRACE_MAGIC) return false
-
-            val indexEntry = zip.nextEntry ?: return false
-            if (indexEntry.name != PACKED_INDEX_ITEM_NAME) return false
-            if (readMagic(zip) != INDEX_MAGIC) return false
-
-            return true
-        }
-    } catch (_: Throwable) {
-        false
-    }
-}
-
-fun isTraceData(traceFileName: String): Boolean {
-    return try {
-        val input = openExistingFile(traceFileName) ?: return false
-        input.use { input ->
-            return readMagic(input) == TRACE_MAGIC
-        }
-    } catch (_: Throwable) {
-        false
-    }
-}
-
-fun isTraceData(firstBytes: ByteBuffer): Boolean =
-    firstBytes.capacity() >= 8 && firstBytes.getLong(0) == TRACE_MAGIC
-
-/**
- * Load unpacked trace. [inp] must be stream pointing to binary trace format, not
- * packed in any way.
-
- * [TraceWithContext.metaInfo] will be `null`.
- */
-fun loadRecordedTrace(inp: InputStream): TraceWithContext = loadRecordedTrace(inp, null)
-
-private fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?): TraceWithContext {
-    DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
-        checkDataHeader(input)
-
-        // Create an isolated fresh context for this load
-        val context = TraceContext()
-        val roots = mutableMapOf<Int, MutableList<TRTracePoint>>()
-
-        loadAllObjectsDeep(
-            input = input,
-            context = context,
-            tracepointConsumer = object : TracepointConsumer {
-                override fun tracePointRead(
-                    parent: TRContainerTracePoint?,
-                    tracePoint: TRTracePoint
-                ) {
-                    if (parent == null) {
-                        roots.computeIfAbsent(tracePoint.threadId) { mutableListOf() }.add(tracePoint)
-                    } else {
-                        parent.addChild(tracePoint)
-                    }
-                }
-            },
-            blockConsumer = object : BlockConsumer {}
-        )
-
-        roots.forEach {
-            if (it.value.size > 1) {
-                Logger.warn { "TraceRecorder: Thread #${it.key} contains multiple top-level calls" }
-            }
-        }
-
-        return TraceWithContext(context, meta, roots.values.map { it.first() })
-    }
-}
-
-private fun loadAllObjectsDeep(
-    input: DataInputStream,
-    context: TraceContext,
-    tracepointConsumer: TracepointConsumer,
-    blockConsumer: BlockConsumer
-) {
-    val codeLocs = CodeLocationsContext()
-    val trees = mutableMapOf<Int, MutableList<TRContainerTracePoint>>()
-    var seenEOF = false
-
-    while (input.available() > 0) {
-        // Start a new block
-        val kind = input.readKind()
-
-        // All blocks are read
-        if (kind == ObjectKind.EOF) {
-            seenEOF = true
-            break
-        }
-
-        check(kind == ObjectKind.BLOCK_START) {
-            "Unexpected object kind $kind, expected BLOCK_START, broken file"
-        }
-
-        val threadId = input.readInt()
-        blockConsumer.blockStarted(threadId)
-
-        val tree = trees.computeIfAbsent(threadId) { mutableListOf() }
-
-        // Read objects and tracepoints from this block till it ends.
-        // Unwind the stack manually, if needed
-        while (true) {
-            val kind = loadObjects(input, context, codeLocs, true) { input, context, codeLocs ->
-                loadTracePointDeep(input, context, codeLocs, tree, tracepointConsumer)
-            }
-            if (kind == ObjectKind.BLOCK_END) {
-                blockConsumer.blockEnded(threadId)
-                break
-            }
-            check(kind == ObjectKind.TRACEPOINT_FOOTER) {
-                "Unexpected object kind $kind, expected TRACEPOINT_FOOTER, broken file"
-            }
-            check (tree.isNotEmpty()) { "Stack underflow" }
-
-            val tracePoint = tree.removeLast()
-            tracepointConsumer.footerStarted(tracePoint)
-            tracePoint.loadFooter(input)
-        }
-    }
-    codeLocs.restoreAllCodeLocations(context)
-
-    if (!seenEOF) {
-        Logger.warn {"TraceRecorder: no EOF record at the end of the file" }
-    }
-    // Check that all stacks are empty
-    trees.forEach {
-        if (!it.value.isEmpty()) {
-            Logger.warn { "TraceRecorder: Thread #${it.key} contains unfinished method calls" }
-        }
-    }
-}
-
-private fun loadTracePointDeep(
-    input: DataInput,
-    context: TraceContext,
-    codeLocs: CodeLocationsContext,
-    tree: TraceTree,
-    consumer: TracepointConsumer
-): Boolean {
-    // Load tracepoint itself
-    val tracePoint = loadTRTracePoint(context, input)
-    consumer.tracePointRead(tree.lastOrNull(), tracePoint)
-    if (tracePoint !is TRContainerTracePoint) {
-        return true
-    }
-    // We need to load all children
-    tree.add(tracePoint)
-    val kind = loadObjects(input, context, codeLocs, true) { input, context, stringCache ->
-        loadTracePointDeep(input, context, stringCache, tree, consumer)
-    }
-    when (kind) {
-        ObjectKind.TRACEPOINT_FOOTER -> {
-            check(tracePoint == tree.removeLast()) { "Tracepoint reading stack corruption" }
-            consumer.footerStarted(tracePoint)
-            tracePoint.loadFooter(input)
-        }
-        ObjectKind.BLOCK_END -> {
-            return false
-        }
-        else -> {
-            Logger.error { "TraceRecorder: Unexpected object kind $kind when loading tracepoints" }
-            return false
-        }
-    }
-    return true
-}
-
-private fun loadObjects(
-    input: DataInput,
-    context: TraceContext,
-    codeLocs: CodeLocationsContext,
-    restore: Boolean,
-    tracePointReader: TracePointReader
-): ObjectKind {
-    while (true) {
-        when (val kind = input.readKind()) {
-            ObjectKind.THREAD_NAME -> loadThreadName(input, context, restore)
-            ObjectKind.CLASS_DESCRIPTOR -> loadClassDescriptor(input, context, restore)
-            ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(input, context, restore)
-            ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
-            ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
-            ObjectKind.STRING -> loadString(input, codeLocs, restore)
-            ObjectKind.ACCESS_PATH -> loadAccessPath(input, codeLocs, restore)
-            ObjectKind.CODE_LOCATION -> loadCodeLocation(input, codeLocs, restore)
-            // Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block
-            ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, codeLocs)) return ObjectKind.BLOCK_END
-            ObjectKind.TRACEPOINT_FOOTER, // Children read or skipped by recursion into tracePointReader
-            ObjectKind.BLOCK_START, // Should not happen, really
-            ObjectKind.BLOCK_END, // Block ended
-            ObjectKind.EOF // Should not happen, really; BLOCK_END must go first
-                -> return kind
-        }
-    }
-}
-
-private fun loadThreadName(
-    input: DataInput,
-    context: TraceContext,
-    restore: Boolean
-): Int {
-    val id = input.readInt()
-    val name = input.readUTF()
-    if (restore) {
-        context.setThreadName(id, name)
-    }
-    return id
-}
-
-private fun loadClassDescriptor(
-    input: DataInput,
-    context: TraceContext,
-    restore: Boolean
-): Int {
-    val id = input.readInt()
-    val descriptor = input.readClassDescriptor()
-    if (restore) {
-        context.restoreClassDescriptor(id, descriptor)
-    }
-    return id
-}
-
-private fun loadMethodDescriptor(
-    input: DataInput,
-    context: TraceContext,
-    restore: Boolean
-): Int {
-    val id = input.readInt()
-    val descriptor = input.readMethodDescriptor(context)
-    if (restore)
-        context.restoreMethodDescriptor(id, descriptor)
-    return id
-}
-
-private fun loadFieldDescriptor(
-    input: DataInput,
-    context: TraceContext,
-    restore: Boolean
-): Int {
-    val id = input.readInt()
-    val descriptor = input.readFieldDescriptor(context)
-    if (restore)
-        context.restoreFieldDescriptor(id, descriptor)
-    return id
-}
-
-private fun loadVariableDescriptor(
-    input: DataInput,
-    context: TraceContext,
-    restore: Boolean
-): Int {
-    val id = input.readInt()
-    val descriptor = input.readVariableDescriptor()
-    if (restore)
-        context.restoreVariableDescriptor(id, descriptor)
-    return id
-}
-
-private fun loadString(
-    input: DataInput,
-    codeLocs: CodeLocationsContext,
-    restore: Boolean
-): Int {
-    val id = input.readInt()
-    val value = input.readUTF()
-    if (restore) {
-        codeLocs.loadString(id, value)
-    }
-    return id
-}
-
-private fun loadAccessPath(
-    input: DataInput,
-    codeLocs: CodeLocationsContext,
-    restore: Boolean
-): Int {
-    val id = input.readInt()
-    val len = input.readInt()
-    val locations = mutableListOf<ShallowAccessLocation>()
-    repeat(len) {
-        locations.add(input.readAccessLocation())
-    }
-    if (restore) {
-        codeLocs.loadAccessPath(id, ShallowAccessPath(locations))
-    }
-    return id
-}
-
-private fun loadCodeLocation(
-    input: DataInput,
-    codeLocs: CodeLocationsContext,
-    restore: Boolean
-): Int {
-    val id = input.readInt()
-
-    val fileNameId = input.readInt()
-    val classNameId = input.readInt()
-    val methodNameId = input.readInt()
-    val lineNumber = input.readInt()
-    val accessPathId = input.readInt()
-    
-    val nArgumentNames = input.readInt()
-    val argumentNameIds = when {
-        nArgumentNames == 0 -> null
-        else -> List(nArgumentNames) { input.readInt() }
-    }
-    val nActiveLocalsNames = input.readInt()
-    val activeLocalsNamesIds = when {
-        nActiveLocalsNames == 0 -> null
-        else -> List(nActiveLocalsNames) { input.readInt() }
-    }
-
-    if (restore) {
-        val scl = ShallowCodeLocation(
-            className = classNameId,
-            methodName = methodNameId,
-            fileName = fileNameId,
-            lineNumber = lineNumber,
-            accessPath = accessPathId,
-            argumentNames = argumentNameIds,
-            activeLocalsNames = activeLocalsNamesIds
-        )
-        codeLocs.loadCodeLocation(id, scl)
-    }
-    return id
-}
-
-private fun checkDataHeader(input: DataInput) {
-    val magic = input.readLong()
-    check(magic == TRACE_MAGIC) {
-        "Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}"
-    }
-
-    val version = input.readLong()
-    check(version == TRACE_VERSION) {
-        "Wrong version $version (expected $TRACE_VERSION)"
-    }
-}
-
-@Suppress("NOTHING_TO_INLINE")
-private inline fun throwZipError(fileName: String, cause: Throwable? = null): Nothing {
-    throw IllegalArgumentException("File \"$fileName\" is a ZIP archive but is not a packed trace", cause)
 }

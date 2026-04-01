@@ -11,8 +11,8 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.stress;
 
 import org.jetbrains.kotlinx.lincheck.*;
 import org.jetbrains.kotlinx.lincheck.execution.*;
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*;
 import org.jetbrains.lincheck.util.LoggingLevel;
+import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier;
 import org.junit.*;

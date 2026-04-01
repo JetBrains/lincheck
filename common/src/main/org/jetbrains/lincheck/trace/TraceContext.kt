@@ -10,12 +10,13 @@
 
 package org.jetbrains.lincheck.trace
 
-import com.sun.org.apache.bcel.internal.classfile.Code
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.ActiveLocal
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocation
-import org.jetbrains.lincheck.descriptors.CodeLocations
+import org.jetbrains.lincheck.descriptors.DescriptorPool
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
+import org.jetbrains.lincheck.descriptors.FieldKind
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
@@ -34,104 +35,21 @@ class TraceContext {
     private val threadNames = ConcurrentHashMap<Int, String>()
     private val accessPaths = ArrayList<AccessPath?>()
     private val locations = ArrayList<CodeLocation?>()
-    private val classes = IndexedPool<ClassDescriptor>()
-    private val methods = IndexedPool<MethodDescriptor>()
-    private val fields = IndexedPool<FieldDescriptor>()
-    private val variables = IndexedPool<VariableDescriptor>()
+    // Descriptor pools
+    val classPool = DescriptorPool<ClassDescriptor>()
+    val methodPool = DescriptorPool<MethodDescriptor>()
+    val fieldPool = DescriptorPool<FieldDescriptor>()
+    val variablePool = DescriptorPool<VariableDescriptor>()
 
     fun setThreadName(id: Int, name: String) { threadNames[id] = name }
 
     fun getThreadName(id: Int): String = threadNames[id] ?: ""
 
-    val classDescriptors: List<ClassDescriptor?> get() = classes.content
+    fun getThreadId(name: String): Int = threadNames.filter { (_, value) -> value == name }.keys.firstOrNull() ?: -1
 
-    fun getOrCreateClassId(className: String): Int {
-        return classes.getOrCreateId(ClassDescriptor(className))
-    }
+    fun getThreadIds(name: String): Set<Int> = threadNames.filter { (_, value) -> value == name }.keys
 
-    fun getClassDescriptor(classId: Int): ClassDescriptor = classes[classId]
-
-    fun restoreClassDescriptor(id: Int, value: ClassDescriptor) {
-        classes.restore(id, value)
-    }
-
-    val methodDescriptors: List<MethodDescriptor?> get() = methods.content
-
-    fun getOrCreateMethodId(className: String, methodName: String, methodType: Types.MethodType): Int {
-        return methods.getOrCreateId(
-            MethodDescriptor(
-                context = this,
-                classId = getOrCreateClassId(className),
-                methodSignature = MethodSignature(
-                    name = methodName,
-                    methodType = methodType
-                )
-            )
-        )
-    }
-
-    fun getMethodDescriptor(className: String, methodName: String, methodType: Types.MethodType): MethodDescriptor =
-        getMethodDescriptor(getOrCreateMethodId(className, methodName, methodType))
-
-    fun getMethodDescriptor(methodId: Int): MethodDescriptor = methods[methodId]
-
-    fun restoreMethodDescriptor(id: Int, value: MethodDescriptor) {
-        methods.restore(id, value)
-    }
-
-    val fieldDescriptors: List<FieldDescriptor?> get() = fields.content
-
-    fun hasFieldDescriptor(field: FieldDescriptor): Boolean {
-        return fields.contains(field)
-    }
-
-    fun getOrCreateFieldId(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): Int {
-        return getOrCreateFieldId(
-            FieldDescriptor(
-                context = this,
-                classId = getOrCreateClassId(className),
-                fieldName = fieldName,
-                isStatic = isStatic,
-                isFinal = isFinal
-            )
-        )
-    }
-
-    fun getOrCreateFieldId(field: FieldDescriptor): Int {
-        return fields.getOrCreateId(field)
-    }
-
-    fun getFieldDescriptor(className: String, fieldName: String, isStatic: Boolean, isFinal: Boolean): FieldDescriptor =
-        getFieldDescriptor(getOrCreateFieldId(className, fieldName, isStatic, isFinal))
-
-    fun getFieldDescriptor(fieldId: Int): FieldDescriptor = fields[fieldId]
-
-    fun restoreFieldDescriptor(id: Int, value: FieldDescriptor) {
-        fields.restore(id, value)
-    }
-
-    val variableDescriptors: List<VariableDescriptor?> get() = variables.content
-
-    fun hasVariableDescriptor(variable: VariableDescriptor): Boolean {
-        return variables.contains(variable)
-    }
-
-    fun getOrCreateVariableId(variableName: String): Int {
-        return getOrCreateVariableId(VariableDescriptor(variableName))
-    }
-
-    fun getOrCreateVariableId(variableDescriptor: VariableDescriptor): Int {
-        return variables.getOrCreateId(variableDescriptor)
-    }
-
-    fun getVariableDescriptor(variableName: String): VariableDescriptor =
-        getVariableDescriptor(getOrCreateVariableId(variableName))
-
-    fun getVariableDescriptor(variableId: Int): VariableDescriptor = variables[variableId]
-
-    fun restoreVariableDescriptor(id: Int, value: VariableDescriptor) {
-        variables.restore(id, value)
-    }
+    fun threadNames(): List<String> = threadNames.values.toList()
 
     val codeLocations: List<CodeLocation?> get() = locations
 
@@ -139,7 +57,7 @@ class TraceContext {
         stackTraceElement: StackTraceElement,
         accessPath: AccessPath? = null,
         argumentNames: List<AccessPath?>? = null,
-        activeLocals: List<String>? = null
+        activeLocals: List<ActiveLocal>? = null
     ): Int {
         val id = locations.size
         val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
@@ -177,7 +95,7 @@ class TraceContext {
         return loc.argumentNames
     }
 
-    fun activeLocalsNames(codeLocationId: Int): List<String>? {
+    fun activeLocals(codeLocationId: Int): List<ActiveLocal>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
         val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
         return loc.activeLocals
@@ -208,9 +126,101 @@ class TraceContext {
     fun clear() {
         accessPaths.clear()
         locations.clear()
-        classes.clear()
-        methods.clear()
-        fields.clear()
-        variables.clear()
+        classPool.clear()
+        methodPool.clear()
+        fieldPool.clear()
+        variablePool.clear()
     }
+}
+
+
+/**
+ * Creates a method descriptor and registers it in the context receiver.
+ * As side effect this function also registers class descriptor for provided [className].
+ *
+ * @return created method descriptor.
+ */
+fun TraceContext.createAndRegisterMethodDescriptor(
+    className: String,
+    methodName: String,
+    methodType: Types.MethodType,
+    isInline: Boolean = false
+): MethodDescriptor {
+    // If a descriptor with the same key already exists, return the existing instance (with a proper id).
+    val signature = MethodSignature(methodName, methodType)
+    val clazzId = createAndRegisterClassDescriptor(className).id
+    val key = MethodDescriptor.Key(clazzId, signature)
+    methodPool[key]?.let { return it }
+
+    // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
+    val descriptor = MethodDescriptor(
+        context = this,
+        classId = clazzId,
+        methodSignature = signature,
+        isInline = isInline
+    )
+    methodPool.register(descriptor)
+    return descriptor
+}
+
+/**
+ * Creates a field descriptor and registers it in the context receiver.
+ * As side effect this function also registers class descriptor for provided [className].
+ *
+ * @return created field descriptor.
+ */
+fun TraceContext.createAndRegisterFieldDescriptor(
+    className: String,
+    fieldName: String,
+    type: Types.Type,
+    fieldKind: FieldKind,
+    isFinal: Boolean
+): FieldDescriptor {
+    // If a descriptor with the same key already exists, return the existing instance (with a proper id).
+    val clazzId = createAndRegisterClassDescriptor(className).id
+    val key = FieldDescriptor.Key(clazzId, fieldName, type, fieldKind)
+    fieldPool[key]?.let { return it }
+
+    // Otherwise, create and register a new descriptor and return it (id will be assigned during registration).
+    val descriptor = FieldDescriptor(
+        context = this,
+        classId = clazzId,
+        fieldName = fieldName,
+        type = type,
+        fieldKind = fieldKind,
+        isFinal = isFinal
+    )
+    fieldPool.register(descriptor)
+    return descriptor
+}
+
+/**
+ * Creates a class descriptor and registers it in the context receiver.
+ *
+ * @return created class descriptor.
+ */
+fun TraceContext.createAndRegisterClassDescriptor(className: String): ClassDescriptor {
+    val key = ClassDescriptor.Key(className)
+    classPool[key]?.let { return it }
+
+    val descriptor = ClassDescriptor(context = this, name = className)
+    classPool.register(descriptor)
+    return descriptor
+}
+
+/**
+ * Creates a variable descriptor and registers it in the context receiver.
+ *
+ * @return created variable descriptor.
+ */
+fun TraceContext.createAndRegisterVariableDescriptor(
+    name: String,
+    type: Types.Type
+): VariableDescriptor {
+    val key = VariableDescriptor.Key(name, type)
+    variablePool[key]?.let { return it }
+
+    val descriptor = VariableDescriptor(context = this, name, type)
+    variablePool.register(descriptor)
+    return descriptor
 }

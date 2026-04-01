@@ -157,11 +157,6 @@ class AgentParametersParserTests {
     }
 
     @Test(expected = IllegalStateException::class)
-    fun testNewStyleBadKeyChar() {
-        TraceAgentParameters.parseArgs("key$=bad", emptyList())
-
-    }
-    @Test(expected = IllegalStateException::class)
     fun testNewStyleNoValue() {
         TraceAgentParameters.parseArgs("key", emptyList())
     }

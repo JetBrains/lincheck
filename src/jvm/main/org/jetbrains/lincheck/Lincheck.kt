@@ -9,7 +9,7 @@
  */
 package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.kotlinx.lincheck.runPluginReplay
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.jetbrains.lincheck.datastructures.CTestConfiguration
@@ -22,11 +22,11 @@ import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.ensureObjectIsTransformed
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import sun.nio.ch.lincheck.Injections
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -93,7 +93,7 @@ object Lincheck {
 
     private fun ManagedCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
         val runner = LambdaRunner(timeoutMs = timeoutMs, block)
-        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckJavaAgent.context).also {
+        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
             runner.initializeStrategy(it)
         }
     }

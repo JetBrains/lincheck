@@ -34,10 +34,15 @@ public class ResultInterceptor {
     private Object interceptedResult = null;
     private Throwable interceptedException = null;
 
+    // Sometimes we can intercept the "null" value as a result.
+    // Therefore, we need this extra field that will actually indicate if a result is intercepted or not
+    private Boolean isResultIntercepted = false;
+
     private Object eventTrackerData = null;
 
     public void interceptResult(Object result) {
         if (isIntercepted()) throw ResultAlreadyInterceptedException(this);
+        isResultIntercepted = true;
         interceptedResult = result;
     }
 
@@ -55,7 +60,7 @@ public class ResultInterceptor {
     }
 
     public boolean isResultIntercepted() {
-        return (interceptedResult != null);
+        return isResultIntercepted;
     }
 
     public boolean isExceptionIntercepted() {
@@ -63,7 +68,7 @@ public class ResultInterceptor {
     }
 
     public boolean isIntercepted() {
-        return (interceptedResult != null || interceptedException != null);
+        return (isResultIntercepted || interceptedException != null);
     }
 
     public Object getEventTrackerData() {
@@ -72,6 +77,16 @@ public class ResultInterceptor {
 
     public void setEventTrackerData(Object eventTrackerData) {
         this.eventTrackerData = eventTrackerData;
+    }
+
+    /**
+     * Resets the interceptor to its initial state, so it can be re-used.
+     */
+    public void reset() {
+        interceptedResult = null;
+        interceptedException = null;
+        isResultIntercepted = false;
+        eventTrackerData = null;
     }
 
     private static IllegalStateException ResultAlreadyInterceptedException(ResultInterceptor interceptor) {

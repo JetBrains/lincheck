@@ -9,8 +9,8 @@
  */
 package org.jetbrains.lincheck.datastructures.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
 
 /**
  * An abstraction for verifiers which use the labeled transition system (LTS) under the hood.
@@ -101,7 +101,7 @@ abstract class VerifierContext(
      * The number of threads that expectedly suspended their execution.
      */
     private val suspendedThreads: Int get() =
-        threads.count { t -> suspended[t] && results.threadsResultsWithClock[t][executed[t]].result === Suspended }
+        threads.count { t -> suspended[t] && results.threadsResultsWithClock[t][executed[t]].result === SuspendedResult }
 
     /**
      * Returns the number of completed threads from the specified range.

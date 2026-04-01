@@ -17,12 +17,13 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.TRACE_DEBUGGING
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
 
@@ -30,6 +31,14 @@ import java.lang.reflect.Method
  * Options for the model checking strategy.
  */
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
+
+    private var experimentalModelChecking = false
+
+    internal fun useExperimentalModelChecking(): ModelCheckingOptions {
+        experimentalModelChecking = true
+        return this
+    }
+
     override fun createTestConfigurations(testClass: Class<*>): ModelCheckingCTestConfiguration {
         return ModelCheckingCTestConfiguration(
             testClass = testClass,
@@ -49,6 +58,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             timeoutMs = timeoutMs,
             customScenarios = customScenarios,
             stdLibAnalysisEnabled = stdLibAnalysisEnabled,
+            experimentalModelChecking = experimentalModelChecking,
         )
     }
 }
@@ -74,6 +84,7 @@ class ModelCheckingCTestConfiguration(
     timeoutMs: Long,
     customScenarios: List<ExecutionScenario>,
     stdLibAnalysisEnabled: Boolean,
+    experimentalModelChecking: Boolean,
 ) : ManagedCTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -94,6 +105,9 @@ class ModelCheckingCTestConfiguration(
     stdLibAnalysisEnabled = stdLibAnalysisEnabled,
 ) {
 
+    private val useExperimentalModelChecking =
+        experimentalModelChecking || System.getProperty("lincheck.useExperimentalModelChecking")?.toBoolean() ?: false
+
     override val instrumentationMode: InstrumentationMode get() =
         if (isInTraceDebuggerMode) TRACE_DEBUGGING else MODEL_CHECKING
 
@@ -111,8 +125,14 @@ class ModelCheckingCTestConfiguration(
             timeoutMs = getTimeOutMs(inIdeaPluginReplayMode, timeoutMs),
             useClocks = UseClocks.ALWAYS
         )
-        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckJavaAgent.context).also {
-            runner.initializeStrategy(it)
+        if (useExperimentalModelChecking) {
+            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+                runner.initializeStrategy(it)
+            }
+        } else {
+            return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+                runner.initializeStrategy(it)
+            }
         }
     }
 }

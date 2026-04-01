@@ -33,7 +33,6 @@ import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
-import kotlin.Result as KResult
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
@@ -59,7 +58,7 @@ internal abstract class ManagedStrategy(
         else -> error("Unexpected runner type: ${runner.javaClass.name}")
     }
 
-    private val scenario: ExecutionScenario?
+    protected val scenario: ExecutionScenario?
         get() = (runner as? ExecutionScenarioRunner)?.scenario
 
     // The number of parallel threads in the scenario (for data structures testing mode).
@@ -95,6 +94,9 @@ internal abstract class ManagedStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker
+    // Tracker of shared memory accesses.
+    protected abstract val memoryTracker: MemoryTracker?
+
     // Tracker of objects' identity hash codes.
     private val identityHashCodeTracker = ObjectIdentityHashCodeTracker()
     // Tracker of native method call states.
@@ -131,6 +133,8 @@ internal abstract class ManagedStrategy(
 
     // Whether an additional information requires for the trace construction should be collected.
     protected var collectTrace = false
+
+    protected open val trackFinalFields = false
 
     // Collector of all events in the execution such as thread switches.
     private var traceCollector: TraceCollector? = null // null when `collectTrace` is false
@@ -231,6 +235,7 @@ internal abstract class ManagedStrategy(
         suddenInvocationResult = null
         loopDetector.reset()
         objectTracker.reset()
+        memoryTracker?.reset()
         monitorTracker.reset()
         parkingTracker.reset()
         currentEventId = -1
@@ -264,7 +269,7 @@ internal abstract class ManagedStrategy(
     override fun runInvocation(): InvocationResult {
         initializeInvocation()
         val result: InvocationResult = try {
-            runner.runInvocation()
+            runInvocationImpl()
         } finally {
             restoreMemorySnapshot()
         }
@@ -289,6 +294,11 @@ internal abstract class ManagedStrategy(
         return suddenResult
     }
 
+    // TODO: better name?
+    protected open fun runInvocationImpl(): InvocationResult {
+        return runner.runInvocation()
+    }
+
     protected open fun enableSpinCycleReplay() {}
 
     protected open fun initializeReplay() {
@@ -303,12 +313,14 @@ internal abstract class ManagedStrategy(
     // == BASIC STRATEGY METHODS ==
 
     override fun beforePart(part: ExecutionPart) = runInsideIgnoredSection {
-        val tracePoint = SectionDelimiterTracePoint(
-            context = context,
-            eventId = getNextEventId(),
-            executionPart = part,
-        )
-        traceCollector?.addTracePointInternal(tracePoint)
+        // add section delimiter trace point only in data structures mode
+        if (executionMode == ExecutionMode.DATA_STRUCTURES) {
+            val tracePoint = SectionDelimiterTracePoint(
+                context = context,eventId = getNextEventId(),
+                executionPart = part,
+            )
+            traceCollector?.addTracePointInternal(tracePoint)
+        }
 
         val nextThread = when (part) {
             INIT -> 0
@@ -358,8 +370,9 @@ internal abstract class ManagedStrategy(
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
         if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
-        val threadNames = MutableList(threadScheduler.nThreads) { "" }
-        getRegisteredThreads().forEach { (threadId, thread) ->
+        val registeredThreads = getRegisteredThreads()
+        val threadNames = MutableList(registeredThreads.size) { "" }
+        registeredThreads.forEach { (threadId, thread) ->
             when (val threadNumber = objectTracker.getObjectDisplayNumber(thread)) {
                 0    -> threadNames[threadId] = "Main Thread"
                 else -> threadNames[threadId] = "Thread $threadNumber"
@@ -527,7 +540,7 @@ internal abstract class ManagedStrategy(
      * Returns whether the specified thread is active and
      * can continue its execution (i.e., is not blocked/finished).
      */
-    private fun isActive(iThread: Int): Boolean =
+    protected open fun isActive(iThread: Int): Boolean =
         threadScheduler.isSchedulable(iThread) && !isTestThreadCoroutineSuspended(iThread)
 
     /**
@@ -535,13 +548,14 @@ internal abstract class ManagedStrategy(
      *
      * @return true if this thread actually switched to another thread, false otherwise.
      */
-    private fun switchCurrentThread(
+    protected fun switchCurrentThread(
         iThread: Int,
         blockingReason: BlockingReason? = null,
     ): Boolean {
         val switchReason = blockingReason.toSwitchReason {
             objectTracker.getObjectDisplayNumber(threadScheduler.getThread(it)!!)
         }
+
         // we create switch point on detected live-locks,
         // but that switch is not mandatory in case if there are no available threads
         val mustSwitch = (blockingReason != null) && (blockingReason !is BlockingReason.LiveLocked)
@@ -589,6 +603,8 @@ internal abstract class ManagedStrategy(
         if (suspendedThread != null) {
            return suspendedThread
         }
+
+
         // any other situation is considered to be a deadlock
         failDueToDeadlock()
     }
@@ -612,7 +628,8 @@ internal abstract class ManagedStrategy(
      * Also, notifies the respective tracker about interruption.
      */
     protected fun unblockInterruptedThreads() {
-        for ((threadId, thread) in getRegisteredThreads()) {
+        for (threadId in threadScheduler.getRegisteredThreadIds()) {
+            val thread = threadScheduler.getThread(threadId) ?: continue
             if (threadScheduler.isBlocked(threadId) && thread.isInterrupted) {
                 val blockingReason = threadScheduler.getBlockingReason(threadId)
                 if (blockingReason != null && blockingReason.isInterruptible()) {
@@ -631,7 +648,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    private fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
+    protected fun abortWithSuddenInvocationResult(invocationResult: InvocationResult): Nothing {
         suddenInvocationResult = invocationResult
         threadScheduler.abortOtherThreads()
         threadScheduler.abortCurrentThread()
@@ -640,9 +657,9 @@ internal abstract class ManagedStrategy(
     /**
      * Threads to which an execution can be switched from thread [iThread].
      */
-    private fun switchableThreads(iThread: Int) =
+    protected fun switchableThreads(iThread: Int) =
         if (currentExecutionPart == PARALLEL) {
-            (0 until threadScheduler.nThreads).filter { it != iThread && isActive(it) }
+            threadScheduler.getRegisteredThreadIds().filter { it != iThread && isActive(it) }
         } else {
             emptyList()
         }
@@ -656,7 +673,7 @@ internal abstract class ManagedStrategy(
      */
     private fun resumableThreads(iThread: Int): List<Int> =
         if (currentExecutionPart == PARALLEL) {
-            (0 until threadScheduler.nThreads).filter { it != iThread && threadScheduler.isLiveLocked(it) }
+            threadScheduler.getRegisteredThreadIds().filter { it != iThread && threadScheduler.isLiveLocked(it) }
         } else {
             emptyList()
         }
@@ -708,11 +725,11 @@ internal abstract class ManagedStrategy(
             className = "java.lang.Thread",
             methodName = "run",
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = context.getOrCreateMethodId(
+            methodId = context.createAndRegisterMethodDescriptor(
                 className = "java.lang.Thread",
                 methodName = "run",
                 methodType = Types.MethodType(Types.VOID_TYPE)
-            ),
+            ).id,
             methodParams = emptyArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.THREAD_RUN
@@ -755,14 +772,13 @@ internal abstract class ManagedStrategy(
         // scenario threads are handled separately by the runner itself
         if (currentThreadId < nScenarioThreads) return
         // check if the exception is internal
-        if (isInternalException(exception)) {
+        if (isLincheckInternalException(exception)) {
             onInternalException(currentThreadId, exception)
         } else {
             // re-throw any non-internal exception,
             // so it will be treated as the final result of `Thread::run`.
             disableAnalysis()
-            Logger.info { "Exception was thrown in user thread \"Thread-$currentThreadId\":" }
-            Logger.info(exception)
+            Logger.info(exception) { "Exception was thrown in user thread \"Thread-$currentThreadId\":" }
             // the current thread will not be put in the ABORTED state,
             // like in the ` onInternalException ` case,
             // thus, it is still executed in isolation, and we can finish it properly
@@ -788,7 +804,8 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
+    //TODO: perhaps there is a method of not making this open, but I am not sure.
+    open fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
         val threadId = threadScheduler.registerThread(thread, descriptor)
         isSuspended[threadId] = false
         currentActorId[threadId] = if (isScenarioThread(threadId)) -1 else 0
@@ -816,7 +833,7 @@ internal abstract class ManagedStrategy(
 
     override fun awaitUserThreads(timeoutNano: Long): Long {
         var remainingTime = timeoutNano
-        for ((threadId, _) in getRegisteredThreads()) {
+        for (threadId in threadScheduler.getRegisteredThreadIds()) {
             if (isRunnerThread(threadId)) continue // do not wait for Lincheck threads
             val elapsedTime = threadScheduler.awaitThreadFinish(threadId, remainingTime)
             if (elapsedTime < 0) {
@@ -833,10 +850,8 @@ internal abstract class ManagedStrategy(
     fun getRegisteredThreads(): ThreadMap<Thread> =
         threadScheduler.getRegisteredThreads()
 
-    fun getUserThreadIds() = getRegisteredThreads().mapNotNull {
-        if (isRunnerThread(it.key)) null
-        else it.key
-    }
+    fun getUserThreadIds(): List<ThreadId> =
+        threadScheduler.getRegisteredThreadIds().filter { !isRunnerThread(it) }
 
     protected fun isRegisteredThread(): Boolean {
         val threadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
@@ -873,22 +888,23 @@ internal abstract class ManagedStrategy(
      */
     private fun tryAbortingUserThreads(threadId: Int, blockingReason: BlockingReason?) {
         val userThreadsAbortionPossible =
-            // all `TestThread`s are finished (including main: with id of zero)
-            (0 ..< nRunnerThreads).all(threadScheduler::isFinished) &&
+            // All `TestThread`s are finished (including main: with id of zero).
+            (0 ..< nRunnerThreads).all(threadScheduler::isFinished)
             // The main thread finished its execution (actually all `TestThread`s did): successfully or not, we don't care.
             // If all user threads (those that are not `TestThread` instances) are not blocked, then abort
             // the running user threads. Essentially treating them as "daemons", which completion we do not wait for.
             // Thus, abort all of them and allow `runner` to process the invocation result accordingly.
-            getUserThreadIds()
+            && getUserThreadIds()
                 .filter { it != threadId } // we check invoking thread separately
                 .all { threadScheduler.isLiveLocked(it) || threadScheduler.isParked(it) }
-                .and(
-                    threadScheduler.isFinished(threadId) ||
-                    // if invoking thread is not finished, then it must execute strategy hook,
-                    // in which it will become LiveLocked or Parked
-                    blockingReason is BlockingReason.LiveLocked ||
-                    blockingReason is BlockingReason.Parked
-                )
+            // The invoking thread is finished, live-locked or parked.
+            && (
+                threadScheduler.isFinished(threadId) ||
+                // if invoking thread is not finished, then it must execute a strategy hook,
+                // in which it will become LiveLocked or Parked
+                blockingReason is BlockingReason.LiveLocked ||
+                blockingReason is BlockingReason.Parked
+            )
 
         if (userThreadsAbortionPossible) {
             threadScheduler.abortAllThreads()
@@ -923,14 +939,15 @@ internal abstract class ManagedStrategy(
         setCurrentThread(nextThread)
     }
 
+
     /**
-     * This method is executed if an internal exception has been thrown (see [isInternalException]).
+     * This method is executed if an internal exception has been thrown (see [isLincheckInternalException]).
      *
      * @param threadId the thread id of the thread where exception was thrown.
      * @param exception the exception that was thrown.
      */
     open fun onInternalException(threadId: Int, exception: Throwable): Unit = runInsideIgnoredSection {
-        check(isInternalException(exception))
+        check(isLincheckInternalException(exception))
         // This method is called only if the exception cannot be treated as a normal result,
         // so we exit testing code to avoid trace collection resume or some bizarre bugs
         disableAnalysis()
@@ -949,6 +966,11 @@ internal abstract class ManagedStrategy(
 
     override fun onActorStart(iThread: Int) = runInsideIgnoredSection {
         check(runner is ExecutionScenarioRunner)
+
+        if (threadScheduler.isAborted(iThread)) {
+            enableAnalysis()
+            return
+        }
 
         val actorId = 1 + currentActorId[iThread]!!
         currentActorId[iThread] = actorId
@@ -970,11 +992,11 @@ internal abstract class ManagedStrategy(
             className = actor.method.declaringClass.name,
             methodName = actor.method.name,
             codeLocation = UNKNOWN_CODE_LOCATION,
-            methodId = context.getOrCreateMethodId(
+            methodId = context.createAndRegisterMethodDescriptor(
                 className = actor.method.declaringClass.name.toCanonicalClassName(),
                 methodName = actor.method.name,
                 methodType = Types.convertAsmMethodType(methodDescriptor)
-            ),
+            ).id,
             methodParams = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,
@@ -985,6 +1007,12 @@ internal abstract class ManagedStrategy(
 
     override fun onActorFinish(iThread: Int) = runInsideIgnoredSection {
         check(runner is ExecutionScenarioRunner)
+
+        if (threadScheduler.isAborted(iThread)) {
+            disableAnalysis()
+            return
+        }
+
         val actorStartTracePoint = traceCollector?.trace
                 ?.filterIsInstance<MethodCallTracePoint>()
                 ?.firstOrNull { it.isActor && it.actorId == currentActorId[iThread] && it.iThread == iThread }
@@ -1263,7 +1291,7 @@ internal abstract class ManagedStrategy(
 
     @Suppress("UNUSED_PARAMETER")
     private fun unblockJoiningThreads(finishedThreadId: Int) {
-        for (threadId in 0 until threadScheduler.nThreads) {
+        for (threadId in threadScheduler.getRegisteredThreadIds()) {
             val blockingReason = threadScheduler.getBlockingReason(threadId)
             if (blockingReason is BlockingReason.ThreadJoin && blockingReason.joinedThreadId == finishedThreadId) {
                 threadScheduler.unblockThread(threadId)
@@ -1294,9 +1322,10 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         obj: Any?,
-        fieldId: Int
+        fieldId: Int,
+        resultInterceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
-        val fieldDescriptor = context.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.fieldPool[fieldId]
         if (!fieldDescriptor.isStatic && obj == null) {
             return // ignore, `NullPointerException` will be thrown
         }
@@ -1304,7 +1333,7 @@ internal abstract class ManagedStrategy(
         // We need to ensure all the classes related to the reading object are instrumented.
         // The following call checks all the static fields.
         if (fieldDescriptor.isStatic) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(fieldDescriptor.className)
         }
         // Do not track accesses to untracked objects
         if (!shouldTrackFieldAccess(obj, fieldDescriptor)) {
@@ -1312,7 +1341,19 @@ internal abstract class ManagedStrategy(
         }
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
+        if (memoryTracker != null) {
+            val location = objectTracker.getFieldAccessMemoryLocation(obj,
+                className = fieldDescriptor.className,
+                fieldName = fieldDescriptor.fieldName,
+                type = fieldDescriptor.type,
+                isStatic = fieldDescriptor.isStatic,
+                isFinal = fieldDescriptor.isFinal,
+            )
+            memoryTracker!!.beforeRead(threadId, codeLocation, location)
+            resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
+        }
         loopDetector.beforeReadField(obj)
+        return
     }
 
     override fun beforeReadArrayElement(
@@ -1320,6 +1361,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         array: Any?,
         index: Int,
+        resultInterceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         if (array == null) return // ignore, `NullPointerException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
@@ -1328,7 +1370,16 @@ internal abstract class ManagedStrategy(
         }
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
+        // TODO: this is a mess
+        if (memoryTracker != null) {
+            val type = array.javaClass.kotlin.getArrayElementType()
+            val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
+            // TODO: Should we use threadID or thread Descriptor here?
+            memoryTracker!!.beforeRead(threadId, codeLocation, location)
+            resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
+        }
         loopDetector.beforeReadArrayElement(array, index)
+        return
     }
 
     override fun afterReadField(
@@ -1340,9 +1391,12 @@ internal abstract class ManagedStrategy(
     ) = threadDescriptor.runInsideIgnoredSection {
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
-        val fieldDescriptor = context.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.fieldPool[fieldId]
         if (fieldDescriptor.isStatic && value !== null && !value.isImmutable) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(value.javaClass)
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(value.javaClass)
+        }
+        if (value !== null && objectTracker.shouldTrackObject(value)) {
+            objectTracker.registerObjectIfAbsent(value)
         }
         if (collectTrace) {
             val valueRepresentation = objectTracker.getObjectRepresentation(value)
@@ -1373,6 +1427,9 @@ internal abstract class ManagedStrategy(
         index: Int,
         value: Any?
     ) = threadDescriptor.runInsideIgnoredSection {
+        if (value != null && objectTracker.shouldTrackObject(value)) {
+            objectTracker.registerObjectIfAbsent(value)
+        }
         if (collectTrace) {
             val eventId = getNextEventId()
             val threadId = threadScheduler.getCurrentThreadId()
@@ -1402,10 +1459,10 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         obj: Any?,
         value: Any?,
-        fieldId: Int
+        fieldId: Int,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
-        val fieldDescriptor = context.getFieldDescriptor(fieldId)
+        val fieldDescriptor = context.fieldPool[fieldId]
         if (!fieldDescriptor.isStatic && obj == null) {
             return // ignore, `NullPointerException` will be thrown
         }
@@ -1436,6 +1493,16 @@ internal abstract class ManagedStrategy(
             null
         }
         traceCollector?.addTracePointInternal(tracePoint)
+        if (memoryTracker != null) {
+            val location = objectTracker.getFieldAccessMemoryLocation(obj,
+                className = fieldDescriptor.className,
+                fieldName = fieldDescriptor.fieldName,
+                type = fieldDescriptor.type,
+                isStatic = fieldDescriptor.isStatic,
+                isFinal = fieldDescriptor.isFinal,
+            )
+            memoryTracker!!.beforeWrite(threadId, codeLocation, location, value)
+        }
         loopDetector.beforeWriteField(obj, value)
     }
 
@@ -1477,6 +1544,11 @@ internal abstract class ManagedStrategy(
             null
         }
         traceCollector?.addTracePointInternal(tracePoint)
+        if (memoryTracker != null) {
+            val type = array.javaClass.kotlin.getArrayElementType()
+            val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
+            memoryTracker!!.beforeWrite(threadId, codeLocation, location, value)
+        }
         loopDetector.beforeWriteArrayElement(array, index, value)
     }
 
@@ -1488,6 +1560,8 @@ internal abstract class ManagedStrategy(
         }
     }
 
+    // TODO: Should we intercept on array copy?
+
     override fun afterLocalRead(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, value: Any?) {}
 
     override fun afterLocalWrite(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, value: Any?) {}
@@ -1496,14 +1570,11 @@ internal abstract class ManagedStrategy(
         threadDescriptor: ThreadDescriptor,
         className: String
     ) = threadDescriptor.runInsideIgnoredSection {
-        LincheckJavaAgent.ensureClassHierarchyIsTransformed(className)
+        LincheckInstrumentation.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {
-        // Fast-check for immutable objects without entering an ignored section.
-        // Please note that this check must not produce Lincheck events.
-        if (obj.isImmutable) return
-        threadDescriptor.runInsideIgnoredSection {
+    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit = threadDescriptor.runInsideIgnoredSection {
+        if (objectTracker.shouldTrackObject(obj)) {
             identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker.registerNewObject(obj)
         }
@@ -1512,7 +1583,7 @@ internal abstract class ManagedStrategy(
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldDescriptor: FieldDescriptor): Boolean =
-      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && !fieldDescriptor.isFinal
+      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && (trackFinalFields || !fieldDescriptor.isFinal)
 
     private fun shouldTrackObjectAccess(obj: Any?): Boolean {
         // by default, we track accesses to all objects
@@ -1632,7 +1703,7 @@ internal abstract class ManagedStrategy(
         methodId: Int,
         result: Any?,
     ) {
-        val intrinsicDescriptor = context.getMethodDescriptor(methodId)
+        val intrinsicDescriptor = context.methodPool[methodId]
         check(intrinsicDescriptor.isIntrinsic) { "Processing intrinsic method effect of non-intrinsic call" }
 
         if (
@@ -1642,7 +1713,7 @@ internal abstract class ManagedStrategy(
             result?.let { afterNewObjectCreation(threadDescriptor, it) }
         }
     }
-    
+
     private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodCall(
         receiver: Any?,
         params: Array<Any?>,
@@ -1667,7 +1738,7 @@ internal abstract class ManagedStrategy(
             interceptor?.intercept(interceptedResult)
         }
     }
-    
+
     private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodResult(
         receiver: Any?,
         params: Array<Any?>,
@@ -1676,10 +1747,10 @@ internal abstract class ManagedStrategy(
     ) {
         val interceptorData = (interceptor.eventTrackerData as DeterministicMethodCallInterceptorData)
         if (isInTraceDebuggerMode && isFirstReplay) {
-            val newResult = saveFirstResultWithCast(receiver, params, KResult.success(result)) {
+            val newResult = saveFirstResultWithCast(receiver, params, Result.success(result)) {
                 nativeMethodCallStatesTracker.setState(interceptorData.deterministicCallId, methodCallInfo, it)
             }.getOrElse {
-                error("Unexpected replacement success -> failure:\n$result\n${KResult.failure<Any?>(it)}")
+                error("Unexpected replacement success -> failure:\n$result\n${Result.failure<Any?>(it)}")
             }
         }
     }
@@ -1692,7 +1763,7 @@ internal abstract class ManagedStrategy(
     ) {
         val interceptorData = (interceptor.eventTrackerData as DeterministicMethodCallInterceptorData)
         if (isInTraceDebuggerMode && isFirstReplay) {
-            val newThrowable = saveFirstResult(receiver, params, KResult.failure(throwable)) {
+            val newThrowable = saveFirstResult(receiver, params, Result.failure(throwable)) {
                 nativeMethodCallStatesTracker.setState(interceptorData.deterministicCallId, methodCallInfo, it)
             }.let { newResult ->
                 newResult.exceptionOrNull() ?: error("Unexpected replacement failure -> success:\n$throwable\n$newResult")
@@ -1708,19 +1779,19 @@ internal abstract class ManagedStrategy(
         params: Array<Any?>,
         interceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
         // process method effect on the static memory snapshot
         processMethodEffectOnStaticSnapshot(receiver, params, atomicMethodDescriptor)
         val threadId = threadScheduler.getCurrentThreadId()
+
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
 
-        // obtain deterministic method descriptor if required
         val methodCallInfo = MethodCallInfo(
             ownerType = Types.ObjectType(methodDescriptor.className),
             methodSignature = methodDescriptor.methodSignature,
@@ -1728,9 +1799,33 @@ internal abstract class ManagedStrategy(
             methodId = methodId,
         )
 
+        var shouldInterceptAtomicMethod: Boolean = false
+        if (memoryTracker != null && atomicMethodDescriptor != null && receiver != null) {
+            val location = objectTracker.getAtomicAccessMemoryLocation(
+                context,
+                methodDescriptor.className,
+                methodDescriptor.methodName,
+                receiver,
+                params,
+                atomicMethodDescriptor,
+            )
+            shouldInterceptAtomicMethod = memoryTracker!!.trackAtomicMethodMemoryAccess(
+                receiver,
+                codeLocation,
+                params,
+                atomicMethodDescriptor,
+                threadId,
+                location,
+            )
+        }
+
+        // obtain deterministic method descriptor if required
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
+
         if (deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, methodCallInfo, interceptor)
+        } else if (memoryTracker != null && shouldInterceptAtomicMethod) {
+            interceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         } else {
             // we are at normal deterministic method => no need to enforce the deterministic result => do nothing
         }
@@ -1745,8 +1840,9 @@ internal abstract class ManagedStrategy(
         )
         // in case if a static method is called, ensure its class is instrumented
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
-            LincheckJavaAgent.ensureClassHierarchyIsTransformed(methodDescriptor.className)
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
+
         // in the case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
             objectTracker.registerObjectLink(
@@ -1829,7 +1925,7 @@ internal abstract class ManagedStrategy(
         result: Any?,
         interceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
 
         // process intrinsic candidate methods
         if (methodDescriptor.isIntrinsic) {
@@ -1838,7 +1934,7 @@ internal abstract class ManagedStrategy(
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
         if (deterministicMethodDescriptor != null) {
-            deterministicMethodDescriptor.processDeterministicMethodResult(receiver, params, result, interceptor)    
+            deterministicMethodDescriptor.processDeterministicMethodResult(receiver, params, result, interceptor)
         }
 
         val threadId = threadScheduler.getCurrentThreadId()
@@ -1891,7 +1987,7 @@ internal abstract class ManagedStrategy(
         throwable: Throwable,
         interceptor: ResultInterceptor?,
     ) = threadDescriptor.runInsideIgnoredSection {
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
         if (deterministicMethodDescriptor != null) {
@@ -1925,6 +2021,15 @@ internal abstract class ManagedStrategy(
         leaveAnalysisSection(threadId, methodSection)
     }
 
+    // SnapshotLineBreakpoint not supported for lincheck/gpmc
+    override fun onSnapshotLineBreakpoint(
+        descriptor: ThreadDescriptor?,
+        codeLocation: Int,
+        locals: Array<Any?>,
+        traceId: String?,
+        breakpointId: Int,
+    ) {}
+
     override fun onInlineMethodCall(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
@@ -1932,7 +2037,7 @@ internal abstract class ManagedStrategy(
         owner: Any?,
     ) = threadDescriptor.runInsideIgnoredSection {
         val threadId = threadScheduler.getCurrentThreadId()
-        val methodDescriptor = context.getMethodDescriptor(methodId)
+        val methodDescriptor = context.methodPool[methodId]
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
         }
@@ -1992,6 +2097,14 @@ internal abstract class ManagedStrategy(
 
     override fun afterLoopExit(threadDescriptor: ThreadDescriptor, codeLocation: Int, loopId: Int, exception: Throwable?, isReachableFromOutsideLoop: Boolean) {
         error("Lincheck managed strategy does not support CFG-based loops tracking.")
+    }
+
+    override fun onThrow(threadDescriptor: ThreadDescriptor, codeLocation: Int, exception: Throwable) {
+        error("Lincheck managed strategy does not support throw tracking.")
+    }
+
+    override fun onCatch(threadDescriptor: ThreadDescriptor, codeLocation: Int, exception: Throwable) {
+        error("Lincheck managed strategy does not support catch tracking.")
     }
 
     private fun methodAnalysisSectionType(
@@ -2096,7 +2209,7 @@ internal abstract class ManagedStrategy(
      *
      * @param iThread number of invoking thread.
      */
-    internal fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
+    internal open fun afterCoroutineSuspended(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(runner is ExecutionScenarioRunner)
         check(isScenarioThread(iThread)) {
@@ -2113,13 +2226,26 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    internal fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
+    internal open fun afterCoroutineResumed(iThread: Int) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"
         }
         isSuspended[iThread] = false
     }
+
+    /**
+     * This method is invoked by a test thread that resumes some coroutine.
+     */
+    internal open fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) {}
+
+    /**
+     * This method is invoked by a test thread to check if the coroutine was resumed.
+     */
+    internal open fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        return true
+    }
+
 
     internal fun beforeCoroutineCancellation(iThread: Int) {
         check(threadScheduler.getCurrentThreadId() == iThread)
@@ -2129,7 +2255,7 @@ internal abstract class ManagedStrategy(
         lastCoroutineCancellationTracePoint[iThread] = createAndLogCancellationTracePoint()
     }
 
-    internal fun afterCoroutineCancellation(iThread: Int, cancellationResult: CancellationResult) = runInsideIgnoredSection {
+    internal open fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationResult: CancellationResult) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"
@@ -2142,7 +2268,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    fun afterCoroutineCancellation(iThread: Int, cancellationException: Throwable) = runInsideIgnoredSection {
+    open fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationException: Throwable) = runInsideIgnoredSection {
         check(threadScheduler.getCurrentThreadId() == iThread)
         check(isScenarioThread(iThread)) {
             "Special coroutines handling methods should only be called from scenario threads"

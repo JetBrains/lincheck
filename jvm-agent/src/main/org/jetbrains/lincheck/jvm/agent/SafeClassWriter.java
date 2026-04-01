@@ -48,7 +48,7 @@ import java.util.Objects;
  */
 public class SafeClassWriter extends ClassWriter {
 
-    private final ClassLoader loader;
+    final ClassLoader loader;
 
 
     public SafeClassWriter(ClassReader cr, ClassLoader loader, final int flags) {

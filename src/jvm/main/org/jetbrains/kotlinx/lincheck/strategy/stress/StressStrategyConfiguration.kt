@@ -28,13 +28,16 @@ import java.lang.reflect.Method
  * Options for the stress strategy.
  */
 @Deprecated(
-    level = DeprecationLevel.WARNING,
+    level = DeprecationLevel.ERROR,
     message = "Use org.jetbrains.lincheck.datastructures.StressOptions instead.",
 )
 @Suppress("DEPRECATION")
-open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
-    override fun createTestConfigurations(testClass: Class<*>): StressCTestConfiguration {
-        return StressCTestConfiguration(
+open class StressOptions : Options<
+    org.jetbrains.lincheck.datastructures.StressOptions,
+    org.jetbrains.lincheck.datastructures.StressCTestConfiguration
+>() {
+    override fun createTestConfigurations(testClass: Class<*>): org.jetbrains.lincheck.datastructures.StressCTestConfiguration {
+        return org.jetbrains.lincheck.datastructures.StressCTestConfiguration(
             testClass = testClass,
             iterations = iterations,
             threads = threads,

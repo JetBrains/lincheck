@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.datastructures.verifier.Verifier
 
 @Deprecated(
     message = "Use org.jetbrains.lincheck.datastructures.verifier.QuiescentConsistencyVerifier instead.",
-    level = DeprecationLevel.WARNING
+    level = DeprecationLevel.ERROR
 )
 class QuiescentConsistencyVerifier
     private constructor(val delegate: QuiescentConsistencyVerifier) : Verifier by delegate
