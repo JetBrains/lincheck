@@ -23,9 +23,14 @@ sourceSets {
         val javaWebSocketVersion: String by project
         implementation(project(":common"))
         implementation("org.java-websocket:Java-WebSocket:${javaWebSocketVersion}")
+
+        val junitVersion: String by project
         testImplementation(project(":common"))
+        testImplementation("junit:junit:$junitVersion")
     }
 }
+
+setupTestsJDK(project)
 
 tasks {
     named<JavaCompile>("compileTestJava") {
@@ -37,6 +42,12 @@ tasks {
 
     withType<KotlinCompile> {
         getAccessToInternalDefinitionsOf(project(":common"))
+    }
+}
+
+tasks {
+    test {
+        configureJvmTestCommon(project)
     }
 }
 
