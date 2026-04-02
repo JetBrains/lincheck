@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.trace.util
 
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.util.Logger
 import org.junit.Test
 import java.io.DataInputStream
 import java.io.File
@@ -181,8 +182,8 @@ class BufferedTraceWriterTest {
         val magic = dataInput.readLong()
         val version = dataInput.readLong()
 
-        println("Magic: 0x${magic.toString(16)}")
-        println("Version: $version")
+        Logger.info { "Magic: 0x${magic.toString(16)}" }
+        Logger.info { "Version: $version" }
 
         // Track what descriptors we found in each block
         val blocks = mutableMapOf<Int, BlockAnalysis>()
@@ -195,7 +196,7 @@ class BufferedTraceWriterTest {
                     ObjectKind.BLOCK_START -> {
                         val threadId = dataInput.readInt()
                         currentBlock = BlockAnalysis(threadId)
-                        println("Block started for thread $threadId")
+                        Logger.info { "lock started for thread $threadId" }
                     }
 
                     ObjectKind.BLOCK_END -> {
@@ -208,12 +209,11 @@ class BufferedTraceWriterTest {
                                 prevBlock.codeLocations.addAll(currentBlock.codeLocations)
                             }
 
-                            println("Block ended for thread ${currentBlock.threadId}")
-                            println("  - ClassDescriptors: ${currentBlock.classDescriptors}")
-                            println("  - MethodDescriptors: ${currentBlock.methodDescriptors}")
-                            println("  - Strings: ${currentBlock.strings.size}")
-                            println("  - CodeLocations: ${currentBlock.codeLocations}")
-                            println()
+                            Logger.info { "Block ended for thread ${currentBlock!!.threadId}" }
+                            Logger.info { "  - ClassDescriptors: ${currentBlock!!.classDescriptors}" }
+                            Logger.info { "  - MethodDescriptors: ${currentBlock!!.methodDescriptors}" }
+                            Logger.info { "  - Strings: ${currentBlock!!.strings.size}" }
+                            Logger.info { "  - CodeLocations: ${currentBlock!!.codeLocations}\n" }
                             currentBlock = null
                         }
                     }
@@ -222,7 +222,7 @@ class BufferedTraceWriterTest {
                         val id = dataInput.readInt()
                         val name = dataInput.readUTF()
                         currentBlock?.classDescriptors?.add(id)
-                        println("  ClassDescriptor(id=$id, name=$name)")
+                        Logger.info { "  ClassDescriptor(id=$id, name=$name)" }
                     }
 
                     ObjectKind.METHOD_DESCRIPTOR -> {
@@ -230,25 +230,25 @@ class BufferedTraceWriterTest {
                         val classId = dataInput.readInt()
                         val sign = dataInput.readMethodSignature()
                         currentBlock?.methodDescriptors?.add(id)
-                        println("  MethodDescriptor(id=$id, classId=$classId, sign=$sign)")
+                        Logger.info { "  MethodDescriptor(id=$id, classId=$classId, sign=$sign)" }
                     }
 
                     ObjectKind.STRING -> {
                         val id = dataInput.readInt()
                         val string = dataInput.readUTF()
                         currentBlock?.strings?.add(id)
-                        println("  String(id=$id, string=\"$string\")")
+                        Logger.info { "  String(id=$id, string=\"$string\")" }
                     }
 
                     ObjectKind.CODE_LOCATION -> {
                         val id = loadCodeLocation(dataInput, loadedContext, false)
-                        println("  CodeLocation(id=$id)")
+                        Logger.info { "  CodeLocation(id=$id)" }
                         currentBlock?.codeLocations?.add(id)
                     }
 
                     ObjectKind.TRACEPOINT -> {
                         val tr = loadTRTracePoint(loadedContext, dataInput)
-                        println("  Tracepoint: ${tr.toText(true)}")
+                        Logger.info { "  Tracepoint: ${tr.toText(true)}" }
 
                         check(dataInput.readKind() == ObjectKind.TRACEPOINT_FOOTER) {
                             "Simplistic reader expected to consume TRACEPOINT_FOOTER"
@@ -261,17 +261,17 @@ class BufferedTraceWriterTest {
                     ObjectKind.THREAD_NAME -> {
                         val id = dataInput.readInt()
                         val name = dataInput.readUTF()
-                        println("  ThreadName(id=$id, name=\"$name\")")
+                        Logger.info { "  ThreadName(id=$id, name=\"$name\")" }
                     }
 
                     ObjectKind.EOF -> {
-                        println("End of file")
+                        Logger.info { "End of file" }
                         break
                     }
 
                     else -> {
                         // For simplicity, skip other kinds
-                        println("  $kind (skipping detailed parsing)")
+                        Logger.info { "  $kind (skipping detailed parsing)" }
                     }
                 }
             }
