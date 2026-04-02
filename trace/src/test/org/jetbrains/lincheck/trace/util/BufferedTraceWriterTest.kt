@@ -321,43 +321,39 @@ class BufferedTraceWriterTest {
                     }
 
                     ObjectKind.CLASS_DESCRIPTOR -> {
-                        val id = dataInput.readInt()
-                        val name = dataInput.readUTF()
+                        val id = loadClassDescriptor(dataInput, loadedContext, restore = false)
                         currentBlock?.classDescriptors?.add(id)
-                        Logger.info { "  ClassDescriptor(id=$id, name=$name)" }
+                        Logger.info { "  ClassDescriptor(id=$id, name=${loadedContext.classPool[id]})" }
                     }
 
                     ObjectKind.METHOD_DESCRIPTOR -> {
-                        val id = dataInput.readInt()
-                        val classId = dataInput.readInt()
-                        val sign = dataInput.readMethodSignature()
+                        val id = loadMethodDescriptor(dataInput, loadedContext, restore = false)
                         currentBlock?.methodDescriptors?.add(id)
-                        Logger.info { "  MethodDescriptor(id=$id, classId=$classId, sign=$sign)" }
+                        val md = loadedContext.methodPool[id]
+                        Logger.info { "  MethodDescriptor(id=$id, classId=${md.classId}, sign=${md.methodSignature})" }
                     }
 
                     ObjectKind.VARIABLE_DESCRIPTOR -> {
-                        val id = dataInput.readInt()
-                        val name = dataInput.readUTF()
+                        val id = loadVariableDescriptor(dataInput, loadedContext, restore = false)
                         currentBlock?.variableDescriptors?.add(id)
-                        Logger.info { "  VariableDescriptor(id=$id, name=$name)" }
+                        Logger.info { "  VariableDescriptor(id=$id, name=${loadedContext.variablePool[id]})" }
                     }
 
                     ObjectKind.STRING -> {
-                        val id = dataInput.readInt()
-                        val string = dataInput.readUTF()
+                        val id = loadString(dataInput, loadedContext, restore = false)
                         currentBlock?.strings?.add(id)
-                        Logger.info { "  String(id=$id, string=\"$string\")" }
+                        Logger.info { "  String(id=$id, string=\"${loadedContext.stringPool[id]}\")" }
                     }
 
                     ObjectKind.CODE_LOCATION -> {
-                        val id = loadCodeLocation(dataInput, loadedContext, false)
-                        Logger.info { "  CodeLocation(id=$id): ${loadedContext.codeLocationsPool[id].stackTraceElement}" }
+                        val id = loadCodeLocation(dataInput, loadedContext, restore = false)
                         currentBlock?.codeLocations?.add(id)
+                        Logger.info { "  CodeLocation(id=$id): ${loadedContext.codeLocationsPool[id].stackTraceElement}" }
                     }
 
                     ObjectKind.TRACEPOINT -> {
                         val tr = loadTRTracePoint(loadedContext, dataInput)
-                        Logger.info { "  Tracepoint: ${tr.toText(true)}" }
+                        Logger.info { "  Tracepoint: ${tr.toText(verbose = true)}" }
 
                         if (tr is TRContainerTracePoint) {
                             tracePointsStack.add(tr)
@@ -365,9 +361,8 @@ class BufferedTraceWriterTest {
                     }
 
                     ObjectKind.THREAD_NAME -> {
-                        val id = dataInput.readInt()
-                        val name = dataInput.readUTF()
-                        Logger.info { "  ThreadName(id=$id, name=\"$name\")" }
+                        val id = loadThreadName(dataInput, loadedContext, restore = false)
+                        Logger.info { "  ThreadName(id=$id, name=\"${loadedContext.getThreadName(id)}\")" }
                     }
 
                     ObjectKind.EOF -> {
