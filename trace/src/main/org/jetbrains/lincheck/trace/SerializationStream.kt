@@ -47,7 +47,7 @@ internal data class BlockContextSnapshot(
     val variableDescriptorIds: Set<Int> = emptySet(),
     val stringIds: Set<Int> = emptySet(),
     val codeLocationIds: Set<Int> = emptySet(),
-    val accessPaths: Set<AccessPath> = emptySet()
+    val accessPathIds: Set<Int> = emptySet()
 )
 
 internal interface BlockSaver {
@@ -80,7 +80,7 @@ internal class BufferedTraceWriter(
     private val variableDescriptorIdsInBlock = mutableSetOf<Int>()
     private val stringIdsInBlock = mutableSetOf<Int>()
     private val codeLocationIdsInBlock = mutableSetOf<Int>()
-    private val accessPathsInBlock = mutableSetOf<AccessPath>()
+    private val accessPathIdsInBlock = mutableSetOf<Int>()
 
     override val currentDataPosition: Long get() = currentStartDataPosition + bufferStream.position()
 
@@ -92,6 +92,8 @@ internal class BufferedTraceWriter(
             FieldDescriptor::class -> id in fieldDescriptorIdsInBlock
             VariableDescriptor::class -> id in variableDescriptorIdsInBlock
             String::class -> id in stringIdsInBlock
+            CodeLocation::class -> id in codeLocationIdsInBlock
+            AccessPath::class -> id in accessPathIdsInBlock
             else -> false
         }
         return inBlock || super.isDescriptorSavedInContext(descriptorClass, id)
@@ -106,29 +108,9 @@ internal class BufferedTraceWriter(
             FieldDescriptor::class -> fieldDescriptorIdsInBlock.add(id)
             VariableDescriptor::class -> variableDescriptorIdsInBlock.add(id)
             String::class -> stringIdsInBlock.add(id)
+            CodeLocation::class -> codeLocationIdsInBlock.add(id)
+            AccessPath::class -> accessPathIdsInBlock.add(id)
         }
-    }
-
-    override fun isCodeLocationSavedInContext(id: Int): Boolean {
-        return (id in codeLocationIdsInBlock) || super.isCodeLocationSavedInContext(id)
-    }
-
-    override fun markCodeLocationSavedInContext(id: Int) {
-        // Marking is deferred until FileStreamingThread persists block to disk
-        codeLocationIdsInBlock.add(id)
-    }
-
-    override fun isAccessPathSavedInContext(value: AccessPath): Int {
-        if (value in accessPathsInBlock) {
-            // Already in the current block, return positive (saved)
-            return super.isAccessPathSavedInContext(value).absoluteValue
-        }
-        return super.isAccessPathSavedInContext(value)
-    }
-
-    override fun markAccessPathSavedInContext(value: AccessPath) {
-        // Marking is deferred until FileStreamingThread persists block to disk
-        accessPathsInBlock.add(value)
     }
 
     override fun close() {
@@ -188,7 +170,7 @@ internal class BufferedTraceWriter(
             variableDescriptorIds = variableDescriptorIdsInBlock.toSet(),
             stringIds = stringIdsInBlock.toSet(),
             codeLocationIds = codeLocationIdsInBlock.toSet(),
-            accessPaths = accessPathsInBlock.toSet()
+            accessPathIds = accessPathIdsInBlock.toSet()
         )
 
         // Clear for next block
@@ -198,7 +180,7 @@ internal class BufferedTraceWriter(
         variableDescriptorIdsInBlock.clear()
         stringIdsInBlock.clear()
         codeLocationIdsInBlock.clear()
-        accessPathsInBlock.clear()
+        accessPathIdsInBlock.clear()
 
         storage.saveDataAndIndexBlock(writerId, logicalStart, bufferStream.detachBuffer(), indexToSave, snapshot)
     }
@@ -329,8 +311,8 @@ private class FileStreamingThread(
             fieldDescriptorIds.forEach { savedState.markDescriptorSaved<FieldDescriptor>(it) }
             variableDescriptorIds.forEach { savedState.markDescriptorSaved<VariableDescriptor>(it) }
             stringIds.forEach { savedState.markDescriptorSaved<String>(it) }
-            codeLocationIds.forEach { savedState.markCodeLocationSaved(it) }
-            accessPaths.forEach { savedState.markAccessPathSaved(it) }
+            codeLocationIds.forEach { savedState.markDescriptorSaved<CodeLocation>(it) }
+            accessPathIds.forEach { savedState.markDescriptorSaved<AccessPath>(it) }
         }
     }
 
@@ -406,25 +388,10 @@ class FileStreamingTraceCollecting(
     private var seenMethodDescriptors = AtomicBitmap()
     private var seenFieldDescriptors = AtomicBitmap()
     private var seenVariableDescriptors = AtomicBitmap()
-    private var seenCodeLocations = AtomicBitmap()
-    private val accessPathEnumerator = Enumerator<AccessPath>()
+    private var seenCodeLocationDescriptors = AtomicBitmap()
+    private var seenAccessPathDescriptors = AtomicBitmap()
 
     private val writers = ConcurrentHashMap<Thread, BufferedTraceWriter>()
-
-    private class Enumerator<T : Any> {
-        private val idGenerator = AtomicInteger(1)
-        private val cache = ConcurrentHashMap<T, Int>()
-
-        fun isSaved(value: T): Int {
-            val id = cache.computeIfAbsent(value) { _ -> -idGenerator.getAndIncrement() }
-            return id
-        }
-
-        fun makeSaved(value: T) {
-            // Make positive!
-            cache.compute(value) { _, v -> v?.absoluteValue }
-        }
-    }
 
     override fun registerCurrentThread(threadId: Int) {
         val thread = Thread.currentThread()
@@ -515,18 +482,12 @@ class FileStreamingTraceCollecting(
             FieldDescriptor::class -> seenFieldDescriptors
             VariableDescriptor::class -> seenVariableDescriptors
             String::class -> seenStringDescriptors
+            CodeLocation::class -> seenCodeLocationDescriptors
+            AccessPath::class -> seenAccessPathDescriptors
             else -> {
-                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
+                Logger.error { "Unknown descriptor class: $descriptorClass" }
                 null
             }
         }
     }
-
-    override fun isCodeLocationSaved(id: Int): Boolean = seenCodeLocations.isSet(id)
-
-    override fun markCodeLocationSaved(id: Int): Unit = seenCodeLocations.set(id)
-
-    override fun isAccessPathSaved(value: AccessPath): Int = accessPathEnumerator.isSaved(value)
-
-    override fun markAccessPathSaved(value: AccessPath): Unit = accessPathEnumerator.makeSaved(value)
 }

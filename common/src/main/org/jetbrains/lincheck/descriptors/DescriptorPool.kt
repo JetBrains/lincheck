@@ -29,6 +29,11 @@ interface DescriptorPool<K, D> {
     operator fun get(id: Int): D
 
     /**
+     * @return descriptor by index [id], or null if no descriptor with the specified id is present in the pool.
+     */
+    fun getOrNull(id: Int): D?
+
+    /**
      * @return descriptor by its [key], or null if no descriptor with the specified key is present in the pool.
      */
     operator fun get(key: K): D?
@@ -72,6 +77,10 @@ private abstract class AbstractDescriptorPool<K, D> : DescriptorPool<K, D> {
         descriptors[id].ensureNotNull {
             "Element $id is not found in pool"
         }
+
+    @Synchronized
+    override fun getOrNull(id: Int): D? =
+        descriptors.getOrNull(id)
 
     @Synchronized
     override operator fun get(key: K): D? =
@@ -133,4 +142,18 @@ fun StringPool(): DescriptorPool<String, String> = StringPoolImpl()
 private class StringPoolImpl : AbstractDescriptorPool<String, String>() {
     override fun register(descriptor: String) = registerImpl(descriptor, descriptor)
     override fun restore(id: Int, descriptor: String) = restoreImpl(id, descriptor, descriptor)
+}
+
+fun CodeLocationPool(): DescriptorPool<CodeLocation, CodeLocation> = CodeLocationPoolImpl()
+
+private class CodeLocationPoolImpl : AbstractDescriptorPool<CodeLocation, CodeLocation>() {
+    override fun register(descriptor: CodeLocation) = registerImpl(descriptor, descriptor)
+    override fun restore(id: Int, descriptor: CodeLocation) = restoreImpl(id, descriptor, descriptor)
+}
+
+fun AccessPathPool(): DescriptorPool<AccessPath, AccessPath> = AccessPathPoolImpl()
+
+private class AccessPathPoolImpl : AbstractDescriptorPool<AccessPath, AccessPath>() {
+    override fun register(descriptor: AccessPath) = registerImpl(descriptor, descriptor)
+    override fun restore(id: Int, descriptor: AccessPath) = restoreImpl(id, descriptor, descriptor)
 }

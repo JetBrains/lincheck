@@ -105,124 +105,6 @@ private fun BlockList.dataSize(): Long {
 }
 
 
-internal data class ShallowCodeLocation(
-    val className: Int,
-    val methodName: Int,
-    val fileName: Int,
-    val lineNumber: Int,
-    val accessPath: Int,
-    val argumentNames: List<Int>?,
-    val activeLocalsNames: List<Int>?,
-    val activeLocalsKinds: List<Int>?
-)
-
-internal class ShallowAccessPath(val locations: MutableList<ShallowAccessLocation>)
-
-internal sealed class ShallowAccessLocation
-internal data class ShallowLocalVariableAccessLocation(val variableDescriptorId: Int) : ShallowAccessLocation()
-internal data class ShallowStaticFieldAccessLocation(val fieldDescriptorId: Int) : ShallowAccessLocation()
-internal data class ShallowObjectFieldAccessLocation(val fieldDescriptorId: Int) : ShallowAccessLocation()
-internal data class ShallowArrayElementByIndexAccessLocation(val index: Int) : ShallowAccessLocation()
-internal data class ShallowArrayElementByNameAccessLocation(val accessPathId: Int) : ShallowAccessLocation()
-
-
-/**
- * This class is used to load code locations without referring strings too early.
- *
- * It is possible, that code location ([StackTraceElement]) can be loaded before
- * its strings are loaded due to data blocks serialization order.
- * The same applies for the access paths
- * (for them [org.jetbrains.lincheck.descriptors.VariableDescriptor] or [org.jetbrains.lincheck.descriptors.FieldDescriptor]
- * might be yet not loaded when the access path is read).
- *
- */
-internal class CodeLocationsContext {
-    private val stringCache: MutableList<String?> = ArrayList()
-    private val shallowAccessPathsCache: MutableList<ShallowAccessPath?> = ArrayList()
-    private val shallowCodeLocations: MutableList<ShallowCodeLocation?> = ArrayList()
-
-    fun loadString(id: Int, value: String): Unit = load(stringCache, id, value)
-
-    fun loadAccessPath(id: Int, value: ShallowAccessPath): Unit = load(shallowAccessPathsCache, id, value)
-
-    fun loadCodeLocation(id: Int, value: ShallowCodeLocation): Unit = load(shallowCodeLocations, id, value)
-
-    fun restoreAllCodeLocations(context: TraceContext) {
-        restoreAllAccessPaths(context)
-        shallowCodeLocations.forEachIndexed { id, value ->
-            if (value == null) return@forEachIndexed
-            restoreCodeLocation(context, id, value)
-        }
-    }
-
-    fun restoreCodeLocation(context: TraceContext, id: Int) {
-        val value = shallowCodeLocations[id] ?: return
-        restoreCodeLocation(context, id, value)
-    }
-
-    private fun restoreCodeLocation(context: TraceContext, id: Int, value: ShallowCodeLocation) {
-        val stackTraceElement = StackTraceElement(
-            /* declaringClass = */ stringCache.getOrNull(value.className) ?: "<unknown class>",
-            /* methodName = */ stringCache.getOrNull(value.methodName) ?: "<unknown method>",
-            /* fileName = */ stringCache.getOrNull(value.fileName) ?: "<unknown file>",
-            /* lineNumber = */ value.lineNumber
-        )
-        val accessPath = if (value.accessPath != -1) context.getAccessPath(value.accessPath) else null
-        val argumentNames = value.argumentNames?.map {
-            if (it != -1) context.getAccessPath(it) else null
-        }
-        val activeLocalsNames: List<String>? =
-            value.activeLocalsNames?.map { stringCache[it] ?: "<unknown local>" }
-        val activeLocals = activeLocalsNames?.zip(value.activeLocalsKinds!!)?.map { (name, kind) -> ActiveLocal(name, LocalKind.entries[kind]) }
-                val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
-        context.restoreCodeLocation(id, location)
-    }
-
-    private fun restoreAllAccessPaths(context: TraceContext) {
-        shallowAccessPathsCache.forEachIndexed { id, value ->
-            if (value == null) return@forEachIndexed
-            restoreAccessPath(context, id, value)
-        }
-    }
-
-    fun restoreAccessPath(context: TraceContext, id: Int) {
-        val value = shallowAccessPathsCache[id] ?: return
-        restoreAccessPath(context, id, value)
-    }
-
-    private fun restoreAccessPath(context: TraceContext, id: Int, value: ShallowAccessPath) {
-        val locations: List<AccessLocation> = value.locations.map { shallowLocation: ShallowAccessLocation ->
-            when (shallowLocation) {
-                is ShallowLocalVariableAccessLocation -> LocalVariableAccessLocation(
-                    context.variablePool[shallowLocation.variableDescriptorId]
-                )
-
-                is ShallowStaticFieldAccessLocation -> StaticFieldAccessLocation(
-                    context.fieldPool[shallowLocation.fieldDescriptorId]
-                )
-
-                is ShallowObjectFieldAccessLocation -> ObjectFieldAccessLocation(
-                    context.fieldPool[shallowLocation.fieldDescriptorId]
-                )
-
-                is ShallowArrayElementByIndexAccessLocation -> ArrayElementByIndexAccessLocation(shallowLocation.index)
-                is ShallowArrayElementByNameAccessLocation -> ArrayElementByNameAccessLocation(
-                    context.getAccessPath(shallowLocation.accessPathId)
-                )
-            }
-        }
-        context.restoreAccessPath(id, AccessPath(locations))
-    }
-
-    private fun <T> load(container: MutableList<T?>, id: Int, value: T) {
-        while (container.size <= id) {
-            container.add(null)
-        }
-        container[id] = value
-    }
-}
-
-
 /**
  * This needs a file name as it uses a seekable file channel, it is easier than seekable stream
  */
@@ -414,7 +296,7 @@ class LazyTraceReader private constructor(
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
         var idx = 0
         while (true) {
-            var kind = loadObjects(data, context, CodeLocationsContext(), false) { _, _, _ ->
+            var kind = loadObjects(data, context, restore = false) { _, _ ->
                 val tracePointOffset = data.position() - 1 // account for Kind
                 val tracePoint = reader()
                 if (tracePoint != null) {
@@ -486,7 +368,6 @@ class LazyTraceReader private constructor(
 
                 var objNum = 0
                 var tps = 0
-                val codeLocs = CodeLocationsContext()
                 while (true) {
                     val kind = index.readKind()
                     val id = index.readInt()
@@ -511,9 +392,9 @@ class LazyTraceReader private constructor(
                             ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(data, context, restore = true)
                             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(data, context, restore = true)
                             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(data, context, restore = true)
-                            ObjectKind.STRING -> loadString(data, context, codeLocs, restore = true)
-                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, codeLocs, restore = true)
-                            ObjectKind.CODE_LOCATION -> loadCodeLocation(data, codeLocs, restore = true)
+                            ObjectKind.STRING -> loadString(data, context, restore = true)
+                            ObjectKind.ACCESS_PATH -> loadAccessPath(data, context, restore = true)
+                            ObjectKind.CODE_LOCATION -> loadCodeLocation(data, context, restore = true)
                             ObjectKind.BLOCK_START -> {
                                 val list = dataBlocks.computeIfAbsent(id) { mutableListOf() }
                                 list.addNewBlock(start, end)
@@ -534,7 +415,6 @@ class LazyTraceReader private constructor(
                     objNum++
                 }
                 callTracepointChildren.finishIndex()
-                codeLocs.restoreAllCodeLocations(context)
                 val magicEnd = index.readLong()
                 if (magicEnd != INDEX_MAGIC) {
                     error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")

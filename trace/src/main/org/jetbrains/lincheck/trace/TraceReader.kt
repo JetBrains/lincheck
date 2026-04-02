@@ -10,6 +10,11 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.AccessLocation
+import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.ActiveLocal
+import org.jetbrains.lincheck.descriptors.CodeLocation
+import org.jetbrains.lincheck.descriptors.LocalKind
 import org.jetbrains.lincheck.util.Logger
 import java.io.DataInput
 import java.io.DataInputStream
@@ -19,7 +24,7 @@ import java.nio.ByteBuffer
 import kotlin.use
 
 private typealias TraceTree = MutableList<TRContainerTracePoint>
-private typealias TracePointReader = (DataInput, TraceContext, CodeLocationsContext) -> Boolean
+private typealias TracePointReader = (DataInput, TraceContext) -> Boolean
 
 internal interface TracepointConsumer {
     fun tracePointRead(parent: TRContainerTracePoint?, tracePoint: TRTracePoint)
@@ -161,7 +166,6 @@ internal fun loadAllObjectsDeep(
     tracepointConsumer: TracepointConsumer,
     blockConsumer: BlockConsumer
 ) {
-    val codeLocs = CodeLocationsContext()
     val trees = mutableMapOf<Int, MutableList<TRContainerTracePoint>>()
     var seenEOF = false
 
@@ -187,8 +191,8 @@ internal fun loadAllObjectsDeep(
         // Read objects and tracepoints from this block till it ends.
         // Unwind the stack manually, if needed
         while (true) {
-            val kind = loadObjects(input, context, codeLocs, true) { input, context, codeLocs ->
-                loadTracePointDeep(input, context, codeLocs, tree, tracepointConsumer)
+            val kind = loadObjects(input, context, restore = true) { input, context ->
+                loadTracePointDeep(input, context, tree, tracepointConsumer)
             }
             if (kind == ObjectKind.BLOCK_END) {
                 blockConsumer.blockEnded(threadId)
@@ -204,7 +208,6 @@ internal fun loadAllObjectsDeep(
             tracePoint.loadFooter(input)
         }
     }
-    codeLocs.restoreAllCodeLocations(context)
 
     if (!seenEOF) {
         Logger.warn { "TraceRecorder: no EOF record at the end of the file" }
@@ -220,7 +223,6 @@ internal fun loadAllObjectsDeep(
 internal fun loadTracePointDeep(
     input: DataInput,
     context: TraceContext,
-    codeLocs: CodeLocationsContext,
     tree: TraceTree,
     consumer: TracepointConsumer
 ): Boolean {
@@ -232,8 +234,8 @@ internal fun loadTracePointDeep(
     }
     // We need to load all children
     tree.add(tracePoint)
-    val kind = loadObjects(input, context, codeLocs, true) { input, context, stringCache ->
-        loadTracePointDeep(input, context, stringCache, tree, consumer)
+    val kind = loadObjects(input, context, restore = true) { input, context ->
+        loadTracePointDeep(input, context, tree, consumer)
     }
     when (kind) {
         ObjectKind.TRACEPOINT_FOOTER -> {
@@ -257,7 +259,6 @@ internal fun loadTracePointDeep(
 internal fun loadObjects(
     input: DataInput,
     context: TraceContext,
-    codeLocs: CodeLocationsContext,
     restore: Boolean,
     tracePointReader: TracePointReader
 ): ObjectKind {
@@ -268,11 +269,11 @@ internal fun loadObjects(
             ObjectKind.METHOD_DESCRIPTOR -> loadMethodDescriptor(input, context, restore)
             ObjectKind.FIELD_DESCRIPTOR -> loadFieldDescriptor(input, context, restore)
             ObjectKind.VARIABLE_DESCRIPTOR -> loadVariableDescriptor(input, context, restore)
-            ObjectKind.STRING -> loadString(input, context, codeLocs, restore)
-            ObjectKind.ACCESS_PATH -> loadAccessPath(input, codeLocs, restore)
-            ObjectKind.CODE_LOCATION -> loadCodeLocation(input, codeLocs, restore)
+            ObjectKind.STRING -> loadString(input, context, restore)
+            ObjectKind.ACCESS_PATH -> loadAccessPath(input, context, restore)
+            ObjectKind.CODE_LOCATION -> loadCodeLocation(input, context, restore)
             // Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block
-            ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context, codeLocs)) return ObjectKind.BLOCK_END
+            ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context)) return ObjectKind.BLOCK_END
             ObjectKind.TRACEPOINT_FOOTER, // Children read or skipped by recursion into tracePointReader
             ObjectKind.BLOCK_START, // Should not happen, really
             ObjectKind.BLOCK_END, // Block ended
@@ -349,38 +350,36 @@ internal fun loadVariableDescriptor(
 internal fun loadString(
     input: DataInput,
     context: TraceContext,
-    codeLocs: CodeLocationsContext,
     restore: Boolean
 ): Int {
     val id = input.readInt()
     val string = input.readUTF()
     if (restore) {
         context.stringPool.restore(id, string)
-        codeLocs.loadString(id, string)
     }
     return id
 }
 
 internal fun loadAccessPath(
     input: DataInput,
-    codeLocs: CodeLocationsContext,
+    context: TraceContext,
     restore: Boolean
 ): Int {
     val id = input.readInt()
     val len = input.readInt()
-    val locations = mutableListOf<ShallowAccessLocation>()
+    val locations = mutableListOf<AccessLocation>()
     repeat(len) {
-        locations.add(input.readAccessLocation())
+        locations.add(input.readAccessLocation(context))
     }
     if (restore) {
-        codeLocs.loadAccessPath(id, ShallowAccessPath(locations))
+        context.restoreAccessPath(id, AccessPath(locations))
     }
     return id
 }
 
 internal fun loadCodeLocation(
     input: DataInput,
-    codeLocs: CodeLocationsContext,
+    context: TraceContext,
     restore: Boolean
 ): Int {
     val id = input.readInt()
@@ -407,17 +406,22 @@ internal fun loadCodeLocation(
     }
 
     if (restore) {
-        val scl = ShallowCodeLocation(
-            className = classNameId,
-            methodName = methodNameId,
-            fileName = fileNameId,
-            lineNumber = lineNumber,
-            accessPath = accessPathId,
-            argumentNames = argumentNameIds,
-            activeLocalsNames = activeLocalsNamesIds,
-            activeLocalsKinds = activeLocalsKinds
+        val stringPool = context.stringPool
+        val codeLocation = CodeLocation(
+            stackTraceElement = StackTraceElement(
+                stringPool.getOrNull(classNameId) ?: "<unknown class>",
+                stringPool.getOrNull(methodNameId) ?: "<unknown method>",
+                stringPool.getOrNull(fileNameId) ?: "<unknown file>",
+                lineNumber
+            ),
+            accessPath = if (accessPathId != -1) context.getAccessPath(accessPathId) else null,
+            argumentNames = argumentNameIds?.map { if (it != -1) context.getAccessPath(it) else null },
+            activeLocals = if (activeLocalsNamesIds == null || activeLocalsKinds == null) null
+                           else activeLocalsNamesIds.map { stringPool.getOrNull(it) ?: "<unknown local>" }
+                                                    .zip(activeLocalsKinds)
+                                                    .map { (name, kind) -> ActiveLocal(name, LocalKind.entries[kind]) }
         )
-        codeLocs.loadCodeLocation(id, scl)
+        context.restoreCodeLocation(id, codeLocation)
     }
     return id
 }

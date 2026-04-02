@@ -142,19 +142,6 @@ internal interface TraceWriter : DataOutput, Closeable {
 internal interface TraceContextSavedState {
     fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean
     fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int)
-    fun isCodeLocationSaved(id: Int): Boolean
-    fun markCodeLocationSaved(id: Int)
-
-    /**
-     * Return positive access path id, if it was stored already, and negative, if it should be stored
-     *  with the absolute value of this id.
-     */
-    fun isAccessPathSaved(value: AccessPath): Int
-
-    /**
-     * Mark access path as stored. Do nothing if it was not passed to [isAccessPathSaved].
-     */
-    fun markAccessPathSaved(value: AccessPath)
 }
 
 internal inline fun <reified T> TraceContextSavedState.isDescriptorSaved(id: Int) = isDescriptorSaved(T::class, id)
@@ -203,42 +190,6 @@ internal sealed class ContextAwareTraceWriter(
      */
     protected open fun markDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int) {
         contextState.markDescriptorSaved(descriptorClass, id)
-    }
-
-    /**
-     * Check if code location is already saved in the context.
-     * Default implementation delegates to [contextState].
-     * Override to customize the check logic.
-     */
-    protected open fun isCodeLocationSavedInContext(id: Int): Boolean {
-        return contextState.isCodeLocationSaved(id)
-    }
-
-    /**
-     * Mark code location as saved in the context.
-     * Default implementation marks immediately via [contextState].
-     * Override to defer marking.
-     */
-    protected open fun markCodeLocationSavedInContext(id: Int) {
-        contextState.markCodeLocationSaved(id)
-    }
-
-    /**
-     * Check if access path is already saved in the context.
-     * Default implementation delegates to [contextState].
-     * Override to customize the check logic.
-     */
-    protected open fun isAccessPathSavedInContext(value: AccessPath): Int {
-        return contextState.isAccessPathSaved(value)
-    }
-
-    /**
-     * Mark access path as saved in the context.
-     * Default implementation marks immediately via [contextState].
-     * Override to defer marking.
-     */
-    protected open fun markAccessPathSavedInContext(value: AccessPath) {
-        contextState.markAccessPathSaved(value)
     }
 
     override fun close() {
@@ -389,7 +340,7 @@ internal sealed class ContextAwareTraceWriter(
             "Cannot save reference data inside tracepoint"
         }
         if (id == UNKNOWN_CODE_LOCATION_ID) return
-        if (isCodeLocationSavedInContext(id)) return
+        if (isDescriptorSaved<CodeLocation>(id)) return
 
         val codeLocation = context.stackTrace(id)
         val accessPath = context.accessPath(id)
@@ -418,7 +369,7 @@ internal sealed class ContextAwareTraceWriter(
         dataOutput.writeInt(activeLocalNameIds?.size ?: 0)
         activeLocalNameIds?.forEach { dataOutput.writeInt(it) }
         activeLocals?.forEach { dataOutput.writeInt(it.localKind.ordinal) }
-        markCodeLocationSavedInContext(id)
+        markDescriptorSaved<CodeLocation>(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
     }
@@ -480,7 +431,7 @@ internal sealed class ContextAwareTraceWriter(
     }
 
     private fun writeAccessPaths(root: AccessPath, savingOrder: List<AccessPath>): Int {
-        var rootId = 0
+        var rootId = -1
 
         savingOrder
             // first, we save all references of every location inside each access path
@@ -492,23 +443,23 @@ internal sealed class ContextAwareTraceWriter(
             // then, save the access paths in correct order
             .onEach { value ->
                 val position = currentDataPosition
-                val id = isAccessPathSavedInContext(value)
-                if (value == root) rootId = id.absoluteValue
-                if (id > 0) return@onEach // already saved
+                val id = context.accessPathPool.register(value)
+                if (value == root) rootId = id
+                if (isDescriptorSaved<AccessPath>(id)) return@onEach
 
                 dataOutput.writeKind(ObjectKind.ACCESS_PATH)
-                dataOutput.writeInt(-id)
+                dataOutput.writeInt(id)
                 dataOutput.writeInt(value.locations.size)
 
                 value.locations.forEach { location ->
-                    location.save(this, context, contextState)
+                    location.save(this, context)
                 }
 
-                markAccessPathSavedInContext(value)
-                writeIndexCell(ObjectKind.ACCESS_PATH, -id, position, -1)
+                markDescriptorSaved<AccessPath>(id)
+                writeIndexCell(ObjectKind.ACCESS_PATH, id, position, -1)
             }
 
-        check(rootId > 0) { "Root access path $root was not added to the saved access paths: $savingOrder" }
+        check(rootId >= 0) { "Root access path $root was not added to the saved access paths: $savingOrder" }
         return rootId
     }
 

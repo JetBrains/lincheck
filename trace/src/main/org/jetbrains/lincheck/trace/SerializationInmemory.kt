@@ -25,28 +25,8 @@ private class SimpleTraceContextSavedState: TraceContextSavedState {
     private var seenFieldDescriptors = BooleanArray(1024)
     private var seenVariableDescriptors = BooleanArray(1024)
     private var seenStringDescriptors = BooleanArray(1024)
-    private var seenCodeLocations = BooleanArray(65536)
-    private val accessPathCache = Enumerator<AccessPath>()
-
-    private class Enumerator<T : Any> {
-        private val cache = mutableMapOf<T, Int>()
-
-        fun isSaved(value: T): Int {
-            val id = cache[value]
-            if (id != null && id > 0) {
-                return id
-            }
-            cache[value] = -(cache.size + 1)
-            return -cache.size
-        }
-
-        fun makeSaved(value: T) {
-            val id = cache[value]
-            if (id != null && id < 0) {
-                cache[value] = -id
-            }
-        }
-    }
+    private var seenCodeLocationDescriptors = BooleanArray(65536)
+    private var seenAccessPathDescriptors = BooleanArray(1024)
 
     override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
         val array = getDescriptorsArray(descriptorClass) ?: return false
@@ -67,8 +47,10 @@ private class SimpleTraceContextSavedState: TraceContextSavedState {
             FieldDescriptor::class -> seenFieldDescriptors
             VariableDescriptor::class -> seenVariableDescriptors
             String::class -> seenStringDescriptors
+            CodeLocation::class -> seenCodeLocationDescriptors
+            AccessPath::class -> seenAccessPathDescriptors
             else -> {
-                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
+                Logger.error { "Unknown descriptor class: $descriptorClass" }
                 null
             }
         }
@@ -81,27 +63,12 @@ private class SimpleTraceContextSavedState: TraceContextSavedState {
             FieldDescriptor::class -> seenFieldDescriptors = array
             VariableDescriptor::class -> seenVariableDescriptors = array
             String::class -> seenStringDescriptors = array
+            CodeLocation::class -> seenCodeLocationDescriptors = array
+            AccessPath::class -> seenAccessPathDescriptors = array
             else -> {
-                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
+                Logger.error { "Unknown descriptor class: $descriptorClass" }
             }
         }
-    }
-
-    override fun isCodeLocationSaved(id: Int): Boolean {
-        return id < seenCodeLocations.size && seenCodeLocations[id]
-    }
-
-    override fun markCodeLocationSaved(id: Int) {
-        seenCodeLocations = ensureSize(seenCodeLocations, id)
-        seenCodeLocations[id] = true
-    }
-
-    override fun isAccessPathSaved(value: AccessPath): Int {
-        return accessPathCache.isSaved(value)
-    }
-
-    override fun markAccessPathSaved(value: AccessPath) {
-        accessPathCache.makeSaved(value)
     }
 
     private fun ensureSize(map: BooleanArray, id: Int): BooleanArray {

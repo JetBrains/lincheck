@@ -11,9 +11,11 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.AccessPathPool
 import org.jetbrains.lincheck.descriptors.ActiveLocal
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.descriptors.CodeLocation
+import org.jetbrains.lincheck.descriptors.CodeLocationPool
 import org.jetbrains.lincheck.descriptors.DescriptorPool
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.FieldKind
@@ -34,8 +36,8 @@ private val EMPTY_STACK_TRACE = StackTraceElement("", "", "", 0)
 
 class TraceContext {
     private val threadNames = ConcurrentHashMap<Int, String>()
-    private val accessPaths = ArrayList<AccessPath?>()
-    private val locations = ArrayList<CodeLocation?>()
+    val accessPathPool = AccessPathPool()
+    val codeLocationsPool = CodeLocationPool()
     // Descriptor pools
     val classPool = DescriptorPool<ClassDescriptor>()
     val methodPool = DescriptorPool<MethodDescriptor>()
@@ -53,82 +55,53 @@ class TraceContext {
 
     fun threadNames(): List<String> = threadNames.values.toList()
 
-    val codeLocations: List<CodeLocation?> get() = locations
-
     fun newCodeLocation(
         stackTraceElement: StackTraceElement,
         accessPath: AccessPath? = null,
         argumentNames: List<AccessPath?>? = null,
         activeLocals: List<ActiveLocal>? = null
     ): Int {
-        val id = locations.size
         val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
-        locations.add(location)
+        val id = codeLocationsPool.register(location)
         return id
     }
 
-    fun codeLocation(codeLocationId: Int): CodeLocation? =
-        locations[codeLocationId]
+    fun codeLocation(codeLocationId: Int): CodeLocation? = codeLocationsPool.getOrNull(codeLocationId)
 
     fun stackTrace(codeLocationId: Int): StackTraceElement {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
-        val loc = locations[codeLocationId]
-        if (loc == null) {
-            error("Invalid code location id $codeLocationId")
-        }
+        val loc = codeLocationsPool[codeLocationId]
         return loc.stackTraceElement
     }
 
     fun accessPath(codeLocationId: Int): AccessPath? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = locations[codeLocationId]
-        if (loc == null) {
-            error("Invalid code location id $codeLocationId")
-        }
+        val loc = codeLocationsPool[codeLocationId]
         return loc.accessPath
     }
     
     fun methodCallArgumentNames(codeLocationId: Int): List<AccessPath?>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = locations[codeLocationId]
-        if (loc == null) {
-            error("Invalid code location id $codeLocationId")
-        }
+        val loc = codeLocationsPool[codeLocationId]
         return loc.argumentNames
     }
 
     fun activeLocals(codeLocationId: Int): List<ActiveLocal>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
+        val loc = codeLocationsPool[codeLocationId]
         return loc.activeLocals
     }
 
-    fun getAccessPath(id: Int): AccessPath = accessPaths[id] ?: error("Referenced access path $id not loaded")
+    fun getAccessPath(id: Int): AccessPath = accessPathPool[id]
 
-    fun restoreAccessPath(id: Int, accessPath: AccessPath) {
-        check(id >= accessPaths.size || accessPaths[id] == null || accessPaths[id] == accessPath) {
-            "AccessPath with id $id is already present in context and differs from $accessPath"
-        }
-        while (accessPaths.size <= id) {
-            accessPaths.add(null)
-        }
-        accessPaths[id] = accessPath
-    }
+    fun restoreAccessPath(id: Int, accessPath: AccessPath) = accessPathPool.restore(id, accessPath)
 
-    fun restoreCodeLocation(id: Int, location: CodeLocation) {
-        check(id >= locations.size || locations[id] == null || locations[id] == location) {
-            "CodeLocation with id $id is already present in context and differs from $location"
-        }
-        while (locations.size <= id) {
-            locations.add(null)
-        }
-        locations[id] = location
-    }
+    fun restoreCodeLocation(id: Int, location: CodeLocation) = codeLocationsPool.restore(id, location)
 
     fun clear() {
         threadNames.clear()
-        accessPaths.clear()
-        locations.clear()
+        accessPathPool.clear()
+        codeLocationsPool.clear()
         classPool.clear()
         methodPool.clear()
         fieldPool.clear()

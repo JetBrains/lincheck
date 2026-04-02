@@ -242,7 +242,7 @@ class BufferedTraceWriterTest {
                     }
 
                     ObjectKind.CODE_LOCATION -> {
-                        val id = loadCodeLocation(dataInput, CodeLocationsContext(), false)
+                        val id = loadCodeLocation(dataInput, loadedContext, false)
                         println("  CodeLocation(id=$id)")
                         currentBlock?.codeLocations?.add(id)
                     }
