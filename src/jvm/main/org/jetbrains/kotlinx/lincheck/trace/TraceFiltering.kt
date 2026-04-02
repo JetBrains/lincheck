@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 
 internal interface TraceFilter {
@@ -75,7 +74,7 @@ internal val TracePoint.isVirtual: Boolean get() =
 // trace points from `Throwable` methods are filter-out from the trace
 internal val TracePoint.isThrowableTracePoint: Boolean get() {
     val codeLocation = (this as? CodeLocationTracePoint)?.codeLocation ?: return false
-    val stackTraceElement = CodeLocations.stackTrace(context, codeLocation)
+    val stackTraceElement = context.stackTrace(codeLocation)
     return stackTraceElement.className.toCanonicalClassName() == "java.lang.Throwable"
 }
 

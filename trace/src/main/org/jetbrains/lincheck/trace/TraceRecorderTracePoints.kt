@@ -127,9 +127,9 @@ sealed class TRTracePoint(
         out.writeCodeLocation(codeLocationId)
     }
 
-    val codeLocation: StackTraceElement get() = CodeLocations.stackTrace(context, codeLocationId)
-    val activeLocals: List<ActiveLocal> get() = CodeLocations.activeLocals(context, codeLocationId) ?: emptyList() // used in plugin
-    val accessPath: AccessPath? get() = CodeLocations.accessPath(context, codeLocationId)
+    val codeLocation: StackTraceElement get() = context.stackTrace(codeLocationId)
+    val activeLocals: List<ActiveLocal> get() = context.activeLocals(codeLocationId) ?: emptyList() // used in plugin
+    val accessPath: AccessPath? get() = context.accessPath(codeLocationId)
 
     fun toText(verbose: Boolean): String {
         val sb = StringBuilder()
@@ -732,7 +732,7 @@ class TRSnapshotLineBreakpointTracePoint(
         get() = context.getThreadName(threadId)
 
     val stackTrace: List<StackTraceElement>
-        get() = stackTraceCodeLocationIds.map { CodeLocations.stackTrace(context, it) }
+        get() = stackTraceCodeLocationIds.map { context.stackTrace(it) }
 
     override fun save(out: TraceWriter) {
         super.save(out)

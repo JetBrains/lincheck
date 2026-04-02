@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.jvm.agent.ASM_API
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
 import org.jetbrains.lincheck.jvm.agent.toInternalClassName
@@ -63,7 +62,7 @@ internal class TraceRecorderMethodTransformer(
             /* lineNumber = */ firstLine
         )
 
-        val codeLocationId = CodeLocations.newCodeLocation(context, stackTraceElement)
+        val codeLocationId = context.newCodeLocation(stackTraceElement)
         push(codeLocationId)
 
         invokeStatic(TraceRecorderInjections::startTraceRecorder)

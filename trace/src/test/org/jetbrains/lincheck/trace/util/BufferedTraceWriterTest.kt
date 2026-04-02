@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.trace.util
 
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.junit.Test
@@ -157,8 +156,8 @@ class BufferedTraceWriterTest {
     ): TRMethodCallTracePoint {
         val methodType = Types.MethodType(Types.OBJECT_TYPE)
         val md = context.createAndRegisterMethodDescriptor(className, methodName, methodType)
-        val codeLocationId = CodeLocations.newCodeLocation(
-            context, StackTraceElement(md.className, md.methodName, "Example.java", 10)
+        val codeLocationId = context.newCodeLocation(
+            StackTraceElement(md.className, md.methodName, "Example.java", 10)
         )
         val tracepoint = TRMethodCallTracePoint(
             context,
