@@ -15,7 +15,6 @@ import java.io.Closeable
 import java.io.DataOutput
 import java.io.DataOutputStream
 import java.io.OutputStream
-import kotlin.math.absoluteValue
 import kotlin.reflect.KClass
 
 // Buffer for saving trace in one piece
@@ -171,24 +170,24 @@ internal sealed class ContextAwareTraceWriter(
     protected abstract val currentDataPosition: Long
     abstract val writerId: Int
 
-    private inline fun <reified T> isDescriptorSaved(id: Int) = isDescriptorSavedInContext(T::class, id)
-    private inline fun <reified T> markDescriptorSaved(id: Int) = markDescriptorSavedInContext(T::class, id)
+    private inline fun <reified T> isDescriptorSaved(id: Int) = isDescriptorSavedByWriter(T::class, id)
+    private inline fun <reified T> markDescriptorSaved(id: Int) = markDescriptorSavedByWriter(T::class, id)
 
     /**
-     * Check if descriptor is already saved in the context.
+     * Check if descriptor is already saved by this writer.
      * Default implementation delegates to [contextState].
-     * Override to customize the check logic (e.g., include current block snapshot).
+     * Override to customize the check logic (e.g., include current block snapshot for [BufferedTraceWriter]).
      */
-    protected open fun isDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int): Boolean {
+    protected open fun isDescriptorSavedByWriter(descriptorClass: KClass<*>, id: Int): Boolean {
         return contextState.isDescriptorSaved(descriptorClass, id)
     }
 
     /**
-     * Mark descriptor as saved in the context.
+     * Mark descriptor as saved by this writer.
      * Default implementation marks immediately via [contextState].
-     * Override to defer marking (e.g., until block is persisted to disk).
+     * Override to defer marking (e.g., until block is persisted to disk in [BufferedTraceWriter]).
      */
-    protected open fun markDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int) {
+    protected open fun markDescriptorSavedByWriter(descriptorClass: KClass<*>, id: Int) {
         contextState.markDescriptorSaved(descriptorClass, id)
     }
 

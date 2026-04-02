@@ -18,7 +18,6 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.reflect.KClass
 
@@ -84,7 +83,11 @@ internal class BufferedTraceWriter(
 
     override val currentDataPosition: Long get() = currentStartDataPosition + bufferStream.position()
 
-    override fun isDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int): Boolean {
+    /**
+     * This implementation checks that given descriptor is either saved globally by the IO Thread,
+     * or it is saved to this writer's block and should not be saved again at least by this writer.
+     */
+    override fun isDescriptorSavedByWriter(descriptorClass: KClass<*>, id: Int): Boolean {
         // Check if already globally saved OR written in the current block
         val inBlock = when (descriptorClass) {
             ClassDescriptor::class -> id in classDescriptorIdsInBlock
@@ -96,10 +99,14 @@ internal class BufferedTraceWriter(
             AccessPath::class -> id in accessPathIdsInBlock
             else -> false
         }
-        return inBlock || super.isDescriptorSavedInContext(descriptorClass, id)
+        return inBlock || super.isDescriptorSavedByWriter(descriptorClass, id)
     }
 
-    override fun markDescriptorSavedInContext(descriptorClass: KClass<*>, id: Int) {
+    /**
+     * This implementation marks the given descriptor as saved to this writer's block.
+     * Later IO Thread will eventually dump this block to the file and mark its content as saved globally.
+     */
+    override fun markDescriptorSavedByWriter(descriptorClass: KClass<*>, id: Int) {
         // Don't mark globally; accumulate in the block snapshot instead.
         // Actual global marking happens in FileStreamingThread after disk writing
         when (descriptorClass) {
