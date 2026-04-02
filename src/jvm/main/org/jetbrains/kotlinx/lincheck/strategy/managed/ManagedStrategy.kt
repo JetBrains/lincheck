@@ -1548,6 +1548,11 @@ internal abstract class ManagedStrategy(
 
     override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit = threadDescriptor.runInsideIgnoredSection {
         if (objectTracker.shouldTrackObject(obj)) {
+            // Zero out the identity hash code in the object header to ensure deterministic behavior.
+            // The ConstantHashCodeTransformer only intercepts hashCode()/identityHashCode() calls
+            // in instrumented code, but non-instrumented JDK internals (e.g., HashMap)
+            // read the hash code directly from the object header.
+            UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, 0)
             objectTracker.registerNewObject(obj)
         }
     }
@@ -2547,6 +2552,14 @@ enum class ExecutionMode(val id: String) {
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but an active lock is detected"
+
+/**
+ * Offset (in bytes) of identity hash code in a 64-bit JVM object header.
+ * See OpenJDK markOop.hpp for the layout:
+ *   unused:25 | hash:31 | unused:1 | age:4 | biased_lock:1 | lock:2
+ * The hash starts after the first byte (8 bits of age/lock fields).
+ */
+private const val IDENTITY_HASHCODE_OFFSET = 1L
 
 private const val OBSTRUCTION_FREEDOM_LOCK_VIOLATION_MESSAGE =
     "The algorithm should be non-blocking, but a lock is detected"
