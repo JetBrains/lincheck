@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.trace.util
 
+import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.Logger
@@ -87,7 +89,7 @@ class BufferedTraceWriterTest {
         collector.traceEnded()
 
         val loadedTrace = loadRecordedTrace(traceFile.absolutePath)
-        printRecorderTrace(System.out, loadedTrace.context, loadedTrace.roots, true)
+        printRecorderTrace(System.out, loadedTrace.context, loadedTrace.roots, verbose = true)
         val blocks = collectSavedBlocks(loadedTrace.context, traceFile)
         check(blocks.size == 2 && blocks.containsKey(1) && blocks.containsKey(2)) { "Expected 2 blocks for both threads, got thread ids: ${blocks.keys}" }
 
@@ -97,6 +99,7 @@ class BufferedTraceWriterTest {
         val expectedVariableDescriptorIds = setOf(0 /* sharedVar */)
         val expectedCodeLocationIds1 = setOf(0 /* methodName1 at Example.java:10 */, 2 /* sharedMethod at Example.java:10 */, 3 /* sharedVar in someMethod at Example.java:20 */)
         val expectedCodeLocationIds2 = setOf(1 /* methodName2 at Example.java:10 */, 2 /* sharedMethod at Example.java:10 */, 3 /* sharedVar in someMethod at Example.java:20 */)
+        val expectedAccessPathIds = setOf(0 /* AccessPath to sharedVar */)
         val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* someMethod */, 4 /* sharedMethod */)
         val expectedStringIds2 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 5 /* methodName2 */, 3 /* someMethod */, 4 /* sharedMethod */)
 
@@ -105,6 +108,7 @@ class BufferedTraceWriterTest {
             checkMethodDescriptors(expectedMethodDescriptorIds1)
             checkVariableDescriptors(expectedVariableDescriptorIds)
             checkCodeLocations(expectedCodeLocationIds1)
+            checkAccessPaths(expectedAccessPathIds)
             checkStrings(expectedStringIds1)
         }
         blocks[2]!!.run {
@@ -112,6 +116,7 @@ class BufferedTraceWriterTest {
             checkMethodDescriptors(expectedMethodDescriptorIds2)
             checkVariableDescriptors(expectedVariableDescriptorIds)
             checkCodeLocations(expectedCodeLocationIds2)
+            checkAccessPaths(expectedAccessPathIds)
             checkStrings(expectedStringIds2)
         }
     }
@@ -182,6 +187,7 @@ class BufferedTraceWriterTest {
         val expectedVariableDescriptorIds1 = setOf(0 /* sharedVar */)
         val expectedCodeLocationIds1 = setOf(0 /* methodName1 at Example.java:10 */, 2 /* sharedMethod at Example.java:10 */, 3 /* sharedVar in someMethod at Example.java:20 */)
         val expectedCodeLocationIds2 = setOf(1 /* methodName2 at Example.java:10 */)
+        val expectedAccessPathIds1 = setOf(0 /* AccessPath to sharedVar */)
         val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* someMethod */, 4 /* sharedMethod */)
         val expectedStringIds2 = setOf(5 /* methodName2 */)
 
@@ -190,6 +196,7 @@ class BufferedTraceWriterTest {
             checkMethodDescriptors(expectedMethodDescriptorIds1)
             checkVariableDescriptors(expectedVariableDescriptorIds1)
             checkCodeLocations(expectedCodeLocationIds1)
+            checkAccessPaths(expectedAccessPathIds1)
             checkStrings(expectedStringIds1)
         }
         blocks[2]!!.run {
@@ -197,6 +204,7 @@ class BufferedTraceWriterTest {
             checkMethodDescriptors(expectedMethodDescriptorIds2)
             checkVariableDescriptors(emptySet())
             checkCodeLocations(expectedCodeLocationIds2)
+            checkAccessPaths(emptySet())
             checkStrings(expectedStringIds2)
         }
     }
@@ -231,6 +239,12 @@ class BufferedTraceWriterTest {
         }
     }
 
+    private fun BlockAnalysis.checkAccessPaths(expected: Set<Int>) {
+        check(accessPaths == expected) {
+            "Thread must have saved the following access paths: $expected, got: $accessPaths"
+        }
+    }
+
     private fun createBasicMethodCallTracePoint(
         context: TraceContext,
         threadId: Int,
@@ -260,8 +274,13 @@ class BufferedTraceWriterTest {
         variableName: String
     ): TRWriteLocalVariableTracePoint {
         val vd = context.createAndRegisterVariableDescriptor(variableName, Types.INT_TYPE)
+
+        // Create an access path for the variable
+        val accessPath = AccessPath(listOf(LocalVariableAccessLocation(vd)))
+
         val codeLocationId = context.newCodeLocation(
-            StackTraceElement("com.example.SomeClass", "someMethod", "Example.java", 20)
+            stackTraceElement = StackTraceElement("com.example.SomeClass", "someMethod", "Example.java", 20),
+            accessPath = accessPath
         )
         return TRWriteLocalVariableTracePoint(
             context,
@@ -308,6 +327,7 @@ class BufferedTraceWriterTest {
                                 prevBlock.variableDescriptors.addAll(currentBlock.variableDescriptors)
                                 prevBlock.strings.addAll(currentBlock.strings)
                                 prevBlock.codeLocations.addAll(currentBlock.codeLocations)
+                                prevBlock.accessPaths.addAll(currentBlock.accessPaths)
                             }
 
                             Logger.info { "Block ended for thread ${currentBlock!!.threadId}" }
@@ -315,7 +335,8 @@ class BufferedTraceWriterTest {
                             Logger.info { "  - MethodDescriptors: ${currentBlock!!.methodDescriptors}" }
                             Logger.info { "  - VariableDescriptors: ${currentBlock!!.variableDescriptors}" }
                             Logger.info { "  - Strings: ${currentBlock!!.strings}" }
-                            Logger.info { "  - CodeLocations: ${currentBlock!!.codeLocations}\n" }
+                            Logger.info { "  - CodeLocations: ${currentBlock!!.codeLocations}" }
+                            Logger.info { "  - AccessPaths: ${currentBlock!!.accessPaths}\n" }
                             currentBlock = null
                         }
                     }
@@ -349,6 +370,12 @@ class BufferedTraceWriterTest {
                         val id = loadCodeLocation(dataInput, loadedContext, restore = false)
                         currentBlock?.codeLocations?.add(id)
                         Logger.info { "  CodeLocation(id=$id): ${loadedContext.codeLocationsPool[id].stackTraceElement}" }
+                    }
+
+                    ObjectKind.ACCESS_PATH -> {
+                        val id = loadAccessPath(dataInput, loadedContext, restore = true)
+                        currentBlock?.accessPaths?.add(id)
+                        Logger.info { "  AccessPath(id=$id): ${loadedContext.accessPathPool[id]}" }
                     }
 
                     ObjectKind.TRACEPOINT -> {
@@ -394,6 +421,7 @@ class BufferedTraceWriterTest {
         val variableDescriptors: MutableSet<Int> = mutableSetOf(),
         val strings: MutableSet<Int> = mutableSetOf(),
         val codeLocations: MutableSet<Int> = mutableSetOf(),
+        val accessPaths: MutableSet<Int> = mutableSetOf()
     )
 }
 
