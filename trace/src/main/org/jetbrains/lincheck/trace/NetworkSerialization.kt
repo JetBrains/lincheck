@@ -10,14 +10,12 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.trace.network.TracingCallbacks
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.util.Logger
 import java.io.*
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
@@ -52,15 +50,7 @@ class NetworkStreamingTraceCollecting(
 
     private val lock = ReentrantLock()
 
-    // Internal buffer and writer for serializing trace points before sending.
-    // The buffers are stable; only the writer and context state are recreated
-    // when we detect that the client reference has changed, because the new
-    // client reader has no prior context (descriptors, strings, etc.).
-    private val byteStream = ByteArrayOutputStream(MESSAGE_BUFFER_SIZE)
-    private val outputStream = DataOutputStream(byteStream)
-    private var contextState = SubscriberTraceContextSavedState()
-    private var writer = NetworkTraceWriter(context, contextState, outputStream, outputStream)
-    private var headerSent = false
+    private var sender = NetworkTracePointSender(tracingServer.connection, context)
 
     // Tracks the last client reference we wrote to, so we can detect reconnects.
     private var lastClient: TracingCallbacks? = null
@@ -140,11 +130,6 @@ class NetworkStreamingTraceCollecting(
             Logger.warn { "WebSocket trace writer thread did not finish in time" }
         }
 
-        // Close the writer
-        lock.withLock {
-            writer.close()
-        }
-
         Logger.info {
             val recorded = recordedPoints.get()
             val dropped = droppedPoints.get()
@@ -181,59 +166,26 @@ class NetworkStreamingTraceCollecting(
     }
 
     /**
-     * Resets the writer and context state (but not the shared buffers).
-     * Called when a client change is detected, because the new client's reader
+     * Resets the sender when a client change is detected, because the new client's reader
      * does not have any of the previously sent context (descriptors, strings, etc.).
      */
-    private fun resetWriter() {
-        contextState = SubscriberTraceContextSavedState()
-        writer = NetworkTraceWriter(context, contextState, outputStream, outputStream)
-        headerSent = false
+    private fun resetSender() {
+        sender = NetworkTracePointSender(
+            callbacks = tracingServer.connection,
+            context = context,
+        )
         Logger.info { "Network trace writer reset for new client" }
     }
 
     private fun writeTracePointToSubscriber(tracePoint: TRSnapshotLineBreakpointTracePoint) {
         try {
-            // Detect client change and reset writer if needed
+            // Detect client change and reset sender if needed
             val currentClient = tracingServer.connection
             if (currentClient !== lastClient) {
-                resetWriter()
+                resetSender()
                 lastClient = currentClient
             }
-            // Send header on first write
-            if (!headerSent) {
-                byteStream.reset()
-                outputStream.writeLong(TRACE_MAGIC)
-                outputStream.writeLong(TRACE_VERSION)
-                outputStream.flush()
-                tracingServer.connection.binaryTraceData(byteStream.toByteArray())
-                headerSent = true
-            }
-
-            // TODO: for simplicity, we wrap each trace point into a separate block;
-            //       in the future, as an optimization, we can group several consecutive trace points
-            //       from the same thread into a single block.
-
-            // Reset the byte buffer for this message
-            byteStream.reset()
-
-            // Write block start
-            outputStream.writeKind(ObjectKind.BLOCK_START)
-            outputStream.writeInt(tracePoint.threadId)
-
-            outputStream.writeKind(ObjectKind.THREAD_NAME)
-            outputStream.writeInt(tracePoint.threadId)
-            outputStream.writeUTF(tracePoint.threadName)
-
-            // Write trace point
-            tracePoint.save(writer)
-
-            // Write block end
-            outputStream.writeKind(ObjectKind.BLOCK_END)
-            outputStream.flush()
-
-            // Send the accumulated bytes via the notifier
-            tracingServer.connection.binaryTraceData(byteStream.toByteArray())
+            sender.send(tracePoint)
         } catch (e: Exception) {
             Logger.error(e) { "Error writing trace point to client" }
         }
@@ -255,6 +207,72 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
 
     override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean = false
     override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int): Unit = Unit
+}
+
+
+/**
+ * Sends [TRSnapshotLineBreakpointTracePoint] objects over a [TracingCallbacks] websocket.
+ *
+ * This class encapsulates the header and per-trace-point serialization logic so that
+ * both the lincheck tracing infrastructure and the control-plane can send trace points
+ * without duplicating low-level protocol details.
+ *
+ * @param callbacks the TracinCallbacks instance to send binary data over
+ * @param context the trace context containing descriptors and metadata
+ */
+class NetworkTracePointSender(
+    private val callbacks: TracingCallbacks,
+    context: TraceContext,
+) {
+    private val lock = ReentrantLock()
+    private val byteStream = ByteArrayOutputStream(MESSAGE_BUFFER_SIZE)
+    private val outputStream = DataOutputStream(byteStream)
+    private var contextState: TraceContextSavedState = SubscriberTraceContextSavedState()
+    private var writer: TraceWriter = NetworkTraceWriter(context, contextState, outputStream, outputStream)
+    private var headerSent = false
+
+    /**
+     * Serializes and sends a single [TRSnapshotLineBreakpointTracePoint] over the WebSocket.
+     *
+     * On the first call, the trace protocol header (magic number and version) is sent
+     * automatically before the trace point data.
+     */
+    fun send(tracePoint: TRSnapshotLineBreakpointTracePoint) = lock.withLock {
+        // Send header on first write
+        if (!headerSent) {
+            byteStream.reset()
+            outputStream.writeLong(TRACE_MAGIC)
+            outputStream.writeLong(TRACE_VERSION)
+            outputStream.flush()
+            callbacks.binaryTraceData(byteStream.toByteArray())
+            headerSent = true
+        }
+
+        // TODO: for simplicity, we wrap each trace point into a separate block;
+        //       in the future, as an optimization, we can group several consecutive trace points
+        //       from the same thread into a single block.
+
+        // Reset the byte buffer for this message
+        byteStream.reset()
+
+        // Write block start
+        outputStream.writeKind(ObjectKind.BLOCK_START)
+        outputStream.writeInt(tracePoint.threadId)
+
+        // Write thread name
+        outputStream.writeKind(ObjectKind.THREAD_NAME)
+        outputStream.writeInt(tracePoint.threadId)
+        outputStream.writeUTF(tracePoint.threadName)
+
+        // Write trace point
+        tracePoint.save(writer)
+
+        // Write block end
+        outputStream.writeKind(ObjectKind.BLOCK_END)
+        outputStream.flush()
+
+        callbacks.binaryTraceData(byteStream.toByteArray())
+    }
 }
 
 /**
@@ -320,7 +338,7 @@ class NetworkTraceReader : Closeable {
      * Signal that the data source has disconnected / reached EOF.
      * Transitions the reader to [State.Eof].
      */
-    internal fun handleDisconnect() {
+    fun handleDisconnect() {
         _state.set(State.Eof)
     }
 
@@ -379,7 +397,7 @@ class NetworkTraceReader : Closeable {
         start()
     }
 
-    internal fun processMessage(data: ByteArray) {
+    fun processMessage(data: ByteArray) {
         val dataInput = DataInputStream(ByteArrayInputStream(data))
 
         // First message should be the header
