@@ -13,15 +13,15 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------ |
-|                                                      Thread 1                                                      |
-| ------------------------------------------------------------------------------------------------------------------ |
-| operation()                                                                                                        |
-|   Default.nextInt(): -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:17) |
-|     Random.getDefaultRandom(): PlatformThreadLocalRandom#1 at Random.Default.nextInt(Random.kt:286)                |
-|     defaultRandom.nextInt(): -1147404850 at Random.Default.nextInt(Random.kt:286)                                  |
-|       getImpl(): ThreadLocalRandom#1 at AbstractPlatformRandom.<unknown method>(PlatformRandom.kt:41)              |
-|       ThreadLocalRandom#1.nextInt(): -1147404850 at AbstractPlatformRandom.<unknown method>(PlatformRandom.kt:41)  |
-|   a = -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:17)                |
-|   result: void                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------ |
+| ----------------------------------------------------------------------------------------------------------------- |
+|                                                     Thread 1                                                      |
+| ----------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                       |
+|   Default.nextInt(): -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:9) |
+|     Random.getDefaultRandom(): PlatformThreadLocalRandom#1 at Random.Default.nextInt(Random.kt:286)               |
+|     defaultRandom.nextInt(): -1147404850 at Random.Default.nextInt(Random.kt:286)                                 |
+|       getImpl(): ThreadLocalRandom#1 at AbstractPlatformRandom.<unknown method>(PlatformRandom.kt:41)             |
+|       ThreadLocalRandom#1.nextInt(): -1147404850 at AbstractPlatformRandom.<unknown method>(PlatformRandom.kt:41) |
+|   a = -1147404850 at KotlinRandomRepresentationTest.operation(KotlinRandomRepresentationTest.kt:9)                |
+|   result: void                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------------- |

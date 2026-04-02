@@ -205,7 +205,6 @@ fun createTransformationProfile(
         STRESS -> StressDefaultTransformationProfile
         TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
         LIVE_DEBUGGING -> LiveDebuggerTransformationProfile(liveDebuggerSettings)
-        TRACE_DEBUGGING -> TraceDebuggerDefaultTransformationProfile
         MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
         EXPERIMENTAL_MODEL_CHECKING -> ExperimentalModelCheckingTransformationProfile
     }
@@ -334,129 +333,6 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
             trackThrows = true
             trackCatchBlocks = true
-        }
-    }
-}
-
-object TraceDebuggerDefaultTransformationProfile : TransformationProfile {
-
-    override fun shouldTransform(className: String): Boolean {
-        // We do not need to instrument most standard Java classes.
-        // It is fine to inject the Lincheck analysis only into the
-        // `java.util.*` ones, ignored the known atomic constructs.
-        if (className.startsWith("java.")) {
-            // Instrument `Thread` to intercept thread events.
-            if (className == "java.lang.Thread") return true
-            // Instrument `Throwable` as it has `synchronized` methods,
-            // and corresponding monitor events should be intercepted.
-            if (className == "java.lang.Throwable") return true
-            // Instrument `java.util.concurrent` classes, except atomics.
-            if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
-            // Instrument `java.util` classes.
-            if (className.startsWith("java.util.")) return true
-
-            // Transform IO classes in trace debugger mode to intercept non-deterministic APIs.
-            if (className.startsWith("java.io.")) return true
-            if (className.startsWith("java.nio.")) return true
-            if (className.startsWith("java.time.")) return true
-
-            return false
-        }
-        if (className.startsWith("javax.")) return false
-        if (className.startsWith("jdk.")) {
-            // Transform `ThreadContainer.start` to detect thread forking.
-            if (isThreadContainerClass(className)) return true
-            return false
-        }
-
-        if (className.startsWith("com.sun.")) return false
-        if (className.startsWith("sun.")) {
-            // We should never instrument the Lincheck classes.
-            if (className.startsWith("sun.nio.ch.lincheck.")) return false
-            // Transform IO classes in trace debugger mode to intercept non-deterministic APIs.
-            if (className.startsWith("sun.nio.")) return true
-            return false
-        }
-
-        // Old legacy Java std library for CORBA,
-        // for instance, `org/omg/stub/javax/management`;
-        // can appear on Java 8 when JMX is used.
-        if (className.startsWith("org.omg.")) return false
-
-        // We do not need to instrument most standard Kotlin classes.
-        // However, we need to inject the Lincheck analysis into the classes
-        // related to collections, iterators, random and coroutines.
-        if (className.startsWith("kotlin.")) {
-            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
-            if (className.startsWith("kotlin.collections.")) return true
-            if (className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) return true
-            if (className.startsWith("kotlin.ranges.")) return true
-            if (className.startsWith("kotlin.random.")) return true
-            if (className.startsWith("kotlin.coroutines.jvm.internal.")) return false
-            if (className.startsWith("kotlin.coroutines.")) return true
-
-            // Transform IO classes in trace debugger mode to intercept non-deterministic APIs.
-            if (className.startsWith("kotlin.io.")) return true
-            return false
-        }
-
-        if (isRecognizedUninstrumentedClass(className)) return false
-        return true
-    }
-
-    override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
-        val config = TransformationConfiguration()
-
-        // NOTE: `shouldWrapInIgnoredSection` should be before `shouldNotInstrument`,
-        //       otherwise we may incorrectly forget to add some ignored sections
-        //       and start tracking events in unexpected places
-        if (shouldWrapInIgnoredSection(className, methodName, descriptor)) {
-            return config.apply {
-                wrapInIgnoredSection = true
-            }
-        }
-        if (shouldNotInstrument(className, methodName, descriptor)) {
-            return config
-        }
-
-        // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
-        // we only apply `ThreadTransformer` and skip all other transformations
-        if (isThreadClass(className) || isThreadContainerThreadStartMethod(className, methodName)) {
-            return config.apply {
-                trackAllThreadsOperations = true
-            }
-        }
-
-        // In trace debugger mode we record hash codes of tracked objects and substitute them on re-run.
-        // To intercept all hash codes, we need to use `DeterministicInvokeDynamicTransformer` transformer,
-        //  to properly track events inside various primitives that use `invokedynamic`,
-        // such as string templates or lambda expressions.
-        config.interceptInvokeDynamic = true
-
-        // Debugger implicitly evaluates `toString()` for variables rendering.
-        // We need to ensure there are no `beforeEvents` calls inside `toString()`
-        // to ensure the event numeration will remain the same.
-        if (ideaPluginEnabled && isToStringMethod(methodName, descriptor)) {
-            return config.apply {
-                trackObjectCreations = true
-            }
-        }
-
-        return config.apply {
-            trackObjectCreations = true
-
-            trackLocalVariableWrites = true
-            trackAllSharedMemoryAccesses = true
-
-            trackMethodCalls = true
-            trackInlineMethodCalls = true
-            interceptMethodCallResults = true
-
-            trackAllThreadsOperations = true
-            trackAllSynchronizationOperations = true
-
-            trackCoroutineSuspensions = true
-            interceptCoroutineDelays = true
         }
     }
 }

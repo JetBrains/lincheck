@@ -414,7 +414,7 @@ private fun visualize(strategy: ManagedStrategy) = runCatching {
 }
 
 /**
- * This method is called from the trace-debugger on each debugger session
+ * This method is called on each debugger session
  * pause to recalculate objects numeration and later visualize it.
  */
 private fun visualizeTrace(): Array<Any>? = runCatching {

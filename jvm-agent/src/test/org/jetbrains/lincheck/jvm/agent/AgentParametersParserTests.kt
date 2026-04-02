@@ -25,10 +25,10 @@ class AgentParametersParserTests {
     fun testOldStyleMinimal() {
         TraceAgentParameters.parseArgs("org.Class,method", emptyList())
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method", TraceAgentParameters.methodUnderTracing)
         assertEquals("method", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertNull(TraceAgentParameters.traceDumpFilePath)
@@ -39,10 +39,10 @@ class AgentParametersParserTests {
     fun testOldStyleWithOutput() {
         TraceAgentParameters.parseArgs("org.Class,method,/var/data", emptyList())
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method", TraceAgentParameters.methodUnderTracing)
         assertEquals("method", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertEquals("/var/data", TraceAgentParameters.traceDumpFilePath)
@@ -53,10 +53,10 @@ class AgentParametersParserTests {
     fun testOldStyleWithOutputAndTwoOptions() {
         TraceAgentParameters.parseArgs("org.Class,method,/var/data,bin,stream", listOf("opt1", "opt2"))
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method", TraceAgentParameters.methodUnderTracing)
         assertEquals("method", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertEquals("/var/data", TraceAgentParameters.traceDumpFilePath)
@@ -71,10 +71,10 @@ class AgentParametersParserTests {
     fun testOldStyleEscaping() {
         TraceAgentParameters.parseArgs("org.Class,method\\,comma\\\\backslash,c:\\\\temp\\\\data", emptyList())
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method,comma\\backslash", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method,comma\\backslash", TraceAgentParameters.methodUnderTracing)
         assertEquals("method,comma\\backslash", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertEquals("c:\\temp\\data", TraceAgentParameters.traceDumpFilePath)
@@ -85,10 +85,10 @@ class AgentParametersParserTests {
     fun testNewStyleMinimal() {
         TraceAgentParameters.parseArgs("class=org.Class,method=method", emptyList())
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method", TraceAgentParameters.methodUnderTracing)
         assertEquals("method", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertNull(TraceAgentParameters.traceDumpFilePath)
@@ -99,10 +99,10 @@ class AgentParametersParserTests {
     fun testNewStyleMinimalOtherOrder() {
         TraceAgentParameters.parseArgs("method=method,class=org.Class", emptyList())
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method", TraceAgentParameters.methodUnderTracing)
         assertEquals("method", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertNull(TraceAgentParameters.traceDumpFilePath)
@@ -113,10 +113,10 @@ class AgentParametersParserTests {
     fun testNewStyleTrailingComma() {
         TraceAgentParameters.parseArgs("method=method,class=org.Class,", emptyList())
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method", TraceAgentParameters.methodUnderTracing)
         assertEquals("method", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertNull(TraceAgentParameters.traceDumpFilePath)
@@ -127,10 +127,10 @@ class AgentParametersParserTests {
     fun testNewStyleEscapesInValue() {
         TraceAgentParameters.parseArgs("method=method\\,comma\\\\backslash\\=equals,class=org.Class", emptyList())
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method,comma\\backslash=equals", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method,comma\\backslash=equals", TraceAgentParameters.methodUnderTracing)
         assertEquals("method,comma\\backslash=equals", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertNull(TraceAgentParameters.traceDumpFilePath)
@@ -141,10 +141,10 @@ class AgentParametersParserTests {
     fun testNewStyleQuotedValue() {
         TraceAgentParameters.parseArgs("method=\"method,comma\\backslash=equals\\\"quote\",class=org.Class", emptyList())
 
-        assertEquals("org.Class", TraceAgentParameters.classUnderTraceDebugging)
+        assertEquals("org.Class", TraceAgentParameters.classUnderTracing)
         assertEquals("org.Class", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_CLASS))
 
-        assertEquals("method,comma\\backslash=equals\"quote", TraceAgentParameters.methodUnderTraceDebugging)
+        assertEquals("method,comma\\backslash=equals\"quote", TraceAgentParameters.methodUnderTracing)
         assertEquals("method,comma\\backslash=equals\"quote", TraceAgentParameters.getArg(TraceAgentParameters.ARGUMENT_METHOD))
 
         assertNull(TraceAgentParameters.traceDumpFilePath)

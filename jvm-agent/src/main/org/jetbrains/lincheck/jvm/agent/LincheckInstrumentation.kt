@@ -100,18 +100,6 @@ enum class InstrumentationMode {
     EXPERIMENTAL_MODEL_CHECKING,
 
     /**
-     * Trace debugging mode.
-     *
-     * This mode is similar to [MODEL_CHECKING] mode: it tracks a similar set of events,
-     * inserts potential switch points and creates trace points,
-     * enforces deterministic execution.
-     *
-     * The difference is that in this mode Lincheck does not enumerate various interleavings of events
-     * but rather collects a single execution trace and then replays it deterministically.
-     */
-    TRACE_DEBUGGING,
-
-    /**
      * Trace recording mode.
      *
      * In this mode, Lincheck only tracks requested events to collect an execution trace.
@@ -132,7 +120,7 @@ enum class InstrumentationMode {
 }
 
 val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) {
-    MODEL_CHECKING, EXPERIMENTAL_MODEL_CHECKING, TRACE_DEBUGGING -> true
+    MODEL_CHECKING, EXPERIMENTAL_MODEL_CHECKING -> true
     else -> false
 }
 
@@ -163,7 +151,7 @@ object LincheckInstrumentation {
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
      *
-     * It is set either by `TraceDebuggerAgent`/`TraceRecorderAgent` static agents, or on the first call to
+     * It is set either by `TraceRecorderAgent` static agents, or on the first call to
      * [withLincheckJavaAgent] which will use [ByteBuddyAgent] dynamic agent instead.
      */
     lateinit var instrumentation: Instrumentation
@@ -340,7 +328,6 @@ object LincheckInstrumentation {
      * Rules:
      * - For trace recorder always use `EAGER`.
      * - If "instrument all classes" was requested, use `EAGER`.
-     * - If trace debugger java-agent provided the `lazy` argument, use `LAZY` (defaults to true).
      * - Else use `LAZY` if [instrumentationMode] supports it, `EAGER` otherwise.
      */
     private fun setInstrumentationStrategy() {

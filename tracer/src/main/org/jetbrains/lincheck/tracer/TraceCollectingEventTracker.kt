@@ -327,16 +327,6 @@ class TraceCollectingEventTracker(
     override fun beforeNewObjectCreation(threadDescriptor: ThreadDescriptor, className: String) {}
     override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
 
-    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): Long = runInsideIgnoredSection {
-        Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
-        return 0L
-    }
-
-    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: Long) =
-        runInsideIgnoredSection {
-            Logger. error { "Trace Recorder mode doesn't support Trace Debugger-specific instrumentation" }
-        }
-
     override fun getCachedInvokeDynamicCallSite(
         name: String,
         descriptor: String,

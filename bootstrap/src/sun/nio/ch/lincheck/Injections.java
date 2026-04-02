@@ -936,41 +936,6 @@ public class Injections {
     }
 
     /**
-     * Retrieves the next object id, used for identity hash code substitution, and then advances it by one.
-     */
-    public static long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker) {
-        return getEventTracker().getNextTraceDebuggerEventTrackerId(tracker);
-    }
-
-    /**
-     * Advances the current object id with the delta, associated with the old id {@code oldId},
-     * previously received with {@code getNextObjectId}.
-     * <p>
-     * If for the given {@code oldId} there is no saved {@code newId},
-     * the function saves the current object id and associates it with the {@code oldId}.
-     * On subsequent re-runs, when for the given {@code oldId} there exists a saved {@code newId},
-     * the function sets the counter to the {@code newId}.
-     * <p>
-     * This function is typically used to account for some cached computations:
-     * on the first run the actual computation is performed, and its result is cached,
-     * and on subsequent runs the cached value is re-used.
-     * One example of such a situation is the {@code invokedynamic} instruction.
-     * <p>
-     * In such cases, on the first run, the performed computation may allocate more objects,
-     * assigning more object ids to them.
-     * On subsequent runs, however, these objects will not be allocated, and thus the object ids numbering may vary.
-     * To account for this, before the first invocation of the cached computation,
-     * the last allocated object id {@code oldId} can be saved, and after the computation,
-     * the new last object id can be associated with it via a call {@code advanceCurrentObjectId(oldId)}.
-     * On subsequent re-runs, the cached computation will be skipped, but the
-     * current object id will still be advanced by the required delta via a call to {@code advanceCurrentObjectId(oldId)}.
-     */
-    public static void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId) {
-        getEventTracker().advanceCurrentTraceDebuggerEventTrackerId(tracker, oldId);
-    }
-
-
-    /**
      * Replacement for ASM {@code Handle} type, not presented in the bootstrap module.
      */
     public static class HandlePojo {
@@ -1222,7 +1187,7 @@ public class Injections {
      * <p> 
      * In JDK 8 there are additional <a href="https://github.com/frohoff/jdk8u-jdk/blob/da0da73ab82ed714dc5be94acd2f0d00fbdfe2e9/src/share/classes/java/lang/invoke/MethodHandles.java#L681">restrictions</a>,
      * breaking {@code MethodHandles.lookup()} from being called from the Java standard library.
-     * Calling it is necessary for {@code invokedynamic} handling in the trace debugger.
+     * Calling it is necessary for {@code invokedynamic} handling.
      * <p> 
      * The function instead calls a private constructor with the TRUSTED mode via reflection.
      *

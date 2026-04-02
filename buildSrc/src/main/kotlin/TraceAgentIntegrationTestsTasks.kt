@@ -90,17 +90,16 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
 
     traceAgentIntegrationTestsPrerequisites = tasks.register("traceAgentIntegrationTestsPrerequisites") {
         prerequisite.forEach { dependsOn(it) }
-        dependsOn(":trace-debugger:traceDebuggerFatJar")
         dependsOn(":trace-recorder:traceRecorderFatJar")
     }
 }
 
 /**
- * This function is required to copy `trace-recorder-fat.jar` and `trace-debugger-fat.jar` files from
- * the corresponding projects into the lincheck's build directory. This allows integration tests to see
- * the fat-jars and add paths to them via `-javaagent` VM flag.
+ * This function is required to copy `trace-recorder-fat.jar` file from
+ * the corresponding project into the lincheck's build directory. This allows integration tests to see
+ * the fat-jar and add a path to it via `-javaagent` VM flag.
  *
- * @param fromProject trace-debugger/recorder project from which to copy the fat-jar.
+ * @param fromProject trace-recorder project from which to copy the fat-jar.
  * @param fatJarName expected fat-jar name.
  */
 fun Project.copyTraceAgentFatJar(fromProject: Project, fatJarName: String): TaskProvider<Copy> {

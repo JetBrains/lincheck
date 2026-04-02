@@ -17,7 +17,7 @@ sourceSets {
 }
 
 tasks {
-    // TODO: rename to match trace-debugger/recorder gradle task naming pattern to 'lincheckIntegrationTest'
+    // TODO: rename to match trace-recorder gradle task naming pattern to 'lincheckIntegrationTest'
     val lincheckIntegrationTest = register<Test>("integrationTest") {
         configureJvmTestCommon(project)
         group = "verification"

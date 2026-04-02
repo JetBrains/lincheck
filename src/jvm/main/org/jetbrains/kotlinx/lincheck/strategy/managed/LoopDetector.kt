@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.trace.ObstructionFreedomViolationExecution
 import org.jetbrains.kotlinx.lincheck.trace.SpinCycleStartTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.SwitchEventTracePoint
 import org.jetbrains.kotlinx.lincheck.trace.TracePoint
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 
@@ -156,8 +155,6 @@ internal class LoopDetector(
     }
 
     fun enableReplayMode(failDueToDeadlockInTheEnd: Boolean) {
-        if (isInTraceDebuggerMode) return
-
         val contextSwitchesBeforeHalt = findMaxPrefixLengthWithNoCycleOnSuffix(currentInterleavingHistory)
             ?.let { it.executionsBeforeCycle + it.cyclePeriod }
             ?: currentInterleavingHistory.size
@@ -263,21 +260,6 @@ internal class LoopDetector(
         // If we are in replay mode, check if the replay has lead to a deadlock
         replayModeLoopDetectorHelper?.let {
             return it.detectLivelock()
-        }
-        // In trace debugger mode, check whether the count exceeds
-        // the maximum number of repetitions for spin-loop detection.
-        // Check whether the count exceeds the maximum number of repetitions for loop/hang detection.
-        if (isInTraceDebuggerMode) {
-            return when {
-                // spin-loop detected - switch
-                count > currentHangingDetectionThreshold ->
-                    Decision.LivelockThreadSwitch(currentHangingDetectionThreshold)
-                // live-lock detected - fail
-                totalExecutionsCount > ManagedCTestConfiguration.DEFAULT_LIVELOCK_EVENTS_THRESHOLD ->
-                    Decision.EventsThresholdReached
-                // else - continue
-                else -> Decision.Idle
-            }
         }
         val detectedFirstTime = count > currentHangingDetectionThreshold
         val detectedEarly = loopTrackingCursor.isInCycle

@@ -13,13 +13,12 @@ package org.jetbrains.lincheck.jvm.agent
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 /**
- * Parses and stores arguments passed to Lincheck JVM javaagents (trace-recorder and trace-debugger).
+ * Parses and stores arguments passed to Lincheck JVM javaagents (Trace Recorder and Live Debugger).
  *
  * Arguments are provided as a comma-separated string of key=value pairs.
  * Keys must be valid Java identifiers (letters/digits/underscore, not starting with a digit).
@@ -125,10 +124,10 @@ object TraceAgentParameters {
     lateinit var rawArgs: String
 
     @JvmStatic
-    lateinit var classUnderTraceDebugging: String
+    lateinit var classUnderTracing: String
 
     @JvmStatic
-    lateinit var methodUnderTraceDebugging: String
+    lateinit var methodUnderTracing: String
 
     @JvmStatic
     var traceDumpFilePath: String? = null
@@ -165,13 +164,13 @@ object TraceAgentParameters {
             Logger.warn { "Looks like old-style arguments found, consider migrate to key-value arguments" }
             val actualArguments = splitArgs(actualArgs)
 
-            classUnderTraceDebugging = actualArguments.getOrNull(0) ?: ""
-            methodUnderTraceDebugging = actualArguments.getOrNull(1) ?: ""
-            namedArgs[ARGUMENT_CLASS] = classUnderTraceDebugging
-            namedArgs[ARGUMENT_METHOD] = methodUnderTraceDebugging
+            classUnderTracing = actualArguments.getOrNull(0) ?: ""
+            methodUnderTracing = actualArguments.getOrNull(1) ?: ""
+            namedArgs[ARGUMENT_CLASS] = classUnderTracing
+            namedArgs[ARGUMENT_METHOD] = methodUnderTracing
 
             validateClassAndMethodArgumentsAreProvided()
-            setClassUnderTraceDebuggingToMethodOwner()
+            setClassUnderTracingToMethodOwner()
 
             traceDumpFilePath = actualArguments.getOrNull(2)
             namedArgs[ARGUMENT_OUTPUT] = traceDumpFilePath
@@ -184,10 +183,10 @@ object TraceAgentParameters {
                 namedArgs[validAdditionalArgs[idx - 3]] = actualArguments[idx]
             }
         } else {
-            classUnderTraceDebugging = kvArguments[ARGUMENT_CLASS] ?: ""
-            methodUnderTraceDebugging = kvArguments[ARGUMENT_METHOD] ?: ""
-            if (!classUnderTraceDebugging.isEmpty() && !methodUnderTraceDebugging.isEmpty()) {
-                setClassUnderTraceDebuggingToMethodOwner()
+            classUnderTracing = kvArguments[ARGUMENT_CLASS] ?: ""
+            methodUnderTracing = kvArguments[ARGUMENT_METHOD] ?: ""
+            if (!classUnderTracing.isEmpty() && !methodUnderTracing.isEmpty()) {
+                setClassUnderTracingToMethodOwner()
             }
 
             traceDumpFilePath = kvArguments[ARGUMENT_OUTPUT]
@@ -206,10 +205,10 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun validateClassAndMethodArgumentsAreProvided() {
-        if (classUnderTraceDebugging.isBlank()) {
+        if (classUnderTracing.isBlank()) {
             error("Class name was not provided")
         }
-        if (methodUnderTraceDebugging.isBlank()) {
+        if (methodUnderTracing.isBlank()) {
             error("Method name was not provided")
         }
     }
@@ -217,44 +216,42 @@ object TraceAgentParameters {
     @JvmStatic
     fun validateMode() {
         // Check if one of the required parameters is set.
-        check(isInTraceRecorderMode || isInTraceDebuggerMode || isInLiveDebuggerMode) {
+        check(isInTraceRecorderMode || isInLiveDebuggerMode) {
             """
             When lincheck agent is attached to process,
             mode should be selected by agent parameter `mode` or by VM parameter:
-            `lincheck.traceRecorderMode`, `lincheck.traceDebuggerMode`, or `lincheck.liveDebuggerMode`.
+            `lincheck.traceRecorderMode` or `lincheck.liveDebuggerMode`.
             One of them is expected to be set.
-            
-            Rerun with: 
+
+            Rerun with:
             - `-Dlincheck.traceRecorderMode=true` or `mode=traceRecorder` as agent argument;
-            - `-Dlincheck.traceDebuggerMode=true` or `mode=traceDebugger` as agent argument;
             - `-Dlincheck.liveDebuggerMode=true` or `mode=liveDebugger` as agent argument.
             """
             .trimIndent()
         }
-        
+
         // Check that only one parameter is set
-        val modesEnabled = listOf(isInTraceRecorderMode, isInTraceDebuggerMode, isInLiveDebuggerMode).count { it }
+        val modesEnabled = listOf(isInTraceRecorderMode, isInLiveDebuggerMode).count { it }
         check(modesEnabled == 1) {
             """
             When lincheck agent is attached to process,
             mode should be selected by one of agent parameter `mode` or VM parameters:
-            `lincheck.traceRecorderMode`, `lincheck.traceDebuggerMode`, or `lincheck.liveDebuggerMode`.
+            `lincheck.traceRecorderMode` or `lincheck.liveDebuggerMode`.
             Only one of them expected to be set.
-            
+
             Rerun with exactly one mode flag set:
             - `-Dlincheck.traceRecorderMode=true` or `mode=traceRecorder` as agent argument;
-            - `-Dlincheck.traceDebuggerMode=true` or `mode=traceDebugger` as agent argument;
             - `-Dlincheck.liveDebuggerMode=true` or `mode=liveDebugger` as agent argument.
             """
             .trimIndent()
         }
     }
 
-    private fun setClassUnderTraceDebuggingToMethodOwner(
-        startClass: String = classUnderTraceDebugging,
-        method: String = methodUnderTraceDebugging,
+    private fun setClassUnderTracingToMethodOwner(
+        startClass: String = classUnderTracing,
+        method: String = methodUnderTracing,
     ) {
-        classUnderTraceDebugging =
+        classUnderTracing =
             runCatching { Class.forName(startClass) }.getOrNull()
                 ?.let { findDeclaringClassOrInterface(it, method) }
                 ?: startClass
@@ -294,16 +291,16 @@ object TraceAgentParameters {
 
     @JvmStatic
     fun getClassAndMethod(): Pair<Class<*>, Method> {
-        val testClass = Class.forName(classUnderTraceDebugging)
-        val testMethod = testClass.methods.find { it.name == methodUnderTraceDebugging }
-            ?: error("Method \"${methodUnderTraceDebugging}\" was not found in class \"${classUnderTraceDebugging}\". Check that method exists and it is public.")
+        val testClass = Class.forName(classUnderTracing)
+        val testMethod = testClass.methods.find { it.name == methodUnderTracing }
+            ?: error("Method \"${methodUnderTracing}\" was not found in class \"${classUnderTracing}\". Check that method exists and it is public.")
         return testClass to testMethod
     }
 
     @TestOnly
     fun reset() {
-        classUnderTraceDebugging = ""
-        methodUnderTraceDebugging = ""
+        classUnderTracing = ""
+        methodUnderTracing = ""
         traceDumpFilePath = null
         namedArgs.clear()
     }

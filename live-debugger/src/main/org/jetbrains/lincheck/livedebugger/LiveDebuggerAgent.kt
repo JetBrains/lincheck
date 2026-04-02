@@ -21,8 +21,8 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_HEARTBEAT
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTraceDebugging
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTraceDebugging
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTracing
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
@@ -65,7 +65,7 @@ internal object LiveDebuggerAgent {
         override fun validateArguments(attachType: JavaAgentAttachType) {
             TraceAgentParameters.validateMode()
 
-            if (classUnderTraceDebugging.isNotBlank() || methodUnderTraceDebugging.isNotBlank()) {
+            if (classUnderTracing.isNotBlank() || methodUnderTracing.isNotBlank()) {
                 error("Class and method arguments are not allowed in live debugger mode")
             }
         }

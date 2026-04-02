@@ -20,11 +20,9 @@ import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.TRACE_DEBUGGING
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
 
 /**
@@ -108,8 +106,7 @@ class ModelCheckingCTestConfiguration(
     private val useExperimentalModelChecking =
         experimentalModelChecking || System.getProperty("lincheck.useExperimentalModelChecking")?.toBoolean() ?: false
 
-    override val instrumentationMode: InstrumentationMode get() =
-        if (isInTraceDebuggerMode) TRACE_DEBUGGING else MODEL_CHECKING
+    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
 
     override fun createStrategy(
         testClass: Class<*>,

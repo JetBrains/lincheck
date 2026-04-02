@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck_test.datastructures.linearizable
 
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -22,9 +21,6 @@ import java.util.concurrent.ConcurrentSkipListMap
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class SkipListMapTest : AbstractLincheckTest() {
     override fun <O : Options<O, *>> O.customize() {
-        if (isInTraceDebuggerMode && this is ModelCheckingOptions) {
-            invocationsPerIteration(1)
-        }
         if (this is ModelCheckingOptions) analyzeStdLib(true)
     }
 

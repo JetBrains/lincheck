@@ -14,20 +14,14 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.LincheckAssertionError
-import org.junit.Assume.assumeFalse
-import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 class DaemonThreadPoolTest {
-
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     // Test should complete with no errors, even though we don't close threadpool explicitly
     @Test

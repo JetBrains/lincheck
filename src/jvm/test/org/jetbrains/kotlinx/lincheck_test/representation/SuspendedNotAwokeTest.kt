@@ -20,7 +20,6 @@ import org.junit.Test
 /**
  * Covers a scenario when operation is suspended but never awoke.
  */
-// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class SuspendedNotAwokeTest {
 
     @Volatile

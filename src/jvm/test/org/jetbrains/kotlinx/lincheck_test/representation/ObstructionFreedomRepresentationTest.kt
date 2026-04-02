@@ -13,12 +13,10 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 
 import java.util.concurrent.atomic.*
-import org.junit.Assume.assumeFalse
 import org.junit.*
 
 
@@ -29,9 +27,6 @@ import org.junit.*
 class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTest(
     "obstruction_freedom_violation_with_no_detected_cycle"
 ) {
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
-
     private val counter = AtomicInteger(0)
 
     override fun operation() {

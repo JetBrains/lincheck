@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck_test.datastructures.linearizable
 
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -35,7 +34,7 @@ class ConcurrentHashMapTest : AbstractLincheckTest() {
     override fun <O : Options<O, *>> O.customize() {
         // To obtain rare interleaving with `fullAddCount` method
         if (this is ModelCheckingOptions) {
-            invocationsPerIteration(if (isInTraceDebuggerMode) 1 else 10000)
+            invocationsPerIteration(10000)
             analyzeStdLib(true)
         }
     }

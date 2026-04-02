@@ -11,7 +11,6 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.junit.*
 import java.util.*
 import java.util.concurrent.*
@@ -52,6 +51,5 @@ abstract class AbstractRandomTest {
         .actorsAfter(0)
         .threads(3)
         .actorsPerThread(1)
-        .run { if (isInTraceDebuggerMode) invocationsPerIteration(1) else this }
         .check(this::class)
 }

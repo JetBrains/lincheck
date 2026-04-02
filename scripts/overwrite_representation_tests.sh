@@ -11,8 +11,8 @@
 
 
 # This script runs all representation tests in overwrite mode.
-# It runs the tests on all jdks, specified in array and both in trace and non-trace modes, in the order:
-# jdk-default non-trace -> jdk-default trace -> jdk-8 non-trace -> jdk 8 trace -> jdk-11 non-trace, jdk-11 trace, ...
+# It runs the tests on all jdks, specified in array, in the order:
+# jdk-default -> jdk-8 -> jdk-11, ...
 # Where necessary the output files are created or overwritten.
 # One can use this script to verify trace outputs by looking at the local changes after the script ran.
 # And commit the changes if accepted, to update test outputs.
@@ -32,16 +32,8 @@ jdks=("17") # ... "8" "11" "21"
 
 testFilter="org.jetbrains.kotlinx.lincheck_test.representation.*"
 
-for jdk in "${jdks[@]}" 
+for jdk in "${jdks[@]}"
 do
-  echo "[Representation Tests Overwrite] Running tests for jdk: $jdk in non-trace mode  ----------------------"
-  ./gradlew clean :test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=false
-
-  #https://github.com/JetBrains/lincheck/issues/500
-  if [ "$jdk" = "8" ]; then
-     continue
-  fi 
-  
-  echo "[Representation Tests Overwrite] Running tests for jdk: $jdk in trace mode  --------------------------"
-  ./gradlew clean :test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true -PtestInTraceDebuggerMode=true
-done 
+  echo "[Representation Tests Overwrite] Running tests for jdk: $jdk  ----------------------"
+  ./gradlew clean :test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true
+done

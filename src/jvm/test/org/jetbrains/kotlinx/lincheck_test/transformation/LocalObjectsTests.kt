@@ -16,7 +16,6 @@ import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.lincheck.util.JdkVersion
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.jdkVersion
 import org.junit.Assume.assumeFalse
 import org.junit.Before
@@ -35,7 +34,6 @@ import kotlin.reflect.KFunction
 class LocalObjectEliminationTest {
     @Before
     fun setUp() {
-        assumeFalse(isInTraceDebuggerMode)
         // https://youtrack.jetbrains.com/issue/JBRes-5736
         assumeFalse(jdkVersion == JdkVersion.JDK_21)
     }

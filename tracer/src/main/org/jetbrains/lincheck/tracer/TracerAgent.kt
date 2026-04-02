@@ -87,8 +87,8 @@ abstract class TracerAgent {
             /* transformer = */ TracingEntryPointTransformer(
                 LincheckInstrumentation.context,
                 provider,
-                classUnderTracing = TraceAgentParameters.classUnderTraceDebugging,
-                methodUnderTracing = TraceAgentParameters.methodUnderTraceDebugging,
+                classUnderTracing = TraceAgentParameters.classUnderTracing,
+                methodUnderTracing = TraceAgentParameters.methodUnderTracing,
             ),
             /* canRetransform = */ true
         )

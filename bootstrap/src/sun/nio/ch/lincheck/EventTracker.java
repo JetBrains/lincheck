@@ -40,9 +40,6 @@ public interface EventTracker {
     void beforeNewObjectCreation(ThreadDescriptor descriptor, String className);
     void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj);
 
-    long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
-    void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
-
     CallSite getCachedInvokeDynamicCallSite(
             String name,
             String descriptor,

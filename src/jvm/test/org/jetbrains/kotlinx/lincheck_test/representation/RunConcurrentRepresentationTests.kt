@@ -10,7 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.UnsafeHolder
 import org.jetbrains.kotlinx.lincheck_test.gpmc.*
 import org.jetbrains.kotlinx.lincheck_test.util.*
@@ -269,7 +268,6 @@ class AnonymousObjectRunConcurrentRepresentationTest : BaseRunConcurrentRepresen
     }
 }
 
-// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class CustomThreadsRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/custom_threads") {
     override fun block() {
         // We use an object here instead of lambda to avoid hustle
@@ -326,11 +324,7 @@ class KotlinThreadRunConcurrentRepresentationTest : BaseRunConcurrentRepresentat
     }
 }
 
-// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/livelock") {
-
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     override fun block() {
         var counter = 0
@@ -357,7 +351,6 @@ class LivelockRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationT
     }
 }
 
-// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class IncorrectConcurrentLinkedDequeRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>("run_concurrent_test/deque") {
     override fun block() {
         val deque = ConcurrentLinkedDeque<Int>()
@@ -400,11 +393,6 @@ class IncorrectHashmapRunConcurrentRepresentationTest : BaseRunConcurrentReprese
 class ThreadPoolRunConcurrentRepresentationTest : BaseRunConcurrentRepresentationTest<Unit>(
     "run_concurrent_test/thread_pool/thread_pool"
 ) {
-    @Before
-    fun setUp() {
-        assumeFalse(isInTraceDebuggerMode) // unstable hash-code
-    }
-
     override fun block() {
         // TODO: currently there is a problem --- if we declare counter as a local variable the test does not pass;
         //   after inspecting the generated traces, the hypothesis is that it is most likely because
@@ -452,7 +440,6 @@ class CoroutinesRunConcurrentRepresentationTest : BaseRunConcurrentRepresentatio
 
     @Before
     fun setUp() {
-        assumeFalse(isInTraceDebuggerMode) // unstable hash-code
         // TODO: investigate why test is unstable on these JDKs
         assumeFalse(jdkVersion == JdkVersion.JDK_8)
         assumeFalse(jdkVersion == JdkVersion.JDK_11)

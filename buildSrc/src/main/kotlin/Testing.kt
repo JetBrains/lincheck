@@ -42,11 +42,6 @@ fun Test.configureJvmTestCommon(project: Project) {
     if (withEventIdSequentialCheck.toBoolean()) {
         extraArgs.add("-Dlincheck.debug.withEventIdSequentialCheck=true")
     }
-    val testInTraceDebuggerMode: String by project
-    if (testInTraceDebuggerMode.toBoolean()) {
-        extraArgs.add("-Dlincheck.traceDebuggerMode=true")
-        exclude("**/lincheck_test/guide/*")
-    }
     val dumpTransformedSources: String by project
     if (dumpTransformedSources.toBoolean()) {
         extraArgs.add("-Dlincheck.dumpTransformedSources=true")
@@ -69,11 +64,8 @@ fun setupTestsJDK(project: Project) {
         javaLauncher.set(
             javaToolchains.launcherFor {
                 val jdkToolchainVersion: String by project
-                val testInTraceDebuggerMode: String by project
                 val jdkVersion = jdkToolchainVersion.toInt()
-                // https://github.com/JetBrains/lincheck/issues/500
-                val jreVersion = if (testInTraceDebuggerMode.toBoolean() && jdkVersion == 8) 17 else jdkVersion
-                languageVersion.set(JavaLanguageVersion.of(jreVersion))
+                languageVersion.set(JavaLanguageVersion.of(jdkVersion))
             }
         )
     }

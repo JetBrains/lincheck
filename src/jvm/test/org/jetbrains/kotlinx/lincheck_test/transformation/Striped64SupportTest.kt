@@ -14,18 +14,11 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.util.concurrent.atomic.*
-import org.junit.Assume.assumeFalse
 import org.junit.*
 
 
 class Striped64SupportTest {
-    @Before
-    fun setUp() {
-        assumeFalse(isInTraceDebuggerMode) // requires invocationsPerIteration(1), but then does not fail in this case
-    }
-
     val counter = LongAdder() // LongAdder uses Striped64.getProbe() under the hood
 
     @Operation
