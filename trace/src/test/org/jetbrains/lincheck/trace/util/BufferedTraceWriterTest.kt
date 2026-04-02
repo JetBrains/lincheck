@@ -30,6 +30,8 @@ class BufferedTraceWriterTest {
         val tr2 = createBasicMethodCallTracePoint(context, 2, "com.example.SomeClass", "methodName2")
         val sharedCall1 = createBasicMethodCallTracePoint(context, tr1.threadId, "com.example.SomeClass", "sharedMethod")
         val sharedCall2 = createBasicMethodCallTracePoint(context, tr2.threadId, "com.example.SomeClass", "sharedMethod")
+        val varAssignment1 = createVariableWriteTracePoint(context, tr1.threadId, "sharedVar")
+        val varAssignment2 = createVariableWriteTracePoint(context, tr2.threadId, "sharedVar")
 
         val traceFile = File.createTempFile("trace_test", ".trace").apply { deleteOnExit() }
         val collector = FileStreamingTraceCollecting(traceFile.absolutePath, context)
@@ -40,6 +42,9 @@ class BufferedTraceWriterTest {
         val t1 = thread(name = "TestThread-1") {
             collector.registerCurrentThread(tr1.threadId)
             collector.tracePointCreated(parent = null, tr1)
+
+            // Add a variable assignment tracepoint
+            collector.tracePointCreated(parent = tr1, varAssignment1)
 
             // Add nested shared method call
             collector.tracePointCreated(parent = tr1, sharedCall1)
@@ -58,6 +63,9 @@ class BufferedTraceWriterTest {
         val t2 = thread(name = "TestThread-2") {
             collector.registerCurrentThread(tr2.threadId)
             collector.tracePointCreated(parent = null, tr2)
+
+            // Add a variable assignment tracepoint (same variable as in thread 1)
+            collector.tracePointCreated(parent = tr2, varAssignment2)
 
             // Add nested shared method call (same method as in thread 1)
             collector.tracePointCreated(parent = tr2, sharedCall2)
@@ -85,17 +93,20 @@ class BufferedTraceWriterTest {
         val expectedClassDescriptorIds = setOf(0 /* SomeClass */)
         val expectedMethodDescriptorIds1 = setOf(0 /* methodName1 */, 2 /* sharedMethod */)
         val expectedMethodDescriptorIds2 = setOf(1 /* methodName2 */, 2 /* sharedMethod */)
-        val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* sharedMethod */)
-        val expectedStringIds2 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 4 /* methodName2 */, 3 /* sharedMethod */)
+        val expectedVariableDescriptorIds = setOf(0 /* sharedVar */)
+        val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* someMethod */, 4 /* sharedMethod */)
+        val expectedStringIds2 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 5 /* methodName2 */, 3 /* someMethod */, 4 /* sharedMethod */)
 
         blocks[1]!!.run {
             checkClassDescriptors(expectedClassDescriptorIds)
             checkMethodDescriptors(expectedMethodDescriptorIds1)
+            checkVariableDescriptors(expectedVariableDescriptorIds)
             checkStrings(expectedStringIds1)
         }
         blocks[2]!!.run {
             checkClassDescriptors(expectedClassDescriptorIds)
             checkMethodDescriptors(expectedMethodDescriptorIds2)
+            checkVariableDescriptors(expectedVariableDescriptorIds)
             checkStrings(expectedStringIds2)
         }
     }
@@ -107,6 +118,8 @@ class BufferedTraceWriterTest {
         val tr2 = createBasicMethodCallTracePoint(context, 2, "com.example.SomeClass", "methodName2")
         val sharedCall1 = createBasicMethodCallTracePoint(context, tr1.threadId, "com.example.SomeClass", "sharedMethod")
         val sharedCall2 = createBasicMethodCallTracePoint(context, tr2.threadId, "com.example.SomeClass", "sharedMethod")
+        val varAssignment1 = createVariableWriteTracePoint(context, tr1.threadId, "sharedVar")
+        val varAssignment2 = createVariableWriteTracePoint(context, tr2.threadId, "sharedVar")
 
         val traceFile = File.createTempFile("trace_test", ".trace").apply { deleteOnExit() }
         val collector = FileStreamingTraceCollecting(traceFile.absolutePath, context)
@@ -116,6 +129,9 @@ class BufferedTraceWriterTest {
         val t1 = thread(name = "TestThread-1") {
             collector.registerCurrentThread(tr1.threadId)
             collector.tracePointCreated(parent = null, tr1)
+
+            // Add a variable assignment tracepoint
+            collector.tracePointCreated(parent = tr1, varAssignment1)
 
             // Add nested shared method call
             collector.tracePointCreated(parent = tr1, sharedCall1)
@@ -132,6 +148,9 @@ class BufferedTraceWriterTest {
             latch.await()
 
             collector.tracePointCreated(parent = null, tr2)
+
+            // Add a variable assignment tracepoint (same variable as in thread 1)
+            collector.tracePointCreated(parent = tr2, varAssignment2)
 
             // Add nested shared method call (same method as in thread 1)
             collector.tracePointCreated(parent = tr2, sharedCall2)
@@ -154,18 +173,21 @@ class BufferedTraceWriterTest {
 
         val expectedClassDescriptorIds1 = setOf(0 /* SomeClass */)
         val expectedMethodDescriptorIds1 = setOf(0 /* methodName1 */, 2 /* sharedMethod */)
-        val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* sharedMethod */)
         val expectedMethodDescriptorIds2 = setOf(1 /* methodName2 */)
-        val expectedStringIds2 = setOf(4 /* methodName2 */)
+        val expectedVariableDescriptorIds1 = setOf(0 /* sharedVar */)
+        val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* someMethod */, 4 /* sharedMethod */)
+        val expectedStringIds2 = setOf(5 /* methodName2 */)
 
         blocks[1]!!.run {
             checkClassDescriptors(expectedClassDescriptorIds1)
             checkMethodDescriptors(expectedMethodDescriptorIds1)
+            checkVariableDescriptors(expectedVariableDescriptorIds1)
             checkStrings(expectedStringIds1)
         }
         blocks[2]!!.run {
             checkClassDescriptors(emptySet())
             checkMethodDescriptors(expectedMethodDescriptorIds2)
+            checkVariableDescriptors(emptySet())
             checkStrings(expectedStringIds2)
         }
     }
@@ -185,6 +207,12 @@ class BufferedTraceWriterTest {
     private fun BlockAnalysis.checkMethodDescriptors(expected: Set<Int>) {
         check(methodDescriptors == expected) {
             "Thread must have saved the following method descriptors: $expected, got: $methodDescriptors"
+        }
+    }
+
+    private fun BlockAnalysis.checkVariableDescriptors(expected: Set<Int>) {
+        check(variableDescriptors == expected) {
+            "Thread must have saved the following variable descriptors: $expected, got: $variableDescriptors"
         }
     }
 
@@ -209,6 +237,24 @@ class BufferedTraceWriterTest {
         )
         tracepoint.result = null
         return tracepoint
+    }
+
+    private fun createVariableWriteTracePoint(
+        context: TraceContext,
+        threadId: Int,
+        variableName: String
+    ): TRWriteLocalVariableTracePoint {
+        val vd = context.createAndRegisterVariableDescriptor(variableName, Types.INT_TYPE)
+        val codeLocationId = context.newCodeLocation(
+            StackTraceElement("com.example.SomeClass", "someMethod", "Example.java", 20)
+        )
+        return TRWriteLocalVariableTracePoint(
+            context,
+            threadId,
+            codeLocationId,
+            localVariableId = vd.id,
+            value = TRPrimitive(TR_OBJECT_P_INT, 0, 42)
+        )
     }
 
     private fun collectSavedBlocks(loadedContext: TraceContext, traceFile: File): Map<Int, BlockAnalysis> {
@@ -244,6 +290,7 @@ class BufferedTraceWriterTest {
                             if (prevBlock != null) {
                                 prevBlock.methodDescriptors.addAll(currentBlock.methodDescriptors)
                                 prevBlock.classDescriptors.addAll(currentBlock.classDescriptors)
+                                prevBlock.variableDescriptors.addAll(currentBlock.variableDescriptors)
                                 prevBlock.strings.addAll(currentBlock.strings)
                                 prevBlock.codeLocations.addAll(currentBlock.codeLocations)
                             }
@@ -251,6 +298,7 @@ class BufferedTraceWriterTest {
                             Logger.info { "Block ended for thread ${currentBlock!!.threadId}" }
                             Logger.info { "  - ClassDescriptors: ${currentBlock!!.classDescriptors}" }
                             Logger.info { "  - MethodDescriptors: ${currentBlock!!.methodDescriptors}" }
+                            Logger.info { "  - VariableDescriptors: ${currentBlock!!.variableDescriptors}" }
                             Logger.info { "  - Strings: ${currentBlock!!.strings}" }
                             Logger.info { "  - CodeLocations: ${currentBlock!!.codeLocations}\n" }
                             currentBlock = null
@@ -270,6 +318,13 @@ class BufferedTraceWriterTest {
                         val sign = dataInput.readMethodSignature()
                         currentBlock?.methodDescriptors?.add(id)
                         Logger.info { "  MethodDescriptor(id=$id, classId=$classId, sign=$sign)" }
+                    }
+
+                    ObjectKind.VARIABLE_DESCRIPTOR -> {
+                        val id = dataInput.readInt()
+                        val name = dataInput.readUTF()
+                        currentBlock?.variableDescriptors?.add(id)
+                        Logger.info { "  VariableDescriptor(id=$id, name=$name)" }
                     }
 
                     ObjectKind.STRING -> {
@@ -326,6 +381,7 @@ class BufferedTraceWriterTest {
         val threadId: Int,
         val classDescriptors: MutableSet<Int> = mutableSetOf(),
         val methodDescriptors: MutableSet<Int> = mutableSetOf(),
+        val variableDescriptors: MutableSet<Int> = mutableSetOf(),
         val strings: MutableSet<Int> = mutableSetOf(),
         val codeLocations: MutableSet<Int> = mutableSetOf(),
     )
