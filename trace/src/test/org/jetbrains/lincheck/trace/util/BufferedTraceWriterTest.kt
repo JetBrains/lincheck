@@ -58,8 +58,9 @@ class BufferedTraceWriterTest {
             collector.completeThread(Thread.currentThread())
         }
 
-        latch.await() // we want to ensure correct assignment of ids for saved strings, so we wait
+        latch.await() // we want to ensure correct assignment of ids for saved strings/descriptors/etc., so we wait
                       // for the first thread to write data to its buffered writer before starting the second one
+
         val t2 = thread(name = "TestThread-2") {
             collector.registerCurrentThread(tr2.threadId)
             collector.tracePointCreated(parent = null, tr2)
@@ -94,6 +95,8 @@ class BufferedTraceWriterTest {
         val expectedMethodDescriptorIds1 = setOf(0 /* methodName1 */, 2 /* sharedMethod */)
         val expectedMethodDescriptorIds2 = setOf(1 /* methodName2 */, 2 /* sharedMethod */)
         val expectedVariableDescriptorIds = setOf(0 /* sharedVar */)
+        val expectedCodeLocationIds1 = setOf(0 /* methodName1 at Example.java:10 */, 2 /* sharedMethod at Example.java:10 */, 3 /* sharedVar in someMethod at Example.java:20 */)
+        val expectedCodeLocationIds2 = setOf(1 /* methodName2 at Example.java:10 */, 2 /* sharedMethod at Example.java:10 */, 3 /* sharedVar in someMethod at Example.java:20 */)
         val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* someMethod */, 4 /* sharedMethod */)
         val expectedStringIds2 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 5 /* methodName2 */, 3 /* someMethod */, 4 /* sharedMethod */)
 
@@ -101,12 +104,14 @@ class BufferedTraceWriterTest {
             checkClassDescriptors(expectedClassDescriptorIds)
             checkMethodDescriptors(expectedMethodDescriptorIds1)
             checkVariableDescriptors(expectedVariableDescriptorIds)
+            checkCodeLocations(expectedCodeLocationIds1)
             checkStrings(expectedStringIds1)
         }
         blocks[2]!!.run {
             checkClassDescriptors(expectedClassDescriptorIds)
             checkMethodDescriptors(expectedMethodDescriptorIds2)
             checkVariableDescriptors(expectedVariableDescriptorIds)
+            checkCodeLocations(expectedCodeLocationIds2)
             checkStrings(expectedStringIds2)
         }
     }
@@ -175,6 +180,8 @@ class BufferedTraceWriterTest {
         val expectedMethodDescriptorIds1 = setOf(0 /* methodName1 */, 2 /* sharedMethod */)
         val expectedMethodDescriptorIds2 = setOf(1 /* methodName2 */)
         val expectedVariableDescriptorIds1 = setOf(0 /* sharedVar */)
+        val expectedCodeLocationIds1 = setOf(0 /* methodName1 at Example.java:10 */, 2 /* sharedMethod at Example.java:10 */, 3 /* sharedVar in someMethod at Example.java:20 */)
+        val expectedCodeLocationIds2 = setOf(1 /* methodName2 at Example.java:10 */)
         val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* someMethod */, 4 /* sharedMethod */)
         val expectedStringIds2 = setOf(5 /* methodName2 */)
 
@@ -182,12 +189,14 @@ class BufferedTraceWriterTest {
             checkClassDescriptors(expectedClassDescriptorIds1)
             checkMethodDescriptors(expectedMethodDescriptorIds1)
             checkVariableDescriptors(expectedVariableDescriptorIds1)
+            checkCodeLocations(expectedCodeLocationIds1)
             checkStrings(expectedStringIds1)
         }
         blocks[2]!!.run {
             checkClassDescriptors(emptySet())
             checkMethodDescriptors(expectedMethodDescriptorIds2)
             checkVariableDescriptors(emptySet())
+            checkCodeLocations(expectedCodeLocationIds2)
             checkStrings(expectedStringIds2)
         }
     }
@@ -213,6 +222,12 @@ class BufferedTraceWriterTest {
     private fun BlockAnalysis.checkVariableDescriptors(expected: Set<Int>) {
         check(variableDescriptors == expected) {
             "Thread must have saved the following variable descriptors: $expected, got: $variableDescriptors"
+        }
+    }
+
+    private fun BlockAnalysis.checkCodeLocations(expected: Set<Int>) {
+        check(codeLocations == expected) {
+            "Thread must have saved the following code locations: $expected, got: $codeLocations"
         }
     }
 
@@ -336,7 +351,7 @@ class BufferedTraceWriterTest {
 
                     ObjectKind.CODE_LOCATION -> {
                         val id = loadCodeLocation(dataInput, loadedContext, false)
-                        Logger.info { "  CodeLocation(id=$id)" }
+                        Logger.info { "  CodeLocation(id=$id): ${loadedContext.codeLocationsPool[id].stackTraceElement}" }
                         currentBlock?.codeLocations?.add(id)
                     }
 
