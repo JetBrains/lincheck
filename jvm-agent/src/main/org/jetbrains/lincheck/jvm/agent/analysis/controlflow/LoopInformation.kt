@@ -92,6 +92,9 @@ typealias LoopId = Int
      val isReducible: Boolean
          get() = headers.size == 1
 
+    val isIrreducible: Boolean
+        get() = !isReducible
+
      private fun validate() {
          require(headers.isNotEmpty()) {
              "Loop headers set must not be empty"

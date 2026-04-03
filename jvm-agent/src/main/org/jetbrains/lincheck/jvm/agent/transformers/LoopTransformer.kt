@@ -31,7 +31,7 @@ internal class LoopTransformer(
     context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
-    shouldTrackIrreducibleLoops: Boolean,
+    val shouldTrackIrreducibleLoops: Boolean,
 ) : InstructionMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     // Retrieve loop sites planned from the precomputed basic-block CFG.
@@ -94,7 +94,7 @@ internal class LoopTransformer(
             // STACK: descriptor, codeLocation, loopId
             if (loopInfo.isReducible) {
                 adapter.invokeStatic(Injections::onLoopIteration)
-            } else {
+            } else if (shouldTrackIrreducibleLoops) {
                 adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
             }
             // STACK: <empty>
@@ -103,6 +103,9 @@ internal class LoopTransformer(
         // Inject `onLoopExit` on transitions from within the loop body to outside.
         normalExitSites[nonPhonyIndex]?.let { loopIds ->
             for (loopId in loopIds) {
+                val isIrreducible = loopInfo.getLoopInfo(loopId)?.isIrreducible ?: true
+                if (isIrreducible && !shouldTrackIrreducibleLoops) continue
+
                 val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]
                     ?.contains(loopId) ?: true
                 // STACK: <empty>
@@ -125,6 +128,9 @@ internal class LoopTransformer(
             val exceptionLocal = newLocal(THROWABLE_TYPE)
             storeLocal(exceptionLocal)
             for (loopId in loopIds) {
+                val isIrreducible = loopInfo.getLoopInfo(loopId)?.isIrreducible ?: true
+                if (isIrreducible && !shouldTrackIrreducibleLoops) continue
+
                 val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]
                     ?.contains(loopId) ?: true
                 // STACK: <empty>
