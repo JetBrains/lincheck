@@ -50,8 +50,8 @@ internal object TraceRecorderInjections {
     @JvmStatic
     fun startTraceRecorder(startingCodeLocationId: Int) {
         try {
-            val className = TraceAgentParameters.classUnderTraceDebugging
-            val methodName = TraceAgentParameters.methodUnderTraceDebugging
+            val className = TraceAgentParameters.classUnderTracing
+            val methodName = TraceAgentParameters.methodUnderTracing
             val thread = Thread.currentThread()
 
             val startCount = startCount.incrementAndGet()
@@ -79,8 +79,8 @@ internal object TraceRecorderInjections {
     fun stopTraceRecorderAndDumpTrace() {
         // This method should never throw an exception, or tracer state is undetermined
         try {
-            val className = TraceAgentParameters.classUnderTraceDebugging
-            val methodName = TraceAgentParameters.methodUnderTraceDebugging
+            val className = TraceAgentParameters.classUnderTracing
+            val methodName = TraceAgentParameters.methodUnderTracing
             val thread = Thread.currentThread()
 
             val traceDumpPath = TraceAgentParameters.traceDumpFilePath ?: error("Trace dump path is not set")

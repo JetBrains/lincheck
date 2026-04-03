@@ -51,7 +51,6 @@ internal abstract class ManagedStrategy(
 ) : Strategy(), EventTracker {
 
     val executionMode: ExecutionMode = when {
-        isInTraceDebuggerMode -> ExecutionMode.TRACE_DEBUGGER
         (runner is LambdaRunner) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
         (runner is ExecutionScenarioRunner) -> ExecutionMode.DATA_STRUCTURES
 
@@ -94,25 +93,18 @@ internal abstract class ManagedStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker
+
     // Tracker of shared memory accesses.
     protected abstract val memoryTracker: MemoryTracker?
 
-    // Tracker of objects' identity hash codes.
-    private val identityHashCodeTracker = ObjectIdentityHashCodeTracker()
-    // Tracker of native method call states.
-    private val nativeMethodCallStatesTracker = NativeMethodCallStatesTracker()
+    // Tracker of the monitors' operations.
+    protected abstract val monitorTracker: MonitorTracker
 
-    internal val traceDebuggerEventTrackers: Map<TraceDebuggerTracker, AbstractTraceDebuggerEventTracker> = mapOf(
-        TraceDebuggerTracker.IdentityHashCode to identityHashCodeTracker,
-        TraceDebuggerTracker.NativeMethodCall to nativeMethodCallStatesTracker,
-    )
+    // Tracker of the thread parking.
+    protected abstract val parkingTracker: ParkingTracker
 
     // Cache for evaluated invoke dynamic call sites
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
-    // Tracker of the monitors' operations.
-    protected abstract val monitorTracker: MonitorTracker
-    // Tracker of the thread parking.
-    protected abstract val parkingTracker: ParkingTracker
 
     // Snapshot of the memory, which will be restored between invocations
     protected val memorySnapshot = SnapshotTracker().apply {
@@ -168,9 +160,6 @@ internal abstract class ManagedStrategy(
     // current interleaving replay number
     protected var replayNumber = 0L
 
-    // Is first replay within one invocation
-    private val isFirstReplay get() = replayNumber == 1L
-
     /**
      * For each thread, represents a shadow stack used to reflect the program's actual stack.
      *
@@ -197,15 +186,6 @@ internal abstract class ManagedStrategy(
 
     override fun close() {
         super.close()
-        closeTraceDebuggerTrackers()
-    }
-
-    internal fun resetTraceDebuggerTrackerIds() {
-        traceDebuggerEventTrackers.values.forEach { it.resetIds() }
-    }
-
-    internal fun closeTraceDebuggerTrackers() {
-        traceDebuggerEventTrackers.values.forEach { it.close() }
     }
 
     // == STRATEGY INTERFACE METHODS ==
@@ -301,9 +281,7 @@ internal abstract class ManagedStrategy(
 
     protected open fun enableSpinCycleReplay() {}
 
-    protected open fun initializeReplay() {
-        resetTraceDebuggerTrackerIds()
-    }
+    protected open fun initializeReplay() {}
 
     internal fun doReplay(): InvocationResult {
         initializeReplay()
@@ -362,8 +340,8 @@ internal abstract class ManagedStrategy(
                 result is ManagedDeadlockInvocationResult ||
                 result is ObstructionFreedomViolationInvocationResult
         )
-        resetTraceDebuggerTrackerIds()
 
+        initializeReplay()
         val loggedResults = runInvocation()
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
@@ -1575,7 +1553,6 @@ internal abstract class ManagedStrategy(
 
     override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit = threadDescriptor.runInsideIgnoredSection {
         if (objectTracker.shouldTrackObject(obj)) {
-            identityHashCodeTracker.afterNewTrackedObjectCreation(obj)
             objectTracker.registerNewObject(obj)
         }
     }
@@ -1626,16 +1603,6 @@ internal abstract class ManagedStrategy(
 
     private fun Injections.HandlePojo.toAsmHandle(): Handle =
         Handle(tag, owner, name, desc, isInterface)
-
-    override fun getNextTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker): TraceDebuggerEventId =
-        runInsideIgnoredSection {
-            traceDebuggerEventTrackers[tracker]?.getNextId() ?: 0
-        }
-
-    override fun advanceCurrentTraceDebuggerEventTrackerId(tracker: TraceDebuggerTracker, oldId: TraceDebuggerEventId): Unit =
-        runInsideIgnoredSection {
-            traceDebuggerEventTrackers[tracker]?.advanceCurrentId(oldId)
-        }
 
     /**
      * Tracks a specific field of an [obj], if the [obj] is either `null` (which means that field is static),
@@ -1720,23 +1687,11 @@ internal abstract class ManagedStrategy(
         methodCallInfo: MethodCallInfo,
         interceptor: ResultInterceptor?,
     ) {
-        var deterministicCallId = -1L
-        val interceptedResult = when {
-            // in Lincheck mode we always run stub implementation to simulate the deterministic result
-            !isInTraceDebuggerMode -> runFake(receiver, params)
-            // in trace debugger mode, on the first invocation record the result, on next invocations => replay it
-            else -> {
-                deterministicCallId = nativeMethodCallStatesTracker.getNextId()
-                if (isFirstReplay) null else {
-                    val state = nativeMethodCallStatesTracker.getState(deterministicCallId, methodCallInfo)
-                    runFromStateWithCast(receiver, params, state)
-                }
-            }
-        }
+        val deterministicCallId = -1L
+        // run stub implementation to simulate the deterministic result
+        val interceptedResult = runFake(receiver, params)
         interceptor?.eventTrackerData = DeterministicMethodCallInterceptorData(deterministicCallId, this)
-        if (interceptedResult != null) {
-            interceptor?.intercept(interceptedResult)
-        }
+        interceptor?.intercept(interceptedResult)
     }
 
     private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodResult(
@@ -1744,32 +1699,14 @@ internal abstract class ManagedStrategy(
         params: Array<Any?>,
         result: Any?,
         interceptor: ResultInterceptor,
-    ) {
-        val interceptorData = (interceptor.eventTrackerData as DeterministicMethodCallInterceptorData)
-        if (isInTraceDebuggerMode && isFirstReplay) {
-            val newResult = saveFirstResultWithCast(receiver, params, Result.success(result)) {
-                nativeMethodCallStatesTracker.setState(interceptorData.deterministicCallId, methodCallInfo, it)
-            }.getOrElse {
-                error("Unexpected replacement success -> failure:\n$result\n${Result.failure<Any?>(it)}")
-            }
-        }
-    }
+    ) {}
 
     private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodException(
         receiver: Any?,
         params: Array<Any?>,
         throwable: Throwable,
         interceptor: ResultInterceptor,
-    ) {
-        val interceptorData = (interceptor.eventTrackerData as DeterministicMethodCallInterceptorData)
-        if (isInTraceDebuggerMode && isFirstReplay) {
-            val newThrowable = saveFirstResult(receiver, params, Result.failure(throwable)) {
-                nativeMethodCallStatesTracker.setState(interceptorData.deterministicCallId, methodCallInfo, it)
-            }.let { newResult ->
-                newResult.exceptionOrNull() ?: error("Unexpected replacement failure -> success:\n$throwable\n$newResult")
-            }
-        }
-    }
+    ) {}
 
     override fun onMethodCall(
         threadDescriptor: ThreadDescriptor,
@@ -2115,12 +2052,7 @@ internal abstract class ManagedStrategy(
         deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
     ): AnalysisSectionType {
         // Ignore static MethodHandle calls.
-        if (isIgnoredMethodHandleMethod(className, methodName) &&
-            // in trace debugger mode, `invokedynamic` instructions are intercepted
-            // and are replaced with `MethodHandles` machinery to achieve deterministic execution
-            // TODO: investigate if we still can ignore these methods even with `invokedynamic` instrumentation
-            !isInTraceDebuggerMode
-        ) {
+        if (isIgnoredMethodHandleMethod(className, methodName)) {
             return AnalysisSectionType.IGNORED
         }
         // Ignore `toString()` on primitive and immutable types.
@@ -2639,7 +2571,6 @@ private val BlockingReason.obstructionFreedomViolationMessage: String get() = wh
 enum class ExecutionMode(val id: String) {
     DATA_STRUCTURES("DATA_STRUCTURES"),
     GENERAL_PURPOSE_MODEL_CHECKER("GENERAL_PURPOSE_MODEL_CHECKER"),
-    TRACE_DEBUGGER("TRACE_DEBUGGER")
 }
 
 private const val OBSTRUCTION_FREEDOM_SPINLOCK_VIOLATION_MESSAGE =

@@ -40,23 +40,6 @@ public interface EventTracker {
     void beforeNewObjectCreation(ThreadDescriptor descriptor, String className);
     void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj);
 
-    long getNextTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker);
-    void advanceCurrentTraceDebuggerEventTrackerId(TraceDebuggerTracker tracker, long oldId);
-
-    CallSite getCachedInvokeDynamicCallSite(
-            String name,
-            String descriptor,
-            Injections.HandlePojo bootstrapMethodHandlePojo,
-            Object[] bootstrapMethodArguments
-    );
-    void cacheInvokeDynamicCallSite(
-            String name,
-            String descriptor,
-            Injections.HandlePojo bootstrapMethodHandlePojo,
-            Object[] bootstrapMethodArguments,
-            CallSite callSite
-    );
-
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 
     void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor);
@@ -90,6 +73,21 @@ public interface EventTracker {
 
     InjectedRandom getThreadLocalRandom();
     int randomNextInt();
+
+    CallSite getCachedInvokeDynamicCallSite(
+            String name,
+            String descriptor,
+            Injections.HandlePojo bootstrapMethodHandlePojo,
+            Object[] bootstrapMethodArguments
+    );
+
+    void cacheInvokeDynamicCallSite(
+            String name,
+            String descriptor,
+            Injections.HandlePojo bootstrapMethodHandlePojo,
+            Object[] bootstrapMethodArguments,
+            CallSite callSite
+    );
 
     // Methods required for the plugin integration
 

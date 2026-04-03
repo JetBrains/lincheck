@@ -20,8 +20,8 @@ import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.tasks.Copy
 import java.io.File
 
-// Below are tasks that are used by the trace debugger plugin.
-// When these jars are loaded the `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` VM argument is expected
+// Below are tasks that are used by the tracing agent plugin.
+// When these jars are loaded the `-Dlincheck.traceRecorderMode=true` VM argument is expected
 fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, premainClass: String) {
     // Ensure the Java plugin is applied (for sourceSets and runtimeClasspath)
     plugins.apply("java")

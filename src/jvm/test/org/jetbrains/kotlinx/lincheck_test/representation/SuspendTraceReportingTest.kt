@@ -17,7 +17,6 @@ import org.junit.*
 import kotlin.coroutines.*
 import kotlinx.coroutines.sync.*
 
-// TODO investigate difference for trace debugger (Evgeniy Moiseenko)
 class SuspendTraceReportingTest {
     private val lock = Mutex()
     private var canEnterForbiddenBlock: Boolean = false

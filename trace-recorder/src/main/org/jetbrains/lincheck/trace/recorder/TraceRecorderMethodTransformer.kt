@@ -24,12 +24,12 @@ import org.objectweb.asm.commons.GeneratorAdapter
  *
  * The method body is transformed from:
  * ```kotlin
- * fun methodUnderTraceDebugging() {/* code */}
+ * fun methodUnderTracing() {/* code */}
  * ```
  *
  * To:
  * ```kotlin
- * fun methodUnderTraceDebugging() {
+ * fun methodUnderTracing() {
  *  TraceRecorderInjections::startTraceRecorder()
  *  try {
  *    /* code */

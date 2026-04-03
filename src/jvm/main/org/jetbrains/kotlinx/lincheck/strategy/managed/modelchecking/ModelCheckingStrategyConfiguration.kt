@@ -21,12 +21,10 @@ import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
 import org.jetbrains.lincheck.datastructures.ManagedOptions
 import org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.TRACE_DEBUGGING
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.datastructures.getTimeOutMs
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import java.lang.reflect.Method
 
 /**
@@ -106,8 +104,7 @@ class ModelCheckingCTestConfiguration(
     stdLibAnalysisEnabled = stdLibAnalysisEnabled,
 ) {
 
-    override val instrumentationMode: InstrumentationMode get() =
-        if (isInTraceDebuggerMode) TRACE_DEBUGGING else MODEL_CHECKING
+    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
 
     override fun createStrategy(
         testClass: Class<*>,

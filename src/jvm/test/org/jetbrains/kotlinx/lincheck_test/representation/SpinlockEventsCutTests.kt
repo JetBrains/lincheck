@@ -15,13 +15,10 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.kotlinx.lincheck_test.datastructures.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.jetbrains.lincheck.datastructures.CTestConfiguration
 import org.jetbrains.lincheck.datastructures.RandomProvider
-import org.junit.Assume.assumeFalse
-import org.junit.Before
 import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
@@ -35,8 +32,6 @@ import kotlin.reflect.jvm.*
  */
 class ObstructionFreedomViolationEventsCutTest {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val q = MSQueueBlocking()
 
@@ -58,8 +53,6 @@ class ObstructionFreedomViolationEventsCutTest {
  */
 class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedStateAny = AtomicBoolean(false)
 
@@ -77,8 +70,6 @@ class SpinlockEventsCutShortLengthTest : AbstractSpinLivelockTest() {
  */
 class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedStateAny = AtomicBoolean(false)
 
@@ -98,8 +89,6 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
  */
 class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val sharedStateAny = AtomicBoolean(false)
 
@@ -119,8 +108,6 @@ class SpinlockEventsCutInfiniteLoopTest : AbstractSpinLivelockTest() {
  */
 class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var sharedState: Boolean = false
@@ -141,8 +128,6 @@ class SpinlockEventsCutInfiniteLoopWithParametersTest : AbstractSpinLivelockTest
  */
 class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Receiver(false)
     private val second = Receiver(false)
@@ -169,8 +154,6 @@ class SpinlockEventsCutInfiniteLoopWithReceiversTest : AbstractSpinLivelockTest(
  */
 class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var array: Array<Int> = Array(3) { 0 }
@@ -197,8 +180,6 @@ class SpinlockEventsCutInfiniteLoopWithArrayOperationsTest : AbstractSpinLiveloc
  */
 class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val first = Array(3) { 0 }
     private val second = Array(3) { 0 }
@@ -224,8 +205,6 @@ class SpinlockEventsCutInfiniteLoopWithArrayReceiversTest : AbstractSpinLivelock
  */
 class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val array = Array(3) { 0 }
     private val random = java.util.Random(0)
@@ -248,8 +227,6 @@ class SpinlockEventsCutInfiniteNoCycleWithParamsTest : AbstractSpinLivelockTest(
  */
 class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val data = AtomicReferenceArray<Int>(7)
     override val outputFileName: String
@@ -272,8 +249,6 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
  */
 class SpinlockEventsCutWithInnerLoopActionsTest : AbstractSpinLivelockTest() {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val data = AtomicReferenceArray<Int>(10)
 
@@ -337,8 +312,6 @@ abstract class AbstractSpinLivelockTest {
  */
 class SpinlockInIncorrectResultsWithClocksTest {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var bStarted = false
@@ -421,8 +394,6 @@ class SpinlockInIncorrectResultsWithClocksTest {
  */
 class SpinCycleWithSideEffectsTest {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
 
@@ -463,8 +434,6 @@ class SpinCycleWithSideEffectsTest {
  */
 class SpinLockWithAllEventsWrappedInMethodsTest {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     private val counter = AtomicInteger(0)
     private val someUselessSharedState = AtomicBoolean(false)
@@ -513,8 +482,6 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
 @Ignore // TODO investigate why this goes OOM #632
 class SingleThreadTopLevelSpinLockTest {
 
-    @Before // spin-loop detection is unsupported in trace debugger mode
-    fun setUp() = assumeFalse(isInTraceDebuggerMode)
 
     @Volatile
     private var state: Boolean = false

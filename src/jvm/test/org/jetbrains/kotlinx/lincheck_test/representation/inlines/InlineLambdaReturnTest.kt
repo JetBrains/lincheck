@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck_test.representation.inlines
 
 import org.jetbrains.kotlinx.lincheck_test.representation.BaseTraceRepresentationTest
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
 import org.jetbrains.lincheck.util.isJdk8
 import org.junit.Assume.assumeFalse
 import org.junit.Before
@@ -24,8 +23,8 @@ class InlineLambdaReturnTest: BaseTraceRepresentationTest("inlines/lambda_return
     fun setUp() {
         // cannot run this test, as it has different output on JDK-8,
         // but due to https://github.com/JetBrains/lincheck/issues/500
-        // we cannot set trace-debugger & JDK-8 specific expected output file
-        assumeFalse(isInTraceDebuggerMode || isJdk8)
+        // we cannot set JDK-8 specific expected output file
+        assumeFalse(isJdk8)
     }
 
     override fun operation() {

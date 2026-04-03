@@ -12,9 +12,12 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 import org.jetbrains.kotlinx.lincheck.runner.Runner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.trace.TraceContext
-import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.isJavaLambdaClass
+import org.jetbrains.lincheck.util.traverseObjectGraph
+import org.jetbrains.lincheck.util.truncateTo
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.random.Random
@@ -60,9 +63,7 @@ internal class ModelCheckingStrategy(
     private var isReplayingSpinCycle = false
 
     // Tracker of objects' allocations and object graph topology.
-    override val objectTracker: ObjectTracker = run {
-        if (isInTraceDebuggerMode) BaseObjectTracker() else LocalObjectManager()
-    }
+    override val objectTracker: ObjectTracker = LocalObjectManager()
 
     override val memoryTracker: MemoryTracker? = null
 
@@ -81,7 +82,6 @@ internal class ModelCheckingStrategy(
         replayNumber = 0
         currentInterleaving = root.nextInterleaving()
             ?: return false
-        resetTraceDebuggerTrackerIds()
         return true
     }
 

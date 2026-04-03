@@ -226,12 +226,12 @@ internal class LincheckClassVisitor(
         // It can appear earlier in code than `IntrinsicCandidateMethodFilter` because if kover instruments intrinsic methods
         // (which cannot disallow) then we don't need to hide coverage instrumentation from lincheck,
         // because lincheck will not see intrinsic method bodies at all.
-        if (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_DEBUGGING) {
+        if (instrumentationMode == MODEL_CHECKING) {
             mv = CoverageBytecodeFilter(initialVisitor, mv)
         }
 
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-        if (instrumentationMode == MODEL_CHECKING || instrumentationMode == TRACE_DEBUGGING) {
+        if (instrumentationMode == MODEL_CHECKING) {
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv, context)
         }
 
