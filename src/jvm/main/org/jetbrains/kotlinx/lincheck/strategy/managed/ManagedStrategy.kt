@@ -15,6 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.*
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.kotlinx.lincheck.util.*
@@ -277,8 +278,7 @@ internal abstract class ManagedStrategy(
 
     protected open fun enableSpinCycleReplay() {}
 
-    protected open fun initializeReplay() {
-    }
+    protected open fun initializeReplay() {}
 
     internal fun doReplay(): InvocationResult {
         initializeReplay()
@@ -337,6 +337,8 @@ internal abstract class ManagedStrategy(
                 result is ManagedDeadlockInvocationResult ||
                 result is ObstructionFreedomViolationInvocationResult
         )
+
+        initializeReplay()
         val loggedResults = runInvocation()
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
@@ -1681,15 +1683,32 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    private fun DeterministicMethodDescriptor<*>.processDeterministicMethodCall(
+    private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodCall(
         receiver: Any?,
         params: Array<Any?>,
+        methodCallInfo: MethodCallInfo,
         interceptor: ResultInterceptor?,
     ) {
+        val deterministicCallId = -1L
+        // run stub implementation to simulate the deterministic result
         val interceptedResult = runFake(receiver, params)
-        interceptor?.eventTrackerData = DeterministicMethodCallInterceptorData(this)
+        interceptor?.eventTrackerData = DeterministicMethodCallInterceptorData(deterministicCallId, this)
         interceptor?.intercept(interceptedResult)
     }
+
+    private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodResult(
+        receiver: Any?,
+        params: Array<Any?>,
+        result: Any?,
+        interceptor: ResultInterceptor,
+    ) {}
+
+    private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodException(
+        receiver: Any?,
+        params: Array<Any?>,
+        throwable: Throwable,
+        interceptor: ResultInterceptor,
+    ) {}
 
     override fun onMethodCall(
         threadDescriptor: ThreadDescriptor,
@@ -1719,7 +1738,7 @@ internal abstract class ManagedStrategy(
             methodId = methodId,
         )
 
-        var shouldInterceptAtomicMethod = false
+        var shouldInterceptAtomicMethod: Boolean = false
         if (memoryTracker != null && atomicMethodDescriptor != null && receiver != null) {
             val location = objectTracker.getAtomicAccessMemoryLocation(
                 context,
@@ -1743,7 +1762,7 @@ internal abstract class ManagedStrategy(
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
 
         if (deterministicMethodDescriptor != null) {
-            deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, interceptor)
+            deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, methodCallInfo, interceptor)
         } else if (memoryTracker != null && shouldInterceptAtomicMethod) {
             interceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         } else {
@@ -1853,6 +1872,9 @@ internal abstract class ManagedStrategy(
         }
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
+        if (deterministicMethodDescriptor != null) {
+            deterministicMethodDescriptor.processDeterministicMethodResult(receiver, params, result, interceptor)
+        }
 
         val threadId = threadScheduler.getCurrentThreadId()
         // check if the called method is an atomics API method
@@ -1907,6 +1929,9 @@ internal abstract class ManagedStrategy(
         val methodDescriptor = context.methodPool[methodId]
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
+        if (deterministicMethodDescriptor != null) {
+            deterministicMethodDescriptor.processDeterministicMethodException(receiver, params, throwable, interceptor)
+        }
 
         val threadId = threadScheduler.getCurrentThreadId()
         // check if the called method is an atomics API method
@@ -2026,7 +2051,7 @@ internal abstract class ManagedStrategy(
         className: String,
         methodName: String,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
-        deterministicMethodDescriptor: DeterministicMethodDescriptor<*>?,
+        deterministicMethodDescriptor: DeterministicMethodDescriptor<*, *>?,
     ): AnalysisSectionType {
         // Ignore static MethodHandle calls.
         if (isIgnoredMethodHandleMethod(className, methodName)) {
