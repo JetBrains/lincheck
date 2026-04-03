@@ -277,7 +277,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
             }
         }
         val allNodes = (0 until n).toSet()
-        val sccs = computeSCCs(allNodes, residualSuccessors)
+        val sccs = computeStronglyConnectedComponents(allNodes, residualSuccessors)
         for (scc in sccs) {
             // Skip SCCs that are fully contained in an already-found reducible loop body
             val isAlreadyCovered = loopBodiesWithHeaders.any { (_, body) -> body.containsAll(scc) }
@@ -363,7 +363,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
     return MethodLoopsInformation(loops = loops, loopsByBlock = loopsByBlock)
 }
 
-private fun computeSCCs(
+private fun computeStronglyConnectedComponents(
     nodes: Set<BasicBlockIndex>,
     successors: (BasicBlockIndex) -> Iterable<BasicBlockIndex>
 ): List<Set<BasicBlockIndex>> {

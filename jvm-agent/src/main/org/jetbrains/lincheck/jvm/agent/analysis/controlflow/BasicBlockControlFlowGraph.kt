@@ -162,26 +162,17 @@ class BasicBlockControlFlowGraph(
 
             if (isReducible()) {
                 isReducible = true
-                // CFG is reducible, so we can compute actual loops
-                loopInfo = computeLoopsFromDominators().also { info ->
-                    info.validateBasicBlocksLoopsMapping()
-                    info.loops.forEach {
-                        it.validateLoopEdgesInvariants()
-                    }
-                }
             } else {
                 isReducible = false
-                // CFG is irreducible, our loop calculation algorithm will not work perfectly in this case
-                // so we report that fact and compute limited loop information
+                // Report irreducible CFG
                 Logger.warn { "Irreducible CFG detected, loop information will be limited for $className::$method" }
                 Logger.debug { "CFG:\n${toFormattedString()}" }
-                // loopInfo = MethodLoopsInformation()
+            }
 
-                loopInfo = computeLoopsFromDominators().also { info ->
-                    info.validateBasicBlocksLoopsMapping()
-                    info.loops.forEach {
-                        it.validateLoopEdgesInvariants()
-                    }
+            loopInfo = computeLoopsFromDominators().also { info ->
+                info.validateBasicBlocksLoopsMapping()
+                info.loops.forEach {
+                    it.validateLoopEdgesInvariants()
                 }
             }
         }
