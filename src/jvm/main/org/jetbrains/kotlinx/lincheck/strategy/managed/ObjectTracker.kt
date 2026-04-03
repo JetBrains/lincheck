@@ -10,13 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import sun.nio.ch.lincheck.WeakIdentityReference
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
-import kotlin.coroutines.Continuation
+import sun.nio.ch.lincheck.WeakIdentityReference
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
-import java.util.WeakHashMap
+import java.util.*
+import kotlin.coroutines.Continuation
 import kotlin.reflect.KClass
 
 /**
@@ -396,8 +396,20 @@ private class Lambda
  *
  * It provides an implementation for registering, retrieving, updating,
  * and managing objects and their entries in the registry.
+ *
+ * @param shouldOverwriteNewObjectsIdentityHashCode enables overwriting of the hash code of newly created objects.
+ *   If true, a physical overwriting of the identity hash code in the object's header using Unsafe API.
+ *   This provides deterministic behavior of the identity hash codes between replays of the same execution.
+ *   Without this option enabled, the instrumentation only intercepts `hashCode()` and `identityHashCode()`
+ *   calls in the instrumented code, skipping hash codes interception in ignored uninstrumented classes.
+ *   With this option enabled, for every object whose creation was intercepted,
+ *   the hash code will be overwritten, and thus all classes (both instrumented and uninstrumented)
+ *   will observe the same intercepted hash code value.
+ *
  */
-open class BaseObjectTracker : ObjectTracker {
+open class BaseObjectTracker(
+    val shouldOverwriteNewObjectsIdentityHashCode: Boolean = true
+) : ObjectTracker {
 
     /**
      * Indicates whether the object tracker should track immutable value objects (false by default).
@@ -452,8 +464,12 @@ open class BaseObjectTracker : ObjectTracker {
         registerObjectIfAbsent(thread)
     }
 
-    override fun registerNewObject(obj: Any): ObjectEntry =
-        registerObject(ObjectKind.NEW, obj)
+    override fun registerNewObject(obj: Any): ObjectEntry {
+        if (shouldOverwriteNewObjectsIdentityHashCode) {
+            overwriteIdentityHashCode(obj)
+        }
+        return registerObject(ObjectKind.NEW, obj)
+    }
 
     override fun registerExternalObject(obj: Any): ObjectEntry =
         registerObject(ObjectKind.EXTERNAL, obj)
@@ -559,6 +575,11 @@ open class BaseObjectTracker : ObjectTracker {
             return@retainAll isAlive
         }
     }
+
+    private fun overwriteIdentityHashCode(obj: Any) {
+        // Zero out the identity hash code in the object header to ensure deterministic behavior.
+        UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, 0)
+    }
 }
 
 private fun ReferenceQueue<Any>.clear() {
@@ -568,3 +589,25 @@ private fun ReferenceQueue<Any>.clear() {
 }
 
 private typealias IdentityHashCode = Int
+
+/**
+ * Offset (in bytes) of identity hashcode in an object header.
+ *
+ * The memory layout of object header mark work from [2] (on 64 bits architectures):
+ * | unused:25 hash:31 -->| unused:1   age:4    biased_lock:1 lock:2 (normal object) |
+ * So the hash code starts after the 1st byte (1 unused + 4 age bits + 3 lock bits = 8 bits).
+ *
+ * Links:
+ *   [1] JVM Anatomy Quark #26: Identity Hash Code:
+ *   <a href="https://shipilev.net/jvm/anatomy-quarks/26-identity-hash-code/#_hashcode_storage">JVM Anatomy Quark #26: Identity Hash Code</a>
+ *
+ *   [2] OpenJDK object header source code:
+ *   <a href="https://hg.openjdk.org/jdk8/jdk8/hotspot/file/87ee5ee27509/src/share/vm/oops/markOop.hpp">
+ *
+ * TODO:
+ *   1. Check on 32 bits architectures.
+ *   2. Re-check if CAS is needed to account for concurrent GC.
+ *   3. Re-check wrt. compact identity hash codes:
+ *      https://wiki.openjdk.org/display/lilliput/Compact+Identity+Hashcode
+ */
+private const val IDENTITY_HASHCODE_OFFSET = 1L
