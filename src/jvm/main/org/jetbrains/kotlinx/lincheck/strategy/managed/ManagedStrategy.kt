@@ -93,15 +93,18 @@ internal abstract class ManagedStrategy(
 
     // Tracker of objects' allocations and object graph topology.
     protected abstract val objectTracker: ObjectTracker
+
     // Tracker of shared memory accesses.
     protected abstract val memoryTracker: MemoryTracker?
 
-    // Cache for evaluated invoke dynamic call sites
-    private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
     // Tracker of the monitors' operations.
     protected abstract val monitorTracker: MonitorTracker
+
     // Tracker of the thread parking.
     protected abstract val parkingTracker: ParkingTracker
+
+    // Cache for evaluated invoke dynamic call sites
+    private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
 
     // Snapshot of the memory, which will be restored between invocations
     protected val memorySnapshot = SnapshotTracker().apply {
