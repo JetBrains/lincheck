@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.trace.debugger
+package org.jetbrains.kotlinx.lincheck_test.deterministicmethods
 
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.util.JdkVersion
