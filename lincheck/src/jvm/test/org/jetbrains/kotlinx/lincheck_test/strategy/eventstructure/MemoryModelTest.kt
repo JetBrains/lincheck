@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.*
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.lincheck.datastructures.scenario
-import org.junit.Ignore
 
 import org.junit.Test
 
@@ -102,72 +101,6 @@ class MemoryModelTest {
             (r1 to r2)
         }
     }
-
-    @Test
-    fun testHashMap() {
-        class Foo {
-            var x = AtomicInteger(0)
-            fun one() {
-                 val map = mutableMapOf<Int, Int>()
-                map[0] = x.get()
-            }
-
-            fun two() {
-                val flarb = Object()
-                x.set(1)
-            }
-        }
-
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(Foo::one)
-                }
-                thread {
-                    actor(Foo::two)
-                }
-            }
-        }
-
-        val outcomes: Set<Unit> = setOf(Unit)
-        litmusTest(Foo::class.java, testScenario, outcomes) { results ->
-            Unit
-        }
-    }
-
-    @Test
-    fun testIf() {
-        class Foo {
-            var x = AtomicInteger(0)
-            fun one() {
-                x.get() == 0
-                val blarb = Object()
-            }
-
-            fun two() {
-                val flarb = Object()
-                x.set(1)
-            }
-        }
-
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(Foo::one)
-                }
-                thread {
-                    actor(Foo::two)
-                }
-            }
-        }
-
-        val outcomes: Set<Unit> = setOf(Unit)
-        litmusTest(Foo::class.java, testScenario, outcomes) { results ->
-            Unit
-        }
-
-    }
-
 }
 
 internal class SharedMemory(size: Int = 16) {

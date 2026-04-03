@@ -1134,4 +1134,83 @@ class PrimitivesTest {
         }
     }
 
+
+    @Test
+    fun testObjectsObjectsIDsDoNotBreakOnBackwardRevisit() {
+        // This test is specifically made to make break during backward revisit of allocated objects
+        // We had a bug in the object tracker where the replay order of the events affected the ObjectIDs of the replayed objects
+        // In the initial invocation, we first assigned objectID 1 to Bar(1) and 2 to Bar(2)
+        // In the next invocation we do a backward revisit from x.set(1) to x.get()
+        // This means that we first replay Bar(2) and the x.set(1) and go to actually run x.get() and Bar(1).
+        // During replay this meant that we wrongly gave Bar(2) the objectID of 1 (instead of the original 2 value)
+        class Bar(a: Int) {
+            val b = a
+            override fun toString(): String {
+                return "BAR:($b)"
+            }
+        }
+        class Foo {
+            var x = AtomicInteger(0)
+            @Volatile var y = Bar(0)
+            fun one() {
+                x.get() == 0
+                y = Bar(1)
+                val x = y
+            }
+            fun two() {
+                y = Bar(2)
+                x.set(1)
+            }
+        }
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(Foo::one)
+                }
+                thread {
+                    actor(Foo::two)
+                }
+            }
+        }
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            Unit
+        }
+    }
+
+
+
+    @Test
+    fun testStringsObjectsIDsDoNotBreakOnBackwardRevisit() {
+        // Same thing as the test above, but with strings, which work a bit differently
+        class Foo {
+            var x = AtomicInteger(0)
+            @Volatile var y = ""
+
+            fun one() {
+                x.get() == 0
+                y = "a"
+            }
+
+            fun two() {
+                y = "b"
+                x.set(1)
+            }
+
+        }
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(Foo::one)
+                }
+                thread {
+                    actor(Foo::two)
+                }
+            }
+        }
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            Unit
+        }
+    }
 }
