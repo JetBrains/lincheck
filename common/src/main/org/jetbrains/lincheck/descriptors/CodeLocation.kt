@@ -25,13 +25,10 @@ class CodeLocation(
         if (this === other) return true
         if (other !is CodeLocation) return false
 
-        // TODO: argumentNames are not considered here,
-        //   because of some weird bug that occurs if we consider them;
-        //   likely, this is related to the fact that we currently do not (de)serialize them
-        return (stackTraceElement == other.stackTraceElement) && (accessPath == other.accessPath)
+        return (stackTraceElement == other.stackTraceElement) && (accessPath == other.accessPath) && (argumentNames == other.argumentNames)
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(stackTraceElement, accessPath)
+        return Objects.hash(stackTraceElement, accessPath, argumentNames)
     }
 }
