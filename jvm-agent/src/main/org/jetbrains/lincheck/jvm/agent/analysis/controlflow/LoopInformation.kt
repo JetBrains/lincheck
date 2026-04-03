@@ -269,14 +269,23 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
     for ((headers, body) in loopBodiesWithHeaders) {
         val header = headers.min()
 
-        // Collect back edges for this loop: edges targeting any of its headers from within the body
-        val loopBackEdges = buildSet {
-            for (e in normalEdges) {
-                if (e.source in body && e.target in headers) {
-                    add(e)
+        // Collect back edges for this loop.
+        val loopBackEdges = if (headers.size == 1 && isReducible == true) {
+            // Reducible loop case:
+            // back edges are already grouped by header, so we can just take the set for the header.
+            backEdgesByHeader[header]!!.toSet()
+        } else {
+            // Irreducible loop case:
+            // collect edges targeting any of its headers from within the body.
+            buildSet {
+                for (e in normalEdges) {
+                    if (e.source in body && e.target in headers) {
+                        add(e)
+                    }
                 }
             }
         }
+
         // Normal exits: edges from body to outside, non-exception
         val normalExits = buildSet {
             for (e in normalEdges) {
