@@ -213,20 +213,27 @@ internal fun BasicBlockControlFlowGraph.computeBackEdges(): Set<Edge> {
 }
 
 /**
- * This algorithm cannot detect loops in irreducible graphs. It only produces reducible loops.
- * Thus, expects reducible CFG.
- *
  * Compute loops using dominators and back-edge detection.
- * A back edge is an edge u -> h (non-exception) where h dominates u.
- * For each header h, the loop body is the union of natural loops of its back edges.
+ * Handles both reducible and irreducible CFGs.
  *
- * Note: "natural loops" are loops calculated via the algorithm below.
- * If there is more than one back edge to the same header, the body of the loop is the union of the nodes computed for each back edge.
- * Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
+ * **Reducible loops** are detected via back edges: an edge u -> h where h dominates u.
+ *   For each header h, the loop body is the union of natural loops of its back edges
+ *   (computed by reverse DFS from each back-edge source to h).
+ *   If there is more than one back edge to the same header,
+ *   the body of the loop is the union of the nodes computed for each back edge.
+ *   Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
  *
- * @return A list of detected loops, each represented by a [LoopInformation] object.
- *   The list is empty if no loops were detected.
- *   The loops are sorted by the header block index.
+ * **Irreducible loops** (present when the CFG is irreducible) are detected by computing
+ *   strongly connected components (SCCs) in the residual graph obtained by removing
+ *   dominator-identified back edges. SCCs that are already fully covered by a reducible
+ *   loop body are skipped; the remaining cyclic SCCs become irreducible loops whose
+ *   headers are the SCC nodes reachable from outside the SCC.
+ *
+ * The returned loops are sorted so that outer loops receive smaller ids than their inner loops.
+ *
+ * @return A [MethodLoopsInformation] containing all detected loops (both reducible and irreducible),
+ *   each represented by a [LoopInformation] object.
+ *   The result is empty if no loops were detected.
  */
 internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoopsInformation {
     require(isReducible != null) { "CFG reducibility was not checked before computing the loops" }
@@ -330,11 +337,17 @@ private typealias BackEdgesByHeader = Map<BasicBlockIndex, Set<Edge>>
 private typealias LoopBodiesWithHeaders = List<Pair<Set<BasicBlockIndex>, Set<BasicBlockIndex>>>
 
 /**
- * Compute reducible loop bodies from back edges grouped by header.
- * For each header h, the loop body is the union of natural loops of its back edges.
+ * Compute reducible (natural) loop bodies from back edges grouped by header.
+ *
+ * For each header h, the natural loop body is computed by performing a reverse DFS
+ * from each back-edge source towards h over normal predecessor edges.
+ * When multiple back edges share the same header, a union of their natural loops is taken.
+ *
+ * Each resulting loop has exactly one header.
  *
  * @param backEdgesByHeader back edges grouped by their header (target) block.
- * @return list of pairs (headers, body) for each reducible loop.
+ * @return list of pairs (headers, body) for each reducible loop,
+ *   where headers is a singleton set containing the loop header.
  */
 private fun BasicBlockControlFlowGraph.computeReducibleLoopBodies(
     backEdgesByHeader: BackEdgesByHeader,
@@ -362,10 +375,17 @@ private fun BasicBlockControlFlowGraph.computeReducibleLoopBodies(
 }
 
 /**
- * Compute irreducible loop bodies by finding SCCs in the residual graph
- * (after removing dominator-identified back edges).
+ * Compute irreducible loop bodies by finding strongly connected components (SCCs)
+ * in the residual graph obtained by removing dominator-identified back edges.
  *
- * @param backEdges the set of all back edges in the CFG.
+ * SCCs that are fully contained within an already-detected reducible loop body are skipped,
+ * since they are already accounted for. For each remaining cyclic SCC, the headers are
+ * determined as the SCC nodes reachable from outside the SCC
+ * (i.e., having at least one predecessor outside the SCC).
+ *
+ * Irreducible loops typically have multiple headers.
+ *
+ * @param backEdges the set of all dominator-identified back edges in the CFG.
  * @param reducibleLoopBodies already computed reducible loop bodies, used to skip covered SCCs.
  * @return list of pairs (headers, body) for each irreducible loop.
  */
@@ -382,7 +402,7 @@ private fun BasicBlockControlFlowGraph.computeIrreducibleLoopBodies(
         }
     }
     val allNodes = (0 until n).toSet()
-    val sccs = computeStronglyConnectedComponents(allNodes, residualSuccessors)
+    val sccs = computeCyclicStronglyConnectedComponents(allNodes, residualSuccessors)
     val result = mutableListOf<Pair<Set<BasicBlockIndex>, Set<BasicBlockIndex>>>()
     for (scc in sccs) {
         // Skip SCCs that are fully contained in an already-found reducible loop body
@@ -407,7 +427,21 @@ private fun BasicBlockControlFlowGraph.computeIrreducibleLoopBodies(
     return result
 }
 
-private fun computeStronglyConnectedComponents(
+/**
+ * Compute cyclic strongly connected components (SCCs) of a directed control-flow graph
+ * using Tarjan's algorithm.
+ *
+ * Returns only cyclic SCCs: components of size > 1, or singletons with a self-loop.
+ * Acyclic singleton nodes are filtered out, since only cyclic components can represent loops.
+ *
+ * Nodes are visited in sorted order to produce deterministic results.
+ *
+ * @param nodes the set of graph nodes to consider.
+ * @param successors a function returning the successors of a given node;
+ *   successors outside [nodes] are ignored.
+ * @return a list of cyclic SCCs, each represented as a set of node indices.
+ */
+private fun computeCyclicStronglyConnectedComponents(
     nodes: Set<BasicBlockIndex>,
     successors: (BasicBlockIndex) -> Iterable<BasicBlockIndex>
 ): List<Set<BasicBlockIndex>> {
