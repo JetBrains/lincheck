@@ -231,11 +231,15 @@ internal fun BasicBlockControlFlowGraph.computeBackEdges(): Set<Edge> {
  *
  * The returned loops are sorted so that outer loops receive smaller ids than their inner loops.
  *
+ * @param computeIrreducibleLoops whether to detect irreducible loops in addition to reducible ones.
+ *   When `false`, only reducible (natural) loops are reported, even if the CFG is irreducible.
  * @return A [MethodLoopsInformation] containing all detected loops (both reducible and irreducible),
  *   each represented by a [LoopInformation] object.
  *   The result is empty if no loops were detected.
  */
-internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoopsInformation {
+internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(
+    computeIrreducibleLoops: Boolean,
+): MethodLoopsInformation {
     require(isReducible != null) { "CFG reducibility was not checked before computing the loops" }
 
     val dominators = dominators
@@ -258,7 +262,7 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
     var nextLoopId = 0
 
     loopBodiesWithHeaders += computeReducibleLoopBodies(backEdgesByHeader).toMutableList()
-    if (isReducible == false) {
+    if (computeIrreducibleLoops && isReducible == false) {
         loopBodiesWithHeaders += computeIrreducibleLoopBodies(backEdges, loopBodiesWithHeaders)
     }
 

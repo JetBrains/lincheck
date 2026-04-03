@@ -265,7 +265,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             } else {
                 buildControlFlowGraph(classNode.name, m)
             }
-            cfg.computeLoopInformation()
+            cfg.computeLoopInformation(computeIrreducibleLoops = config.trackIrreducibleLoops)
             key to cfg
         }.toMap()
     }

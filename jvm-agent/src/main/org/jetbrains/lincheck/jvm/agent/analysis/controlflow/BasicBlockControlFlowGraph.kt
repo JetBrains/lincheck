@@ -153,8 +153,10 @@ class BasicBlockControlFlowGraph(
 
     /**
      * Computes loop-related information for this method.
+     *
+     * @param computeIrreducibleLoops determines whether to compute loop information for irreducible loops.
      */
-    fun computeLoopInformation(): MethodLoopsInformation {
+    fun computeLoopInformation(computeIrreducibleLoops: Boolean = false): MethodLoopsInformation {
         if (loopInfo == null) {
             // compute loop information
             dominators = computeDominators()
@@ -169,7 +171,7 @@ class BasicBlockControlFlowGraph(
                 Logger.debug { "CFG:\n${toFormattedString()}" }
             }
 
-            loopInfo = computeLoopsFromDominators().also { info ->
+            loopInfo = computeLoopsFromDominators(computeIrreducibleLoops).also { info ->
                 info.validateBasicBlocksLoopsMapping()
                 info.loops.forEach {
                     it.validateLoopEdgesInvariants()
