@@ -1178,6 +1178,96 @@ class PrimitivesTest {
         }
     }
 
+    @Test
+    fun testDoNotGCExternalObjects() {
+        // This test tries to force the GC to collect the external Baz(0), which is left unused after each testInvocation
+        // The ObjectTracker used to rely on a weak reference to the GC'd object, which would cause trouble
+        class Baz(a: Int) {
+            @Volatile var b = a
+            override fun toString(): String {
+                return "BAZ:($b)"
+            }
+        }
+        class Foo {
+            // The Baz(0) here is an external object
+            // Since it is the intial value of a field of the test class
+            @Volatile var y = Baz(0)
+            fun one() : Int {
+                val res = y.b
+                return 0
+            }
+            fun two() {
+                y.b = 0
+                y.b = 1
+                y.b = 2
+            }
+        }
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(Foo::one)
+                }
+                thread {
+                    actor(Foo::two)
+                }
+            }
+        }
+        val outcomes: Set<Int> = setOf(0)
+        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            val b1 = getValue<Int>(results.parallelResults[0][0]!!)
+            System.gc() // Kindly suggest the GC to do its thing. Should make the test fail more consistently.
+            System.gc()
+            return@litmusTest b1
+        }
+    }
+
+    @Test
+    fun testObjectIdsStableCrazy() {
+        // This test tries various nesting levels to see if we can break the replay order of the object tracker
+        // Kind of a throw stuff at the wall and see what sticks approach
+        class Bar(a: AtomicInteger) {
+            @Volatile
+            var b = a
+            override fun toString(): String {
+                return "BAR:($b)"
+            }
+        }
+        class Baz(a: Bar) {
+            @Volatile var b = a
+            override fun toString(): String {
+                return "BAZ:($b)"
+            }
+        }
+        class Foo {
+            @Volatile var y = Baz(Bar(AtomicInteger(0)))
+            fun one() : Int {
+                y.b = Bar(AtomicInteger(1))
+                val res = y.b.b.get()
+                return res
+            }
+            fun two() {
+                y.b = Bar(AtomicInteger(2))
+                y.b.b = AtomicInteger(3)
+                y.b.b.set(4)
+            }
+        }
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(Foo::one)
+                }
+                thread {
+                    actor(Foo::two)
+                }
+            }
+        }
+        val outcomes: Set<Int> = setOf(1,2,3,4)
+        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            val b1 = getValue<Int>(results.parallelResults[0][0]!!)
+            return@litmusTest b1
+        }
+    }
+
 
 
     @Test

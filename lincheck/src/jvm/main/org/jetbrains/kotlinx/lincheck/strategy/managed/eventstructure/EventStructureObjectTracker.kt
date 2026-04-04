@@ -32,14 +32,41 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
 
     override val shouldTrackImmutableValues: Boolean = true
 
-    private class EventStructureObjectEntry(
+    // We have two types of object entires:
+    // * Internal which belong to object that are allocated during an invocation, and the test instance itself.
+    //   These are purged from the ObjectTracker after each invocation.
+    //   Also when replaying an invocation, the ObjectID of an internal object is set to be equal to the ObjectID of the previous
+    //   allocation event.
+    // * External which belong to object that were already allocated before we started the tests
+    //   Most often these are the initial threads, and the initial values of the fields of the test instance class
+    //   Since these values are persistent across invocations, we keep them in the object tracker after invocations
+    //   We also hold a refernce to them to prevent the GC from removing them, while we still use them
+    private abstract class EventStructureObjectEntry(
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
         objReference: WeakReference<Any>,
         val allocation: AtomicThreadEvent,
-        val external: Boolean,
     ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
+
+    private class InternalEventStructureObjectEntry(
+        objNumber: Int,
+        objHashCode: Int,
+        objDisplayNumber: Int,
+        objReference: WeakReference<Any>,
+        allocation: AtomicThreadEvent,
+    ) : EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocation)
+
+    private class ExternalEventStructureObjectEntry(
+        objNumber: Int,
+        objHashCode: Int,
+        objDisplayNumber: Int,
+        objReference: WeakReference<Any>,
+        @Suppress("unused")
+        val hardRef: Any, // Prevent the gc from gc
+        allocation: AtomicThreadEvent,
+    ) : EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocation)
+
 
 
     private var initEvent: AtomicThreadEvent? = null
@@ -66,7 +93,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         val obj = objReference.get()!!
         if (kind == ObjectKind.EXTERNAL) {
             (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objNumber)
-            return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, initEvent!!, true)
+            return ExternalEventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, obj, initEvent!!)
         } else {
             val iThread = (Thread.currentThread() as? TestThread)?.threadId ?: eventStructure.mainThreadId
             // We create a new object allocation event and we "suggest" an objNumber
@@ -75,7 +102,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
             val allocationEvent = eventStructure.addObjectAllocationEvent(iThread!!,obj.opaque(), objNumber)
             val actualObjectNumber = (allocationEvent.label as ObjectAllocationLabel).objectID
             check(actualObjectNumber <= objNumber)
-            return EventStructureObjectEntry(actualObjectNumber, objHashCode, objDisplayNumber, objReference, allocationEvent, false)
+            return InternalEventStructureObjectEntry(actualObjectNumber, objHashCode, objDisplayNumber, objReference, allocationEvent)
         }
     }
 
@@ -92,7 +119,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         return lookupByNumber(id)?.objectReference?.get()?.opaque()
     }
     override fun reset() {
-        retain { (it as EventStructureObjectEntry).external }
+        retain { (it is ExternalEventStructureObjectEntry)  }
     }
 }
 
