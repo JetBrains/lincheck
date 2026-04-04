@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
-import org.jetbrains.kotlinx.lincheck.util.mutableThreadMapOf
+import org.jetbrains.kotlinx.lincheck.util.*
 
 interface LoopDetector {
     enum class Decision {
@@ -19,15 +19,13 @@ interface LoopDetector {
         STUCK // M iterations
     }
 
-    fun resetAll()              // between iterations
-    fun resetThread(threadId: Int) // when a thread finishes
-
     fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int)
     fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Pair<Boolean, Decision>
     fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Decision
     fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, isReachableFromOutsideLoop: Boolean): Int?
 
-    // TODO: at the moment params are only passed, but not used
+    // TODO: at the moment, method params are only passed, but not used
+
     fun onMethodEnter(
         threadId: Int,
         codeLocation: Int,
@@ -49,8 +47,8 @@ interface LoopDetector {
     fun currentMethodId(threadId: Int): Int
     fun isLoopInStack(threadId: Int, loopId: Int) : Boolean
 
-//  TODO: Implement in next iteration, find where to call (beforeWriteField, beforeWriteArrayElement, afterLocalWrite)
-//    fun onStageChange(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, valueHash: Int)
+    fun resetAll()                  // between iterations
+    fun resetThread(threadId: Int)  // when a thread finishes
 }
 
 private data class LoopKey(
@@ -58,7 +56,7 @@ private data class LoopKey(
     val codeLocation: Int,
 )
 
-private data class ActiveLoopInfo (
+private data class ActiveLoopInfo(
     val key: LoopKey,
     var iterationCount: Int = 0,
 )
@@ -76,9 +74,9 @@ private data class LoopDetectorThreadState(
 )
 
 class BoundedLoopDetector(
-    val iterationsBeforeThreadSwitch: Int, // N limit
-    val iterationsBound: Int, // M limit
-    val recursiveCallsBound: Int, // limit for recursive calls
+    val iterationsBeforeThreadSwitch: Int,  // N limit for loop iterations before thread switch
+    val iterationsBound: Int,               // M limit for loop iterations before stuck
+    val recursiveCallsBound: Int,           // K limit for recursive calls before stuck
 ) : LoopDetector {
     private val threadStates = mutableThreadMapOf<LoopDetectorThreadState>()
 
@@ -126,7 +124,8 @@ class BoundedLoopDetector(
         }
     }
 
-    // --- LOOP LEVEL ---
+    // --- Loops ---
+
     override fun onLoopIteration(
         threadId: Int,
         codeLocation: Int,
@@ -145,7 +144,6 @@ class BoundedLoopDetector(
         return Pair(started, decision)
     }
 
-    // --- IRREDUCIBLE LOOPS ---
     override fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
         val state = threadStates[threadId] ?: return LoopDetector.Decision.IDLE
         val frame = state.callStack.lastOrNull() ?: return LoopDetector.Decision.IDLE
@@ -226,7 +224,17 @@ class BoundedLoopDetector(
         return LoopDetector.Decision.IDLE
     }
 
-    // --- METHOD LEVEL ---
+    override fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {
+        val state = state(threadId)
+        val stack = state.callStack
+        val frame = stack.lastOrNull()?: return 1
+        val loop = frame.loops.lastOrNull { it.key.loopId == loopId && it.key.codeLocation == codeLocation } ?: return 1
+
+        return loop.iterationCount
+    }
+
+    // --- Method calls  ---
+
     override fun onMethodEnter(
         threadId: Int,
         codeLocation: Int,
@@ -285,14 +293,5 @@ class BoundedLoopDetector(
         while (stack.size - 1 > idx) stack.removeLast()
         val frame = stack.lastOrNull() ?: return
         if (frame.depth > 1) frame.depth -= 1 else stack.removeLast()
-    }
-
-    override fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {
-        val state = state(threadId)
-        val stack = state.callStack
-        val frame = stack.lastOrNull()?: return 1
-        val loop = frame.loops.lastOrNull { it.key.loopId == loopId && it.key.codeLocation == codeLocation } ?: return 1
-
-        return loop.iterationCount
     }
 }

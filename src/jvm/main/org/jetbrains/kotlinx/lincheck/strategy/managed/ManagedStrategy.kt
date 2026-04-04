@@ -33,7 +33,6 @@ import kotlin.coroutines.*
 import kotlin.coroutines.intrinsics.*
 import org.jetbrains.kotlinx.lincheck.beforeEvent as ideaPluginBeforeEvent
 import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
-import kotlin.Result as KResult
 
 /**
  * This is an abstraction for all managed strategies, which encapsulated
