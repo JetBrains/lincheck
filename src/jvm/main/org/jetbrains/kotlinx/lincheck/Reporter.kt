@@ -735,7 +735,7 @@ private fun Appendable.appendDeadlockMessageIfRequired(failure: LincheckFailure)
 
 private fun Appendable.appendLivelockMessageIfRequired(failure: LincheckFailure) {
     if (failure is ManagedLivelockFailure) {
-        appendLine(SPINLOOP_MESSAGE)
+        appendLine(ALL_UNFINISHED_THREADS_IN_LIVELOCK_MESSAGE)
     }
 }
 
@@ -839,6 +839,8 @@ private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"
 internal const val TRACE_TITLE = "The following interleaving leads to the error:"
 internal const val DETAILED_TRACE_TITLE = "Detailed trace:"
 
-internal const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"
+internal const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE =
+    "All unfinished threads are in deadlock"
 
-internal const val SPINLOOP_MESSAGE = "All unfinished threads are in livelock due to non-terminating loops (spinloops)"
+internal const val ALL_UNFINISHED_THREADS_IN_LIVELOCK_MESSAGE =
+    "All unfinished threads are in livelock due to non-terminating loops"

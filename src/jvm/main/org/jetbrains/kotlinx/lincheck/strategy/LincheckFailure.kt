@@ -38,7 +38,6 @@ internal class ManagedDeadlockFailure(
     analysisProfile: AnalysisProfile
 ) : LincheckFailure(scenario,results, trace, analysisProfile)
 
-//TODO: verify livelock handling
 internal class ManagedLivelockFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,

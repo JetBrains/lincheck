@@ -199,7 +199,7 @@ internal class RecursionNode(
 ) : TraceNode(eventNumber, node.tracePoint) {
 
     override fun toString(withLocation: Boolean): String {
-        return "${node.toString(withLocation)} [recursion x $depth]"
+        return "${node.toString(withLocation)} [recursive call x $depth times]"
     }
 
     override fun copy(): TraceNode = RecursionNode(node, depth, eventNumber)
