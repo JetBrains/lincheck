@@ -20,7 +20,7 @@ The following interleaving leads to the error:
 |   counter.decrementAndGet(): 0 |                                                                                                                    |
 |   result: void                 |                                                                                                                    |
 | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -90,4 +90,4 @@ Detailed trace:
 |                                                                                                                    |           someUselessSharedState.compareAndSet(true, false): true at SpinLockWithAllEventsWrappedInMethodsTest.action(SpinlockEventsCutTests.kt:493) |
 |                                                                                                                    |       <iteration 201> at SpinLockWithAllEventsWrappedInMethodsTest.deadSpinCycle(SpinlockEventsCutTests.kt:486)                                      |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops

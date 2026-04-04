@@ -39,7 +39,7 @@ The following interleaving leads to the error:
 | two(): <hung>                                                                         |                                                                                       |
 |   loop(201 iterations) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:313) |                                                                                       |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -415,4 +415,4 @@ Detailed trace:
 |         sharedStateAny.set(true) at SpinlockEventsCutMiddleLengthTest.meaninglessActions(SpinlockEventsCutTests.kt:91)    |                                                                                                                           |
 |     <iteration 201> at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:316)                                        |                                                                                                                           |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops

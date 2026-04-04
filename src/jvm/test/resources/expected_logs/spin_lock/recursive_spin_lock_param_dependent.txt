@@ -12,20 +12,20 @@ The following interleaving leads to the error:
 | --------------------- |
 | actorMethod(): <hung> |
 | --------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
-| ----------------------------------------------------------------------------------------------------------------------- |
-|                                                        Thread 1                                                         |
-| ----------------------------------------------------------------------------------------------------------------------- |
-| actorMethod(): <hung>                                                                                                   |
-|   b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:292)                        |
-|     value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298)  |
-|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
-|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                     |
-|   b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293) [recursion x 51]        |
-|     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298) |
-|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                               |
-|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                     |
-| ----------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+| --------------------------------------------------------------------------------------------------------------------------- |
+|                                                          Thread 1                                                           |
+| --------------------------------------------------------------------------------------------------------------------------- |
+| actorMethod(): <hung>                                                                                                       |
+|   b(false) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:292)                            |
+|     value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298)      |
+|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                                   |
+|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                         |
+|   b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293) [recursive call x 51 times] |
+|     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298)     |
+|     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                                   |
+|       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                         |
+| --------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in livelock due to non-terminating loops

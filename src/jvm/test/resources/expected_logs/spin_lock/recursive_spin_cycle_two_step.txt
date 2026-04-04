@@ -15,7 +15,7 @@ The following interleaving leads to the error:
 |   switch                       |                          |
 |                                | causesSpinLock(): <hung> |
 | --------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1228,4 +1228,4 @@ Detailed trace:
 |                                                                                                                     |                                                                                                                                                                                                             <iteration 5> at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:202)                               |
 |                                                                                                                     |                                                                                                                                                                                                           outerRecursiveSpinCycle() at RecursiveSpinLockTwoStepRecursionEventsTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:206)                     |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops

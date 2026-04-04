@@ -17,7 +17,7 @@ The following interleaving leads to the error:
 |               |   switch                  |
 | one(): <hung> |                           |
 | ----------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -31,7 +31,7 @@ Detailed trace:
 |                                                                                                                                         |   sharedState2.set(false) at RecursiveTwoThreadsSpinLockTest.two(RecursiveSpinLockTest.kt:253)                                         |
 |                                                                                                                                         |   switch                                                                                                                               |
 | one(): <hung>                                                                                                                           |                                                                                                                                        |
-|   meaninglessActions2() at RecursiveTwoThreadsSpinLockTest.one(RecursiveSpinLockTest.kt:239) [recursion x 51]                           |                                                                                                                                        |
+|   meaninglessActions2() at RecursiveTwoThreadsSpinLockTest.one(RecursiveSpinLockTest.kt:239) [recursive call x 51 times]                |                                                                                                                                        |
 |     sharedState1.compareAndSet(false, true): false at RecursiveTwoThreadsSpinLockTest.meaninglessActions2(RecursiveSpinLockTest.kt:265) |                                                                                                                                        |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops

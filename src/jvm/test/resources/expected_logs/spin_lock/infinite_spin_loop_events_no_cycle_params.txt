@@ -43,7 +43,7 @@ The following interleaving leads to the error:
 |                                                                                     |   result: 1                                                                         |
 |                                                                                     | one(): 1                                                                            |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -187,4 +187,4 @@ Detailed trace:
 |             Array<Integer>#1[0] = -2091151636 at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:240) |                                                                                                                    |
 |           <iteration 201> at SpinlockEventsCutInfiniteNoCycleWithParamsTest.meaninglessActions(SpinlockEventsCutTests.kt:236)                     |                                                                                                                    |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops

@@ -15,7 +15,7 @@ The following interleaving leads to the error:
 |   switch                       |                          |
 |                                | causesSpinLock(): <hung> |
 | --------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -26,7 +26,7 @@ Detailed trace:
 |   switch                                                                                     |                                                                                                                                              |
 |                                                                                              | causesSpinLock(): <hung>                                                                                                                     |
 |                                                                                              |   counter.get(): 1 at RecursiveSpinLockTest.causesSpinLock(RecursiveSpinLockTest.kt:42)                                                      |
-|                                                                                              |   deadSpinCycleRecursive() at RecursiveSpinLockTest.causesSpinLock(RecursiveSpinLockTest.kt:43) [recursion x 51]                             |
+|                                                                                              |   deadSpinCycleRecursive() at RecursiveSpinLockTest.causesSpinLock(RecursiveSpinLockTest.kt:43) [recursive call x 51 times]                  |
 |                                                                                              |     loop(5 iterations) at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:48)                                          |
 |                                                                                              |       <iteration 1> at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:48)                                             |
 |                                                                                              |         getSharedVariable(): false at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:49)                              |
@@ -46,4 +46,4 @@ Detailed trace:
 |                                                                                              |         someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:50) |
 |                                                                                              |       <iteration 5> at RecursiveSpinLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:48)                                             |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops

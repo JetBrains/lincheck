@@ -12,7 +12,7 @@ The following interleaving leads to the error:
 | ------------------- |
 | operation(): <hung> |
 | ------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -29,4 +29,4 @@ Detailed trace:
 |         counter.incrementAndGet(): 200 at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:49) |
 |       <iteration 201> at ObstructionFreedomActiveLockRepresentationTest.incrementManyTimes(ObstructionFreedomRepresentationTest.kt:48)                  |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in livelock due to non-terminating loops (spinloops)
+All unfinished threads are in livelock due to non-terminating loops
