@@ -165,7 +165,7 @@ sealed class TRContainerTracePoint(
         parentTracePoint = parent
     }
 
-    internal open fun addChildAddress(address: Long) {
+    internal fun addChildAddress(address: Long) {
         childrenAddresses.add(address)
         children.add(null)
     }
@@ -178,7 +178,7 @@ sealed class TRContainerTracePoint(
         }
     }
 
-    open fun addChild(child: TRTracePoint, address: Long = -1) {
+    fun addChild(child: TRTracePoint, address: Long = -1) {
         childrenAddresses.add(address)
         children.add(child)
 
@@ -436,16 +436,8 @@ class TRLoopTracePoint(
     var iterations: Int = 0
         private set
 
-    override fun addChild(child: TRTracePoint, address: Long) {
-        require(child is TRLoopIterationTracePoint) { "Only loop iterations can be children of loops" }
-        super.addChild(child, address)
-        iterations++
-    }
-
-    override fun addChildAddress(address: Long) {
-        super.addChildAddress(address)
-        // We believe that it is address of iteration
-        iterations++
+    fun incrementIterations(): Int {
+        return iterations++
     }
 
     override fun save(out: TraceWriter) {
