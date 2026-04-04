@@ -12,11 +12,22 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.*
 
+/**
+ * Tracks loop iterations and recursive method calls
+ * during managed strategy execution to detect potential livelocks and infinite recursion.
+ *
+ * The loop detector is notified by the managed strategy
+ * about loop iterations and method enter/exit events.
+ * It produces a [Decision] objet that instruct the strategy to either
+ *   - [Decision.IDLE] --- continue execution,
+ *   - [Decision.SWITCH_THREAD] --- perform a thread switch,
+ *   - [Decision.STUCK] --- report a livelock.
+ */
 interface LoopDetector {
     enum class Decision {
         IDLE,
-        SWITCH_THREAD, // N iterations
-        STUCK // M iterations
+        SWITCH_THREAD,
+        STUCK
     }
 
     fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int)
@@ -71,6 +82,31 @@ private data class LoopDetectorThreadState(
     val methodCallCounters: MutableMap<Int /* MethodId */, Int> = mutableMapOf()
 )
 
+/**
+ * A [LoopDetector] implementation that uses bounded iteration and call-depth counters to detect livelocks.
+ *
+ * For each thread, the detector maintains a call stack of active method frames,
+ * each of which tracks a stack of active loops within that method.
+ *
+ * **Loop detection:**
+ * on each loop iteration, an iteration counter is incremented.
+ * When the counter reaches a multiple of [iterationsBeforeThreadSwitch],
+ * a [LoopDetector.Decision.SWITCH_THREAD] decision is produced to give other threads a chance to make progress.
+ * If the counter reaches [iterationsBound], a [LoopDetector.Decision.STUCK] decision is produced,
+ * indicating a suspected livelock.
+ *
+ * **Recursion detection:**
+ * on each method entry, per-method call counters are incremented.
+ * If either the number of recursive calls of a method exceeds [recursiveCallsBound],
+ * a [LoopDetector.Decision.STUCK] decision is produced.
+ *
+ * @param iterationsBeforeThreadSwitch the number of loop iterations
+ *   after which a thread context switch is suggested.
+ * @param iterationsBound the upper bound on loop iterations;
+ *   exceeding this limit is treated as a livelock.
+ * @param recursiveCallsBound the upper bound on recursive method call depth;
+ *   exceeding this limit is treated as a livelock.
+ */
 class BoundedLoopDetector(
     val iterationsBeforeThreadSwitch: Int,  // N limit for loop iterations before thread switch
     val iterationsBound: Int,               // M limit for loop iterations before stuck
