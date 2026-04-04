@@ -2106,7 +2106,7 @@ internal abstract class ManagedStrategy(
                     )
                 }
 
-                val iteration = loopDetector.getCurrentIteration(threadId, loopId, codeLocation)
+                val iteration = loopDetector.getCurrentLoopIteration(threadId, loopId, codeLocation)
                 traceCollector?.addTracePointInternal(
                     LoopIterationTracePoint(
                         context = context,

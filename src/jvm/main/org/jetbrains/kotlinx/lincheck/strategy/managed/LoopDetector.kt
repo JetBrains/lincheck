@@ -42,10 +42,8 @@ interface LoopDetector {
         result: Any?,
     )
 
-    fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int) : Int
-
-    fun currentMethodId(threadId: Int): Int
-    fun isLoopInStack(threadId: Int, loopId: Int) : Boolean
+    fun getCurrentLoopIteration(threadId: Int, loopId: Int, codeLocation: Int) : Int
+    fun getCurrentMethodId(threadId: Int): Int
 
     fun resetAll()                  // between iterations
     fun resetThread(threadId: Int)  // when a thread finishes
@@ -103,15 +101,8 @@ class BoundedLoopDetector(
         }
     }
 
-    override fun currentMethodId(threadId: Int): Int =
+    override fun getCurrentMethodId(threadId: Int): Int =
         currentFrame(threadId)?.methodId ?: -1
-
-    override fun isLoopInStack(threadId: Int, loopId: Int): Boolean {
-        val state = threadStates[threadId] ?: return false
-        return state.callStack.any { frame ->
-            frame.loops.any { it.key.loopId == loopId }
-        }
-    }
 
     private fun findLoopInCurrentFrame(
         threadId: Int,
@@ -179,7 +170,7 @@ class BoundedLoopDetector(
         exitCodeLocation: Int
     ): Pair<ActiveMethodCallInfo, ActiveLoopInfo>? {
         val state = threadStates[threadId] ?: return null
-        val currentMethod = currentMethodId(threadId)
+        val currentMethod = getCurrentMethodId(threadId)
 
         var best: Pair<ActiveMethodCallInfo, ActiveLoopInfo>? = null
         var bestDistance = Int.MAX_VALUE
@@ -224,7 +215,7 @@ class BoundedLoopDetector(
         return LoopDetector.Decision.IDLE
     }
 
-    override fun getCurrentIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {
+    override fun getCurrentLoopIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {
         val state = state(threadId)
         val stack = state.callStack
         val frame = stack.lastOrNull()?: return 1
