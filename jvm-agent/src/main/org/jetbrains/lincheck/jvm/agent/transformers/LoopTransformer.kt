@@ -85,23 +85,9 @@ internal class LoopTransformer(
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
-        // Inject `onLoopIteration` at the loop header on every iteration (including the first).
-        iterationEntrySites[nonPhonyIndex]?.let { loopId ->
-            val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
-            // STACK: <empty>
-            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-            loadNewCodeLocationId()
-            adapter.push(loopId)
-            // STACK: descriptor, codeLocation, loopId
-            if (isReducible) {
-                adapter.invokeStatic(Injections::onLoopIteration)
-            } else if (shouldTrackIrreducibleLoops) {
-                adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
-            }
-            // STACK: <empty>
-        }
-
         // Inject `onLoopExit` on transitions from within the loop body to outside.
+        // This must be done before `onLoopIteration` to correctly handle consecutive loops
+        // where the exit target of one loop coincides with the header of the next loop.
         normalExitSites[nonPhonyIndex]?.let { loopIds ->
             for (loopId in loopIds) {
                 val isIrreducible = loopInfo.getLoopInfo(loopId)?.isIrreducible ?: true
@@ -120,6 +106,22 @@ internal class LoopTransformer(
                 // STACK: <empty>
             }
 
+        }
+
+        // Inject `onLoopIteration` at the loop header on every iteration (including the first).
+        iterationEntrySites[nonPhonyIndex]?.let { loopId ->
+            val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
+            // STACK: <empty>
+            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+            loadNewCodeLocationId()
+            adapter.push(loopId)
+            // STACK: descriptor, codeLocation, loopId
+            if (isReducible) {
+                adapter.invokeStatic(Injections::onLoopIteration)
+            } else if (shouldTrackIrreducibleLoops) {
+                adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
+            }
+            // STACK: <empty>
         }
 
         // Inject `onLoopExit` on exceptional transitions from within the loop body to outside exception handlers.
