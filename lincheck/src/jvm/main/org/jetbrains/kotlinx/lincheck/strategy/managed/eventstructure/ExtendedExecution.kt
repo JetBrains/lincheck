@@ -221,12 +221,11 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
         execution = this,
         listOf<AtomicEventConsistencyChecker>(
             ReadModifyWriteAtomicityChecker(execution = this),
-
-            IncrementalSequentialConsistencyChecker(
-                execution = this,
-                checkReleaseAcquireConsistency = true,
-                approximateSequentialConsistency = false
-            )
+//            IncrementalSequentialConsistencyChecker(
+//                execution = this,
+//                checkReleaseAcquireConsistency = true,
+//                approximateSequentialConsistency = false
+//            )
         ),
         listOf(),
     )

@@ -29,8 +29,6 @@ import java.lang.invoke.VarHandle
 
 class JamMemoryModelTests {
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testSBOpaque() {
         class TestSB {
@@ -59,8 +57,6 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun test4SB() {
         class Test4SB {
@@ -105,8 +101,6 @@ class JamMemoryModelTests {
     }
 
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun test6SB() {
         class Test6SB {
@@ -541,8 +535,6 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testIriwInternal() {
         class TestIriwInternal {
@@ -615,8 +607,6 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testMpRelaxed() {
         class TestMpRelaxed {
@@ -648,8 +638,6 @@ class JamMemoryModelTests {
     }
 
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testPodrw001() {
         // NOTE: this is just Store Buffering with 3 reads
@@ -749,8 +737,6 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testX001() {
         class TestX001 {
@@ -1015,8 +1001,6 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testIRIWPoaasLL() {
         class TestIRIWPoaasLL {
@@ -1055,8 +1039,6 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testIRIWPoapsLL() {
         class TestIRIWPoapsLL {

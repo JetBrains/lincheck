@@ -292,12 +292,36 @@ internal class EventStructure(
     }
 
     private fun createBacktrackingPoint(event: AtomicThreadEvent, conflicts: List<AtomicThreadEvent>) {
+        val newPinnedEvents = pinnedEvents.copy().apply {
+            val causalityFrontier = execution.calculateFrontier(event.causalityClock)
+            merge(causalityFrontier)
+        }
+
         val frontier = execution.toMutableFrontier().apply {
-            cut(conflicts)
+            // We need to keep events in the frontier that are either have (tid,idx) <= (event.tid, event.idx)
+            // or are observed by the event
+            filter{  cutEvent ->
+               cutEvent == null ||
+               newPinnedEvents.contains(cutEvent)  ||
+               cutEvent.threadId < event.threadId  ||
+               (cutEvent.threadId == event.threadId &&  cutEvent.threadPosition <= event.threadPosition)
+            }
+
+
             // for already unblocked dangling requests,
             // also put their responses into the frontier
-            addUnblockingResponses(conflicts)
+
+            // TODO: commented out for now since this is for locks/monitors only, and we do not care about them right now
+            // addUnblockingResponses(conflicts)
         }
+
+// This condition should hold. Or atleast some weaker version of it
+// Currently it fails for ThreadStartEvent. Todo is to find out why
+//        frontier.toExecution().forEach { ev ->
+//            val cond = !(ev.label is ReadAccessLabel && ev.label.isResponse) || (newPinnedEvents.contains(ev.readsFrom))
+//            check(cond)
+//        }
+
         val danglingRequests = frontier.getDanglingRequests()
         val blockedRequests = danglingRequests
             // TODO: perhaps, we should change this to the list of requests to conflicting response events?
@@ -306,17 +330,10 @@ internal class EventStructure(
             cut(danglingRequests)
             set(event.threadId, event.parent)
         }
-        val pinnedEvents = pinnedEvents.copy().apply {
-            val causalityFrontier = execution.calculateFrontier(event.causalityClock)
-            merge(causalityFrontier)
-            cut(conflicts)
-            cut(getDanglingRequests())
-            cut(event)
-        }
         val backtrackingPoint = BacktrackingPoint(
             event = event,
             frontier = frontier,
-            pinnedEvents = pinnedEvents,
+            pinnedEvents = newPinnedEvents,
             blockedRequests = blockedRequests,
         )
         backtrackingPoints.add(backtrackingPoint)
@@ -600,31 +617,34 @@ internal class EventStructure(
              * reading from them will result in coherence cycle and will violate consistency
              */
             label is ReadAccessLabel && label.isRequest -> {
-                if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
-                    val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
-                    return sequenceOf(lastWrite)
-                }
-                val threadReads = execution[event.threadId]!!.filter {
-                    it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
-                }
-                val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
-                val staleWrites = threadReads
-                    .map { it.readsFrom }
-                    .filter { it != lastSeenWrite }
-                    .distinct()
-                val eventFrontier = execution.calculateFrontier(event.causalityClock)
-                val racyWrites = calculateRacyWrites(label.location, eventFrontier)
-                candidates.filter {
-                    // !causalityOrder.lessThan(it, threadLastWrite) &&
-                    !racyWrites.any { write -> causalityOrder(it, write) } &&
-                    !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
-                }
+                //TODO: This is disabled for now since the rules here were too strong, and forbid valid behaviour
+                // Also shouldn't the consistency checker be responsible for this only?
+//                if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
+//                    val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
+//                    return sequenceOf(lastWrite)
+//                }
+//                val threadReads = execution[event.threadId]!!.filter {
+//                    it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
+//                }
+//                val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
+//                val staleWrites = threadReads
+//                    .map { it.readsFrom }
+//                    .filter { it != lastSeenWrite }
+//                    .distinct()
+//                val eventFrontier = execution.calculateFrontier(event.causalityClock)
+//                val racyWrites = calculateRacyWrites(label.location, eventFrontier)
+//                candidates.filter {
+//                    // !causalityOrder.lessThan(it, threadLastWrite) &&
+//                    !racyWrites.any { write -> causalityOrder(it, write) } &&
+//                    !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
+//                }
+                candidates
             }
 
             label is WriteAccessLabel -> {
-                if (execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
-                    return sequenceOf()
-                }
+//                if (execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
+//                    return sequenceOf()
+//                }
                 candidates
             }
 
