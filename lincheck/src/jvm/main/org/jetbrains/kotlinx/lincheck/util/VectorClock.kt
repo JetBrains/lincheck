@@ -18,6 +18,7 @@ interface VectorClock {
     fun isEmpty(): Boolean
 
     operator fun get(tid: ThreadId): Int
+    fun maxThreadId(): Int
 }
 
 interface MutableVectorClock : VectorClock {
@@ -65,6 +66,10 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
 
     override fun get(tid: ThreadId): Int =
         if (tid < capacity) clock[tid] else -1
+
+    override fun maxThreadId(): Int {
+        TODO()
+    }
 
     override fun set(tid: ThreadId, timestamp: Int) {
         expandIfNeeded(tid)
@@ -139,6 +144,10 @@ private class ThreadMapClock(private val defaultVal: Int = -1) : MutableVectorCl
 
     override fun get(tid: ThreadId): Int =
         clock.getOrDefault(tid, defaultVal)
+
+    override fun maxThreadId(): Int {
+        return clock.keys.maxOrNull() ?: -1
+    }
 
     override fun set(tid: ThreadId, timestamp: Int) {
         clock.set(tid, timestamp)
