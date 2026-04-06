@@ -288,7 +288,7 @@ private fun foldNode(node: TraceNode): TraceNode {
     val foldedChildren = node.children.map { foldNode(it) }
 
     val finalChildren = if (nodeCopy is LoopNode) {
-        foldLoopChildren(foldedChildren)
+        splitLoopIterationsByThreadSwitchedAndFoldIterations(foldedChildren)
     } else {
         foldedChildren
     }
@@ -345,6 +345,37 @@ fun <T> List<T>.findCycle(
     return null
 }
 
+/**
+ * Splits loop node's children at loop iterations containing switch events,
+ * folds each non-switch section independently (see [foldLoopIterations] for details),
+ * and reassembles.
+ */
+private fun splitLoopIterationsByThreadSwitchedAndFoldIterations(children: List<TraceNode>): List<TraceNode> {
+    val result = mutableListOf<TraceNode>()
+    var sectionStart = 0
+
+    for (i in children.indices) {
+        if (children[i].hasSwitchEvent()) {
+            // Fold the uniform section before this switch iteration
+            if (i > sectionStart) {
+                result += foldLoopIterations(children.subList(sectionStart, i))
+            }
+            // Add the switch iteration as-is
+            result += children[i]
+            sectionStart = i + 1
+        }
+    }
+    // Fold remaining section after the last switch
+    if (sectionStart < children.size) {
+        result += foldLoopIterations(children.subList(sectionStart, children.size))
+    }
+
+    return result
+}
+
+private fun TraceNode.hasSwitchEvent(): Boolean =
+    children.any { it is EventNode && it.tracePoint is SwitchEventTracePoint }
+
 /*
     * Folds equivalent loop iterations in the given list of [children] by detecting cycles and applying folding rules.
     * The folding rules are as follows:
@@ -379,47 +410,7 @@ fun <T> List<T>.findCycle(
        <iteration 12>
          C
  */
-private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
-    // First pass: fold uniform sections between switch-containing iterations.
-    // This ensures that consecutive identical iterations (e.g., regular spin iterations)
-    // are folded into ranges like `<iterations 1-9>` before the overall cycle detection,
-    // which would otherwise group them into a larger period that includes switch iterations.
-    val preFolded = foldNonSwitchSections(children)
-    // Second pass: detect and fold repeating cycles in the pre-folded list.
-    return applyCycleFolding(preFolded)
-}
-
-/**
- * Splits children at iterations containing switch events,
- * folds each non-switch section independently, and reassembles.
- */
-private fun foldNonSwitchSections(children: List<TraceNode>): List<TraceNode> {
-    val result = mutableListOf<TraceNode>()
-    var sectionStart = 0
-
-    for (i in children.indices) {
-        if (children[i].hasSwitchEvent()) {
-            // Fold the uniform section before this switch iteration
-            if (i > sectionStart) {
-                result += applyCycleFolding(children.subList(sectionStart, i))
-            }
-            // Add the switch iteration as-is
-            result += children[i]
-            sectionStart = i + 1
-        }
-    }
-    // Fold remaining section after the last switch
-    if (sectionStart < children.size) {
-        result += applyCycleFolding(children.subList(sectionStart, children.size))
-    }
-
-    return result
-}
-
-private fun TraceNode.hasSwitchEvent(): Boolean =
-    children.any { it is EventNode && it.tracePoint is SwitchEventTracePoint }
-
-private fun applyCycleFolding(children: List<TraceNode>): List<TraceNode> {
+private fun foldLoopIterations(children: List<TraceNode>): List<TraceNode> {
     val result = mutableListOf<TraceNode>()
     var startIndex = 0
 
