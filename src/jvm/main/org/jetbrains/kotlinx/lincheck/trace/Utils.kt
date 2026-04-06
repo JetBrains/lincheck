@@ -376,39 +376,46 @@ private fun splitLoopIterationsByThreadSwitchedAndFoldIterations(children: List<
 private fun TraceNode.hasSwitchEvent(): Boolean =
     children.any { it is EventNode && it.tracePoint is SwitchEventTracePoint }
 
-/*
-    * Folds equivalent loop iterations in the given list of [children] by detecting cycles and applying folding rules.
-    * The folding rules are as follows:
-    * Case (1): fully equal iterations
-     A, A, A, A, ...
-     <iterations 1 - 10>
-       A
-
-    * Case (2): partially equal iterations
-     A(a), A(b), A(c), ...., A(j)
-     <loop(10 iterations)>
-       <iterations 1>
-         A(a)
-       ...
-       <iteration 10>
-         A(j)
-
-    * Case (3): cycle with period > 1 (either fully or partially equal)
-     A, B, C, A, B, C, ...
-     <loop(12 iterations)>
-       <iteration 1>
-         A
-       <iteration 2>
-         B
-       <iteration 3>
-         C
-       ...
-       <iteration 10>
-         A
-       <iteration 11>
-         B
-       <iteration 12>
-         C
+/**
+ * Folds equivalent loop iterations in the given list of [children] by detecting cycles and applying folding rules.
+ * The folding rules are as follows:
+ *
+ * Case (1): fully equal iterations
+ *   ```
+ *   A, A, A, A, ...
+ *   <iterations 1 - 10>
+ *     A
+ *   ```
+ *
+ * Case (2): partially equal iterations
+ *   ```
+ *   A(a), A(b), A(c), ...., A(j)
+ *   <loop(10 iterations)>
+ *     <iteration 1>
+ *       A(a)
+ *     ...
+ *     <iteration 10>
+ *       A(j)
+ * ```
+ *
+ * Case (3): cycle with the period > 1 (either fully or partially equal)
+ *   ```
+ *   A, B, C, A, B, C, ...
+ *   <loop(12 iterations)>
+ *     <iteration 1>
+ *       A
+ *     <iteration 2>
+ *       B
+ *     <iteration 3>
+ *       C
+ *     ...
+ *     <iteration 10>
+ *       A
+ *     <iteration 11>
+ *       B
+ *     <iteration 12>
+ *       C
+ * ```
  */
 private fun foldLoopIterations(children: List<TraceNode>): List<TraceNode> {
     val result = mutableListOf<TraceNode>()
