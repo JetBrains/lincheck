@@ -20,6 +20,8 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.tree.InvokeDynamicInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
+import org.objectweb.asm.tree.IincInsnNode
+import org.objectweb.asm.tree.VarInsnNode
 import sun.nio.ch.lincheck.*
 
 /**
@@ -439,6 +441,42 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
 
     // If the header block itself has side effects, no suitable await loop can be formed
     if (headerClassification.hasSideEffects) return emptySet()
+
+    // Check for side effects on the header block and for variables loaded in the header and written in the body.
+    val headerBlock = basicBlocks.getOrNull(header)
+    if (headerBlock?.executableRange != null) {
+        val loadedVars = mutableSetOf<Int>()
+        for (i in headerBlock.executableRange) {
+            val insn = instructions.get(i)
+            if (insn is VarInsnNode && insn.opcode in listOf(Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD)) {
+                loadedVars.add(insn.`var`)
+            }
+        }
+
+        // If there are variables loaded in the header, check if any of them is written to in the body.
+        if (loadedVars.isNotEmpty()) {
+            for (bodyBlockIndex in bodyBlocks) {
+                val bodyBlock = basicBlocks.getOrNull(bodyBlockIndex) ?: continue
+                if (bodyBlock.executableRange == null) continue
+                for (i in bodyBlock.executableRange) {
+                    val insn = instructions.get(i)
+                    if (insn is VarInsnNode && insn.opcode in listOf(Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE)) {
+                        if (insn.`var` in loadedVars) {
+                            // A variable loaded in the header is written to in the loop body.
+                            // This is a side effect.
+                            return emptySet()
+                        }
+                    }
+                    // increment operations
+                    if (insn is IincInsnNode) {
+                        if (insn.`var` in loadedVars) {
+                            return emptySet()
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     // BFS visited state bitmask
     // VISITED_NO_READ = visited without a read on the path,
