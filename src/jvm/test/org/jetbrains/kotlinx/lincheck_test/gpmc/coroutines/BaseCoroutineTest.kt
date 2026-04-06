@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.asCoroutineDispatcher
 import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
 import java.io.Closeable
 import java.util.concurrent.Executors
 
@@ -25,7 +26,10 @@ abstract class BaseCoroutineTest(
 
     protected fun executeCoroutineTest(block: (CoroutineDispatcher) -> Unit) {
         val result = runCatching {
-            Lincheck.runConcurrentTest(invocations) {
+            val settings = LincheckSettings(
+                loopBound = 200,
+            )
+            Lincheck.runConcurrentTestInternal(invocations, settings) {
                 createDispatcher().let { dispatcher ->
                     try {
                         block(dispatcher)
