@@ -167,7 +167,7 @@ class BasicBlockControlFlowGraph(
             } else {
                 isReducible = false
                 // Report irreducible CFG
-                Logger.warn { "Irreducible CFG detected, loop information will be limited for $className::$method" }
+                Logger.warn { "Irreducible CFG detected for $className::$method" }
                 Logger.debug { "CFG:\n${toFormattedString()}" }
             }
 
