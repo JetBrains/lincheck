@@ -133,8 +133,6 @@ internal class IterationObservations {
     fun signature(): Int {
         var h = reads.hashCode()
         h = h * 31 + writes.hashCode()
-        h = h * 31 + casSuccesses
-        h = h * 31 + casFailures
         return h
     }
 
