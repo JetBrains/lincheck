@@ -424,19 +424,35 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
                 result += rangeNode
             } else {
                 // Cases 2 & 3: Partially equal or period > 1
+                val lastPeriodStart = startIndex + totalNodesCovered - cycle.bestPeriod
+
                 // Add the first period of the cycle
                 for (i in 0 until cycle.bestPeriod) {
                     result += deepCopyNode(children[startIndex + i])
                 }
 
                 if (cycle.bestCount > 2) {
-                    // Add Ellipsis(...) node to indicate the folding
-                    val eventNumber = children[startIndex + cycle.bestPeriod].eventNumber
+                    // The first folded iteration may start with a switch event
+                    // that is essential for understanding the thread interleaving.
+                    // Extract and preserve any leading switch events before the ellipsis.
+                    val firstFoldedIteration = children[startIndex + cycle.bestPeriod]
+                    for (child in firstFoldedIteration.children) {
+                        if (child is EventNode && child.tracePoint is SwitchEventTracePoint) {
+                            result += deepCopyNode(child)
+                        } else {
+                            break
+                        }
+                    }
+
+                    // Add Ellipsis(...) node to indicate the folding.
+                    // Use the event number of the last folded iteration so that
+                    // when the multithreaded trace is sorted globally by event number,
+                    // the ellipsis is placed just before the last visible period.
+                    val eventNumber = children[lastPeriodStart - 1].eventNumber
                     result += EllipsisNode(firstNode.tracePoint, eventNumber)
                 }
 
                 // Add the last period of the cycle
-                val lastPeriodStart = startIndex + totalNodesCovered - cycle.bestPeriod
                 for (i in 0 until cycle.bestPeriod) {
                     result += deepCopyNode(children[lastPeriodStart + i])
                 }
