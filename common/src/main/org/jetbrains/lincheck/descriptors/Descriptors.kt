@@ -85,6 +85,7 @@ data class FieldDescriptor(
     val type: Types.Type,
     val fieldKind: FieldKind,
     val isFinal: Boolean,
+    val isVolatile: Boolean,
 ) : Descriptor {
     // ClassName cannot be used in Key, because FieldDescriptor can be read before ClassDescriptor
     // and only classId will be known in such case.
@@ -126,6 +127,7 @@ fun Field.toDescriptor(context: TraceContext) = context.createAndRegisterFieldDe
     type = this.type.kotlin.getType(),
     fieldKind = FieldKind.fromIsStatic(Modifier.isStatic(this.modifiers)),
     isFinal = Modifier.isFinal(this.modifiers),
+    isVolatile = Modifier.isVolatile(this.modifiers),
 )
 
 data class VariableDescriptor(

@@ -64,6 +64,7 @@ data class ObjectFieldAccessLocation(
                 type = Types.INT_TYPE,
                 fieldKind = FieldKind.INSTANCE,
                 isFinal = true,
+                isVolatile = false // TODO: is this really the case?
             )
         )
     }
@@ -156,10 +157,12 @@ fun Field.toAccessLocation(context: TraceContext): FieldAccessLocation {
     val fieldName = name
     val isStatic = Modifier.isStatic(modifiers)
     val isFinal = Modifier.isFinal(modifiers)
+    val isVolatile = Modifier.isVolatile(modifiers)
     val descriptor = context.createAndRegisterFieldDescriptor(className, fieldName,
         type = type.kotlin.getType(),
         fieldKind = FieldKind.fromIsStatic(isStatic),
         isFinal = isFinal,
+        isVolatile = isVolatile
     )
     return if (isStatic) {
         StaticFieldAccessLocation(descriptor)

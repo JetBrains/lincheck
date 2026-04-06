@@ -442,6 +442,7 @@ internal fun DataOutput.writeFieldDescriptor(value: FieldDescriptor) {
     writeType(value.type)
     writeBoolean(value.isStatic)
     writeBoolean(value.isFinal)
+    writeBoolean(value.isVolatile)
 }
 
 internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescriptor {
@@ -451,7 +452,8 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
         fieldName = readUTF(),
         type = readType(),
         fieldKind = FieldKind.fromIsStatic(isStatic = readBoolean()),
-        isFinal = readBoolean()
+        isFinal = readBoolean(),
+        isVolatile = readBoolean() // TODO this is most definitely wrong
     )
 }
 
