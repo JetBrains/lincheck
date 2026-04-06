@@ -23,7 +23,7 @@ Detailed trace:
 |     value.compareAndSet(false, true): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298)      |
 |     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                                   |
 |       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                         |
-|   b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293) [recursive call x 51 times] |
+|   b(true) at RecursiveParametersDependentSpinLockTest.actorMethod(RecursiveSpinLockTest.kt:293) [recursive call x 21 times] |
 |     value.compareAndSet(false, true): false at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:298)     |
 |     c(): true at RecursiveParametersDependentSpinLockTest.b(RecursiveSpinLockTest.kt:299)                                   |
 |       value.get(): true at RecursiveParametersDependentSpinLockTest.c(RecursiveSpinLockTest.kt:305)                         |
