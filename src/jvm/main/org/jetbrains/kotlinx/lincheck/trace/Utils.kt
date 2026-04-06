@@ -380,6 +380,46 @@ fun <T> List<T>.findCycle(
          C
  */
 private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
+    // First pass: fold uniform sections between switch-containing iterations.
+    // This ensures that consecutive identical iterations (e.g., regular spin iterations)
+    // are folded into ranges like `<iterations 1-9>` before the overall cycle detection,
+    // which would otherwise group them into a larger period that includes switch iterations.
+    val preFolded = foldNonSwitchSections(children)
+    // Second pass: detect and fold repeating cycles in the pre-folded list.
+    return applyCycleFolding(preFolded)
+}
+
+/**
+ * Splits children at iterations containing switch events,
+ * folds each non-switch section independently, and reassembles.
+ */
+private fun foldNonSwitchSections(children: List<TraceNode>): List<TraceNode> {
+    val result = mutableListOf<TraceNode>()
+    var sectionStart = 0
+
+    for (i in children.indices) {
+        if (children[i].hasSwitchEvent()) {
+            // Fold the uniform section before this switch iteration
+            if (i > sectionStart) {
+                result += applyCycleFolding(children.subList(sectionStart, i))
+            }
+            // Add the switch iteration as-is
+            result += children[i]
+            sectionStart = i + 1
+        }
+    }
+    // Fold remaining section after the last switch
+    if (sectionStart < children.size) {
+        result += applyCycleFolding(children.subList(sectionStart, children.size))
+    }
+
+    return result
+}
+
+private fun TraceNode.hasSwitchEvent(): Boolean =
+    children.any { it is EventNode && it.tracePoint is SwitchEventTracePoint }
+
+private fun applyCycleFolding(children: List<TraceNode>): List<TraceNode> {
     val result = mutableListOf<TraceNode>()
     var startIndex = 0
 
@@ -432,21 +472,9 @@ private fun foldLoopChildren(children: List<TraceNode>): List<TraceNode> {
                 }
 
                 if (cycle.bestCount > 2) {
-                    // The first folded iteration may start with a switch event
-                    // that is essential for understanding the thread interleaving.
-                    // Extract and preserve any leading switch events before the ellipsis.
-                    val firstFoldedIteration = children[startIndex + cycle.bestPeriod]
-                    for (child in firstFoldedIteration.children) {
-                        if (child is EventNode && child.tracePoint is SwitchEventTracePoint) {
-                            result += deepCopyNode(child)
-                        } else {
-                            break
-                        }
-                    }
-
                     // Add Ellipsis(...) node to indicate the folding.
                     // Use the event number of the last folded iteration so that
-                    // when the multithreaded trace is sorted globally by event number,
+                    // when the multi-threaded trace is sorted globally by event number,
                     // the ellipsis is placed just before the last visible period.
                     val eventNumber = children[lastPeriodStart - 1].eventNumber
                     result += EllipsisNode(firstNode.tracePoint, eventNumber)
