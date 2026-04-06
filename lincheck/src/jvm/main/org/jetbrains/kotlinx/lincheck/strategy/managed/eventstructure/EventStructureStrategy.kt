@@ -39,6 +39,7 @@ import org.jetbrains.lincheck.util.satisfies
 import org.jetbrains.lincheck.util.toInt
 import org.jetbrains.lincheck.util.updateInplace
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.util.MemoryOrdering
 import sun.nio.ch.lincheck.ThreadDescriptor
 
 internal class EventStructureStrategy(
@@ -469,16 +470,16 @@ private class EventStructureMemoryTracker(
     private fun getValue(type: Types.Type, valueID: ValueID) =
         eventStructureObjectTracker.getValue(type, valueID)
 
-    private fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, value: OpaqueValue?,
+    private fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, value: OpaqueValue?,
                               rmwWriteDescriptor: ReadModifyWriteDescriptor? = null) {
         // force evaluation of initial value (before possibly overwriting it)
         eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
-        eventStructure.addWriteEvent(iThread, codeLocation, location, getValueID(location, value), rmwWriteDescriptor)
+        eventStructure.addWriteEvent(iThread, codeLocation, location, memoryOrder, getValueID(location, value), rmwWriteDescriptor)
     }
 
-    private fun addReadRequest(iThread: Int, codeLocation: Int, location: MemoryLocation,
-                               readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null) {
-        eventStructure.addReadRequest(iThread, codeLocation, location, readModifyWriteDescriptor)
+    private fun addReadRequest(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering,
+                               readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null, ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder, readModifyWriteDescriptor)
     }
 
     private fun addReadResponse(iThread: Int): OpaqueValue? {
@@ -495,7 +496,7 @@ private class EventStructureMemoryTracker(
             is ReadModifyWriteDescriptor.GetAndSetDescriptor -> {
                 val newValueID = rmwDescriptor.newValue
                 val newValue = getValue(label.location, newValueID)
-                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
+                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
                 label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
                 return getValue(label.location, label.value)
             }
@@ -504,7 +505,7 @@ private class EventStructureMemoryTracker(
                 if (label.value == rmwDescriptor.expectedValue) {
                     val newValueID = rmwDescriptor.newValue
                     val newValue = getValue(label.location, newValueID)
-                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
+                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
                     label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
                     return getValue(Types.BOOLEAN_TYPE, true.toInt().toLong())
                 }
@@ -515,7 +516,7 @@ private class EventStructureMemoryTracker(
                 if (label.value == rmwDescriptor.expectedValue) {
                     val newValueID = rmwDescriptor.newValue
                     val newValue = getValue(label.location, newValueID)
-                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
+                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
                     label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
                 }
                 return getValue(label.location, label.value)
@@ -524,7 +525,7 @@ private class EventStructureMemoryTracker(
             is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> {
                 val newValueID = label.value + rmwDescriptor.delta
                 val newValue = getValue(label.location, newValueID)
-                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, newValueID, rmwDescriptor)
+                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
                 label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
                 return when (rmwDescriptor.kind) {
                     ReadModifyWriteDescriptor.IncrementKind.Pre  -> getValue(label.location, label.value)
@@ -534,24 +535,43 @@ private class EventStructureMemoryTracker(
         }
     }
 
-    override fun beforeWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, value: Any?) {
-        addWriteEvent(iThread, codeLocation, location, value?.opaque())
+    override fun beforeWrite(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        value: Any?
+    ) {
+        addWriteEvent(iThread, codeLocation, location, memoryOrder, value?.opaque())
     }
 
-    override fun beforeRead(iThread: Int, codeLocation: Int, location: MemoryLocation) {
-        addReadRequest(iThread, codeLocation, location)
+    override fun beforeRead(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering) {
+        addReadRequest(iThread, codeLocation, location, memoryOrder)
     }
 
-    override fun beforeGetAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, newValue: Any?) {
-        eventStructure.addReadRequest(iThread, codeLocation, location,
+    override fun beforeGetAndSet(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        newValue: Any?
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
             readModifyWriteDescriptor = ReadModifyWriteDescriptor.GetAndSetDescriptor(
                 newValue = getValueID(location, newValue?.opaque())
             )
         )
     }
 
-    override fun beforeCompareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, expectedValue: Any?, newValue: Any?) {
-        eventStructure.addReadRequest(iThread, codeLocation, location,
+    override fun beforeCompareAndSet(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        expectedValue: Any?,
+        newValue: Any?
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
             readModifyWriteDescriptor = ReadModifyWriteDescriptor.CompareAndSetDescriptor(
                 expectedValue = getValueID(location, expectedValue?.opaque()),
                 newValue = getValueID(location, newValue?.opaque()),
@@ -559,8 +579,15 @@ private class EventStructureMemoryTracker(
         )
     }
 
-    override fun beforeCompareAndExchange(iThread: Int, codeLocation: Int, location: MemoryLocation, expectedValue: Any?, newValue: Any?) {
-        eventStructure.addReadRequest(iThread, codeLocation, location,
+    override fun beforeCompareAndExchange(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        expectedValue: Any?,
+        newValue: Any?
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
             readModifyWriteDescriptor = ReadModifyWriteDescriptor.CompareAndExchangeDescriptor(
                 expectedValue = getValueID(location, expectedValue?.opaque()),
                 newValue = getValueID(location, newValue?.opaque()),
@@ -568,8 +595,14 @@ private class EventStructureMemoryTracker(
         )
     }
 
-    override fun beforeGetAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number) {
-        eventStructure.addReadRequest(iThread, codeLocation, location,
+    override fun beforeGetAndAdd(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        delta: Number
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
             readModifyWriteDescriptor = ReadModifyWriteDescriptor.FetchAndAddDescriptor(
                 delta = getValueID(location, delta.opaque()),
                 kind = ReadModifyWriteDescriptor.IncrementKind.Pre,
@@ -577,8 +610,14 @@ private class EventStructureMemoryTracker(
         )
     }
 
-    override fun beforeAddAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number) {
-        eventStructure.addReadRequest(iThread, codeLocation, location,
+    override fun beforeAddAndGet(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        delta: Number
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
             readModifyWriteDescriptor = ReadModifyWriteDescriptor.FetchAndAddDescriptor(
                 delta = getValueID(location, delta.opaque()),
                 kind = ReadModifyWriteDescriptor.IncrementKind.Post,
@@ -599,10 +638,11 @@ private class EventStructureMemoryTracker(
             val readLocation  = objectTracker.getArrayAccessMemoryLocation(srcArray, srcPos + i, srcType)
             val writeLocation = objectTracker.getArrayAccessMemoryLocation(dstArray, dstPos + i, dstType)
             val value = run {
-                beforeRead(iThread, codeLocation, readLocation)
+                // TODO: not sure what memory order we should have here. I assume plain?
+                beforeRead(iThread, codeLocation, readLocation, MemoryOrdering.PLAIN)
                 interceptReadResult(iThread)
             }
-            beforeWrite(iThread, codeLocation, writeLocation, value)
+            beforeWrite(iThread, codeLocation, writeLocation, MemoryOrdering.PLAIN, value)
             writeLocation.write(value, eventStructureObjectTracker::getValue)
         }
     }

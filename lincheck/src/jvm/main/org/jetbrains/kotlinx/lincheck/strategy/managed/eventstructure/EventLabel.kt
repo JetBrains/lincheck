@@ -24,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.implies
+import org.jetbrains.lincheck.util.MemoryOrdering
 
 /**
  * EventLabel is a base class for the hierarchy of classes
@@ -457,6 +458,7 @@ sealed class MemoryAccessLabel(
     open val location: MemoryLocation,
     open val readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null,
     open val codeLocation: Int = UNKNOWN_CODE_LOCATION,
+    open val memoryOrdering: MemoryOrdering,
 ): EventLabel(kind) {
 
     /**
@@ -547,7 +549,8 @@ data class ReadAccessLabel(
     override val readValue: ValueID,
     override val readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null,
     override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
-): MemoryAccessLabel(kind, location, readModifyWriteDescriptor, codeLocation) {
+    override val memoryOrdering: MemoryOrdering,
+): MemoryAccessLabel(kind, location, readModifyWriteDescriptor, codeLocation, memoryOrdering) {
 
     init {
         require(isRequest || isResponse || isReceive)
@@ -577,7 +580,8 @@ data class WriteAccessLabel(
     override val writeValue: ValueID,
     override val readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null,
     override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
-): MemoryAccessLabel(LabelKind.Send, location, readModifyWriteDescriptor, codeLocation) {
+    override val memoryOrdering: MemoryOrdering,
+): MemoryAccessLabel(LabelKind.Send, location, readModifyWriteDescriptor, codeLocation, memoryOrdering) {
 
     val value: ValueID
         get() = writeValue
@@ -605,7 +609,8 @@ data class ReadModifyWriteAccessLabel(
     override val writeValue: ValueID,
     override val readModifyWriteDescriptor: ReadModifyWriteDescriptor,
     override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
-): MemoryAccessLabel(kind, location, readModifyWriteDescriptor, codeLocation) {
+    override val memoryOrdering: MemoryOrdering,
+): MemoryAccessLabel(kind, location, readModifyWriteDescriptor, codeLocation, memoryOrdering) {
 
     init {
         require(kind == LabelKind.Response || kind == LabelKind.Receive)
@@ -627,7 +632,9 @@ fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel): 
     return if (read.isExclusive &&
                read.location == write.location &&
                read.readModifyWriteDescriptor == write.readModifyWriteDescriptor &&
-               read.codeLocation == write.codeLocation) {
+               read.codeLocation == write.codeLocation &&
+               read.memoryOrdering == write.memoryOrdering
+        ) {
         ReadModifyWriteAccessLabel(
             kind = read.kind,
             location = read.location,
@@ -635,6 +642,7 @@ fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel): 
             writeValue = write.value,
             readModifyWriteDescriptor = read.readModifyWriteDescriptor!!,
             codeLocation = read.codeLocation,
+            memoryOrdering = read.memoryOrdering
         )
     }
     else null
@@ -735,6 +743,7 @@ fun InitializationLabel.asWriteAccessLabel(location: MemoryLocation): WriteAcces
             location = location,
             writeValue = getInitialValue(location),
             codeLocation = INIT_CODE_LOCATION,
+            memoryOrdering = MemoryOrdering.PLAIN, //TODO: we need to think of how to drill down the volatileness  from memory location
         )
 
     else -> asObjectAllocationLabel(location.objID)?.asWriteAccessLabel(location)
@@ -753,6 +762,7 @@ fun ObjectAllocationLabel.asWriteAccessLabel(location: MemoryLocation): WriteAcc
             writeValue = getInitialValue(location),
             // TODO: use actual allocation-site code location?
             codeLocation = INIT_CODE_LOCATION,
+            memoryOrdering = MemoryOrdering.PLAIN, //TODO: we need to think of how to drill down the volatileness  from memory location
         )
     else null
 

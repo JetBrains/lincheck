@@ -71,7 +71,7 @@ internal enum class AtomicApiKind {
     }
 }
 
-internal enum class MemoryOrdering {
+enum class MemoryOrdering {
     PLAIN, OPAQUE, RELEASE, ACQUIRE, VOLATILE;
 
     override fun toString(): String = when (this) {
