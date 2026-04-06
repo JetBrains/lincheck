@@ -10,8 +10,18 @@
 
 package org.jetbrains.lincheck
 
-internal data class LincheckSettings(val analyzeStdLib: Boolean) {
+internal data class LincheckSettings(
+    val analyzeStdLib: Boolean = DEFAULT.analyzeStdLib,
+    val loopIterationsBeforeThreadSwitch: Int = DEFAULT.loopIterationsBeforeThreadSwitch,
+    val loopBound: Int = DEFAULT.loopBound,
+    val recursionBound: Int = DEFAULT.recursionBound,
+) {
     companion object {
-        val DEFAULT = LincheckSettings(analyzeStdLib = true)
+        val DEFAULT = LincheckSettings(
+            analyzeStdLib = true,
+            loopIterationsBeforeThreadSwitch = 10,
+            loopBound = 50,
+            recursionBound = 20,
+        )
     }
 }
