@@ -39,15 +39,7 @@ internal data class IndexCell(
  * Tracks which descriptors, code locations, and other context elements are written in this block.
  * Used to defer marking these elements as "saved" until the block is persisted to disk.
  */
-internal data class BlockContextSnapshot(
-    val classDescriptorIds: Set<Int> = emptySet(),
-    val methodDescriptorIds: Set<Int> = emptySet(),
-    val fieldDescriptorIds: Set<Int> = emptySet(),
-    val variableDescriptorIds: Set<Int> = emptySet(),
-    val stringIds: Set<Int> = emptySet(),
-    val codeLocationIds: Set<Int> = emptySet(),
-    val accessPathIds: Set<Int> = emptySet()
-)
+private typealias BlockContextSnapshot = SimpleTraceContextSavedState
 
 internal interface BlockSaver {
     fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>, contextSnapshot: BlockContextSnapshot)
@@ -60,65 +52,38 @@ private const val MAX_STRING_SIZE = PER_THREAD_DATA_BUFFER_SIZE - 1024
 internal class BufferedTraceWriter(
     override val writerId: Int,
     context: TraceContext,
-    contextState: TraceContextSavedState,
+    globalContextState: TraceContextSavedState,
     private val storage: BlockSaver,
     private val bufferStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
 ) : ContextAwareTraceWriter(
     context = context,
-    contextState = contextState,
     dataStream = bufferStream,
     dataOutput = bufferStream
 ) {
+    /**
+     * Tracks what's written in the current block for the snapshot
+     */
+    private var blockContextState = BlockContextSnapshot()
+
+    /**
+     * Context state which searches descriptors both in block snapshot and in the global context, but
+     * saves descriptors only to the local snapshot, which later will be propagated to the global context
+     * by IO Thread.
+     */
+    override val contextState = object : TraceContextSavedState {
+        override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
+            return blockContextState.isDescriptorSaved(descriptorClass, id) ||
+                   globalContextState.isDescriptorSaved(descriptorClass, id)
+        }
+
+        override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
+            blockContextState.markDescriptorSaved(descriptorClass, id)
+        }
+    }
     private var currentStartDataPosition: Long = 0
     private var index = mutableListOf<IndexCell>()
 
-    // Track what's written in the current block for the snapshot
-    private val classDescriptorIdsInBlock = mutableSetOf<Int>()
-    private val methodDescriptorIdsInBlock = mutableSetOf<Int>()
-    private val fieldDescriptorIdsInBlock = mutableSetOf<Int>()
-    private val variableDescriptorIdsInBlock = mutableSetOf<Int>()
-    private val stringIdsInBlock = mutableSetOf<Int>()
-    private val codeLocationIdsInBlock = mutableSetOf<Int>()
-    private val accessPathIdsInBlock = mutableSetOf<Int>()
-
     override val currentDataPosition: Long get() = currentStartDataPosition + bufferStream.position()
-
-    /**
-     * This implementation checks that given descriptor is either saved globally by the IO Thread,
-     * or it is saved to this writer's block and should not be saved again at least by this writer.
-     */
-    override fun isDescriptorSavedByWriter(descriptorClass: KClass<*>, id: Int): Boolean {
-        // Check if already globally saved OR written in the current block
-        val inBlock = when (descriptorClass) {
-            ClassDescriptor::class -> id in classDescriptorIdsInBlock
-            MethodDescriptor::class -> id in methodDescriptorIdsInBlock
-            FieldDescriptor::class -> id in fieldDescriptorIdsInBlock
-            VariableDescriptor::class -> id in variableDescriptorIdsInBlock
-            String::class -> id in stringIdsInBlock
-            CodeLocation::class -> id in codeLocationIdsInBlock
-            AccessPath::class -> id in accessPathIdsInBlock
-            else -> false
-        }
-        return inBlock || super.isDescriptorSavedByWriter(descriptorClass, id)
-    }
-
-    /**
-     * This implementation marks the given descriptor as saved to this writer's block.
-     * Later IO Thread will eventually dump this block to the file and mark its content as saved globally.
-     */
-    override fun markDescriptorSavedByWriter(descriptorClass: KClass<*>, id: Int) {
-        // Don't mark globally; accumulate in the block snapshot instead.
-        // Actual global marking happens in FileStreamingThread after disk writing
-        when (descriptorClass) {
-            ClassDescriptor::class -> classDescriptorIdsInBlock.add(id)
-            MethodDescriptor::class -> methodDescriptorIdsInBlock.add(id)
-            FieldDescriptor::class -> fieldDescriptorIdsInBlock.add(id)
-            VariableDescriptor::class -> variableDescriptorIdsInBlock.add(id)
-            String::class -> stringIdsInBlock.add(id)
-            CodeLocation::class -> codeLocationIdsInBlock.add(id)
-            AccessPath::class -> accessPathIdsInBlock.add(id)
-        }
-    }
 
     override fun close() {
         flush()
@@ -169,27 +134,9 @@ internal class BufferedTraceWriter(
             oldIndex
         }
 
-        // Create snapshot of what's being saved in this block
-        val snapshot = BlockContextSnapshot(
-            classDescriptorIds = classDescriptorIdsInBlock.toSet(),
-            methodDescriptorIds = methodDescriptorIdsInBlock.toSet(),
-            fieldDescriptorIds = fieldDescriptorIdsInBlock.toSet(),
-            variableDescriptorIds = variableDescriptorIdsInBlock.toSet(),
-            stringIds = stringIdsInBlock.toSet(),
-            codeLocationIds = codeLocationIdsInBlock.toSet(),
-            accessPathIds = accessPathIdsInBlock.toSet()
-        )
-
-        // Clear for next block
-        classDescriptorIdsInBlock.clear()
-        methodDescriptorIdsInBlock.clear()
-        fieldDescriptorIdsInBlock.clear()
-        variableDescriptorIdsInBlock.clear()
-        stringIdsInBlock.clear()
-        codeLocationIdsInBlock.clear()
-        accessPathIdsInBlock.clear()
-
-        storage.saveDataAndIndexBlock(writerId, logicalStart, bufferStream.detachBuffer(), indexToSave, snapshot)
+        storage.saveDataAndIndexBlock(writerId, logicalStart, bufferStream.detachBuffer(), indexToSave, blockContextState)
+        // Clear the snapshot for the next block
+        blockContextState = BlockContextSnapshot()
     }
 
     private fun maybeFlushData() {
@@ -310,16 +257,15 @@ private class FileStreamingThread(
         index.write(buffer.array(), 0, buffer.limit())
         index.flush()
 
-        // TODO: this could be done before writing to the disk, because the order in which this data will be written is already fixed, should I do it?
         // Mark all items in this block as saved after successful disk write
         job.contextSnapshot.apply {
-            classDescriptorIds.forEach { savedState.markDescriptorSaved<ClassDescriptor>(it) }
-            methodDescriptorIds.forEach { savedState.markDescriptorSaved<MethodDescriptor>(it) }
-            fieldDescriptorIds.forEach { savedState.markDescriptorSaved<FieldDescriptor>(it) }
-            variableDescriptorIds.forEach { savedState.markDescriptorSaved<VariableDescriptor>(it) }
-            stringIds.forEach { savedState.markDescriptorSaved<String>(it) }
-            codeLocationIds.forEach { savedState.markDescriptorSaved<CodeLocation>(it) }
-            accessPathIds.forEach { savedState.markDescriptorSaved<AccessPath>(it) }
+            classDescriptors.forEach { savedState.markDescriptorSaved<ClassDescriptor>(it) }
+            methodDescriptors.forEach { savedState.markDescriptorSaved<MethodDescriptor>(it) }
+            fieldDescriptors.forEach { savedState.markDescriptorSaved<FieldDescriptor>(it) }
+            variableDescriptors.forEach { savedState.markDescriptorSaved<VariableDescriptor>(it) }
+            strings.forEach { savedState.markDescriptorSaved<String>(it) }
+            codeLocations.forEach { savedState.markDescriptorSaved<CodeLocation>(it) }
+            accessPaths.forEach { savedState.markDescriptorSaved<AccessPath>(it) }
         }
     }
 
@@ -406,7 +352,7 @@ class FileStreamingTraceCollecting(
         writers[thread] = BufferedTraceWriter(
             writerId = threadId,
             context = context,
-            contextState = this,
+            globalContextState = this,
             // This is needed to work around visibility problems
             storage = object : BlockSaver {
                 override fun saveDataAndIndexBlock(

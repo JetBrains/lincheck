@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.Logger
 import java.io.Closeable
 import java.io.DataOutput
 import java.io.DataOutputStream
@@ -157,10 +158,10 @@ internal inline fun <reified T> TraceContextSavedState.markDescriptorSaved(id: I
  */
 internal sealed class ContextAwareTraceWriter(
     val context: TraceContext,
-    private val contextState: TraceContextSavedState,
     protected val dataStream: OutputStream,
     protected val dataOutput: DataOutput
 ): TraceWriter, DataOutput by dataOutput {
+    protected abstract val contextState: TraceContextSavedState
     // Stack of "container" tracepoints
     private val containerStack = mutableListOf<Pair<Int, Long>>()
 
@@ -169,27 +170,6 @@ internal sealed class ContextAwareTraceWriter(
 
     protected abstract val currentDataPosition: Long
     abstract val writerId: Int
-
-    private inline fun <reified T> isDescriptorSaved(id: Int) = isDescriptorSavedByWriter(T::class, id)
-    private inline fun <reified T> markDescriptorSaved(id: Int) = markDescriptorSavedByWriter(T::class, id)
-
-    /**
-     * Check if descriptor is already saved by this writer.
-     * Default implementation delegates to [contextState].
-     * Override to customize the check logic (e.g., include current block snapshot for [BufferedTraceWriter]).
-     */
-    protected open fun isDescriptorSavedByWriter(descriptorClass: KClass<*>, id: Int): Boolean {
-        return contextState.isDescriptorSaved(descriptorClass, id)
-    }
-
-    /**
-     * Mark descriptor as saved by this writer.
-     * Default implementation marks immediately via [contextState].
-     * Override to defer marking (e.g., until block is persisted to disk in [BufferedTraceWriter]).
-     */
-    protected open fun markDescriptorSavedByWriter(descriptorClass: KClass<*>, id: Int) {
-        contextState.markDescriptorSaved(descriptorClass, id)
-    }
 
     override fun close() {
         dataOutput.writeKind(ObjectKind.EOF)
@@ -279,20 +259,20 @@ internal sealed class ContextAwareTraceWriter(
 
     override fun writeClassDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (isDescriptorSaved<ClassDescriptor>(id)) return
+        if (contextState.isDescriptorSaved<ClassDescriptor>(id)) return
         // Write class descriptor into data and position into index
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.CLASS_DESCRIPTOR)
         dataOutput.writeInt(id)
         dataOutput.writeClassDescriptor(context.classPool[id])
-        markDescriptorSaved<ClassDescriptor>(id)
+        contextState.markDescriptorSaved<ClassDescriptor>(id)
 
         writeIndexCell(ObjectKind.CLASS_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeMethodDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (isDescriptorSaved<MethodDescriptor>(id)) return
+        if (contextState.isDescriptorSaved<MethodDescriptor>(id)) return
         val descriptor = context.methodPool[id]
         writeClassDescriptor(descriptor.classId)
 
@@ -301,14 +281,14 @@ internal sealed class ContextAwareTraceWriter(
         dataOutput.writeKind(ObjectKind.METHOD_DESCRIPTOR)
         dataOutput.writeInt(id)
         dataOutput.writeMethodDescriptor(descriptor)
-        markDescriptorSaved<MethodDescriptor>(id)
+        contextState.markDescriptorSaved<MethodDescriptor>(id)
 
         writeIndexCell(ObjectKind.METHOD_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeFieldDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (isDescriptorSaved<FieldDescriptor>(id)) return
+        if (contextState.isDescriptorSaved<FieldDescriptor>(id)) return
         val descriptor = context.fieldPool[id]
         writeClassDescriptor(descriptor.classId)
         // Write field descriptor into data and position into index
@@ -316,20 +296,20 @@ internal sealed class ContextAwareTraceWriter(
         dataOutput.writeKind(ObjectKind.FIELD_DESCRIPTOR)
         dataOutput.writeInt(id)
         dataOutput.writeFieldDescriptor(descriptor)
-        markDescriptorSaved<FieldDescriptor>(id)
+        contextState.markDescriptorSaved<FieldDescriptor>(id)
 
         writeIndexCell(ObjectKind.FIELD_DESCRIPTOR, id, position, -1)
     }
 
     override fun writeVariableDescriptor(id: Int) {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (isDescriptorSaved<VariableDescriptor>(id)) return
+        if (contextState.isDescriptorSaved<VariableDescriptor>(id)) return
         // Write variable descriptor into data and position into index
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.VARIABLE_DESCRIPTOR)
         dataOutput.writeInt(id)
         dataOutput.writeVariableDescriptor(context.variablePool[id])
-        markDescriptorSaved<VariableDescriptor>(id)
+        contextState.markDescriptorSaved<VariableDescriptor>(id)
 
         writeIndexCell(ObjectKind.VARIABLE_DESCRIPTOR, id, position, -1)
     }
@@ -339,7 +319,7 @@ internal sealed class ContextAwareTraceWriter(
             "Cannot save reference data inside tracepoint"
         }
         if (id == UNKNOWN_CODE_LOCATION_ID) return
-        if (isDescriptorSaved<CodeLocation>(id)) return
+        if (contextState.isDescriptorSaved<CodeLocation>(id)) return
 
         val codeLocation = context.stackTrace(id)
         val accessPath = context.accessPath(id)
@@ -368,7 +348,7 @@ internal sealed class ContextAwareTraceWriter(
         dataOutput.writeInt(activeLocalNameIds?.size ?: 0)
         activeLocalNameIds?.forEach { dataOutput.writeInt(it) }
         activeLocals?.forEach { dataOutput.writeInt(it.localKind.ordinal) }
-        markDescriptorSaved<CodeLocation>(id)
+        contextState.markDescriptorSaved<CodeLocation>(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
     }
@@ -378,13 +358,13 @@ internal sealed class ContextAwareTraceWriter(
         if (value == null) return -1
 
         val id = context.stringPool.register(value)
-        if (isDescriptorSaved<String>(id)) return id
+        if (contextState.isDescriptorSaved<String>(id)) return id
 
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.STRING)
         dataOutput.writeInt(id)
         dataOutput.writeUTF(value)
-        markDescriptorSaved<String>(id)
+        contextState.markDescriptorSaved<String>(id)
 
         // It cannot fail
         writeIndexCell(ObjectKind.STRING, id, position, -1)
@@ -444,7 +424,7 @@ internal sealed class ContextAwareTraceWriter(
                 val position = currentDataPosition
                 val id = context.accessPathPool.register(value)
                 if (value == root) rootId = id
-                if (isDescriptorSaved<AccessPath>(id)) return@onEach
+                if (contextState.isDescriptorSaved<AccessPath>(id)) return@onEach
 
                 dataOutput.writeKind(ObjectKind.ACCESS_PATH)
                 dataOutput.writeInt(id)
@@ -454,7 +434,7 @@ internal sealed class ContextAwareTraceWriter(
                     location.save(this, context)
                 }
 
-                markDescriptorSaved<AccessPath>(id)
+                contextState.markDescriptorSaved<AccessPath>(id)
                 writeIndexCell(ObjectKind.ACCESS_PATH, id, position, -1)
             }
 
@@ -488,4 +468,48 @@ internal sealed class ContextAwareTraceWriter(
 
 
     protected abstract fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long)
+}
+
+
+internal open class SimpleTraceContextSavedState: TraceContextSavedState {
+    protected open val seenClassDescriptors = SimpleBitmap()
+    val classDescriptors: Set<Int> = seenClassDescriptors
+    protected open val seenMethodDescriptors = SimpleBitmap()
+    val methodDescriptors: Set<Int> = seenMethodDescriptors
+    protected open val seenFieldDescriptors = SimpleBitmap()
+    val fieldDescriptors: Set<Int> = seenFieldDescriptors
+    protected open val seenVariableDescriptors = SimpleBitmap()
+    val variableDescriptors: Set<Int> = seenVariableDescriptors
+    protected open val seenStringDescriptors = SimpleBitmap()
+    val strings: Set<Int> = seenStringDescriptors
+    protected open val seenCodeLocationDescriptors = SimpleBitmap()
+    val codeLocations: Set<Int> = seenCodeLocationDescriptors
+    protected open val seenAccessPathDescriptors = SimpleBitmap()
+    val accessPaths: Set<Int> = seenAccessPathDescriptors
+
+    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
+        val bitmap = getBitmapArray(descriptorClass) ?: return false
+        return bitmap.isSet(id)
+    }
+
+    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
+        val bitmap = getBitmapArray(descriptorClass) ?: return
+        bitmap.set(id)
+    }
+
+    private fun getBitmapArray(descriptorClass: KClass<*>): Bitmap? {
+        return when (descriptorClass) {
+            ClassDescriptor::class -> seenClassDescriptors
+            MethodDescriptor::class -> seenMethodDescriptors
+            FieldDescriptor::class -> seenFieldDescriptors
+            VariableDescriptor::class -> seenVariableDescriptors
+            String::class -> seenStringDescriptors
+            CodeLocation::class -> seenCodeLocationDescriptors
+            AccessPath::class -> seenAccessPathDescriptors
+            else -> {
+                Logger.error { "Unknown descriptor class: $descriptorClass" }
+                null
+            }
+        }
+    }
 }

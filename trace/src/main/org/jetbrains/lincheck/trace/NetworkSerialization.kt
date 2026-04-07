@@ -263,12 +263,11 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
  */
 internal class NetworkTraceWriter(
     context: TraceContext,
-    contextState: TraceContextSavedState,
+    override val contextState: TraceContextSavedState,
     dataOutput: DataOutput,
     dataStream: OutputStream,
 ) : ContextAwareTraceWriter(
     context = context,
-    contextState = contextState,
     dataStream = dataStream,
     dataOutput = dataOutput
 ) {

@@ -83,7 +83,7 @@ internal class AtomicBitmap : Bitmap {
     }
 }
 
-internal class SimpleBitmap(initSize: Int) : AbstractSet<Int>(), Bitmap {
+internal class SimpleBitmap(initSize: Int = 2) : AbstractSet<Int>(), Bitmap {
     private var bitmap: BooleanArray = BooleanArray(initSize)
     private var elementsCount: Int = 0
     override val size: Int

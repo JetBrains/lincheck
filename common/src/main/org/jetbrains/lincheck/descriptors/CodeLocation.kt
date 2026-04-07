@@ -10,8 +10,6 @@
 
 package org.jetbrains.lincheck.descriptors
 
-import java.util.Objects
-
 class CodeLocation(
     val stackTraceElement: StackTraceElement,
     val accessPath: AccessPath? = null,
