@@ -72,28 +72,19 @@ class TraceContext {
 
     fun stackTrace(codeLocationId: Int): StackTraceElement {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
-        val loc = locations[codeLocationId]
-        if (loc == null) {
-            error("Invalid code location id $codeLocationId")
-        }
+        val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
         return loc.stackTraceElement
     }
 
     fun accessPath(codeLocationId: Int): AccessPath? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = locations[codeLocationId]
-        if (loc == null) {
-            error("Invalid code location id $codeLocationId")
-        }
+        val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
         return loc.accessPath
     }
     
     fun methodCallArgumentNames(codeLocationId: Int): List<AccessPath?>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = locations[codeLocationId]
-        if (loc == null) {
-            error("Invalid code location id $codeLocationId")
-        }
+        val loc = locations[codeLocationId] ?: error("Invalid code location id $codeLocationId")
         return loc.argumentNames
     }
 

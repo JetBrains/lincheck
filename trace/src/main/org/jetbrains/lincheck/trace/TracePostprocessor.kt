@@ -400,6 +400,7 @@ object CompressingPostprocessor : TracePostprocessor {
             child.parameters,
             child.flags,
             parent.parentTracePoint,
+            child.reflectionData,
             child.eventId
         )
         newNode.copyDiffStatus(child)

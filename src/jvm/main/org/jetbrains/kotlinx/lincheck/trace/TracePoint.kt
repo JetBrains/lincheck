@@ -253,7 +253,13 @@ internal class MethodCallTracePoint(
     codeLocation: Int,
     val isStatic: Boolean,
     var callType: CallType = CallType.NORMAL,
-    val isSuspend: Boolean
+    val isSuspend: Boolean,
+    // For reflection-like calls (Method.invoke, MethodHandle.invoke, KFunction.call, etc.)
+    // these fields store information about the target method being invoked
+    val reflectionTargetClassName: String? = null,
+    val reflectionTargetMethodName: String? = null,
+    val reflectionTargetOwnerName: String? = null,
+    val reflectionTargetParameters: List<String>? = null
 ) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
     var thrownException: Throwable? = null
@@ -306,12 +312,22 @@ internal class MethodCallTracePoint(
         
     
     private fun StringBuilder.appendDefaultMethodCall() {
-        if (ownerName != null) append("$ownerName.")
-        if (isSuspend) {
-            append("$methodName(${ parameters?.dropLast(1)?.joinToString(", ") ?: "" })")
-            append(" [suspendable: ${parameters?.last()}]")
-        } else {
+        // For reflection-like calls, show target method first, then how it was invoked
+        if (reflectionTargetMethodName != null) {
+            if (reflectionTargetOwnerName != null) append("$reflectionTargetOwnerName.")
+            append("$reflectionTargetMethodName(${reflectionTargetParameters?.joinToString(", ") ?: ""})")
+            append(" [by ")
+            if (ownerName != null) append("$ownerName.")
             append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+            append("]")
+        } else {
+            if (ownerName != null) append("$ownerName.")
+            if (isSuspend) {
+                append("$methodName(${ parameters?.dropLast(1)?.joinToString(", ") ?: "" })")
+                append(" [suspendable: ${parameters?.last()}]")
+            } else {
+                append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+            }
         }
     }
     
@@ -327,14 +343,16 @@ internal class MethodCallTracePoint(
     }
 
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): MethodCallTracePoint = copiedObjects.mapAndCast(this) {
-        MethodCallTracePoint(context, eventId, iThread, actorId, className, methodName, codeLocation, isStatic, callType, isSuspend)
-            .also {
-                it.returnedValue = returnedValue
-                it.thrownException = thrownException
-                it.parameters = parameters
-                it.ownerName = ownerName
-                it.parameterTypes = parameterTypes
-            }
+        MethodCallTracePoint(
+            context, eventId, iThread, actorId, className, methodName, codeLocation, isStatic, callType, isSuspend,
+            reflectionTargetClassName, reflectionTargetMethodName, reflectionTargetOwnerName, reflectionTargetParameters
+        ).also {
+            it.returnedValue = returnedValue
+            it.thrownException = thrownException
+            it.parameters = parameters
+            it.ownerName = ownerName
+            it.parameterTypes = parameterTypes
+        }
     }
 
     fun initializeVoidReturnedValue() {

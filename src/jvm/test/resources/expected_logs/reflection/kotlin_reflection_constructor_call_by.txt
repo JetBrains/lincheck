@@ -1,0 +1,34 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                                                                                        Thread 1                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                                                                                                                                                            |
+|   invokeViaKotlinReflectionConstructorCallBy(17): ReflectionTarget#1 at KotlinReflectionConstructorCallByRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:341)                                                                       |
+|     ctor.getParameters(): ArrayList#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:333)                                                                     |
+|     ArrayList#1.get(0): KParameterImpl#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:333)                                                                  |
+|     TuplesKt.to(KParameterImpl#1, 17): (KParameterImpl#1, 17) at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:334)                                             |
+|     MapsKt.mapOf((KParameterImpl#1, 17)): SingletonMap#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:334)                                                  |
+|       pair.getFirst(): KParameterImpl#1 at MapsKt__MapsJVMKt.<unknown method>(MapsJVM.kt:26)                                                                                                                                                           |
+|       pair.getSecond(): 17 at MapsKt__MapsJVMKt.<unknown method>(MapsJVM.kt:26)                                                                                                                                                                        |
+|       Collections.singletonMap(KParameterImpl#1, 17): SingletonMap#1 at MapsKt__MapsJVMKt.<unknown method>(MapsJVM.kt:26)                                                                                                                              |
+|     ReflectionInvokeBase.ReflectionTarget.<init>(17) [by ctor.callBy(SingletonMap#1)]: ReflectionTarget#1 at KotlinReflectionConstructorCallByRepresentationTest.invokeViaKotlinReflectionConstructorCallBy(ReflectionInvokeRepresentationTest.kt:336) |
+|       Collections.eq(KParameterImpl#1, KParameterImpl#1): true at Collections.SingletonMap.containsKey(Collections.java:5026)                                                                                                                          |
+|         o1.equals(KParameterImpl#1): true at Collections.eq(Collections.java:5474)                                                                                                                                                                     |
+|       Collections.eq(KParameterImpl#1, KParameterImpl#1): true at Collections.SingletonMap.get(Collections.java:5028)                                                                                                                                  |
+|         o1.equals(KParameterImpl#1): true at Collections.eq(Collections.java:5474)                                                                                                                                                                     |
+|   result: void                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

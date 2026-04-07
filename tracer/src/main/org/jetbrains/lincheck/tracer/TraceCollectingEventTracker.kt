@@ -17,6 +17,7 @@ import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.detectReflectedCall
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite
 import java.util.concurrent.ConcurrentHashMap
@@ -515,17 +516,43 @@ class TraceCollectingEventTracker(
         }
 
         val parentTracepoint = threadData.currentTopTracePoint()
+        val reflectionResult = detectReflectedCall(
+            receiver, methodDescriptor.className, methodDescriptor.methodName
+        )
+        // For reflection calls, we need to capture array/map elements so they can be extracted later
+        // For callBy, capture Map entries for key-based lookup
+        val callByKeys = reflectionResult?.callByParameterKeys
+        val traceParameters = if (reflectionResult != null) {
+            params.map { TRObjectForReflectionOrNull(context, it, callByKeys) }
+        } else {
+            params.map { TRObjectOrNull(context, it) }
+        }
+        val reflectionTarget = reflectionResult?.let {
+            ReflectionTargetData(
+                className = it.data.className,
+                methodName = it.data.methodName,
+                callKind = it.data.callKind,
+            )
+        }
         val tracePoint = TRMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
             obj = TRObjectOrNull(context, receiver),
-            parameters = params.map { TRObjectOrNull(context, it) },
+            parameters = traceParameters,
             parentTracePoint = parentTracepoint,
+            reflectionData = reflectionTarget
         )
         strategy.tracePointCreated(parentTracepoint, tracePoint)
-        threadData.pushStackFrame(tracePoint, receiver, isInline = false)
+        // For reflection calls, extract the actual receiver for the shadow stack
+        val actualReceiver = if (reflectionResult != null) {
+            val effectiveParams = reflectionResult.resolveEffectiveParameters(params.asList())
+            reflectionResult.data.extractOwner(effectiveParams, ::unpackVarArgs)
+        } else {
+            receiver
+        }
+        threadData.pushStackFrame(tracePoint, actualReceiver, isInline = false)
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
     }
@@ -1078,5 +1105,28 @@ class TraceCollectingEventTracker(
     ): AnalysisSectionType {
         val ownerName = owner?.javaClass?.canonicalName ?: className
         return analysisProfile.getAnalysisSectionFor(ownerName, methodName)
+    }
+
+    /**
+     * Converts an object to TRValue for reflection calls, capturing array/list/map elements.
+     * For callBy with keys, captures Map entries for key-based lookup.
+     */
+    private fun TRObjectForReflectionOrNull(context: TraceContext, obj: Any?, callByKeys: List<Any?>?): TRValue? = when (obj) {
+        null -> null
+        is Array<*> -> TRArrayWithElements(context, obj, obj.size, obj.asList())
+        is List<*> -> {
+            // For lists, we store the elements as a TRArray representation
+            // Pass the list object itself to preserve the actual class name (e.g., ArrayList)
+            TRArrayWithElements(context, obj, obj.size, obj)
+        }
+
+        is Map<*, *> if callByKeys != null -> {
+            // For callBy Maps, store values in key order as TRArray for extraction
+            val elements = callByKeys.map { key -> obj[key] }
+            // Pass the map object itself to preserve the actual class name
+            TRArrayWithElements(context, obj, elements.size, elements)
+        }
+
+        else -> TRValue(context, obj)
     }
 }

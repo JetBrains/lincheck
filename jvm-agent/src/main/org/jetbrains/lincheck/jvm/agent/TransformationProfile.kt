@@ -282,6 +282,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
         // Instrument thread-related classes to intercept `Thread.run` beginning/end.
         if (className == "java.lang.Thread") return true
         if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
+        if (className.startsWith("kotlin.reflect.")) return false
 
         // In the trace recording mode, we do not instrument Java/Kotlin stdlib classes.
         if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false

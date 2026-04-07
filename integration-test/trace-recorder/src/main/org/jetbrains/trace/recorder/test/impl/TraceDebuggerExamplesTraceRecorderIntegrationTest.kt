@@ -520,4 +520,157 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractGradleTraceInt
             commands = listOf(":test"),
         )
     }
+
+    @Test
+    fun `org_examples_integration_bugs_ReflectionMethodInvokeRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.ReflectionMethodInvokeRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ReflectionStaticMethodInvokeRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.ReflectionStaticMethodInvokeRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_MethodHandleInvokeWithArgumentsVarargsRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.MethodHandleInvokeWithArgumentsVarargsRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_MethodHandleInvokeStaticRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.MethodHandleInvokeStaticRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_MethodHandleInvokeStaticTopLevelRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.MethodHandleInvokeStaticTopLevelRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_MethodHandleInvokeWithArgumentsListRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.MethodHandleInvokeWithArgumentsListRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_MethodHandleInvokeRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.MethodHandleInvokeRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_MethodHandleInvokeExactRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.MethodHandleInvokeExactRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_KotlinReflectionCallRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.KotlinReflectionCallRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_KotlinReflectionCallByRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.KotlinReflectionCallByRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_KotlinReflectionConstructorCallRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.KotlinReflectionConstructorCallRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_KotlinReflectionConstructorCallByRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.KotlinReflectionConstructorCallByRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_KotlinReflectionStaticTopLevelCallRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.KotlinReflectionStaticTopLevelCallRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_KotlinReflectionStaticTopLevelCallByRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.KotlinReflectionStaticTopLevelCallByRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ReflectionConstructorInvokeRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.ReflectionConstructorInvokeRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_MethodHandleInvokeConstructorRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.MethodHandleInvokeConstructorRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    @Test
+    fun `org_examples_integration_bugs_ReflectionExceptionRepresentationTest operation`() {
+        runTest(
+            testClassName = "org.examples.integration.bugs.ReflectionExceptionRepresentationTest",
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
 }

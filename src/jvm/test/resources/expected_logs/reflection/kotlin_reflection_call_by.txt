@@ -1,0 +1,121 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                       Thread 1                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                           |
+|   invokeViaKotlinReflectionCallBy(13, 14): 28 at KotlinReflectionCallByRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:312)                                                                        |
+|     targetKotlinCallByFunction.getParameters(): ArrayList#1 at KotlinReflectionCallByRepresentationTest.invokeViaKotlinReflectionCallBy(ReflectionInvokeRepresentationTest.kt:304)                                    |
+|     ArrayList#1.get(0): KParameterImpl#1 at KotlinReflectionCallByRepresentationTest.invokeViaKotlinReflectionCallBy(ReflectionInvokeRepresentationTest.kt:304)                                                       |
+|     ArrayList#1.get(1): KParameterImpl#2 at KotlinReflectionCallByRepresentationTest.invokeViaKotlinReflectionCallBy(ReflectionInvokeRepresentationTest.kt:304)                                                       |
+|     ArrayList#1.get(2): KParameterImpl#3 at KotlinReflectionCallByRepresentationTest.invokeViaKotlinReflectionCallBy(ReflectionInvokeRepresentationTest.kt:304)                                                       |
+|     targetKotlinReflectionCallBy(13, 14) [by targetKotlinCallByFunction.callBy(ListMap#1)]: 28 at KotlinReflectionCallByRepresentationTest.invokeViaKotlinReflectionCallBy(ReflectionInvokeRepresentationTest.kt:307) |
+|       implFindEntry(KParameterImpl#1): SimpleEntry#1 at AbstractMap.<unknown method>(AbstractMap.kt:25)                                                                                                               |
+|         entrySet(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           getEntries(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:21)                                                                                                                                  |
+|         entries.firstOrNull() at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           iterator(): ArrayIterator#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                          |
+|             getElements(): Array<SimpleEntry>#1 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                                              |
+|             ArrayIteratorKt.iterator(Array<SimpleEntry>#1): ArrayIterator#1 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                  |
+|           ArrayIterator#1.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#1.next(): SimpleEntry#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|       implFindEntry(KParameterImpl#1): SimpleEntry#1 at AbstractMap.<unknown method>(AbstractMap.kt:63)                                                                                                               |
+|         entrySet(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           getEntries(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:21)                                                                                                                                  |
+|         entries.firstOrNull() at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           iterator(): ArrayIterator#2 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                          |
+|             getElements(): Array<SimpleEntry>#1 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                                              |
+|             ArrayIteratorKt.iterator(Array<SimpleEntry>#1): ArrayIterator#2 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                  |
+|           ArrayIterator#2.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#2.next(): SimpleEntry#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|       SimpleEntry#1.getValue(): KotlinReflectionCallByRepresentationTest#1 at AbstractMap.<unknown method>(AbstractMap.kt:63)                                                                                         |
+|       implFindEntry(KParameterImpl#2): SimpleEntry#2 at AbstractMap.<unknown method>(AbstractMap.kt:25)                                                                                                               |
+|         entrySet(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           getEntries(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:21)                                                                                                                                  |
+|         entries.firstOrNull() at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           iterator(): ArrayIterator#3 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                          |
+|             getElements(): Array<SimpleEntry>#1 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                                              |
+|             ArrayIteratorKt.iterator(Array<SimpleEntry>#1): ArrayIterator#3 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                  |
+|           ArrayIterator#3.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#3.next(): SimpleEntry#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|           ArrayIterator#3.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#3.next(): SimpleEntry#2 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#2 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|       implFindEntry(KParameterImpl#2): SimpleEntry#2 at AbstractMap.<unknown method>(AbstractMap.kt:63)                                                                                                               |
+|         entrySet(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           getEntries(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:21)                                                                                                                                  |
+|         entries.firstOrNull() at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           iterator(): ArrayIterator#4 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                          |
+|             getElements(): Array<SimpleEntry>#1 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                                              |
+|             ArrayIteratorKt.iterator(Array<SimpleEntry>#1): ArrayIterator#4 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                  |
+|           ArrayIterator#4.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#4.next(): SimpleEntry#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|           ArrayIterator#4.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#4.next(): SimpleEntry#2 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#2 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|       SimpleEntry#2.getValue(): 13 at AbstractMap.<unknown method>(AbstractMap.kt:63)                                                                                                                                 |
+|       implFindEntry(KParameterImpl#3): SimpleEntry#3 at AbstractMap.<unknown method>(AbstractMap.kt:25)                                                                                                               |
+|         entrySet(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           getEntries(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:21)                                                                                                                                  |
+|         entries.firstOrNull() at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           iterator(): ArrayIterator#5 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                          |
+|             getElements(): Array<SimpleEntry>#1 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                                              |
+|             ArrayIteratorKt.iterator(Array<SimpleEntry>#1): ArrayIterator#5 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                  |
+|           ArrayIterator#5.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#5.next(): SimpleEntry#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|           ArrayIterator#5.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#5.next(): SimpleEntry#2 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#2 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|           ArrayIterator#5.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#5.next(): SimpleEntry#3 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#3 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|       implFindEntry(KParameterImpl#3): SimpleEntry#3 at AbstractMap.<unknown method>(AbstractMap.kt:63)                                                                                                               |
+|         entrySet(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           getEntries(): entries$1 at AbstractMap.<unknown method>(AbstractMap.kt:21)                                                                                                                                  |
+|         entries.firstOrNull() at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                                     |
+|           iterator(): ArrayIterator#6 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                          |
+|             getElements(): Array<SimpleEntry>#1 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                                              |
+|             ArrayIteratorKt.iterator(Array<SimpleEntry>#1): ArrayIterator#6 at ListMap$entries$1.iterator(ReflectionInvokeRepresentationTest.kt:362)                                                                  |
+|           ArrayIterator#6.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#6.next(): SimpleEntry#1 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#1 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|           ArrayIterator#6.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#6.next(): SimpleEntry#2 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#2 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|           ArrayIterator#6.hasNext(): true at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                      |
+|           ArrayIterator#6.next(): SimpleEntry#3 at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                |
+|           firstOrNull$Lambda() at CollectionsKt___CollectionsKt.<unknown method>(_Collections.kt:295)                                                                                                                 |
+|             it.getKey(): KParameterImpl#3 at AbstractMap.<unknown method>(AbstractMap.kt:141)                                                                                                                         |
+|       SimpleEntry#3.getValue(): 14 at AbstractMap.<unknown method>(AbstractMap.kt:63)                                                                                                                                 |
+|       helper.placeholder() at ReflectionInvokeBase.targetKotlinReflectionCallBy(ReflectionInvokeRepresentationTest.kt:53)                                                                                             |
+|   result: void                                                                                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

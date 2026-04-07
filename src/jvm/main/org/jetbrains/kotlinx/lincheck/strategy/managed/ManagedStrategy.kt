@@ -708,9 +708,10 @@ internal abstract class ManagedStrategy(
                 methodName = "run",
                 methodType = Types.MethodType(Types.VOID_TYPE)
             ).id,
-            methodParams = emptyArray(),
+            methodParameters = emptyArray(),
             atomicMethodDescriptor = null,
-            callType = MethodCallTracePoint.CallType.THREAD_RUN
+            callType = MethodCallTracePoint.CallType.THREAD_RUN,
+            reflectionData = null,
         )
         traceCollector?.addTracePointInternal(tracePoint)
 
@@ -975,9 +976,10 @@ internal abstract class ManagedStrategy(
                 methodName = actor.method.name,
                 methodType = Types.convertAsmMethodType(methodDescriptor)
             ).id,
-            methodParams = actor.arguments.toTypedArray(),
+            methodParameters = actor.arguments.toTypedArray(),
             atomicMethodDescriptor = null,
             callType = MethodCallTracePoint.CallType.ACTOR,
+            reflectionData = null,
         )
         traceCollector?.addTracePointInternal(tracePoint)
         enableAnalysis()
@@ -1713,7 +1715,7 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         methodId: Int,
         receiver: Any?,
-        params: Array<Any?>,
+        parameters: Array<Any?>,
         interceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val methodDescriptor = context.methodPool[methodId]
@@ -1721,7 +1723,7 @@ internal abstract class ManagedStrategy(
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
         // process method effect on the static memory snapshot
-        processMethodEffectOnStaticSnapshot(receiver, params, atomicMethodDescriptor)
+        processMethodEffectOnStaticSnapshot(receiver, parameters, atomicMethodDescriptor)
         val threadId = threadScheduler.getCurrentThreadId()
 
         // re-throw abort error if the thread was aborted
@@ -1743,13 +1745,13 @@ internal abstract class ManagedStrategy(
                 methodDescriptor.className,
                 methodDescriptor.methodName,
                 receiver,
-                params,
+                parameters,
                 atomicMethodDescriptor,
             )
             shouldInterceptAtomicMethod = memoryTracker!!.trackAtomicMethodMemoryAccess(
                 receiver,
                 codeLocation,
-                params,
+                parameters,
                 atomicMethodDescriptor,
                 threadId,
                 location,
@@ -1757,15 +1759,20 @@ internal abstract class ManagedStrategy(
         }
 
         // obtain deterministic method descriptor if required
-        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
+        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, parameters, methodCallInfo)
 
         if (deterministicMethodDescriptor != null) {
-            deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, methodCallInfo, interceptor)
+            deterministicMethodDescriptor.processDeterministicMethodCall(receiver, parameters, methodCallInfo, interceptor)
         } else if (memoryTracker != null && shouldInterceptAtomicMethod) {
             interceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         } else {
             // we are at normal deterministic method => no need to enforce the deterministic result => do nothing
         }
+
+        val reflectionResult = detectReflectedCall(receiver, methodDescriptor.className, methodDescriptor.methodName)
+        val reflectionData = reflectionResult?.data
+        // For callBy, resolve the Map to get effective params for extraction
+        val effectiveParameters = reflectionResult.resolveEffectiveParameters(parameters.asList())
 
         // get method's analysis section type
         val methodSection = methodAnalysisSectionType(
@@ -1779,12 +1786,16 @@ internal abstract class ManagedStrategy(
         if (receiver == null && methodSection < AnalysisSectionType.ATOMIC) {
             LincheckInstrumentation.ensureClassHierarchyIsTransformed(methodDescriptor.className)
         }
+        // in case if a static method is called through reflection, ensure its class is instrumented
+        if (reflectionData != null && reflectionData.extractOwner(effectiveParameters, ::unpackVarArgs) == null) {
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(reflectionData.className)
+        }
 
         // in the case of atomics API setter method call, notify the object tracker about a new link between objects
         if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isSetter) {
             objectTracker.registerObjectLink(
-                fromObject = atomicMethodDescriptor.getAccessedObject(receiver, params),
-                toObject = atomicMethodDescriptor.getSetValue(receiver, params)
+                fromObject = atomicMethodDescriptor.getAccessedObject(receiver, parameters),
+                toObject = atomicMethodDescriptor.getSetValue(receiver, parameters)
             )
         }
         // Should this method call be ignored?
@@ -1799,7 +1810,7 @@ internal abstract class ManagedStrategy(
             // do not create a trace point on resumption
             !isResumptionMethodCall(
                 threadId, methodDescriptor.className,
-                methodDescriptor.methodName, params, atomicMethodDescriptor
+                methodDescriptor.methodName, parameters, atomicMethodDescriptor
             )
         ) {
             // create a switch point
@@ -1816,14 +1827,16 @@ internal abstract class ManagedStrategy(
                 methodId = methodId,
                 className = methodDescriptor.className,
                 methodName = methodDescriptor.methodName,
-                methodParams = params,
+                methodParameters = parameters,
                 atomicMethodDescriptor = atomicMethodDescriptor,
                 callType = MethodCallTracePoint.CallType.NORMAL,
+                reflectionData = reflectionData,
+                effectiveParamsForExtraction = effectiveParameters,
             )
             // add trace point to the trace
             traceCollector?.addTracePointInternal(tracePoint)
             // notify loop detector
-            loopDetector.beforeAtomicMethodCall(codeLocation, params)
+            loopDetector.beforeAtomicMethodCall(codeLocation, parameters)
         } else {
             // handle non-atomic methods
 
@@ -1839,15 +1852,17 @@ internal abstract class ManagedStrategy(
                 methodId = methodId,
                 className = methodDescriptor.className,
                 methodName = methodDescriptor.methodName,
-                methodParams = params,
+                methodParameters = parameters,
                 atomicMethodDescriptor = atomicMethodDescriptor,
                 callType = MethodCallTracePoint.CallType.NORMAL,
+                reflectionData = reflectionData,
+                effectiveParamsForExtraction = effectiveParameters,
             )
             // add trace point to the trace
             traceCollector?.addTracePointInternal(tracePoint)
             // notify loop detector about the method call
             if (methodSection < AnalysisSectionType.ATOMIC) {
-                loopDetector.beforeMethodCall(codeLocation, params)
+                loopDetector.beforeMethodCall(codeLocation, parameters)
             }
         }
         // if the method has certain guarantees, enter the corresponding section
@@ -1989,9 +2004,10 @@ internal abstract class ManagedStrategy(
                 methodId = methodId,
                 className = methodDescriptor.className,
                 methodName = methodDescriptor.methodName,
-                methodParams = emptyArray(),
+                methodParameters = emptyArray(),
                 atomicMethodDescriptor = null,
                 callType = MethodCallTracePoint.CallType.NORMAL,
+                reflectionData = null,
             )
             traceCollector?.addTracePointInternal(tracePoint)
         }
@@ -2216,13 +2232,16 @@ internal abstract class ManagedStrategy(
         methodId: Int,
         className: String,
         methodName: String,
-        methodParams: Array<Any?>,
+        methodParameters: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         callType: MethodCallTracePoint.CallType,
+        reflectionData: ReflectedCallData?,
+        /** For callBy, this contains the resolved list for extraction; otherwise same as methodParams */
+        effectiveParamsForExtraction: List<Any?> = methodParameters.asList(),
     ): MethodCallTracePoint? {
         if (!collectTrace) return null
         val callStackTrace = callStackTrace[threadId]!!
-        if (isScenarioThread(threadId) && isResumptionMethodCall(threadId, className, methodName, methodParams, atomicMethodDescriptor)) {
+        if (isScenarioThread(threadId) && isResumptionMethodCall(threadId, className, methodName, methodParameters, atomicMethodDescriptor)) {
             val suspendedMethodStack = suspendedFunctionsStack[threadId]!!
             // In case of resumption, we need to find a call stack frame corresponding to the resumed function
             var elementIndex = suspendedMethodStack.indexOfFirst {
@@ -2261,23 +2280,35 @@ internal abstract class ManagedStrategy(
             }
             return null
         }
+        val reflectionTargetOwner = reflectionData?.extractOwner(effectiveParamsForExtraction, ::unpackVarArgs)
+        val reflectionTargetParams = reflectionData?.extractParameters(effectiveParamsForExtraction, ::unpackVarArgs)
+        val reflectionTargetOwnerName = reflectionData?.let {
+            resolveReflectionTargetOwnerName(it, reflectionTargetOwner, methodName, codeLocation, callStackTrace)
+        }
+        val reflectionTargetParameters = reflectionTargetParams?.map {
+            objectTracker.getObjectRepresentation(it)
+        }
+
         val callId = callStackTraceElementId++
-        // The code location of the new method call is currently the last one
         val tracePoint = createBeforeMethodCallTracePoint(
             eventId = eventId,
             threadId = threadId,
             owner = owner,
             className = className,
             methodName = methodName,
-            methodParams = methodParams,
+            methodParams = methodParameters,
             codeLocation = codeLocation,
             atomicMethodDescriptor = atomicMethodDescriptor,
             callType = callType,
+            reflectionTargetClassName = reflectionData?.className,
+            reflectionTargetMethodName = reflectionData?.methodName,
+            reflectionTargetOwnerName = reflectionTargetOwnerName,
+            reflectionTargetParameters = reflectionTargetParameters
         )
         // Method invocation id used to calculate spin cycle start label call depth.
         // Two calls are considered equals if two same methods were called with the same parameters.
         val methodInvocationId = Objects.hash(methodId,
-            methodParams.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
+            methodParameters.map { primitiveOrIdentityHashCode(it) }.toTypedArray().contentHashCode()
         )
         val stackTraceElement = CallStackTraceElement(
             id = callId,
@@ -2286,9 +2317,24 @@ internal abstract class ManagedStrategy(
             methodInvocationId = methodInvocationId
         )
         callStackTrace.add(stackTraceElement)
-        pushShadowStackFrame(owner)
+        pushShadowStackFrame(if (reflectionData == null) owner else reflectionTargetOwner)
         return tracePoint
     }
+
+    private fun resolveReflectionTargetOwnerName(
+        reflectionData: ReflectedCallData,
+        reflectionTargetOwner: Any?,
+        methodName: String,
+        codeLocation: Int,
+        callStackTrace: MutableList<CallStackTraceElement>
+    ): String? = when {
+        reflectionTargetOwner == null -> reflectionData.className.adornedClassNameRepresentation()
+        methodName == "invokeExact" || methodName == "invoke" ->
+            findOwnerNameFromFirstArgument(context, codeLocation)
+        reflectionTargetOwner == callStackTrace.lastOrNull()?.instance -> null
+        else -> objectTracker.getObjectRepresentation(reflectionTargetOwner)
+    }
+
 
     private fun createBeforeMethodCallTracePoint(
         eventId: Int,
@@ -2300,6 +2346,10 @@ internal abstract class ManagedStrategy(
         codeLocation: Int,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         callType: MethodCallTracePoint.CallType,
+        reflectionTargetClassName: String? = null,
+        reflectionTargetMethodName: String? = null,
+        reflectionTargetOwnerName: String? = null,
+        reflectionTargetParameters: List<String>? = null,
     ): MethodCallTracePoint {
         val (ownerName, params) = if (atomicMethodDescriptor == null) {
             findOwnerName(owner, className, codeLocation) to methodParams.asList()
@@ -2316,7 +2366,11 @@ internal abstract class ManagedStrategy(
             codeLocation = codeLocation,
             isStatic = (owner == null),
             callType = callType,
-            isSuspend = isSuspendFunction(className, methodName, params)
+            isSuspend = isSuspendFunction(className, methodName, params),
+            reflectionTargetClassName = reflectionTargetClassName,
+            reflectionTargetMethodName = reflectionTargetMethodName,
+            reflectionTargetOwnerName = reflectionTargetOwnerName,
+            reflectionTargetParameters = reflectionTargetParameters
         )
         if (!ownerName.isNullOrEmpty()) {
             tracePoint.initializeOwnerName(ownerName)

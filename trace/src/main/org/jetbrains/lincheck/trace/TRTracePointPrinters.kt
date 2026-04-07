@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.ReflectionCallKind
 import java.time.Instant
 
 
@@ -137,6 +138,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
 
     protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
         appendDiffStatus(tracePoint.diffStatus)
+        // For reflection-like calls, show target method first, then how it was invoked
         if (tracePoint.isConstructor()) {
             appendKeyword("new")
             appendSpecialSymbol(" ")
@@ -144,6 +146,15 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendSpecialSymbol("(")
             appendParameters(tracePoint)
             appendSpecialSymbol(")")
+            appendResult(tracePoint)
+        } else if (tracePoint.reflectionData != null) {
+            appendReflectionTarget(tracePoint)
+            appendSpecialSymbol(" ")
+            appendSpecialSymbol("[")
+            appendKeyword("by")
+            appendSpecialSymbol(" ")
+            appendReflectionInvoker(tracePoint)
+            appendSpecialSymbol("]")
             appendResult(tracePoint)
         } else {
             appendOwner(tracePoint)
@@ -153,6 +164,86 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendSpecialSymbol(")")
             appendResult(tracePoint)
         }
+        return this
+    }
+
+    protected fun TRAppendable.appendReflectionTarget(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        val reflectionData = tracePoint.reflectionData ?: return this
+        appendReflectionTargetOwner(tracePoint, reflectionData)
+        append(reflectionData.methodName)
+        appendSpecialSymbol("(")
+        val targetParams = reflectionData.extractParameters(tracePoint.parameters)
+        targetParams.forEachIndexed { i, parameter ->
+            if (i != 0) {
+                appendSpecialSymbol(",")
+                appendSpecialSymbol(" ")
+            }
+            appendObject(parameter)
+        }
+        appendSpecialSymbol(")")
+        return this
+    }
+
+    protected fun TRAppendable.appendReflectionTargetOwner(
+        tracePoint: TRMethodCallTracePoint,
+        reflectionData: ReflectionTargetData
+    ): TRAppendable {
+        val owner = reflectionData.extractOwner(tracePoint.parameters)
+        val targetClassName = reflectionData.className
+        val targetClassDescriptor = ClassDescriptor(tracePoint.context, targetClassName)
+
+        val usesFirstArgumentAsReceiver = reflectionData.callKind == ReflectionCallKind.METHOD_HANDLE_INSTANCE
+        val isConstructor = reflectionData.methodName == "<init>"
+        val isStatic = owner == null
+
+        fun isCalledFromDefiningClass(): Boolean {
+            val parent = (tracePoint.parentTracePoint as? TRMethodCallTracePoint) ?: return false
+            return targetClassName == parent.className ||
+                targetClassName.removeCompanionSuffix() == parent.className
+        }
+
+        return when {
+            isConstructor -> {
+                appendClassName(targetClassDescriptor)
+                appendSpecialSymbol(".")
+                this
+            }
+            usesFirstArgumentAsReceiver -> appendOwnerFromFirstArgument(tracePoint)
+            isStatic && isCalledFromDefiningClass() -> this
+            isStatic && targetClassName.isKtClass() -> this // Top-level Kotlin functions
+            isStatic -> {
+                appendClassName(targetClassDescriptor)
+                appendSpecialSymbol(".")
+                this
+            }
+            owner == (tracePoint.parentTracePoint as? TRMethodCallTracePoint)?.obj -> this
+            else -> {
+                appendObject(owner)
+                appendSpecialSymbol(".")
+                this
+            }
+        }
+    }
+
+    /**
+     * Appends the owner using the first argument's access path (used for MethodHandle invocations
+     * where the first argument is the receiver).
+     */
+    protected fun TRAppendable.appendOwnerFromFirstArgument(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        val firstArgPath = tracePoint.argumentNames.firstOrNull()
+        firstArgPath?.filterThisAccesses()?.takeIf { !it.isEmpty() }?.let {
+            appendAccessPath(it)
+            appendSpecialSymbol(".")
+        }
+        return this
+    }
+
+    protected fun TRAppendable.appendReflectionInvoker(tracePoint: TRMethodCallTracePoint): TRAppendable {
+        appendOwner(tracePoint)
+        appendMethodName(tracePoint.methodDescriptor)
+        appendSpecialSymbol("(")
+        appendParameters(tracePoint)
+        appendSpecialSymbol(")")
         return this
     }
 

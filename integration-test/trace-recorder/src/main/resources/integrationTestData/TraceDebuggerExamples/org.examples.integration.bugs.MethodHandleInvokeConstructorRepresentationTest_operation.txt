@@ -1,0 +1,4 @@
+# Thread 1
+MethodHandleInvokeConstructorRepresentationTest.operation() at ReflectionLike.kt:402
+  invokeViaMethodHandleConstructor(22): ReflectionInvokeBase.ReflectionTarget@1 at ReflectionLike.kt:402
+    ReflectionInvokeBase.ReflectionTarget.<init>(22) [by targetConstructorHandle.invokeExact(value ➜ 22)]: ReflectionInvokeBase.ReflectionTarget@1 at ReflectionLike.kt:397

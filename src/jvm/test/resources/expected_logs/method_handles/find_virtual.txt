@@ -23,10 +23,10 @@ Detailed trace:
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:86)                                                        |
 |         Counter.shared = Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                       |
-|       methodHandle.invoke(Counter#1) at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:91)                                                       |
+|       counter.increment() [by methodHandle.invoke(Counter#1)] at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:91)                              |
 |         value ➜ 0 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
 |         value = 1 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
-|       methodHandle.invokeExact(Counter#1) at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:92)                                                  |
+|       counter.increment() [by methodHandle.invokeExact(Counter#1)] at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:92)                         |
 |         value ➜ 1 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
 |         value = 2 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
 |       counter.value ➜ 2 at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:93)                                                                    |

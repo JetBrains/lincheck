@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.ReflectionCallKind
 import org.jetbrains.lincheck.trace.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRCatchTracePointPrinter.append
 import org.jetbrains.lincheck.trace.DefaultTRFieldTracePointPrinter.append
@@ -27,10 +28,65 @@ import java.math.BigInteger
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
 var INJECTIONS_VOID_OBJECT: Any? = null
+
+/**
+ * Data class containing information about the target of a reflection call.
+ * This is stored in TRMethodCallTracePoint for reflection-like calls (Method.invoke, MethodHandle.invoke, KFunction.call, etc.)
+ *
+ * @param className the class name of the target method being invoked
+ * @param methodName the name of the target method being invoked
+ * @param callKind the type of reflection call, which determines how to extract owner/parameters from the original call
+ */
+data class ReflectionTargetData(
+    val className: String,
+    val methodName: String,
+    val callKind: ReflectionCallKind,
+) {
+    /**
+     * Extracts the target method's owner from the reflection call's parameters.
+     */
+    fun extractOwner(params: List<TRValue?>): TRValue? =
+        callKind.extractOwner(resolveEffectiveParams(params), ::unpackTRVarArgs)
+
+    /**
+     * Extracts the target method's parameters from the reflection call's parameters.
+     */
+    fun extractParameters(params: List<TRValue?>): List<TRValue?> =
+        callKind.extractParameters(resolveEffectiveParams(params), ::unpackTRVarArgs)
+
+    /**
+     * For KFunction calls, unpacks the vararg array first since extraction expects already-unpacked params.
+     * For other reflection calls, returns params as-is.
+     */
+    private fun resolveEffectiveParams(params: List<TRValue?>): List<TRValue?> =
+        if (callKind.isKFunctionCall()) {
+            unpackTRVarArgs(params.firstOrNull())
+        } else {
+            params
+        }
+
+    private fun ReflectionCallKind.isKFunctionCall(): Boolean = when (this) {
+        ReflectionCallKind.KFUNCTION_CALL_INSTANCE,
+        ReflectionCallKind.KFUNCTION_CALL_STATIC,
+        ReflectionCallKind.KFUNCTION_CALL_CONSTRUCTOR -> true
+        else -> false
+    }
+}
+
+/**
+ * Unpacks a TRValue that represents an array or collection into a list of TRValues.
+ * This is used for extracting vararg parameters from reflection calls.
+ */
+private fun unpackTRVarArgs(value: TRValue?): List<TRValue?> = when (value) {
+    is TRArray -> value.capturedElements
+    null -> emptyList()
+    else -> error("Unexpected TRValue type: ${value::class}")
+}
 
 /**
  * Describes status of tracepoint in trace diff
@@ -282,6 +338,9 @@ class TRMethodCallTracePoint(
     val parameters: List<TRValue?>,
     val flags: Short = 0,
     parentTracePoint: TRContainerTracePoint? = null,
+    // For reflection-like calls (Method.invoke, MethodHandle.invoke, KFunction.call, etc.)
+    // this stores information about the type of reflection call and the target method
+    val reflectionData: ReflectionTargetData? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
     var result: TRValue? = null
@@ -341,6 +400,17 @@ class TRMethodCallTracePoint(
             out.writeTRValue(it)
         }
         out.writeShort(flags.toInt())
+
+        // Write reflection data (if present)
+        if (reflectionData != null) {
+            out.writeBoolean(true)
+            out.writeUTF(reflectionData.className)
+            out.writeUTF(reflectionData.methodName)
+            out.writeInt(reflectionData.callKind.ordinal)
+        } else {
+            out.writeBoolean(false)
+        }
+
         // Mark this as container tracepoint which could have children and will have footer
         out.endWriteContainerTracepointHeader(eventId)
     }
@@ -393,6 +463,15 @@ class TRMethodCallTracePoint(
             }
             val flags = inp.readShort()
 
+            // Read reflection data
+            val reflectionData = if (inp.readBoolean()) {
+                val className = inp.readUTF()
+                val methodName = inp.readUTF()
+                val callKindOrdinal = inp.readInt()
+                val callKind = ReflectionCallKind.entries[callKindOrdinal]
+                ReflectionTargetData(className, methodName, callKind)
+            } else null
+
             return TRMethodCallTracePoint(
                 context = context,
                 threadId = threadId,
@@ -401,6 +480,7 @@ class TRMethodCallTracePoint(
                 obj = obj,
                 parameters = parameters,
                 flags = flags,
+                reflectionData = reflectionData,
                 eventId = eventId,
             ).also {
                 it.childrenDiffStatuses = childrenDiffStatus
@@ -1201,7 +1281,7 @@ internal fun DataOutput.writeTRValue(value: TRValue?) {
             writeInt(value.classNameId)
             if (value.classNameId >= 0) {
                 writeInt(value.identityHashCode)
-                
+
                 // Negative for arrays where -1 is empty array
                 val encodedElementsSize = (value.capturedElements.size + 1) * -1
                 writeInt(encodedElementsSize)

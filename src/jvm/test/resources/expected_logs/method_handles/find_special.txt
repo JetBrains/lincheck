@@ -26,8 +26,8 @@ Detailed trace:
 |       counter.increment() at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:28)                                                                  |
 |         value ➜ 0 at CounterDerived.increment(MethodHandlesLookupTests.kt:176)                                                                                                  |
 |         value = 2 at CounterDerived.increment(MethodHandlesLookupTests.kt:176)                                                                                                  |
-|       methodHandle.invoke(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:29)                                                |
-|       methodHandle.invokeExact(CounterDerived#1) at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:30)                                           |
+|       counter.increment() [by methodHandle.invoke(CounterDerived#1)] at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:29)                       |
+|       counter.increment() [by methodHandle.invokeExact(CounterDerived#1)] at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:30)                  |
 |       counter.value ➜ 4 at MethodHandlesFindSpecialRepresentationTest.doTest(MethodHandlesLookupTests.kt:31)                                                                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

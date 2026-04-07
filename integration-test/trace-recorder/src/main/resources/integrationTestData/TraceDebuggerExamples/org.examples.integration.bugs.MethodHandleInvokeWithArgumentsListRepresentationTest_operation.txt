@@ -1,0 +1,9 @@
+# Thread 1
+MethodHandleInvokeWithArgumentsListRepresentationTest.operation() at ReflectionLike.kt:225
+  invokeViaMethodHandleList(5, 6): 30 at ReflectionLike.kt:225
+    Object;@1[0] = MethodHandleInvokeWithArgumentsListRepresentationTest@1 at ReflectionLike.kt:220
+    Object;@1[1] = 5 at ReflectionLike.kt:220
+    Object;@1[2] = 6 at ReflectionLike.kt:220
+    listOf(Object;@1): Arrays.ArrayList@1 at ReflectionLike.kt:220
+    targetMethodHandle(5, 6) [by targetMethodHandle.invokeWithArguments(Arrays.ArrayList@1)]: 30 at ReflectionLike.kt:220
+      helper.placeholder() at ReflectionLike.kt:31

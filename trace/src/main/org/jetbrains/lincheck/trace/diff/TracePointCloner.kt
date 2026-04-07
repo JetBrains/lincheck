@@ -170,6 +170,7 @@ class TracePointCloner(
                 parameters = tracePoint.parameters.clone(),
                 flags = tracePoint.flags,
                 parentTracePoint = null,
+                reflectionData = tracePoint.reflectionData,
                 eventId = eventId++
             ).also {
                 it.result = tracePoint.result?.clone()

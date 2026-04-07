@@ -1,0 +1,7 @@
+# Thread 1
+MethodHandleInvokeStaticRepresentationTest.operation() at ReflectionLike.kt:179
+  invokeViaMethodHandleInvokeExact(3, 4): 13 at ReflectionLike.kt:179
+    staticTarget(3, 4) [by targetMethodHandle.invokeExact(a ➜ 3, b ➜ 4)]: 13 at ReflectionLike.kt:174
+      MethodHandleInvokeStaticRepresentationTest.staticTarget(a ➜ 3, b ➜ 4): 13 at ReflectionLike.kt:0
+        MethodHandleInvokeStaticRepresentationTest.getHelper(): MethodHandleInvokeStaticRepresentationTest.Companion.Helper@1 at ReflectionLike.kt:162
+        MethodHandleInvokeStaticRepresentationTest.Companion.Helper@1.placeholder() at ReflectionLike.kt:162

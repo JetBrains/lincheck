@@ -1,0 +1,5 @@
+# Thread 1
+MethodHandleInvokeExactRepresentationTest.operation() at ReflectionLike.kt:269
+  invokeViaMethodHandleInvokeExact(9, 10): 90 at ReflectionLike.kt:269
+    targetMethodHandle(9, 10) [by targetMethodHandle.invokeExact(, a ➜ 9, b ➜ 10)]: 90 at ReflectionLike.kt:264
+      helper.placeholder() at ReflectionLike.kt:31

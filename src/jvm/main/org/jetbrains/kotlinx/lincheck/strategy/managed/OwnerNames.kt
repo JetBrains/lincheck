@@ -189,3 +189,16 @@ internal fun findAtomicOwnerName(
         objectTracker.getObjectRepresentation(atomic) + arrayAccess to params!!
     }
 }
+
+/**
+ * Finds the owner name from the first argument's access path.
+ * Used for reflection-like calls where the first parameter represents the receiver.
+ *
+ * @param context the trace context containing code location information.
+ * @param codeLocationId the ID of the code location for the method call.
+ * @return the owner name as a string, or null if no valid access path is found.
+ */
+internal fun findOwnerNameFromFirstArgument(context: TraceContext, codeLocationId: Int): String? {
+    val firstArgPath = context.methodCallArgumentNames(codeLocationId)?.firstOrNull()
+    return firstArgPath?.toString()?.takeIf { it.isNotEmpty() }
+}

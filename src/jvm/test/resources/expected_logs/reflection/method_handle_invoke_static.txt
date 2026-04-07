@@ -1,0 +1,23 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                 Thread 1                                                                                                                  |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                                               |
+|   invokeViaMethodHandleInvokeExact(3, 4): 13 at MethodHandleInvokeStaticRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:191)                                                                                           |
+|     MethodHandleInvokeStaticRepresentationTest.staticTarget(3, 4) [by targetMethodHandle.invokeExact(3, 4)]: 13 at MethodHandleInvokeStaticRepresentationTest.invokeViaMethodHandleInvokeExact(ReflectionInvokeRepresentationTest.kt:186) |
+|   result: void                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

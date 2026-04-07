@@ -1,0 +1,26 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                      Thread 1                                                                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                                                                                         |
+|   invokeViaReflection(1, 2): 5 at ReflectionStaticMethodInvokeRepresentationTest.operation(ReflectionInvokeRepresentationTest.kt:130)                                                                                                               |
+|     ReflectionStaticMethodInvokeRepresentationTest.staticTarget(1, 2) [by targetReflectionMethod.invoke(null, Array<Object>#1)]: 5 at ReflectionStaticMethodInvokeRepresentationTest.invokeViaReflection(ReflectionInvokeRepresentationTest.kt:125) |
+|       Companion.staticTarget(1, 2): 5 at ReflectionStaticMethodInvokeRepresentationTest.staticTarget(ReflectionInvokeRepresentationTest.kt:0)                                                                                                       |
+|         ReflectionStaticMethodInvokeRepresentationTest.getHelper(): Helper#1 at ReflectionStaticMethodInvokeRepresentationTest.Companion.staticTarget(ReflectionInvokeRepresentationTest.kt:113)                                                    |
+|         Helper#1.placeholder() at ReflectionStaticMethodInvokeRepresentationTest.Companion.staticTarget(ReflectionInvokeRepresentationTest.kt:113)                                                                                                  |
+|   result: void                                                                                                                                                                                                                                      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

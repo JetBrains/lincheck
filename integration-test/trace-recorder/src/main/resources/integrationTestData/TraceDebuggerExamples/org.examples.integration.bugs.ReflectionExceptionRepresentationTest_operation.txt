@@ -1,0 +1,11 @@
+# Thread 1
+ReflectionExceptionRepresentationTest.operation() at ReflectionLike.kt:424
+  invokeViaReflection(1, 2): -1 at ReflectionLike.kt:424
+    Object;@1[0] = 1 at ReflectionLike.kt:416
+    Object;@1[1] = 2 at ReflectionLike.kt:416
+    targetThrowsException(1, 2) [by targetReflectionMethod.invoke(, Object;@1)]: threw InvocationTargetException at ReflectionLike.kt:416
+      helper.throwException(): threw IllegalStateException at ReflectionLike.kt:46
+        new IllegalStateException("Test exception from nested call"): IllegalStateException@1 at ReflectionLike.kt:56
+        throw IllegalStateException@1 at ReflectionLike.kt:56
+    catch(InvocationTargetException@1) at ReflectionLike.kt:416
+    <unused var> = InvocationTargetException@1 at ReflectionLike.kt:417

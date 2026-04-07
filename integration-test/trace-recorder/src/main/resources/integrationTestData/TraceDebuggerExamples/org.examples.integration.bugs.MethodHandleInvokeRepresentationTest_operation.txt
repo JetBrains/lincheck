@@ -1,0 +1,5 @@
+# Thread 1
+MethodHandleInvokeRepresentationTest.operation() at ReflectionLike.kt:247
+  invokeViaMethodHandleInvoke(7, 8): 56 at ReflectionLike.kt:247
+    targetMethodHandle(7, 8) [by targetMethodHandle.invoke(, a ➜ 7, b ➜ 8)]: 56 at ReflectionLike.kt:242
+      helper.placeholder() at ReflectionLike.kt:31

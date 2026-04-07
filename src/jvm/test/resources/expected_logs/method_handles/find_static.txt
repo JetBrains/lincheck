@@ -23,11 +23,11 @@ Detailed trace:
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:101)                                                        |
 |         Counter.shared = Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                       |
-|       methodHandle.invoke(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:106)                                                       |
+|       Counter.increment(Counter#1) [by methodHandle.invoke(Counter#1)] at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:106)                     |
 |         Companion.increment(Counter#1) at Counter.increment(MethodHandlesLookupTests.kt:0)                                                                                      |
 |           counter.value ➜ 0 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:169)                                                                              |
 |           counter.value = 1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:169)                                                                              |
-|       methodHandle.invokeExact(Counter#1) at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:107)                                                  |
+|       Counter.increment(Counter#1) [by methodHandle.invokeExact(Counter#1)] at MethodHandlesFindStaticRepresentationTest.doTest(MethodHandlesLookupTests.kt:107)                |
 |         Companion.increment(Counter#1) at Counter.increment(MethodHandlesLookupTests.kt:0)                                                                                      |
 |           counter.value ➜ 1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:169)                                                                              |
 |           counter.value = 2 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:169)                                                                              |
