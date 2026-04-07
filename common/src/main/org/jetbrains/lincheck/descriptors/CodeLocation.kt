@@ -29,6 +29,9 @@ class CodeLocation(
     }
 
     override fun hashCode(): Int {
-        return Objects.hash(stackTraceElement, accessPath, argumentNames)
+        var result = stackTraceElement.hashCode()
+        result = 31 * result + (accessPath?.hashCode() ?: 0)
+        result = 31 * result + (argumentNames?.hashCode() ?: 0)
+        return result
     }
 }
