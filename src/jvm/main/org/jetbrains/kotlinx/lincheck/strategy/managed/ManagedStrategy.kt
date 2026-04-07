@@ -1695,16 +1695,6 @@ internal abstract class ManagedStrategy(
         result: Any?,
         interceptor: ResultInterceptor,
     ) {}
-    ) {
-        val interceptorData = (interceptor.eventTrackerData as DeterministicMethodCallInterceptorData)
-        if (isInTraceDebuggerMode && isFirstReplay) {
-            val newResult = saveFirstResultWithCast(receiver, params, KResult.success(result)) {
-                nativeMethodCallStatesTracker.setState(interceptorData.deterministicCallId, methodCallInfo, it)
-            }.getOrElse {
-                error("Unexpected replacement success -> failure:\n$result\n${KResult.failure<Any?>(it)}")
-            }
-        }
-    }
 
     private fun DeterministicMethodDescriptor<*, *>.processDeterministicMethodException(
         receiver: Any?,
