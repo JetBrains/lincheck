@@ -37,9 +37,111 @@ The following interleaving leads to the error:
 |                                                                                      | one(): <hung>                                                                        |
 |                                                                                      |   loop(1 iterations) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:299)  |
 |                                                                                      |   loop(50 iterations) at AbstractSpinLivelockTest.one(SpinlockEventsCutTests.kt:302) |
+|                                                                                      |     <iteration 1>                                                                    |
+|                                                                                      |       switch                                                                         |
 | two(): <hung>                                                                        |                                                                                      |
 |   loop(1 iterations) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:313)  |                                                                                      |
 |   loop(51 iterations) at AbstractSpinLivelockTest.two(SpinlockEventsCutTests.kt:316) |                                                                                      |
+|     <iteration 1>                                                                    |                                                                                      |
+|     <iteration 2>                                                                    |                                                                                      |
+|     ...                                                                              |                                                                                      |
+|     <iteration 7>                                                                    |                                                                                      |
+|     <iteration 8>                                                                    |                                                                                      |
+|     <iteration 9>                                                                    |                                                                                      |
+|     <iteration 10>                                                                   |                                                                                      |
+|       switch (reason: active lock detected)                                          |                                                                                      |
+|                                                                                      |       sharedState2.compareAndSet(false, true): false                                 |
+|                                                                                      |       meaninglessActions()                                                           |
+|                                                                                      |     <iteration 2>                                                                    |
+|                                                                                      |     <iteration 3>                                                                    |
+|                                                                                      |     ...                                                                              |
+|                                                                                      |     <iteration 8>                                                                    |
+|                                                                                      |     <iteration 9>                                                                    |
+|                                                                                      |     <iteration 10>                                                                   |
+|                                                                                      |       switch (reason: active lock detected)                                          |
+|       sharedState1.compareAndSet(false, true): false                                 |                                                                                      |
+|       meaninglessActions()                                                           |                                                                                      |
+|     <iteration 11>                                                                   |                                                                                      |
+|     <iteration 12>                                                                   |                                                                                      |
+|     ...                                                                              |                                                                                      |
+|     <iteration 17>                                                                   |                                                                                      |
+|     <iteration 18>                                                                   |                                                                                      |
+|     <iteration 19>                                                                   |                                                                                      |
+|     <iteration 20>                                                                   |                                                                                      |
+|       switch (reason: active lock detected)                                          |                                                                                      |
+|                                                                                      |       sharedState2.compareAndSet(false, true): false                                 |
+|                                                                                      |       meaninglessActions()                                                           |
+|                                                                                      |     <iteration 11>                                                                   |
+|                                                                                      |     <iteration 12>                                                                   |
+|                                                                                      |     ...                                                                              |
+|                                                                                      |     <iteration 17>                                                                   |
+|                                                                                      |     <iteration 18>                                                                   |
+|                                                                                      |     <iteration 19>                                                                   |
+|                                                                                      |     <iteration 20>                                                                   |
+|                                                                                      |       switch (reason: active lock detected)                                          |
+|       sharedState1.compareAndSet(false, true): false                                 |                                                                                      |
+|       meaninglessActions()                                                           |                                                                                      |
+|     <iteration 21>                                                                   |                                                                                      |
+|     <iteration 22>                                                                   |                                                                                      |
+|     ...                                                                              |                                                                                      |
+|     <iteration 27>                                                                   |                                                                                      |
+|     <iteration 28>                                                                   |                                                                                      |
+|     <iteration 29>                                                                   |                                                                                      |
+|     <iteration 30>                                                                   |                                                                                      |
+|       switch (reason: active lock detected)                                          |                                                                                      |
+|                                                                                      |       sharedState2.compareAndSet(false, true): false                                 |
+|                                                                                      |       meaninglessActions()                                                           |
+|                                                                                      |     <iteration 21>                                                                   |
+|                                                                                      |     <iteration 22>                                                                   |
+|                                                                                      |     ...                                                                              |
+|                                                                                      |     <iteration 27>                                                                   |
+|                                                                                      |     <iteration 28>                                                                   |
+|                                                                                      |     <iteration 29>                                                                   |
+|                                                                                      |     <iteration 30>                                                                   |
+|                                                                                      |       switch (reason: active lock detected)                                          |
+|       sharedState1.compareAndSet(false, true): false                                 |                                                                                      |
+|       meaninglessActions()                                                           |                                                                                      |
+|     <iteration 31>                                                                   |                                                                                      |
+|     <iteration 32>                                                                   |                                                                                      |
+|     ...                                                                              |                                                                                      |
+|     <iteration 37>                                                                   |                                                                                      |
+|     <iteration 38>                                                                   |                                                                                      |
+|     <iteration 39>                                                                   |                                                                                      |
+|     <iteration 40>                                                                   |                                                                                      |
+|       switch (reason: active lock detected)                                          |                                                                                      |
+|                                                                                      |       sharedState2.compareAndSet(false, true): false                                 |
+|                                                                                      |       meaninglessActions()                                                           |
+|                                                                                      |     <iteration 31>                                                                   |
+|                                                                                      |     <iteration 32>                                                                   |
+|                                                                                      |     ...                                                                              |
+|                                                                                      |     <iteration 37>                                                                   |
+|                                                                                      |     <iteration 38>                                                                   |
+|                                                                                      |     <iteration 39>                                                                   |
+|                                                                                      |     <iteration 40>                                                                   |
+|                                                                                      |       switch (reason: active lock detected)                                          |
+|       sharedState1.compareAndSet(false, true): false                                 |                                                                                      |
+|       meaninglessActions()                                                           |                                                                                      |
+|     <iteration 41>                                                                   |                                                                                      |
+|     <iteration 42>                                                                   |                                                                                      |
+|     ...                                                                              |                                                                                      |
+|     <iteration 47>                                                                   |                                                                                      |
+|     <iteration 48>                                                                   |                                                                                      |
+|     <iteration 49>                                                                   |                                                                                      |
+|     <iteration 50>                                                                   |                                                                                      |
+|       switch (reason: active lock detected)                                          |                                                                                      |
+|                                                                                      |       sharedState2.compareAndSet(false, true): false                                 |
+|                                                                                      |       meaninglessActions()                                                           |
+|                                                                                      |     <iteration 41>                                                                   |
+|                                                                                      |     <iteration 42>                                                                   |
+|                                                                                      |     ...                                                                              |
+|                                                                                      |     <iteration 47>                                                                   |
+|                                                                                      |     <iteration 48>                                                                   |
+|                                                                                      |     <iteration 49>                                                                   |
+|                                                                                      |     <iteration 50>                                                                   |
+|                                                                                      |       switch (reason: active lock detected)                                          |
+|       sharedState1.compareAndSet(false, true): false                                 |                                                                                      |
+|       meaninglessActions()                                                           |                                                                                      |
+|     <iteration 51>                                                                   |                                                                                      |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops
 

@@ -17,8 +17,24 @@ The following interleaving leads to the error:
 |                                |   counter.get(): 1                                                                                                |
 |                                |   deadSpinCycle()                                                                                                 |
 |                                |     loop(51 iterations) at SpinLockWithAllEventsWrappedInMethodsTest.deadSpinCycle(SpinlockEventsCutTests.kt:486) |
+|                                |       <iteration 1>                                                                                               |
+|                                |       <iteration 2>                                                                                               |
+|                                |       ...                                                                                                         |
+|                                |       <iteration 7>                                                                                               |
+|                                |       <iteration 8>                                                                                               |
+|                                |       <iteration 9>                                                                                               |
+|                                |       <iteration 10>                                                                                              |
+|                                |         switch (reason: active lock detected)                                                                     |
 |   counter.decrementAndGet(): 0 |                                                                                                                   |
 |   result: void                 |                                                                                                                   |
+|                                |         getSharedVariable(): true                                                                                 |
+|                                |         action(true): true                                                                                        |
+|                                |       <iteration 11>                                                                                              |
+|                                |       <iteration 12>                                                                                              |
+|                                |       ...                                                                                                         |
+|                                |       <iteration 49>                                                                                              |
+|                                |       <iteration 50>                                                                                              |
+|                                |       <iteration 51>                                                                                              |
 | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops
 

@@ -10,17 +10,25 @@ The number next to an exception name helps you find its stack trace provided aft
 ---
 
 The following interleaving leads to the error:
-| -------------------------------------------------------------------------------- |
-|                 Thread 1                  |               Thread 2               |
-| -------------------------------------------------------------------------------- |
-| causeSpinLock(): IllegalStateException #1 |                                      |
-|   counter.incrementAndGet(): 1            |                                      |
-|   switch                                  |                                      |
-|                                           | spinLock(): IllegalStateException #2 |
-|   shouldAlwaysBeZero.get(): 1             |                                      |
-|   illegalInterleavingFound.set(true)      |                                      |
-|   result: IllegalStateException #1        |                                      |
-| -------------------------------------------------------------------------------- |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                 Thread 1                  |                                                                             Thread 2                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| causeSpinLock(): IllegalStateException #1 |                                                                                                                                                                   |
+|   counter.incrementAndGet(): 1            |                                                                                                                                                                   |
+|   switch                                  |                                                                                                                                                                   |
+|                                           | spinLock(): IllegalStateException #2                                                                                                                              |
+|                                           |   counter.get(): 1                                                                                                                                                |
+|                                           |   loop(1 iterations) at InterleavingAnalysisPresentInSpinCycleFirstIterationTest.<unknown method>(InterleavingAnalysisPresentInSpinCycleFirstIterationTest.kt:50) |
+|                                           |     <iteration 1>                                                                                                                                                 |
+|                                           |       counter.get(): 1                                                                                                                                            |
+|                                           |       shouldAlwaysBeZero.incrementAndGet(): 1                                                                                                                     |
+|                                           |       switch                                                                                                                                                      |
+|   shouldAlwaysBeZero.get(): 1             |                                                                                                                                                                   |
+|   illegalInterleavingFound.set(true)      |                                                                                                                                                                   |
+|   result: IllegalStateException #1        |                                                                                                                                                                   |
+|                                           |       illegalInterleavingFound.get(): true                                                                                                                        |
+|                                           |   result: IllegalStateException #2                                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: Illegal interleaving during spin-cycle found

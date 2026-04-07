@@ -16,12 +16,29 @@ The following interleaving leads to the error:
 |                                                                                 | operation2(): IllegalStateException #2                                          |
 |                                                                                 |   ResultKt.throwOnFailure(null)                                                 |
 |                                                                                 |   channel1.receive() [suspendable: Continuation#1]: 1                           |
+|                                                                                 |     BufferedChannel.getReceiveSegment$FU(): AtomicReferenceFieldUpdaterImpl#1   |
+|                                                                                 |     receiveSegment.get(): ChannelSegment#1                                      |
+|                                                                                 |     loop(1 iterations) at BufferedChannel.receive(BufferedChannel.kt:0)         |
+|                                                                                 |       <iteration 1>                                                             |
+|                                                                                 |         isClosedForReceive(): false                                             |
+|                                                                                 |         BufferedChannel.getReceivers$FU(): CASUpdater#2                         |
+|                                                                                 |         receivers.getAndIncrement(): 0                                          |
+|                                                                                 |         BufferedChannel.updateCellReceive(ChannelSegment#1, 0, 0, null): 1      |
+|                                                                                 |           segment.getState(0): null                                             |
+|                                                                                 |           switch                                                                |
 | operation1(): IllegalStateException #1                                          |                                                                                 |
 |   ResultKt.throwOnFailure(null)                                                 |                                                                                 |
 |   Boxing.boxInt(1): 1                                                           |                                                                                 |
 |   channel1.send(1) [suspendable: Continuation#2]                                |                                                                                 |
 |   counter ➜ 0                                                                   |                                                                                 |
 |   switch                                                                        |                                                                                 |
+|                                                                                 |           sendersAndCloseStatus.get(): 1                                        |
+|                                                                                 |           getSendersCounter()                                                   |
+|                                                                                 |           updateCellReceiveSlow(ChannelSegment#1, 0, 0, null): 1                |
+|                                                                                 |         BufferedChannelKt.getSUSPEND(): <SUSPEND>                               |
+|                                                                                 |         BufferedChannelKt.getFAILED(): <FAILED>                                 |
+|                                                                                 |     BufferedChannelKt.getSUSPEND_NO_WAITER(): <SUSPEND_NO_WAITER>               |
+|                                                                                 |     segment.cleanPrev()                                                         |
 |                                                                                 |   counter ➜ 0                                                                   |
 |                                                                                 |   counter = 1                                                                   |
 |                                                                                 |   Boxing.boxInt(1): 1                                                           |

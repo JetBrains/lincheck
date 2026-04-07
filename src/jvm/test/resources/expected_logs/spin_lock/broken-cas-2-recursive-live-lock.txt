@@ -17,6 +17,15 @@ The following interleaving leads to the error:
 |                                  |       status.get(): UNDECIDED                                                                                      |
 |                                  |       installOrHelp(true, 1, false)                                                                                |
 |                                  |         loop(1 iterations) at AtomicArrayWithCAS2.Descriptor.installOrHelp(AtomicArrayWithCAS2LiveLockTest.kt:140) |
+|                                  |           <iteration 1>                                                                                            |
+|                                  |             AtomicArrayWithCAS2.getArray(): AtomicReferenceArray#1                                                 |
+|                                  |             AtomicReferenceArray#1[0].get(): Descriptor#2                                                          |
+|                                  |             AtomicArrayWithCAS2.getGate0$volatile$FU(): AtomicIntegerFieldUpdaterImpl#1                            |
+|                                  |             gate0.set(1)                                                                                           |
+|                                  |             AtomicArrayWithCAS2.getGate1$volatile$FU(): AtomicIntegerFieldUpdaterImpl#2                            |
+|                                  |             gate1.get(): 0                                                                                         |
+|                                  |             AtomicArrayWithCAS2.getGate0$volatile$FU(): AtomicIntegerFieldUpdaterImpl#1                            |
+|                                  |             switch                                                                                                 |
 | cas2_0(0, 0, 2, 1, 0, 3): <hung> |                                                                                                                    |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 All unfinished threads are in livelock due to non-terminating loops
