@@ -29,12 +29,6 @@ internal class ShortenTraceFilter : TraceFilter {
         if (node is CallNode && node.isRootCall && node.tracePoint.isThreadStart) return true
         unfoldableNodes[node]?.let { return it }
 
-        if ((node.children.lastOrNull() is LoopNode || node.children.lastOrNull() is RecursionNode) &&
-                node.children.any { it.containsSwitchInsideIterationRecursively() }) {
-            unfoldableNodes[node] = true
-            return true
-        }
-
         return node.children.any { child ->
             when (child) {
                 is EventNode -> with(child) {
@@ -44,9 +38,9 @@ internal class ShortenTraceFilter : TraceFilter {
                         tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
                     )
                 }
-                is CallNode -> {
-                    child.tracePoint.wasSuspended ||
-                    shouldUnfold(child)
+                is CallNode, is LoopNode, is IterationNode, is RecursionNode -> {
+                    val wasSuspended = (child as? CallNode)?.tracePoint?.wasSuspended ?: false
+                    wasSuspended || shouldUnfold(child)
                 }
                 else -> false
             }
@@ -89,17 +83,3 @@ internal val TracePoint.isBlocking: Boolean get() = when (this) {
     is MonitorEnterTracePoint, is WaitTracePoint, is ParkTracePoint -> true
     else -> false
 }
-
-private fun TraceNode.containsSwitchEventRecursively(): Boolean =
-    when (this) {
-        is EventNode -> tracePoint is SwitchEventTracePoint
-        is CallNode, is LoopNode, is RecursionNode, is IterationNode -> children.any { it.containsSwitchEventRecursively() }
-        else -> false
-    }
-
-private fun TraceNode.containsSwitchInsideIterationRecursively(): Boolean =
-    when (this) {
-        is IterationNode -> children.any { it.containsSwitchEventRecursively() }
-        is CallNode, is LoopNode, is RecursionNode -> children.any { it.containsSwitchInsideIterationRecursively() }
-        else -> false
-    }
