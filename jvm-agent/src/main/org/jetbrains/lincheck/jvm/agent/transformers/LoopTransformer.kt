@@ -94,6 +94,11 @@ internal class LoopTransformer(
 
     private val awaitLoopIds: Set<LoopId> = awaitLoopBackEdgeSources.keys
 
+    private val loopIdsByHeaderNonPhonyIndex: Map<InstructionIndex, List<LoopId>> =
+        methodInfo.basicControlFlowGraph!!.computeLoopIdsByHeaderNonPhonyIndex(insnIndexRemapping, loopInfo)
+
+    private val codeLocationIdByLoopId = mutableMapOf<LoopId, Int>()
+
     // Map from a non-phony instruction index (the last opcode of a clean back-edge source block)
     // to the loopId. These are the sites where `onAwaitLoop` should be injected.
     private val awaitInjectionLocation: Map<InstructionIndex, LoopId> =
@@ -102,6 +107,14 @@ internal class LoopTransformer(
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
+        loopIdsByHeaderNonPhonyIndex[nonPhonyIndex]?.let { loopIds ->
+            val canonicalId = createAndDiscardCodeLocationId()
+            for (loopId in loopIds) {
+                codeLocationIdByLoopId.putIfAbsent(loopId, canonicalId)
+            }
+        }
+
+        // Inject basic onLoopIteration at the header.
         // Inject `onLoopExit` on transitions from within the loop body to outside.
         // This must be done before `onLoopIteration` to correctly handle consecutive loops
         // where the exit target of one loop coincides with the header of the next loop.
@@ -124,13 +137,13 @@ internal class LoopTransformer(
             }
 
         }
-
+//TODO: check when we should use createCurrentLineCodeLocation() instead of codeLocationIdByLoopId.getValue(loopId)
         // Inject `onLoopIteration` at the loop header on every iteration (including the first).
         iterationEntrySites[nonPhonyIndex]?.let { loopId ->
             val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
             // STACK: <empty>
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-            loadNewCodeLocationId(createCurrentLineCodeLocation())
+            adapter.push(codeLocationIdByLoopId.getValue(loopId))
             adapter.push(loopId)
             // STACK: descriptor, codeLocation, loopId
             if (isReducible) {
@@ -148,7 +161,7 @@ internal class LoopTransformer(
         awaitInjectionLocation[nonPhonyIndex]?.let { loopId ->
             // STACK: <empty>
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-            loadNewCodeLocationId()
+            adapter.push(codeLocationIdByLoopId.getValue(loopId))
             adapter.push(loopId)
             // STACK: descriptor, codeLocation, loopId
             adapter.invokeStatic(Injections::onAwaitLoop)
@@ -307,6 +320,22 @@ private fun BasicBlockControlFlowGraph.computeAwaitInjectionLocation(
                 // prefer the inner loop
                 result.merge(nonPhonyIndex, loopId) { old, new -> maxOf(old, new) }
             }
+        }
+    }
+    return result
+}
+
+private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
+    insnIndexRemapping: IntArray,
+    loopInfo: MethodLoopsInformation,
+): Map<InstructionIndex, List<LoopId>> {
+    if (!loopInfo.hasLoops()) return emptyMap()
+    val result = mutableMapOf<InstructionIndex, MutableList<LoopId>>()
+    for (loop in loopInfo.loops) {
+        val idx = firstOpcodeIndexOf(loop.header) ?: continue
+        val nonPhonyIndex = insnIndexRemapping[idx]
+        if (nonPhonyIndex >= 0) {
+            result.getOrPut(nonPhonyIndex) { mutableListOf() }.add(loop.id)
         }
     }
     return result
