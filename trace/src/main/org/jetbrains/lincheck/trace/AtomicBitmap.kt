@@ -11,7 +11,11 @@
 package org.jetbrains.lincheck.trace
 
 import java.util.concurrent.atomic.AtomicLongArray
-import kotlin.math.max
+
+interface Bitmap {
+    fun isSet(id: Int): Boolean
+    fun set(id: Int)
+}
 
 private const val ATOMIC_SIZE_BITS = Long.SIZE_BITS                          // Bits in one atomic array cell (Long)
 private const val ATOMIC_SIZE_BYTES = Long.SIZE_BYTES                        // Bytes in one atomic array cell (Long)
@@ -23,7 +27,7 @@ private const val ATOMIC_CHUNK_BITS = ATOMIC_CHUNK_SIZE * ATOMIC_SIZE_BYTES  // 
 private const val ATOMIC_CHUNK_SHIFT = 15                                    // log2(ATOMIC_CHUNK_BITS)
 private const val ATOMIC_CHUNK_MASK = (1 shl ATOMIC_CHUNK_SHIFT) - 1         // Mask to have a reminder for division by ATOMIC_CHUNK_BITS
 
-internal class AtomicBitmap {
+internal class AtomicBitmap : Bitmap {
     private val bitmap = ArrayList<AtomicLongArray>()
     @Volatile
     private var chunkCount = 0
@@ -34,7 +38,7 @@ internal class AtomicBitmap {
         chunkCount = 1
     }
 
-    fun isSet(id: Int): Boolean {
+    override fun isSet(id: Int): Boolean {
         val chunk = id shr ATOMIC_CHUNK_SHIFT
         // volatile read to see changes by another thread
         if (chunk >= chunkCount) return false
@@ -49,7 +53,7 @@ internal class AtomicBitmap {
         return (value and bit) != 0L
     }
 
-    fun set(id: Int) {
+    override fun set(id: Int) {
         val chunk = id shr ATOMIC_CHUNK_SHIFT
         val bitInChunk = id and ATOMIC_CHUNK_MASK
 
@@ -76,5 +80,56 @@ internal class AtomicBitmap {
         }
         // volatile write for future atomic reads on a hot path
         chunkCount = bitmap.size
+    }
+}
+
+internal class SimpleBitmap(initSize: Int) : AbstractSet<Int>(), Bitmap {
+    private var bitmap: BooleanArray = BooleanArray(initSize)
+    private var elementsCount: Int = 0
+    override val size: Int
+        get() = elementsCount
+
+    override fun isSet(id: Int): Boolean {
+        return id < bitmap.size && bitmap[id]
+    }
+
+    override fun set(id: Int) {
+        if (id >= bitmap.size) {
+            resizeBitmap(id)
+        }
+        if (!bitmap[id]) elementsCount++
+        bitmap[id] = true
+    }
+
+    private fun resizeBitmap(id: Int) {
+        if (id < bitmap.size) return
+        val newlen = Integer.max(id + 16, bitmap.size + bitmap.size / 2)
+        bitmap = bitmap.copyOf(newlen)
+    }
+
+    override fun iterator(): Iterator<Int> {
+        return object : Iterator<Int> {
+            var index = 0
+
+            override fun next(): Int {
+                reachNextOrEnd()
+                if (index < bitmap.size) {
+                    return index++
+                }
+                throw NoSuchElementException()
+            }
+
+            override fun hasNext(): Boolean {
+                reachNextOrEnd()
+                return index < bitmap.size
+            }
+
+            private fun reachNextOrEnd() {
+                while (index < bitmap.size) {
+                    if (bitmap[index]) return
+                    index++
+                }
+            }
+        }
     }
 }
