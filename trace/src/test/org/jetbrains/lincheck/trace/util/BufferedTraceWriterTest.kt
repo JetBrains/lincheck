@@ -66,8 +66,8 @@ class BufferedTraceWriterTest {
     @Test
     fun testDataSavedTwiceWhenNotInFileYet() {
         val context = TraceContext()
-        val tr1 = createBasicMethodCallTracePoint(context, 1, "com.example.SomeClass", "methodName1")
-        val tr2 = createBasicMethodCallTracePoint(context, 2, "com.example.SomeClass", "methodName2")
+        val tr1 = createBasicMethodCallTracePoint(context, 0, "com.example.SomeClass", "methodName1")
+        val tr2 = createBasicMethodCallTracePoint(context, 1, "com.example.SomeClass", "methodName2")
         val sharedCall1 = createBasicMethodCallTracePoint(context, tr1.threadId, "com.example.SomeClass", "sharedMethod")
         val sharedCall2 = createBasicMethodCallTracePoint(context, tr2.threadId, "com.example.SomeClass", "sharedMethod")
         val varAssignment1 = createVariableWriteTracePoint(context, tr1.threadId, "sharedVar")
@@ -129,7 +129,7 @@ class BufferedTraceWriterTest {
         val loadedTrace = loadRecordedTrace(traceFile.absolutePath)
         printRecorderTrace(System.out, loadedTrace.context, loadedTrace.roots, verbose = true)
         val blocks = collectSavedBlocks(loadedTrace.context, traceFile)
-        check(blocks.size == 2 && blocks.containsKey(1) && blocks.containsKey(2)) { "Expected 2 blocks for both threads, got thread ids: ${blocks.keys}" }
+        check(blocks.size == 2 && blocks.containsKey(tr1.threadId) && blocks.containsKey(tr2.threadId)) { "Expected 2 blocks for both threads, got thread ids: ${blocks.keys}" }
 
         val expectedClassDescriptorIds = setOf(0 /* SomeClass */)
         val expectedMethodDescriptorIds1 = setOf(0 /* methodName1 */, 2 /* sharedMethod */)
@@ -141,7 +141,7 @@ class BufferedTraceWriterTest {
         val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* someMethod */, 4 /* sharedMethod */)
         val expectedStringIds2 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 5 /* methodName2 */, 3 /* someMethod */, 4 /* sharedMethod */)
 
-        blocks[1]!!.run {
+        blocks[tr1.threadId]!!.run {
             checkClassDescriptors(expectedClassDescriptorIds)
             checkMethodDescriptors(expectedMethodDescriptorIds1)
             checkVariableDescriptors(expectedVariableDescriptorIds)
@@ -149,7 +149,7 @@ class BufferedTraceWriterTest {
             checkAccessPaths(expectedAccessPathIds)
             checkStrings(expectedStringIds1)
         }
-        blocks[2]!!.run {
+        blocks[tr2.threadId]!!.run {
             checkClassDescriptors(expectedClassDescriptorIds)
             checkMethodDescriptors(expectedMethodDescriptorIds2)
             checkVariableDescriptors(expectedVariableDescriptorIds)
@@ -162,8 +162,8 @@ class BufferedTraceWriterTest {
     @Test
     fun testDataDeduplicatedWhenSavedToFile() {
         val context = TraceContext()
-        val tr1 = createBasicMethodCallTracePoint(context, 1, "com.example.SomeClass", "methodName1")
-        val tr2 = createBasicMethodCallTracePoint(context, 2, "com.example.SomeClass", "methodName2")
+        val tr1 = createBasicMethodCallTracePoint(context, 0, "com.example.SomeClass", "methodName1")
+        val tr2 = createBasicMethodCallTracePoint(context, 1, "com.example.SomeClass", "methodName2")
         val sharedCall1 = createBasicMethodCallTracePoint(context, tr1.threadId, "com.example.SomeClass", "sharedMethod")
         val sharedCall2 = createBasicMethodCallTracePoint(context, tr2.threadId, "com.example.SomeClass", "sharedMethod")
         val varAssignment1 = createVariableWriteTracePoint(context, tr1.threadId, "sharedVar")
@@ -216,8 +216,9 @@ class BufferedTraceWriterTest {
         collector.traceEnded()
 
         val loadedTrace = loadRecordedTrace(traceFile.absolutePath)
+        printRecorderTrace(System.out, loadedTrace.context, loadedTrace.roots, verbose = true)
         val blocks = collectSavedBlocks(loadedTrace.context, traceFile)
-        check(blocks.size == 2 && blocks.containsKey(1) && blocks.containsKey(2)) { "Expected 2 blocks for both threads, got thread ids: ${blocks.keys}" }
+        check(blocks.size == 2 && blocks.containsKey(tr1.threadId) && blocks.containsKey(tr2.threadId)) { "Expected 2 blocks for both threads, got thread ids: ${blocks.keys}" }
 
         val expectedClassDescriptorIds1 = setOf(0 /* SomeClass */)
         val expectedMethodDescriptorIds1 = setOf(0 /* methodName1 */, 2 /* sharedMethod */)
@@ -229,7 +230,7 @@ class BufferedTraceWriterTest {
         val expectedStringIds1 = setOf(0 /* Example.java */, 1 /* com.example.SomeClass */, 2 /* methodName1 */, 3 /* someMethod */, 4 /* sharedMethod */)
         val expectedStringIds2 = setOf(5 /* methodName2 */)
 
-        blocks[1]!!.run {
+        blocks[tr1.threadId]!!.run {
             checkClassDescriptors(expectedClassDescriptorIds1)
             checkMethodDescriptors(expectedMethodDescriptorIds1)
             checkVariableDescriptors(expectedVariableDescriptorIds1)
@@ -237,7 +238,7 @@ class BufferedTraceWriterTest {
             checkAccessPaths(expectedAccessPathIds1)
             checkStrings(expectedStringIds1)
         }
-        blocks[2]!!.run {
+        blocks[tr2.threadId]!!.run {
             checkClassDescriptors(emptySet())
             checkMethodDescriptors(expectedMethodDescriptorIds2)
             checkVariableDescriptors(emptySet())
