@@ -445,12 +445,12 @@ private fun foldLoopIterations(children: List<TraceNode>): List<TraceNode> {
             val firstNode = children[startIndex]
             val lastNode = children[startIndex + totalNodesCovered - 1]
 
-            val startIter = if (firstNode is IterationNode) firstNode.from else 1
-            val endIter = if (lastNode is IterationNode) lastNode.to else cycle.bestCount
+            val startIter = if (firstNode is LoopIterationNode) firstNode.from else 1
+            val endIter = if (lastNode is LoopIterationNode) lastNode.to else cycle.bestCount
 
             if (isStrictlyEqual && cycle.bestPeriod == 1) {
                 // Case 1: Fully equal iterations -> Single IterationNode covering the range
-                val rangeNode = IterationNode(
+                val rangeNode = LoopIterationNode(
                     tracePoint = firstNode.tracePoint,
                     eventNumber = firstNode.eventNumber,
                     from = startIter,

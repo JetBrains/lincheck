@@ -154,7 +154,7 @@ internal class LoopNode(
     fun totalIterations(): Int =
         foldedTotalIterations ?: children.sumOf {
             when (it) {
-                is IterationNode -> it.count
+                is LoopIterationNode -> it.count
                 else -> 0
             }
         }
@@ -170,7 +170,7 @@ internal class LoopNode(
     }
 }
 
-internal class IterationNode(
+internal class LoopIterationNode(
     tracePoint: TracePoint,
     eventNumber: Int,
     val from: Int = (tracePoint as? LoopIterationTracePoint)?.iteration ?: 1,
@@ -189,7 +189,7 @@ internal class IterationNode(
         return tracePoint.toString(withLocation, true)
     }
 
-    override fun copy(): TraceNode = IterationNode(tracePoint, eventNumber, from, to)
+    override fun copy(): TraceNode = LoopIterationNode(tracePoint, eventNumber, from, to)
 }
 
 internal class RecursionNode(
@@ -263,12 +263,12 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
                 var curr = currentNodePerThread[currentThreadId]
 
                 // If we are currently inside an iteration, close it by moving up to the LoopNode
-                if (curr is IterationNode) {
+                if (curr is LoopIterationNode) {
                     curr = curr.parent
                 }
                 // If LoopNode is the current container, add iteration as its child and move into it
                 if (curr is LoopNode) {
-                    val iterNode = IterationNode(event, eventNumber)
+                    val iterNode = LoopIterationNode(event, eventNumber)
                     curr.addChild(iterNode)
                     currentNodePerThread[currentThreadId] = iterNode
                 } else {
@@ -281,7 +281,7 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
                 var curr = currentNodePerThread[currentThreadId]
 
                 // If in an iteration, pop up to Loop
-                if (curr is IterationNode) {
+                if (curr is LoopIterationNode) {
                     curr = curr.parent
                 }
 

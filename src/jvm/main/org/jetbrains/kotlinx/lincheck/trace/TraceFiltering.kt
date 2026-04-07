@@ -38,7 +38,7 @@ internal class ShortenTraceFilter : TraceFilter {
                         tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
                     )
                 }
-                is CallNode, is LoopNode, is IterationNode, is RecursionNode -> {
+                is CallNode, is LoopNode, is LoopIterationNode, is RecursionNode -> {
                     val wasSuspended = (child as? CallNode)?.tracePoint?.wasSuspended ?: false
                     wasSuspended || shouldUnfold(child)
                 }

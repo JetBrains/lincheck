@@ -11,10 +11,7 @@ package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.ValidationFailure
 import org.jetbrains.lincheck.util.*
-import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = Column<T>
 internal typealias MultiThreadedTable<T> = List<Column<T>>
@@ -205,7 +202,7 @@ private class TraceColumnPrinter(
         val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
         _lines.add(traceLine)
 
-        val isUnfoldableNode = node is CallNode || node is LoopNode || node is IterationNode || node is RecursionNode
+        val isUnfoldableNode = node is CallNode || node is LoopNode || node is LoopIterationNode || node is RecursionNode
         if (isUnfoldableNode && (filter?.shouldUnfold(node) ?: true)) {
             pushCallStack(node)
             try {
