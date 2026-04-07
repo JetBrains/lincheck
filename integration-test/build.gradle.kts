@@ -43,7 +43,7 @@ subprojects {
 
         withType<KotlinCompile> {
             setupKotlinToolchain(project)
-            getAccessToInternalDefinitionsOf(rootProject)
+            getAccessToInternalDefinitionsOf(project(":lincheck"))
         }
     }
 }

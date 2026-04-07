@@ -264,7 +264,7 @@ In case of stress testing, Lincheck prints the state representation right before
 as well as at the end.
 
 > * Get the [full code of these examples](https://github.com/JetBrains/lincheck/tree/master/src/jvm/test-lincheck-integration/org/jetbrains/lincheck_test/guide/CounterTest.kt)
-> * See more [test examples](https://github.com/JetBrains/lincheck/tree/master/src/jvm/test/org/jetbrains/lincheck_test/guide)
+> * See more [test examples](https://github.com/JetBrains/lincheck/tree/master/lincheck/src/jvm/test/org/jetbrains/lincheck_test/guide)
 >
 {style="note"}
 
