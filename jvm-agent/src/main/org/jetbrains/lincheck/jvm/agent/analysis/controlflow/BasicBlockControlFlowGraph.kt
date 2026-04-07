@@ -232,13 +232,11 @@ class BasicBlockControlFlowGraph(
             val lastInstruction = instructions.get(last)
             when (e.label) {
                 is EdgeLabel.FallThrough -> {
-                    require(isRecognizedIfJumpOpcode(lastInstruction.opcode)) {
-                        """
-                            Normal loop exit fall-through edge must be produced by an IF* opcode at the end of the source block
-                            at $className::$method, source=B${e.source}, target=B${e.target}, opcode=${lastInstruction.opcode}
-                        """
-                        .trimIndent()
-                    }
+                    // Fall-through loop exits can be produced either by an IF* conditional branch
+                    // (where the jump target stays inside the loop and the fall-through exits),
+                    // or by a block that simply falls through to the next block which happens
+                    // to be outside the loop, e.g., when the block ends with a non-branching instruction
+                    // and the subsequent block is not part of the loop body.
                 }
                 is EdgeLabel.Jump -> {
                     require(isRecognizedJumpOpcode(lastInstruction.opcode)) {
