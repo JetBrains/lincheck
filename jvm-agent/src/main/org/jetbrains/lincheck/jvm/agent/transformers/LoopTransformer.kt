@@ -442,40 +442,39 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
     // If the header block itself has side effects, no suitable await loop can be formed
     if (headerClassification.hasSideEffects) return emptySet()
 
+    val localVariablesInHeader = mutableSetOf<Int>()
     // Check for side effects on the header block and for variables loaded in the header and written in the body.
     val headerBlock = basicBlocks.getOrNull(header)
     if (headerBlock?.executableRange != null) {
-        val loadedVars = mutableSetOf<Int>()
         for (i in headerBlock.executableRange) {
             val insn = instructions.get(i)
-            if (insn is VarInsnNode && insn.opcode in listOf(Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD)) {
-                loadedVars.add(insn.`var`)
+            if (insn is VarInsnNode &&
+                insn.opcode in listOf(Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD)
+            ) {
+                localVariablesInHeader.add(insn.`var`)
             }
         }
+    }
 
-        // If there are variables loaded in the header, check if any of them is written to in the body.
-        if (loadedVars.isNotEmpty()) {
-            for (bodyBlockIndex in bodyBlocks) {
-                val bodyBlock = basicBlocks.getOrNull(bodyBlockIndex) ?: continue
-                if (bodyBlock.executableRange == null) continue
-                for (i in bodyBlock.executableRange) {
-                    val insn = instructions.get(i)
-                    if (insn is VarInsnNode && insn.opcode in listOf(Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE)) {
-                        if (insn.`var` in loadedVars) {
-                            // A variable loaded in the header is written to in the loop body.
-                            // This is a side effect.
-                            return emptySet()
-                        }
-                    }
-                    // increment operations
-                    if (insn is IincInsnNode) {
-                        if (insn.`var` in loadedVars) {
-                            return emptySet()
-                        }
-                    }
+    fun headerGuard(blockIndex: BasicBlockIndex): Boolean {
+        if (localVariablesInHeader.isEmpty()) return false
+        val block = basicBlocks.getOrNull(blockIndex) ?: return false
+        val range = block.executableRange ?: return false
+        for (i in range) {
+            val insn = instructions.get(i)
+            when (insn) {
+                is VarInsnNode -> {
+                    if (insn.opcode in listOf(
+                            Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE
+                        ) && insn.`var` in localVariablesInHeader
+                    ) return true
+                }
+                is IincInsnNode -> {
+                    if (insn.`var` in localVariablesInHeader) return true
                 }
             }
         }
+        return false
     }
 
     // BFS visited state bitmask
@@ -512,6 +511,7 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
             val targetClassification = blockClassifications[target]
             // Skip side effects
             if (targetClassification.hasSideEffects) continue
+            if (headerGuard(target)) continue
 
             val newHasRead = pathHasRead || targetClassification.hasSharedRead
             val bfsBit = if (newHasRead) VISITED_WITH_READ else VISITED_NO_READ
