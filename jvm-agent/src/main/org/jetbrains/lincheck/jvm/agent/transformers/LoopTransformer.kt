@@ -31,6 +31,7 @@ internal class LoopTransformer(
     context: TraceContext,
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
+    val shouldTrackIrreducibleLoops: Boolean,
 ) : InstructionMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     // Retrieve loop sites planned from the precomputed basic-block CFG.
@@ -84,20 +85,14 @@ internal class LoopTransformer(
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
-        // Inject `onLoopIteration` at the loop header on every iteration (including the first).
-        iterationEntrySites[nonPhonyIndex]?.let { loopId ->
-            // STACK: <empty>
-            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-            loadNewCodeLocationId()
-            adapter.push(loopId)
-            // STACK: descriptor, codeLocation, loopId
-            adapter.invokeStatic(Injections::onLoopIteration)
-            // STACK: <empty>
-        }
-
         // Inject `onLoopExit` on transitions from within the loop body to outside.
+        // This must be done before `onLoopIteration` to correctly handle consecutive loops
+        // where the exit target of one loop coincides with the header of the next loop.
         normalExitSites[nonPhonyIndex]?.let { loopIds ->
             for (loopId in loopIds) {
+                val isIrreducible = loopInfo.getLoopInfo(loopId)?.isIrreducible ?: true
+                if (isIrreducible && !shouldTrackIrreducibleLoops) continue
+
                 val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]
                     ?.contains(loopId) ?: true
                 // STACK: <empty>
@@ -113,6 +108,22 @@ internal class LoopTransformer(
 
         }
 
+        // Inject `onLoopIteration` at the loop header on every iteration (including the first).
+        iterationEntrySites[nonPhonyIndex]?.let { loopId ->
+            val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
+            // STACK: <empty>
+            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+            loadNewCodeLocationId()
+            adapter.push(loopId)
+            // STACK: descriptor, codeLocation, loopId
+            if (isReducible) {
+                adapter.invokeStatic(Injections::onLoopIteration)
+            } else if (shouldTrackIrreducibleLoops) {
+                adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
+            }
+            // STACK: <empty>
+        }
+
         // Inject `onLoopExit` on exceptional transitions from within the loop body to outside exception handlers.
         exceptionExitSites[nonPhonyIndex]?.let { loopIds ->
             // At handler entry, the thrown exception object is on the stack.
@@ -120,6 +131,9 @@ internal class LoopTransformer(
             val exceptionLocal = newLocal(THROWABLE_TYPE)
             storeLocal(exceptionLocal)
             for (loopId in loopIds) {
+                val isIrreducible = loopInfo.getLoopInfo(loopId)?.isIrreducible ?: true
+                if (isIrreducible && !shouldTrackIrreducibleLoops) continue
+
                 val isReachableFromOutsideLoop = opcodesReachableFromOutsideLoops[nonPhonyIndex]
                     ?.contains(loopId) ?: true
                 // STACK: <empty>
@@ -156,15 +170,17 @@ private fun BasicBlockControlFlowGraph.computeInstructionIndicesRemapping(): Int
 private fun BasicBlockControlFlowGraph.computeIterationEntrySites(
     insnIndexRemapping: IntArray,
     loopInfo: MethodLoopsInformation,
-): Map<InstructionIndex, Int> {
+): Map<InstructionIndex, LoopId> {
     if (!loopInfo.hasLoops()) return emptyMap()
     val cfg = this
-    val result = mutableMapOf<InstructionIndex, Int>()
+    val result = mutableMapOf<InstructionIndex, LoopId>()
     for (loop in loopInfo.loops) {
-        val idx = cfg.firstOpcodeIndexOf(loop.header) ?: continue
-        // If multiple loops share the same header opcode index (rare),
-        // prefer the inner loop by letting the later put override only if absent.
-        result.putIfAbsent(insnIndexRemapping[idx], loop.id)
+        for (header in loop.headers) {
+            val idx = cfg.firstOpcodeIndexOf(header) ?: continue
+            // If multiple loops share the same header opcode index (rare),
+            // prefer the inner loop by letting the later put override only if absent.
+            result.putIfAbsent(insnIndexRemapping[idx], loop.id)
+        }
     }
     return result
 }

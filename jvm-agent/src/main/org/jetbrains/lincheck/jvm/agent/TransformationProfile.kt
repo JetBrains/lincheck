@@ -49,6 +49,7 @@ class TransformationConfiguration(
     var trackParkingOperations: Boolean = false,
 
     var trackLoops: Boolean = false,
+    var trackIrreducibleLoops: Boolean = false,
 
     var interceptIdentityHashCodes: Boolean = false,
 
@@ -452,6 +453,8 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
 
             trackCoroutineSuspensions = true
             interceptCoroutineDelays = true
+            trackLoops = true
+            trackIrreducibleLoops = true
         }
     }
 }

@@ -153,8 +153,10 @@ class BasicBlockControlFlowGraph(
 
     /**
      * Computes loop-related information for this method.
+     *
+     * @param computeIrreducibleLoops determines whether to compute loop information for irreducible loops.
      */
-    fun computeLoopInformation(): MethodLoopsInformation {
+    fun computeLoopInformation(computeIrreducibleLoops: Boolean = false): MethodLoopsInformation {
         if (loopInfo == null) {
             // compute loop information
             dominators = computeDominators()
@@ -162,20 +164,18 @@ class BasicBlockControlFlowGraph(
 
             if (isReducible()) {
                 isReducible = true
-                // CFG is reducible, so we can compute actual loops
-                loopInfo = computeLoopsFromDominators().also { info ->
-                    info.validateBasicBlocksLoopsMapping()
-                    info.loops.forEach {
-                        it.validateLoopEdgesInvariants()
-                    }
-                }
             } else {
                 isReducible = false
-                // CFG is irreducible, our loop calculation algorithm will not work with it
-                // so we report that fact and don't compute any loop information
-                Logger.warn { "Irreducible CFG detected, loop information will not be computed for $className::$method" }
+                // Report irreducible CFG
+                Logger.warn { "Irreducible CFG detected for $className::$method" }
                 Logger.debug { "CFG:\n${toFormattedString()}" }
-                loopInfo = MethodLoopsInformation()
+            }
+
+            loopInfo = computeLoopsFromDominators(computeIrreducibleLoops).also { info ->
+                info.validateBasicBlocksLoopsMapping()
+                info.loops.forEach {
+                    it.validateLoopEdgesInvariants()
+                }
             }
         }
         return loopInfo!!
@@ -232,13 +232,11 @@ class BasicBlockControlFlowGraph(
             val lastInstruction = instructions.get(last)
             when (e.label) {
                 is EdgeLabel.FallThrough -> {
-                    require(isRecognizedIfJumpOpcode(lastInstruction.opcode)) {
-                        """
-                            Normal loop exit fall-through edge must be produced by an IF* opcode at the end of the source block
-                            at $className::$method, source=B${e.source}, target=B${e.target}, opcode=${lastInstruction.opcode}
-                        """
-                        .trimIndent()
-                    }
+                    // Fall-through loop exits can be produced either by an IF* conditional branch
+                    // (where the jump target stays inside the loop and the fall-through exits),
+                    // or by a block that simply falls through to the next block which happens
+                    // to be outside the loop, e.g., when the block ends with a non-branching instruction
+                    // and the subsequent block is not part of the loop body.
                 }
                 is EdgeLabel.Jump -> {
                     require(isRecognizedJumpOpcode(lastInstruction.opcode)) {

@@ -37,7 +37,7 @@ class HangingDetectionThresholdTest {
             .minimizeFailedScenario(false)
             // we check that no actor can hit the same code location more than twice;
             // because `operation` has only two calls to `get`, it should be true
-            .hangingDetectionThreshold(2)
+            .loopBound(2)
             .addCustomScenario {
                 parallel {
                     thread {

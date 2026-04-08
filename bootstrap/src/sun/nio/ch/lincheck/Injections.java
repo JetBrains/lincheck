@@ -996,6 +996,15 @@ public class Injections {
     }
 
     /**
+     * Called at the beginning of every loop iteration for irreducible loops (loops with multiple entries)
+     */
+    public static void onIrreducibleLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId) {
+        EventTracker tracker = getEventTracker(descriptor);
+        if (tracker == null || descriptor == null) return;
+        tracker.onIrreducibleLoopIteration(descriptor, codeLocation, loopId);
+    }
+
+    /**
      * Called on a normal (non-exceptional) exit from a loop body and
      * at an exception handler entry that is reachable from within a loop body and lies outside it.
      *

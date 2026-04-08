@@ -1,139 +1,50 @@
 = The execution has hung =
-| ------------------------------------------ |
-|    Thread 1     |         Thread 2         |
-| ------------------------------------------ |
-| trigger(): void | causesSpinLock(): <hung> |
-| ------------------------------------------ |
+| -------------------------------------------- |
+|     Thread 1      |         Thread 2         |
+| -------------------------------------------- |
+| trigger(): <hung> | causesSpinLock(): <hung> |
+| -------------------------------------------- |
 
 
 The following interleaving leads to the error:
-| ---------------------------------------------------------------------------------------------------- |
-|            Thread 1            |                              Thread 2                               |
-| ---------------------------------------------------------------------------------------------------- |
-| trigger()                      |                                                                     |
-|   counter.incrementAndGet(): 1 |                                                                     |
-|   switch                       |                                                                     |
-|                                |   causesSpinLock(): <hung>                                          |
-|                                |     counter.get(): 1                                                |
-|                                |     /* The following events repeat infinitely: */                   |
-|                                | ┌╶> deadSpinCycleRecursive(true)                                    |
-|                                | |     flag.set(true)                                                |
-|                                | |     getSharedVariable(): false                                    |
-|                                | |     someUselessSharedState.compareAndSet(false, true): true       |
-|                                | |     getSharedVariable(): true                                     |
-|                                | |     someUselessSharedState.compareAndSet(true, false): true       |
-|                                | |     getSharedVariable(): false                                    |
-|                                | |     someUselessSharedState.compareAndSet(false, true): true       |
-|                                | |     getSharedVariable(): true                                     |
-|                                | |     someUselessSharedState.compareAndSet(true, false): true       |
-|                                | |     deadSpinCycleRecursive(false)                                 |
-|                                | |       flag.set(false)                                             |
-|                                | |       getSharedVariable(): false                                  |
-|                                | |       someUselessSharedState.compareAndSet(false, true): true     |
-|                                | |       getSharedVariable(): true                                   |
-|                                | |       someUselessSharedState.compareAndSet(true, false): true     |
-|                                | |       getSharedVariable(): false                                  |
-|                                | |       someUselessSharedState.compareAndSet(false, true): true     |
-|                                | |       getSharedVariable(): true                                   |
-|                                | |       someUselessSharedState.compareAndSet(true, false): true     |
-|                                | └╶╶╶╶╶╶ switch (reason: active lock detected)                       |
-|   counter.decrementAndGet(): 0 |                                                                     |
-|   result: void                 |                                                                     |
-|                                |         /* The following events repeat infinitely: */               |
-|                                |     ┌╶> deadSpinCycleRecursive(true)                                |
-|                                |     |     flag.set(true)                                            |
-|                                |     |     getSharedVariable(): false                                |
-|                                |     |     someUselessSharedState.compareAndSet(false, true): true   |
-|                                |     |     getSharedVariable(): true                                 |
-|                                |     |     someUselessSharedState.compareAndSet(true, false): true   |
-|                                |     |     getSharedVariable(): false                                |
-|                                |     |     someUselessSharedState.compareAndSet(false, true): true   |
-|                                |     |     getSharedVariable(): true                                 |
-|                                |     |     someUselessSharedState.compareAndSet(true, false): true   |
-|                                |     |     deadSpinCycleRecursive(false)                             |
-|                                |     |       flag.set(false)                                         |
-|                                |     |       getSharedVariable(): false                              |
-|                                |     |       someUselessSharedState.compareAndSet(false, true): true |
-|                                |     |       getSharedVariable(): true                               |
-|                                |     |       someUselessSharedState.compareAndSet(true, false): true |
-|                                |     |       getSharedVariable(): false                              |
-|                                |     |       someUselessSharedState.compareAndSet(false, true): true |
-|                                |     |       getSharedVariable(): true                               |
-|                                |     |       someUselessSharedState.compareAndSet(true, false): true |
-|                                |     └╶╶╶╶╶╶ switch (reason: active lock detected)                   |
-| ---------------------------------------------------------------------------------------------------- |
-All unfinished threads are in deadlock
+| --------------------------------------------------------- |
+|            Thread 1            |         Thread 2         |
+| --------------------------------------------------------- |
+| trigger(): <hung>              |                          |
+|   counter.incrementAndGet(): 1 |                          |
+|   switch                       |                          |
+|                                | causesSpinLock(): <hung> |
+| --------------------------------------------------------- |
+All unfinished threads are in livelock due to non-terminating loops
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                Thread 1                                                |                                                                          Thread 2                                                                           |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| trigger()                                                                                              |                                                                                                                                                             |
-|   counter.incrementAndGet(): 1 at RecursiveSpinWithParamsLockTest.trigger(RecursiveSpinLockTest.kt:85) |                                                                                                                                                             |
-|   switch                                                                                               |                                                                                                                                                             |
-|                                                                                                        |   causesSpinLock(): <hung>                                                                                                                                  |
-|                                                                                                        |     counter.get(): 1 at RecursiveSpinWithParamsLockTest.causesSpinLock(RecursiveSpinLockTest.kt:91)                                                         |
-|                                                                                                        |     /* The following events repeat infinitely: */                                                                                                           |
-|                                                                                                        | ┌╶> deadSpinCycleRecursive(true) at RecursiveSpinWithParamsLockTest.causesSpinLock(RecursiveSpinLockTest.kt:92)                                             |
-|                                                                                                        | |     flag.set(true) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:97)                                                 |
-|                                                                                                        | |     getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                     |
-|                                                                                                        | |       someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                              |
-|                                                                                                        | |     someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)       |
-|                                                                                                        | |     getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                      |
-|                                                                                                        | |       someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                               |
-|                                                                                                        | |     someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)       |
-|                                                                                                        | |     getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                     |
-|                                                                                                        | |       someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                              |
-|                                                                                                        | |     someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)       |
-|                                                                                                        | |     getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                      |
-|                                                                                                        | |       someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                               |
-|                                                                                                        | |     someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)       |
-|                                                                                                        | |     deadSpinCycleRecursive(false) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:102)                                 |
-|                                                                                                        | |       flag.set(false) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:97)                                              |
-|                                                                                                        | |       getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                   |
-|                                                                                                        | |         someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                            |
-|                                                                                                        | |       someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)     |
-|                                                                                                        | |       getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                    |
-|                                                                                                        | |         someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                             |
-|                                                                                                        | |       someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)     |
-|                                                                                                        | |       getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                   |
-|                                                                                                        | |         someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                            |
-|                                                                                                        | |       someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)     |
-|                                                                                                        | |       getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                    |
-|                                                                                                        | |         someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                             |
-|                                                                                                        | |       someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)     |
-|                                                                                                        | └╶╶╶╶╶╶ switch (reason: active lock detected)                                                                                                               |
-|   counter.decrementAndGet(): 0 at RecursiveSpinWithParamsLockTest.trigger(RecursiveSpinLockTest.kt:86) |                                                                                                                                                             |
-|   result: void                                                                                         |                                                                                                                                                             |
-|                                                                                                        |         /* The following events repeat infinitely: */                                                                                                       |
-|                                                                                                        |     ┌╶> deadSpinCycleRecursive(true) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:102)                                |
-|                                                                                                        |     |     flag.set(true) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:97)                                             |
-|                                                                                                        |     |     getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                 |
-|                                                                                                        |     |       someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                          |
-|                                                                                                        |     |     someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)   |
-|                                                                                                        |     |     getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                  |
-|                                                                                                        |     |       someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                           |
-|                                                                                                        |     |     someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)   |
-|                                                                                                        |     |     getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                 |
-|                                                                                                        |     |       someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                          |
-|                                                                                                        |     |     someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)   |
-|                                                                                                        |     |     getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                  |
-|                                                                                                        |     |       someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                           |
-|                                                                                                        |     |     someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100)   |
-|                                                                                                        |     |     deadSpinCycleRecursive(false) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:102)                             |
-|                                                                                                        |     |       flag.set(false) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:97)                                          |
-|                                                                                                        |     |       getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                               |
-|                                                                                                        |     |         someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                        |
-|                                                                                                        |     |       someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100) |
-|                                                                                                        |     |       getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                |
-|                                                                                                        |     |         someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                         |
-|                                                                                                        |     |       someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100) |
-|                                                                                                        |     |       getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                               |
-|                                                                                                        |     |         someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                        |
-|                                                                                                        |     |       someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100) |
-|                                                                                                        |     |       getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                |
-|                                                                                                        |     |         someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                         |
-|                                                                                                        |     |       someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100) |
-|                                                                                                        |     └╶╶╶╶╶╶ switch (reason: active lock detected)                                                                                                           |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-All unfinished threads are in deadlock
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                Thread 1                                                |                                                                        Thread 2                                                                         |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| trigger(): <hung>                                                                                      |                                                                                                                                                         |
+|   counter.incrementAndGet(): 1 at RecursiveSpinWithParamsLockTest.trigger(RecursiveSpinLockTest.kt:85) |                                                                                                                                                         |
+|   switch                                                                                               |                                                                                                                                                         |
+|                                                                                                        | causesSpinLock(): <hung>                                                                                                                                |
+|                                                                                                        |   counter.get(): 1 at RecursiveSpinWithParamsLockTest.causesSpinLock(RecursiveSpinLockTest.kt:91)                                                       |
+|                                                                                                        |   deadSpinCycleRecursive(true) at RecursiveSpinWithParamsLockTest.causesSpinLock(RecursiveSpinLockTest.kt:92) [recursive call x 21 times]               |
+|                                                                                                        |     flag.set(true) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:97)                                               |
+|                                                                                                        |     loop(5 iterations) at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:98)                                           |
+|                                                                                                        |       <iteration 1> at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:98)                                              |
+|                                                                                                        |         getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                               |
+|                                                                                                        |           someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                        |
+|                                                                                                        |         someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100) |
+|                                                                                                        |       <iteration 2> at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:98)                                              |
+|                                                                                                        |         getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                |
+|                                                                                                        |           someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                         |
+|                                                                                                        |         someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100) |
+|                                                                                                        |       <iteration 3> at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:98)                                              |
+|                                                                                                        |         getSharedVariable(): false at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                               |
+|                                                                                                        |           someUselessSharedState.get(): false at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                        |
+|                                                                                                        |         someUselessSharedState.compareAndSet(false, true): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100) |
+|                                                                                                        |       <iteration 4> at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:98)                                              |
+|                                                                                                        |         getSharedVariable(): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:99)                                |
+|                                                                                                        |           someUselessSharedState.get(): true at RecursiveSpinWithParamsLockTest.getSharedVariable(RecursiveSpinLockTest.kt:105)                         |
+|                                                                                                        |         someUselessSharedState.compareAndSet(true, false): true at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:100) |
+|                                                                                                        |       <iteration 5> at RecursiveSpinWithParamsLockTest.deadSpinCycleRecursive(RecursiveSpinLockTest.kt:98)                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in livelock due to non-terminating loops

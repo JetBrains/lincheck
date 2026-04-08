@@ -779,6 +779,10 @@ class TraceCollectingEventTracker(
         threadData.addLoopIteration(tracePoint)
     }
 
+    override fun onIrreducibleLoopIteration(descriptor: ThreadDescriptor?, codeLocation: Int, loopId: Int) {
+        Logger.error { "Trace Recorder mode doesn't support irreducible cfg instrumentation" }
+    }
+
     override fun afterLoopExit(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,

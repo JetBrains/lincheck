@@ -61,7 +61,7 @@ class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(TimeoutFailu
     }
 }
 
-class LiveLockIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedDeadlockFailure::class) {
+class LiveLockIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedLivelockFailure::class) {
     private var counter = 0
     private val lock1 = AtomicBoolean(false)
     private val lock2 = AtomicBoolean(false)

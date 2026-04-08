@@ -38,6 +38,13 @@ internal class ManagedDeadlockFailure(
     analysisProfile: AnalysisProfile
 ) : LincheckFailure(scenario,results, trace, analysisProfile)
 
+internal class ManagedLivelockFailure(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    trace: Trace? = null,
+    analysisProfile: AnalysisProfile
+) : LincheckFailure(scenario,results, trace, analysisProfile)
+
 internal class TimeoutFailure(
     scenario: ExecutionScenario,
     results: ExecutionResult,
@@ -73,6 +80,7 @@ internal class ObstructionFreedomViolationFailure(
 
 internal fun InvocationResult.toLincheckFailure(scenario: ExecutionScenario, trace: Trace? = null, analysisProfile: AnalysisProfile) = when (this) {
     is ManagedDeadlockInvocationResult -> ManagedDeadlockFailure(scenario, results, trace, analysisProfile)
+    is ManagedLivelockInvocationResult -> ManagedLivelockFailure(scenario, results, trace, analysisProfile)
     is RunnerTimeoutInvocationResult -> TimeoutFailure(scenario, results, threadDump, analysisProfile)
     is UnexpectedExceptionInvocationResult -> UnexpectedExceptionFailure(scenario, results, exception, trace, analysisProfile)
     is ValidationFailureInvocationResult -> ValidationFailure(scenario, results, exception, trace, analysisProfile)

@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck.trace
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.lincheck.util.*
-import kotlin.math.max
 
 internal typealias SingleThreadedTable<T> = Column<T>
 internal typealias MultiThreadedTable<T> = List<Column<T>>
@@ -120,8 +119,8 @@ private fun MultiThreadedTable<TraceNode>.splitIntoSections(): List<MultiThreade
         check(parts.count { it == ExecutionPart.INIT } <= 1) {
             "Expected at most one INIT section delimiter"
         }
-        check(parts.count { it == ExecutionPart.PARALLEL } == 1) {
-            "Expected exactly one PARALLEL section delimiter"
+        check(parts.count { it == ExecutionPart.PARALLEL } <= 1) {
+            "Expected at most one PARALLEL section delimiter"
         }
         check(parts.count { it == ExecutionPart.POST } <= 1) {
             "Expected at most one POST section delimiter"
@@ -153,18 +152,13 @@ private fun MultiThreadedTable<TraceNode>.splitIntoSections(): List<MultiThreade
  * Maps all trace nodes of the [MultiThreadedTable] to their string representation.
  *
  * - Unfolds all nested trace nodes where needed.
- * - Prepends spin cycle visualization where needed.
  */
 private fun MultiThreadedTable<TraceNode>.toTraceLinesTable(verbose: Boolean = true): MultiThreadedTable<TraceLine> {
     return this.map { nodes ->
         val filter = if (verbose) VerboseTraceFilter() else ShortenTraceFilter()
         val columnPrinter = TraceColumnPrinter(filter, verbose)
         val nodes = nodes.filterNot { filter.shouldFilter(it.tracePoint) }
-        // first iterate through all top-level nodes to calculate additional padding (if required)
-        nodes.forEach { node ->
-            columnPrinter.updateAdditionalPaddingWidth(node)
-        }
-        // then iterate through all top-level nodes again to print them and their children recursively
+        // iterate through all top-level nodes to print them and their children recursively
         nodes.forEach { node ->
             columnPrinter.appendTraceNode(node)
         }
@@ -189,32 +183,27 @@ private class TraceColumnPrinter(
     private val _lines: MutableList<TraceLine> = mutableListOf()
     val lines: List<TraceLine> get() = _lines
 
-    private var callStack = mutableListOf<CallNode>()
+    private var callStack = mutableListOf<TraceNode>()
     private val callDepth get() = callStack.size
-
-    private var spinCycleState: SpinCycleState? = null
-    private var spinCycleDepth: Int = -1
 
     private var additionalPaddingWidth: Int = 0
 
     private val callDepthMultiplier: Int
         get() = CALL_DEPTH_INDENT_MULTIPLIER
 
-    private val spinCycleMinWidth: Int
-        get() = SPIN_CYCLE_INDENT_MIN_WIDTH
-
     fun appendTraceNode(node: TraceNode?) {
         if (node == null) {
             _lines.add(TraceLine.EMPTY)
             return
         }
-        updateSpinCycleState(node)
 
-        val nodeLine = getPrefix() + node.toStringImpl(withLocation = verbose)
+        val nodeLine = getPrefix() + node.toString(withLocation = verbose)
+
         val traceLine = TraceLine(node.eventNumber, node.iThread, nodeLine)
         _lines.add(traceLine)
 
-        if (node is CallNode && (filter?.shouldUnfold(node) ?: true)) {
+        val isUnfoldableNode = node is CallNode || node is LoopNode || node is LoopIterationNode || node is RecursionNode
+        if (isUnfoldableNode && (filter?.shouldUnfold(node) ?: true)) {
             pushCallStack(node)
             try {
                 val children = filter?.filterChildren(node) ?: node.children
@@ -227,7 +216,7 @@ private class TraceColumnPrinter(
         }
     }
 
-    private fun pushCallStack(node: CallNode) {
+    private fun pushCallStack(node: TraceNode) {
         callStack.add(node)
     }
 
@@ -237,98 +226,18 @@ private class TraceColumnPrinter(
 
     private fun getPrefix(): String {
         val paddingWidth = callDepth * callDepthMultiplier + additionalPaddingWidth
-
-        val spinCycleState = spinCycleState // redeclare local val for smart casting
-        if (spinCycleState != null && spinCycleState != SpinCycleState.HEADER) {
-            check(spinCycleDepth >= 0)
-            val spinIndentWidth = ((callDepth - spinCycleDepth).coerceAtLeast(0) * callDepthMultiplier)
-            val spinIndent = spinCycleState.indent.repeat(spinIndentWidth)
-            val spacePaddingWidth = paddingWidth - (spinCycleState.prefix.length + 1) - spinIndent.length
-            val spacePadding = " ".repeat(spacePaddingWidth.coerceAtLeast(0))
-
-            // depending on spin state, returns one of these (assuming 1 call depth pad on each side):
-            // - "  ┌╶>   "
-            // - "  |     "
-            // - "  └╶╶╶╶ "
-            return spacePadding + spinCycleState.prefix + spinIndent + " "
-        }
-
         return " ".repeat(paddingWidth)
-    }
-
-    fun updateAdditionalPaddingWidth(node: TraceNode) {
-        check(node.parent == null) {
-            "Additional padding width should be calculated only for root nodes"
-        }
-
-        val spinCycleLookupDepth = spinCycleMinWidth / callDepthMultiplier
-        val spinStartLevel = node.findLevelOf(spinCycleLookupDepth) {
-            it.tracePoint.isSpinCycleStartTracePoint
-        }
-        if (spinStartLevel >= 0) {
-            additionalPaddingWidth = max(
-                additionalPaddingWidth,
-                (SPIN_CYCLE_INDENT_MIN_WIDTH - (spinStartLevel * callDepthMultiplier))
-            )
-        }
-    }
-
-    private fun updateSpinCycleState(node: TraceNode) {
-        when {
-            node is EventNode &&
-            node.tracePoint.isSpinCycleStartTracePoint -> {
-                check(spinCycleState == null || spinCycleState == SpinCycleState.END)
-                spinCycleState = SpinCycleState.HEADER
-                spinCycleDepth = callDepth
-            }
-            spinCycleState == SpinCycleState.HEADER -> {
-                spinCycleState = SpinCycleState.START
-            }
-            spinCycleState == SpinCycleState.START && !node.tracePoint.isSpinCycleEndTracePoint -> {
-                spinCycleState = SpinCycleState.INSIDE
-            }
-            node is EventNode &&
-            node.tracePoint.isSpinCycleEndTracePoint &&
-            (spinCycleState == SpinCycleState.START || spinCycleState == SpinCycleState.INSIDE) -> {
-                spinCycleState = SpinCycleState.END
-            }
-            spinCycleState == SpinCycleState.END -> {
-                spinCycleState = null
-                spinCycleDepth = -1
-            }
-        }
-    }
-
-    private enum class SpinCycleState { HEADER, START, INSIDE, END }
-
-    private val SpinCycleState.prefix: String get() = when (this) {
-        SpinCycleState.START  -> "┌╶>"
-        SpinCycleState.INSIDE -> "|  "
-        SpinCycleState.END    -> "└╶╶"
-        else                  -> ""
-    }
-
-    private val SpinCycleState.indent: String get() = when (this) {
-        SpinCycleState.START  -> " "
-        SpinCycleState.INSIDE -> " "
-        SpinCycleState.END    -> "╶"
-        else                  -> ""
     }
 }
 
 private const val CALL_DEPTH_INDENT_MULTIPLIER : Int = 2  // indent on each call depth level
-private const val SPIN_CYCLE_INDENT_MIN_WIDTH  : Int = 4  // min. indent of a trace point related to spin cycle
-
-private val TracePoint.isSpinCycleStartTracePoint: Boolean get() =
-    this is SpinCycleStartTracePoint
-
-private val TracePoint.isSpinCycleEndTracePoint: Boolean get() =
-    this is ObstructionFreedomViolationExecutionAbortTracePoint ||
-    this is SwitchEventTracePoint
 
 internal fun traceToCollapsedTree(trace: Trace, analysisProfile: AnalysisProfile): MultiThreadedTable<TraceNode> {
     // Turn trace into a tree which is List of sections, where a section is a list of root nodes (actors).
-    return traceToTree(trace.threadNames.size, trace)
+    var traceTree = traceToTree(trace.threadNames.size, trace)
+    traceTree = foldEquivalentLoopIterations(traceTree)
+    traceTree = foldRecursiveCalls(traceTree)
+    return traceTree
         .map { it
             .compressTrace()
             .collapseLibraries(analysisProfile)

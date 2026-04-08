@@ -43,6 +43,7 @@ typealias LoopId = Int
  *
  * @property headers All basic blocks that serve as entries into this looping region.
  *   Contains a single element for reducible loops; may contain multiple elements for irreducible loops.
+ *   For reducible loops, `headers == [header]`.
  *
  * @property body The set of basic blocks that form the loop body (the strongly connected component of the graph).
  *   Every path that performs one or more iterations stays within this set until it
@@ -90,6 +91,9 @@ typealias LoopId = Int
 
      val isReducible: Boolean
          get() = headers.size == 1
+
+    val isIrreducible: Boolean
+        get() = !isReducible
 
      private fun validate() {
          require(headers.isNotEmpty()) {
@@ -209,24 +213,34 @@ internal fun BasicBlockControlFlowGraph.computeBackEdges(): Set<Edge> {
 }
 
 /**
- * This algorithm cannot detect loops in irreducible graphs. It only produces reducible loops.
- * Thus, expects reducible CFG.
- *
  * Compute loops using dominators and back-edge detection.
- * A back edge is an edge u -> h (non-exception) where h dominates u.
- * For each header h, the loop body is the union of natural loops of its back edges.
+ * Handles both reducible and irreducible CFGs.
  *
- * Note: "natural loops" are loops calculated via the algorithm below.
- * If there is more than one back edge to the same header, the body of the loop is the union of the nodes computed for each back edge.
- * Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
+ * **Reducible loops** are detected via back edges: an edge u -> h where h dominates u.
+ *   For each header h, the loop body is the union of natural loops of its back edges
+ *   (computed by reverse DFS from each back-edge source to h).
+ *   If there is more than one back edge to the same header,
+ *   the body of the loop is the union of the nodes computed for each back edge.
+ *   Since loops can nest, a header for one loop can be in the body of (but not the header of) another loop.
  *
- * @return A list of detected loops, each represented by a [LoopInformation] object.
- *   The list is empty if no loops were detected.
- *   The loops are sorted by the header block index.
+ * **Irreducible loops** (present when the CFG is irreducible) are detected by computing
+ *   strongly connected components (SCCs) in the residual graph obtained by removing
+ *   dominator-identified back edges. SCCs that are already fully covered by a reducible
+ *   loop body are skipped; the remaining cyclic SCCs become irreducible loops whose
+ *   headers are the SCC nodes reachable from outside the SCC.
+ *
+ * The returned loops are sorted so that outer loops receive smaller ids than their inner loops.
+ *
+ * @param computeIrreducibleLoops whether to detect irreducible loops in addition to reducible ones.
+ *   When `false`, only reducible (natural) loops are reported, even if the CFG is irreducible.
+ * @return A [MethodLoopsInformation] containing all detected loops (both reducible and irreducible),
+ *   each represented by a [LoopInformation] object.
+ *   The result is empty if no loops were detected.
  */
-internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoopsInformation {
+internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(
+    computeIrreducibleLoops: Boolean,
+): MethodLoopsInformation {
     require(isReducible != null) { "CFG reducibility was not checked before computing the loops" }
-    require(isReducible!!) { "Cannot compute loops on irreducible CFG" }
 
     val dominators = dominators
     val backEdges = backEdges
@@ -240,43 +254,49 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
     // Identify back edges grouped by header h
     if (backEdges.isEmpty()) return MethodLoopsInformation()
 
-    // For each header, compute loop body as a union of natural loops for each back edge to that header.
+    // For each header, compute the loop body as a union of natural loops for each back edge to that header.
     // Also calculate normal and exceptional exits
-    val backEdgesByHeader = backEdges.groupBy { it.target }
+    val backEdgesByHeader = backEdges.groupBy({ it.target }, { it }).mapValues { it.value.toSet() }
+    val loopBodiesWithHeaders = mutableListOf<Pair<Set<BasicBlockIndex>, Set<BasicBlockIndex>>>()
     val loops = mutableListOf<LoopInformation>()
     var nextLoopId = 0
-    val loopBodiesWithHeader = mutableListOf<Pair<BasicBlockIndex, Set<BasicBlockIndex>>>()
-    for ((h, adjacentBackEdges) in backEdgesByHeader) {
-        val body = mutableSetOf<BasicBlockIndex>()
-        body.add(h)
-        // Start from each back edge source; perform reverse DFS over normal predecessors until reaching h
-        for (e in adjacentBackEdges) {
-            val u = e.source
-            val stack = ArrayDeque<BasicBlockIndex>()
-            // Natural loop includes both u and h initially
-            if (body.add(u)) stack.add(u)
-            while (stack.isNotEmpty()) {
-                val x = stack.removeLast()
-                for (p in allPredecessors.neighbours(x)) {
-                    if (body.add(p)) stack.add(p)
-                }
-            }
-        }
-        loopBodiesWithHeader.add(h to body.toSet())
+
+    loopBodiesWithHeaders += computeReducibleLoopBodies(backEdgesByHeader).toMutableList()
+    if (computeIrreducibleLoops && isReducible == false) {
+        loopBodiesWithHeaders += computeIrreducibleLoopBodies(backEdges, loopBodiesWithHeaders)
     }
 
     // Sort loop bodies by containment and header values, so that for any two loops a and b we could say that
     // if b is an inner loop of a, then id(a) < id(b), so "outer" loops have smaller ids than "inner" loops
-    loopBodiesWithHeader.sortWith { a, b ->
+    loopBodiesWithHeaders.sortWith { a, b ->
         val aBody = a.second
         val bBody = b.second
         // the "outer" loops will come before their "inner" loops
         if (aBody.size >= bBody.size && aBody.containsAll(bBody)) -1
         else if (aBody.size < bBody.size && bBody.containsAll(aBody)) 1
-        else a.first.compareTo(b.first)
+        else a.first.min().compareTo(b.first.min())
     }
 
-    for ((h, body) in loopBodiesWithHeader) {
+    for ((headers, body) in loopBodiesWithHeaders) {
+        val header = headers.min()
+
+        // Collect back edges for this loop.
+        val loopBackEdges = if (headers.size == 1 && isReducible == true) {
+            // Reducible loop case:
+            // back edges are already grouped by header, so we can just take the set for the header.
+            backEdgesByHeader[header]!!.toSet()
+        } else {
+            // Irreducible loop case:
+            // collect edges targeting any of its headers from within the body.
+            buildSet {
+                for (e in normalEdges) {
+                    if (e.source in body && e.target in headers) {
+                        add(e)
+                    }
+                }
+            }
+        }
+
         // Normal exits: edges from body to outside, non-exception
         val normalExits = buildSet {
             for (e in normalEdges) {
@@ -297,10 +317,10 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
 
         loops += LoopInformation(
             id = nextLoopId++,
-            header = h,
-            headers = setOf(h),
+            header = header,
+            headers = headers,
             body = body,
-            backEdges = backEdgesByHeader[h]!!.toSet(),
+            backEdges = loopBackEdges,
             normalExits = normalExits,
             exceptionalExitHandlers = exceptionalExitHandlers,
             exclusiveExits = exclusiveExits
@@ -315,6 +335,173 @@ internal fun BasicBlockControlFlowGraph.computeLoopsFromDominators(): MethodLoop
         }
     }
     return MethodLoopsInformation(loops = loops, loopsByBlock = loopsByBlock)
+}
+
+private typealias BackEdgesByHeader = Map<BasicBlockIndex, Set<Edge>>
+private typealias LoopBodiesWithHeaders = List<Pair<Set<BasicBlockIndex>, Set<BasicBlockIndex>>>
+
+/**
+ * Compute reducible (natural) loop bodies from back edges grouped by header.
+ *
+ * For each header h, the natural loop body is computed by performing a reverse DFS
+ * from each back-edge source towards h over normal predecessor edges.
+ * When multiple back edges share the same header, a union of their natural loops is taken.
+ *
+ * Each resulting loop has exactly one header.
+ *
+ * @param backEdgesByHeader back edges grouped by their header (target) block.
+ * @return list of pairs (headers, body) for each reducible loop,
+ *   where headers is a singleton set containing the loop header.
+ */
+private fun BasicBlockControlFlowGraph.computeReducibleLoopBodies(
+    backEdgesByHeader: BackEdgesByHeader,
+): LoopBodiesWithHeaders {
+    val result = mutableListOf<Pair<Set<BasicBlockIndex>, Set<BasicBlockIndex>>>()
+    for ((h, adjacentBackEdges) in backEdgesByHeader) {
+        val body = mutableSetOf<BasicBlockIndex>()
+        body.add(h)
+        // Start from each back edge source; perform reverse DFS over normal predecessors until reaching h
+        for (e in adjacentBackEdges) {
+            val u = e.source
+            val stack = ArrayDeque<BasicBlockIndex>()
+            // Natural loop includes both u and h initially
+            if (body.add(u)) stack.add(u)
+            while (stack.isNotEmpty()) {
+                val x = stack.removeLast()
+                for (p in allPredecessors.neighbours(x)) {
+                    if (body.add(p)) stack.add(p)
+                }
+            }
+        }
+        result.add(setOf(h) to body.toSet())
+    }
+    return result
+}
+
+/**
+ * Compute irreducible loop bodies by finding strongly connected components (SCCs)
+ * in the residual graph obtained by removing dominator-identified back edges.
+ *
+ * SCCs that are fully contained within an already-detected reducible loop body are skipped,
+ * since they are already accounted for. For each remaining cyclic SCC, the headers are
+ * determined as the SCC nodes reachable from outside the SCC
+ * (i.e., having at least one predecessor outside the SCC).
+ *
+ * Irreducible loops typically have multiple headers.
+ *
+ * @param backEdges the set of all dominator-identified back edges in the CFG.
+ * @param reducibleLoopBodies already computed reducible loop bodies, used to skip covered SCCs.
+ * @return list of pairs (headers, body) for each irreducible loop.
+ */
+private fun BasicBlockControlFlowGraph.computeIrreducibleLoopBodies(
+    backEdges: Set<Edge>,
+    reducibleLoopBodies: LoopBodiesWithHeaders,
+): LoopBodiesWithHeaders {
+    val n = basicBlocks.size
+    // Build a residual graph by removing dominator-identified back edges
+    val residualSuccessors: (BasicBlockIndex) -> Iterable<BasicBlockIndex> = { v ->
+        allSuccessors.neighbours(v).filter { u ->
+            val edge = normalEdges.find { it.source == v && it.target == u }
+            edge == null || edge !in backEdges
+        }
+    }
+    val allNodes = (0 until n).toSet()
+    val sccs = computeCyclicStronglyConnectedComponents(allNodes, residualSuccessors)
+    val result = mutableListOf<Pair<Set<BasicBlockIndex>, Set<BasicBlockIndex>>>()
+    for (scc in sccs) {
+        // Skip SCCs that are fully contained in an already-found reducible loop body
+        val isAlreadyCovered = reducibleLoopBodies.any { (_, body) -> body.containsAll(scc) }
+        if (isAlreadyCovered) continue
+
+        // Headers = SCC nodes reachable from outside the SCC
+        val headers = scc.filterTo(mutableSetOf()) { node ->
+            allPredecessors.neighbours(node).any { pred -> pred !in scc }
+        }
+        if (headers.isEmpty()) {
+            // If no external entry, the entry block is a header
+            if (0 in scc) headers.add(0)
+            else headers.add(scc.min())
+        }
+
+        // The body is the full SCC
+        val body = scc.toSet()
+
+        result.add(headers to body)
+    }
+    return result
+}
+
+/**
+ * Compute cyclic strongly connected components (SCCs) of a directed control-flow graph
+ * using Tarjan's algorithm.
+ *
+ * Returns only cyclic SCCs: components of size > 1, or singletons with a self-loop.
+ * Acyclic singleton nodes are filtered out, since only cyclic components can represent loops.
+ *
+ * Nodes are visited in sorted order to produce deterministic results.
+ *
+ * @param nodes the set of graph nodes to consider.
+ * @param successors a function returning the successors of a given node;
+ *   successors outside [nodes] are ignored.
+ * @return a list of cyclic SCCs, each represented as a set of node indices.
+ */
+private fun computeCyclicStronglyConnectedComponents(
+    nodes: Set<BasicBlockIndex>,
+    successors: (BasicBlockIndex) -> Iterable<BasicBlockIndex>
+): List<Set<BasicBlockIndex>> {
+    var nextIndex = 0
+    val index = mutableMapOf<BasicBlockIndex, Int>()
+    val lowLink = mutableMapOf<BasicBlockIndex, Int>()
+    val stack = ArrayDeque<BasicBlockIndex>()
+    val onStack = mutableSetOf<BasicBlockIndex>()
+    val result = mutableListOf<Set<BasicBlockIndex>>()
+
+    fun strongConnect(v: BasicBlockIndex) {
+        index[v] = nextIndex
+        lowLink[v] = nextIndex
+        nextIndex++
+
+        stack.addLast(v)
+        onStack.add(v)
+
+        for (w in successors(v).filter { it in nodes }.sorted()) {
+            if (w !in index) {
+                strongConnect(w)
+                lowLink[v] = minOf(lowLink.getValue(v), lowLink.getValue(w))
+            } else if (w in onStack) {
+                lowLink[v] = minOf(lowLink.getValue(v), index.getValue(w))
+            }
+        }
+
+        if (lowLink.getValue(v) == index.getValue(v)) {
+            val component = mutableSetOf<BasicBlockIndex>()
+            while (true) {
+                val w = stack.removeLast()
+                onStack.remove(w)
+                component.add(w)
+                if (w == v) break
+            }
+
+            // Keep only cyclic SCCs:
+            // - size > 1, or
+            // - singleton with a self-loop
+            val isCyclic =
+                component.size > 1 ||
+                        successors(v).any { it == v }
+
+            if (isCyclic) {
+                result += component
+            }
+        }
+    }
+
+    for (v in nodes.sorted()) {
+        if (v !in index) {
+            strongConnect(v)
+        }
+    }
+
+    return result
 }
 
 /**

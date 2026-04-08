@@ -26,9 +26,14 @@ class CompletedInvocationResult(
 ) : InvocationResult()
 
 /**
- * Indicates that the invocation has run into deadlock or livelock found by [ManagedStrategy].
+ * Indicates that the invocation has run into deadlock found by [ManagedStrategy].
  */
 class ManagedDeadlockInvocationResult(val results: ExecutionResult) : InvocationResult()
+
+/**
+ * Indicates that the invocation has run into livelock found by [ManagedStrategy], used by the LoopDetection.
+ */
+class ManagedLivelockInvocationResult(val results: ExecutionResult) : InvocationResult()
 
 /**
  * The invocation was not completed after timeout and runner halted the execution.
@@ -69,12 +74,6 @@ class ObstructionFreedomViolationInvocationResult(
 class InconsistentInvocationResult(
     val inconsistency: Inconsistency
 ) : InvocationResult()
-
-
-/**
- * Indicates that spin-cycle has been found for the first time and replay of current interleaving is required.
- */
-data object SpinCycleFoundAndReplayRequired: InvocationResult()
 
 fun InvocationResult.isAbortedInvocation(): Boolean =
     when (this) {

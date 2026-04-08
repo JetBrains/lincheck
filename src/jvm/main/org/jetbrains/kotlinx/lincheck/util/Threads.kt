@@ -10,6 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck.util
 
+import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
+
 typealias ThreadId = Int
 typealias ThreadMap<T> = Map<ThreadId, T>
 typealias MutableThreadMap<T> = MutableMap<ThreadId, T>
@@ -25,3 +29,10 @@ fun <T> mutableThreadMapOf(): MutableThreadMap<T> =
 
 fun <T> mutableThreadMapOf(vararg pairs: Pair<ThreadId, T>): MutableThreadMap<T> =
     mutableMapOf(*pairs)
+
+internal fun TraceContext.getThreadRunMethodId(): Int =
+    this.createAndRegisterMethodDescriptor(
+        className = "java.lang.Thread",
+        methodName = "run",
+        methodType = Types.MethodType(Types.VOID_TYPE)
+    ).id

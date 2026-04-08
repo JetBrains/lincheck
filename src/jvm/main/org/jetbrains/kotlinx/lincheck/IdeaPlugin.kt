@@ -237,7 +237,7 @@ internal fun flattenedTraceGraphToCSV(nodes: SingleThreadedTable<TraceNode>, fil
             is EventNode -> {
                 val event = node.tracePoint
                 val eventId = event.eventId
-                val representation = event.toStringImpl(withLocation = false)
+                val representation = event.toString(withLocation = false, withValues = true)
                 val (location, locationId) = if (event is CodeLocationTracePoint) {
                     val ste = event.stackTraceElement
                     "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}" to event.codeLocation
@@ -270,12 +270,12 @@ internal fun flattenedTraceGraphToCSV(nodes: SingleThreadedTable<TraceNode>, fil
 
             is CallNode -> if (node.tracePoint.isRootCall) {
                 val beforeEventId = -1
-                val representation = node.tracePoint.toStringImpl(withLocation = false)
+                val representation = node.tracePoint.toString(withLocation = false, withValues = true)
                 val type = TracePointType.ACTOR
                 "${type.ordinal};${node.iThread};${node.callDepth()};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};null;-1;[];false"
             } else {
                 val beforeEventId = node.tracePoint.eventId
-                val representation = node.tracePoint.toStringImpl(withLocation = false)
+                val representation = node.tracePoint.toString(withLocation = false, withValues = true)
                 val ste = node.tracePoint.stackTraceElement
                 val location = "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}"
                 val type = TracePointType.REGULAR
@@ -334,6 +334,7 @@ private val LincheckFailure.type: String
         is UnexpectedExceptionFailure -> "UNEXPECTED_EXCEPTION"
         is ValidationFailure -> "VALIDATION_FAILURE"
         is ManagedDeadlockFailure, is TimeoutFailure -> "DEADLOCK"
+        is ManagedLivelockFailure -> "LIVELOCK"
     }
 
 /**

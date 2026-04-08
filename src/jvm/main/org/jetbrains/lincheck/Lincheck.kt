@@ -67,6 +67,10 @@ object Lincheck {
     ) {
         val options = ModelCheckingOptions()
             .analyzeStdLib(settings.analyzeStdLib)
+            .loopBound(settings.loopBound)
+            .recursionBound(settings.recursionBound)
+            .loopIterationsBeforeThreadSwitch(settings.loopIterationsBeforeThreadSwitch)
+
         val testCfg = options.createTestConfigurations(block::class.java)
 
         withLincheckTestContext(testCfg.instrumentationMode) {
