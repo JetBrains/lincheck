@@ -195,19 +195,19 @@ publishing {
     publications {
         register("maven", MavenPublication::class) {
             val groupId: String by project
-            val artifactId: String by project
-            val version: String by project
+            val lincheckArtifactId: String by project
+            val lincheckVersion: String by project
 
             this.groupId = groupId
-            this.artifactId = artifactId
-            this.version = version
+            this.artifactId = lincheckArtifactId
+            this.version = lincheckVersion
 
             from(components["kotlin"])
             artifact(sourcesJar)
             artifact(javadocJar)
 
             configureMavenPublication {
-                name.set(artifactId)
+                name.set(lincheckArtifactId)
                 description.set("Lincheck - framework for testing concurrent code on the JVM")
             }
         }

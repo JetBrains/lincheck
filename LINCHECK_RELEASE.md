@@ -1,4 +1,5 @@
 # Lincheck release checklist
+
 Follow these steps to release a new `<version>` of Lincheck.
 
 1. Checkout `develop` branch: <br>
@@ -12,10 +13,9 @@ Follow these steps to release a new `<version>` of Lincheck.
 
 4. Replace `<old-version>` with `<version>`:
    * in [README.md](README.md)
-   * in [docs/v.list](docs/v.list) 
-   * in [gradle.properties](gradle.properties)
-   * in all the published subprojects (`common`, `jvm-agent`, `trace`) `gradle.properties` files 
-     * upon new Lincheck release, all subprojects should have the same version
+   * in [docs/v.list](docs/v.list)
+   * in all the published subprojects (`common`, `jvm-agent`, `trace`, `lincheck`) `gradle.properties` files 
+     * upon the new Lincheck release, all subprojects should have the same version
 
 5. Commit the updated [`gradle.properties`](gradle.properties): <br>
    `git add gradle.properties README.md docs/v.list` <br>
@@ -39,7 +39,7 @@ Follow these steps to release a new `<version>` of Lincheck.
 Set `releaseVersion` property to `<version>` in the pop-up window. Make sure that the build succeeds.
 After the task succeeds, the artifact should be uploaded to https://central.sonatype.com/ automatically (may take several minutes).
 
-11. In [GitHub](https://github.com/JetBrains/lincheck/releases) interface:
+11. In the [GitHub](https://github.com/JetBrains/lincheck/releases) interface:
     * Create a release named `lincheck-<version>`.
     * Write a release notes message following the old ones as example of style.
     
