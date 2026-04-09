@@ -1147,7 +1147,7 @@ internal abstract class ManagedStrategy(
     }
 
     private fun shouldAllowSpuriousUnpark(threadId: ThreadId, codeLocation: Int): Boolean {
-        val stackTraceElement = CodeLocations.stackTrace(context, codeLocation)
+        val stackTraceElement = context.stackTrace(codeLocation)
         val analysisSectionStack = this.analysisSectionStack[threadId]!!
         // TODO: refactor, track LockSupport.park directly instead
         val section = if (

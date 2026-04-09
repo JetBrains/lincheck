@@ -17,7 +17,6 @@ import org.jetbrains.lincheck.util.isLincheckInternalException
 import org.jetbrains.lincheck.util.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.descriptors.CodeLocations
 import org.jetbrains.lincheck.trace.TraceContext
 
 data class Trace(
@@ -113,12 +112,12 @@ internal abstract class CodeLocationTracePoint(
     actorId: Int,
     codeLocation: Int
 ) : TracePoint(context, eventId, iThread, actorId) {
-    var stackTraceElement = CodeLocations.stackTrace(context, codeLocation)
+    var stackTraceElement = context.stackTrace(codeLocation)
 
     var codeLocation = 0
         set(value) {
             field = value
-            stackTraceElement = CodeLocations.stackTrace(context, value)
+            stackTraceElement = context.stackTrace(value)
         }
 
     init {

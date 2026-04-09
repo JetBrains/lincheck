@@ -18,7 +18,6 @@ import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.reflect.KClass
 
@@ -35,8 +34,15 @@ internal data class IndexCell(
     val endPos: Long
 )
 
+/**
+ * Snapshot of the trace context portion contained in a specific data block.
+ * Tracks which descriptors, code locations, and other context elements are written in this block.
+ * Used to defer marking these elements as "saved" until the block is persisted to disk.
+ */
+private typealias BlockContextSnapshot = SimpleTraceContextSavedState
+
 internal interface BlockSaver {
-    fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>)
+    fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>, contextSnapshot: BlockContextSnapshot)
 }
 
 
@@ -46,15 +52,34 @@ private const val MAX_STRING_SIZE = PER_THREAD_DATA_BUFFER_SIZE - 1024
 internal class BufferedTraceWriter(
     override val writerId: Int,
     context: TraceContext,
-    contextState: TraceContextSavedState,
+    globalContextState: TraceContextSavedState,
     private val storage: BlockSaver,
     private val bufferStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
-) : TraceWriterBase(
+) : ContextAwareTraceWriter(
     context = context,
-    contextState = contextState,
     dataStream = bufferStream,
     dataOutput = bufferStream
 ) {
+    /**
+     * Tracks what's written in the current block for the snapshot
+     */
+    private var blockContextState = BlockContextSnapshot()
+
+    /**
+     * Context state which searches descriptors both in block snapshot and in the global context, but
+     * saves descriptors only to the local snapshot, which later will be propagated to the global context
+     * by IO Thread.
+     */
+    override val contextState = object : TraceContextSavedState {
+        override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
+            return blockContextState.isDescriptorSaved(descriptorClass, id) ||
+                   globalContextState.isDescriptorSaved(descriptorClass, id)
+        }
+
+        override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
+            blockContextState.markDescriptorSaved(descriptorClass, id)
+        }
+    }
     private var currentStartDataPosition: Long = 0
     private var index = mutableListOf<IndexCell>()
 
@@ -108,7 +133,10 @@ internal class BufferedTraceWriter(
             index = mutableListOf()
             oldIndex
         }
-        storage.saveDataAndIndexBlock(writerId, logicalStart, bufferStream.detachBuffer(), indexToSave)
+
+        storage.saveDataAndIndexBlock(writerId, logicalStart, bufferStream.detachBuffer(), indexToSave, blockContextState)
+        // Clear the snapshot for the next block
+        blockContextState = BlockContextSnapshot()
     }
 
     private fun maybeFlushData() {
@@ -121,9 +149,10 @@ internal class BufferedTraceWriter(
 private class FileStreamingThread(
     dataStream: OutputStream,
     indexStream: OutputStream,
+    private val savedState: TraceContextSavedState
 ): Thread() {
     private sealed class Job()
-    private data class SaveBlockJob(val writerId: Int, val logicalBlockStart: Long, val dataBlock: ByteBuffer, val indexList: List<IndexCell>): Job()
+    private data class SaveBlockJob(val writerId: Int, val logicalBlockStart: Long, val dataBlock: ByteBuffer, val indexList: List<IndexCell>, val contextSnapshot: BlockContextSnapshot): Job()
     private class ExitJob(): Job()
 
     private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream)
@@ -173,8 +202,8 @@ private class FileStreamingThread(
         indexBytes += Long.SIZE_BYTES * 2
     }
 
-    fun addBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) {
-        queue.put(SaveBlockJob(writerId, logicalBlockStart, dataBlock, indexList))
+    fun addBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>, contextSnapshot: BlockContextSnapshot) {
+        queue.put(SaveBlockJob(writerId, logicalBlockStart, dataBlock, indexList, contextSnapshot))
     }
 
     fun exit() {
@@ -227,6 +256,17 @@ private class FileStreamingThread(
         indexBytes += buffer.limit()
         index.write(buffer.array(), 0, buffer.limit())
         index.flush()
+
+        // Mark all items in this block as saved after successful disk write
+        job.contextSnapshot.apply {
+            classDescriptors.forEach { savedState.markDescriptorSaved<ClassDescriptor>(it) }
+            methodDescriptors.forEach { savedState.markDescriptorSaved<MethodDescriptor>(it) }
+            fieldDescriptors.forEach { savedState.markDescriptorSaved<FieldDescriptor>(it) }
+            variableDescriptors.forEach { savedState.markDescriptorSaved<VariableDescriptor>(it) }
+            strings.forEach { savedState.markDescriptorSaved<String>(it) }
+            codeLocations.forEach { savedState.markDescriptorSaved<CodeLocation>(it) }
+            accessPaths.forEach { savedState.markDescriptorSaved<AccessPath>(it) }
+        }
     }
 
     private fun closeStreams() {
@@ -289,7 +329,7 @@ class FileStreamingTraceCollecting(
                 context = context
             )
 
-    private val ioThread = FileStreamingThread(dataStream, indexStream)
+    private val ioThread = FileStreamingThread(dataStream, indexStream, savedState = this)
     init {
         ioThread.start()
     }
@@ -301,25 +341,10 @@ class FileStreamingTraceCollecting(
     private var seenMethodDescriptors = AtomicBitmap()
     private var seenFieldDescriptors = AtomicBitmap()
     private var seenVariableDescriptors = AtomicBitmap()
-    private var seenCodeLocations = AtomicBitmap()
-    private val accessPathEnumerator = Enumerator<AccessPath>()
+    private var seenCodeLocationDescriptors = AtomicBitmap()
+    private var seenAccessPathDescriptors = AtomicBitmap()
 
     private val writers = ConcurrentHashMap<Thread, BufferedTraceWriter>()
-
-    private class Enumerator<T : Any> {
-        private val idGenerator = AtomicInteger(1)
-        private val cache = ConcurrentHashMap<T, Int>()
-
-        fun isSaved(value: T): Int {
-            val id = cache.computeIfAbsent(value) { _ -> -idGenerator.getAndIncrement() }
-            return id
-        }
-
-        fun makeSaved(value: T) {
-            // Make positive!
-            cache.compute(value) { _, v -> v?.absoluteValue }
-        }
-    }
 
     override fun registerCurrentThread(threadId: Int) {
         val thread = Thread.currentThread()
@@ -327,11 +352,16 @@ class FileStreamingTraceCollecting(
         writers[thread] = BufferedTraceWriter(
             writerId = threadId,
             context = context,
-            contextState = this,
+            globalContextState = this,
             // This is needed to work around visibility problems
             storage = object : BlockSaver {
-                override fun saveDataAndIndexBlock(writerId: Int, logicalBlockStart: Long, dataBlock: ByteBuffer, indexList: List<IndexCell>) =
-                    ioThread.addBlock(writerId, logicalBlockStart, dataBlock, indexList)
+                override fun saveDataAndIndexBlock(
+                    writerId: Int,
+                    logicalBlockStart: Long,
+                    dataBlock: ByteBuffer,
+                    indexList: List<IndexCell>,
+                    contextSnapshot: BlockContextSnapshot
+                ) = ioThread.addBlock(writerId, logicalBlockStart, dataBlock, indexList, contextSnapshot)
             }
         )
         context.setThreadName(threadId, thread.name)
@@ -405,18 +435,12 @@ class FileStreamingTraceCollecting(
             FieldDescriptor::class -> seenFieldDescriptors
             VariableDescriptor::class -> seenVariableDescriptors
             String::class -> seenStringDescriptors
+            CodeLocation::class -> seenCodeLocationDescriptors
+            AccessPath::class -> seenAccessPathDescriptors
             else -> {
-                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
+                Logger.error { "Unknown descriptor class: $descriptorClass" }
                 null
             }
         }
     }
-
-    override fun isCodeLocationSaved(id: Int): Boolean = seenCodeLocations.isSet(id)
-
-    override fun markCodeLocationSaved(id: Int): Unit = seenCodeLocations.set(id)
-
-    override fun isAccessPathSaved(value: AccessPath): Int = accessPathEnumerator.isSaved(value)
-
-    override fun markAccessPathSaved(value: AccessPath): Unit = accessPathEnumerator.makeSaved(value)
 }

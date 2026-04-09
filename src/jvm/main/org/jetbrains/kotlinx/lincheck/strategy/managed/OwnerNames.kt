@@ -71,7 +71,7 @@ fun findOwnerName(
     // if the current owner is `this` - no owner needed
     if (shadowStackFrame.isCurrentStackFrameReceiver(obj)) return null
     // lookup for a statically inferred owner name
-    val ownerName = CodeLocations.accessPath(context, codeLocationId) ?: accessPathLookup()
+    val ownerName = context.accessPath(codeLocationId) ?: accessPathLookup()
     if (ownerName != null) {
         return if (isThisName(ownerName.toString())) null else ownerName.toString()
     }

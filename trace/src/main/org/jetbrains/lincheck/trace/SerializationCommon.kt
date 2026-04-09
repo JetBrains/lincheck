@@ -452,30 +452,34 @@ internal fun DataInput.readVariableDescriptor(context: TraceContext): VariableDe
     return VariableDescriptor(context, readUTF(), readType())
 }
 
-internal fun DataInput.readAccessLocation(): ShallowAccessLocation {
+internal fun DataInput.readAccessLocation(context: TraceContext): AccessLocation {
     val type = readByte().toInt()
     val kind = if (type >= 0 && type < AccessLocationKind.entries.size) AccessLocationKind.entries[type]
                else AccessLocationKind.UNKNOWN
     when (kind) {
         AccessLocationKind.LOCAL_VARIABLE -> {
             val variableDescriptorId = readInt()
-            return ShallowLocalVariableAccessLocation(variableDescriptorId)
+            val vd = context.variablePool[variableDescriptorId]
+            return LocalVariableAccessLocation(vd)
         }
         AccessLocationKind.STATIC_FIELD -> {
             val fieldDescriptorId = readInt()
-            return ShallowStaticFieldAccessLocation(fieldDescriptorId)
+            val fd = context.fieldPool[fieldDescriptorId]
+            return StaticFieldAccessLocation(fd)
         }
         AccessLocationKind.OBJECT_FIELD -> {
             val fieldDescriptorId = readInt()
-            return ShallowObjectFieldAccessLocation(fieldDescriptorId)
+            val fd = context.fieldPool[fieldDescriptorId]
+            return ObjectFieldAccessLocation(fd)
         }
         AccessLocationKind.ARRAY_ELEMENT_BY_INDEX -> {
             val index = readInt()
-            return ShallowArrayElementByIndexAccessLocation(index)
+            return ArrayElementByIndexAccessLocation(index)
         }
         AccessLocationKind.ARRAY_ELEMENT_BY_NAME -> {
             val accessPathId = readInt()
-            return ShallowArrayElementByNameAccessLocation(accessPathId)
+            val accessPath = context.getAccessPath(accessPathId)
+            return ArrayElementByNameAccessLocation(accessPath)
         }
         AccessLocationKind.UNKNOWN -> error("Unknown access location kind: read byte is $type, while expected one of: ${AccessLocationKind.entries.map { it.ordinal }.joinToString(", ")}")
     }

@@ -253,16 +253,8 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
     //       just store all data in-place whenever requested.
     //       See JBRes-7900 for details.
 
-    private val accessPathId = AtomicInteger(1)
-
     override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean = false
     override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int): Unit = Unit
-    override fun isCodeLocationSaved(id: Int): Boolean = false
-    override fun markCodeLocationSaved(id: Int): Unit = Unit
-
-
-    override fun isAccessPathSaved(value: AccessPath): Int = -(accessPathId.getAndIncrement())
-    override fun markAccessPathSaved(value: AccessPath): Unit = Unit
 }
 
 /**
@@ -271,12 +263,11 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
  */
 internal class NetworkTraceWriter(
     context: TraceContext,
-    contextState: TraceContextSavedState,
+    override val contextState: TraceContextSavedState,
     dataOutput: DataOutput,
     dataStream: OutputStream,
-) : TraceWriterBase(
+) : ContextAwareTraceWriter(
     context = context,
-    contextState = contextState,
     dataStream = dataStream,
     dataOutput = dataOutput
 ) {
@@ -304,11 +295,7 @@ internal typealias SnapshotLineBreakpointListener = (TRSnapshotLineBreakpointTra
  */
 class NetworkTraceReader : Closeable {
     
-    val context: TraceContext =
-        TraceContext()
-
-    private val codeLocationsContext: CodeLocationsContext =
-        CodeLocationsContext()
+    val context = TraceContext()
 
     private val threadTracePoints = mutableMapOf<Int, MutableList<TRSnapshotLineBreakpointTracePoint>>()
 
@@ -457,17 +444,15 @@ class NetworkTraceReader : Closeable {
                     }
 
                     ObjectKind.STRING -> {
-                        loadString(dataInput, context, codeLocationsContext, restore = true)
+                        loadString(dataInput, context, restore = true)
                     }
 
                     ObjectKind.ACCESS_PATH -> {
-                        val id = loadAccessPath(dataInput, codeLocationsContext, restore = true)
-                        codeLocationsContext.restoreAccessPath(context, id)
+                        loadAccessPath(dataInput, context, restore = true)
                     }
 
                     ObjectKind.CODE_LOCATION -> {
-                        val id = loadCodeLocation(dataInput, codeLocationsContext, restore = true)
-                        codeLocationsContext.restoreCodeLocation(context, id)
+                        loadCodeLocation(dataInput, context, restore = true)
                     }
 
                     ObjectKind.TRACEPOINT -> {

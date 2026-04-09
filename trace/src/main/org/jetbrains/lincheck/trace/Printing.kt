@@ -67,8 +67,8 @@ fun printRecorderTrace(fileName: String?, context: TraceContext, rootCallsPerThr
 fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
     PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
         val appendable = DefaultTRTextAppendable(output, verbose)
-        rootCallsPerThread.forEachIndexed { i, root ->
-            output.println(getThreadName(i, rootCallsPerThread.size, context))
+        rootCallsPerThread.forEach { root ->
+            output.println(getThreadName(root.threadId, rootCallsPerThread.size, context))
             printTRPoint(appendable, root, 0)
         }
     }

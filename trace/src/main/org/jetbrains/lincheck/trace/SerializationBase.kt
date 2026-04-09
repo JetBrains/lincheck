@@ -11,11 +11,11 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.util.Logger
 import java.io.Closeable
 import java.io.DataOutput
 import java.io.DataOutputStream
 import java.io.OutputStream
-import kotlin.math.absoluteValue
 import kotlin.reflect.KClass
 
 // Buffer for saving trace in one piece
@@ -85,7 +85,7 @@ internal interface TraceWriter : DataOutput, Closeable {
     fun endWriteLeafTracepoint()
 
     /**
-     * Mark the end of the container tracepoint's header (now only TRMethodCallTracepoint is a container one).
+     * Mark the end of the container tracepoint's header (now only TRMethodCallTracepoint, TRLoopTracePoint, and TRLoopIterationTracePoint are container ones).
      */
     fun endWriteContainerTracepointHeader(id: Int)
 
@@ -142,19 +142,6 @@ internal interface TraceWriter : DataOutput, Closeable {
 internal interface TraceContextSavedState {
     fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean
     fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int)
-    fun isCodeLocationSaved(id: Int): Boolean
-    fun markCodeLocationSaved(id: Int)
-
-    /**
-     * Return positive access path id, if it was stored already, and negative, if it should be stored
-     *  with the absolute value of this id.
-     */
-    fun isAccessPathSaved(value: AccessPath): Int
-
-    /**
-     * Mark access path as stored. Do nothing if it was not passed to [isAccessPathSaved].
-     */
-    fun markAccessPathSaved(value: AccessPath)
 }
 
 internal inline fun <reified T> TraceContextSavedState.isDescriptorSaved(id: Int) = isDescriptorSaved(T::class, id)
@@ -169,12 +156,12 @@ internal inline fun <reified T> TraceContextSavedState.markDescriptorSaved(id: I
  *
  * `dataStream` can be relaxed to [Closeable], but it will hide its intention even more.
  */
-internal sealed class TraceWriterBase(
+internal sealed class ContextAwareTraceWriter(
     val context: TraceContext,
-    private val contextState: TraceContextSavedState,
     protected val dataStream: OutputStream,
     protected val dataOutput: DataOutput
 ): TraceWriter, DataOutput by dataOutput {
+    protected abstract val contextState: TraceContextSavedState
     // Stack of "container" tracepoints
     private val containerStack = mutableListOf<Pair<Int, Long>>()
 
@@ -332,7 +319,7 @@ internal sealed class TraceWriterBase(
             "Cannot save reference data inside tracepoint"
         }
         if (id == UNKNOWN_CODE_LOCATION_ID) return
-        if (contextState.isCodeLocationSaved(id)) return
+        if (contextState.isDescriptorSaved<CodeLocation>(id)) return
 
         val codeLocation = context.stackTrace(id)
         val accessPath = context.accessPath(id)
@@ -361,7 +348,7 @@ internal sealed class TraceWriterBase(
         dataOutput.writeInt(activeLocalNameIds?.size ?: 0)
         activeLocalNameIds?.forEach { dataOutput.writeInt(it) }
         activeLocals?.forEach { dataOutput.writeInt(it.localKind.ordinal) }
-        contextState.markCodeLocationSaved(id)
+        contextState.markDescriptorSaved<CodeLocation>(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)
     }
@@ -402,7 +389,7 @@ internal sealed class TraceWriterBase(
      * Such order is required, because [AccessPath] is a recursive structure, which may contain another access paths inside.
      * They should come first in the serialization order for easier deserialization later. So when we need to construct
      * an [AccessLocation] which expects [AccessPath] as an argument, we would be sure that it is
-     * present in the trace context and can be retrieved via id. So such locations are serialized the folowwing way:
+     * present in the trace context and can be retrieved via id. So such locations are serialized the following way:
      * ```
      * [location type] [another access path id]
      * ```
@@ -423,7 +410,7 @@ internal sealed class TraceWriterBase(
     }
 
     private fun writeAccessPaths(root: AccessPath, savingOrder: List<AccessPath>): Int {
-        var rootId = 0
+        var rootId = -1
 
         savingOrder
             // first, we save all references of every location inside each access path
@@ -435,23 +422,23 @@ internal sealed class TraceWriterBase(
             // then, save the access paths in correct order
             .onEach { value ->
                 val position = currentDataPosition
-                val id = contextState.isAccessPathSaved(value)
-                if (value == root) rootId = id.absoluteValue
-                if (id > 0) return@onEach // already saved
+                val id = context.accessPathPool.register(value)
+                if (value == root) rootId = id
+                if (contextState.isDescriptorSaved<AccessPath>(id)) return@onEach
 
                 dataOutput.writeKind(ObjectKind.ACCESS_PATH)
-                dataOutput.writeInt(-id)
+                dataOutput.writeInt(id)
                 dataOutput.writeInt(value.locations.size)
 
                 value.locations.forEach { location ->
-                    location.save(this, context, contextState)
+                    location.save(this, context)
                 }
 
-                contextState.markAccessPathSaved(value)
-                writeIndexCell(ObjectKind.ACCESS_PATH, -id, position, -1)
+                contextState.markDescriptorSaved<AccessPath>(id)
+                writeIndexCell(ObjectKind.ACCESS_PATH, id, position, -1)
             }
 
-        check(rootId > 0) { "Root access path $root was not added to the saved access paths: $savingOrder" }
+        check(rootId >= 0) { "Root access path $root was not added to the saved access paths: $savingOrder" }
         return rootId
     }
 
@@ -481,4 +468,48 @@ internal sealed class TraceWriterBase(
 
 
     protected abstract fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long)
+}
+
+
+internal open class SimpleTraceContextSavedState: TraceContextSavedState {
+    protected open val seenClassDescriptors = SimpleBitmap()
+    val classDescriptors: Set<Int> = seenClassDescriptors
+    protected open val seenMethodDescriptors = SimpleBitmap()
+    val methodDescriptors: Set<Int> = seenMethodDescriptors
+    protected open val seenFieldDescriptors = SimpleBitmap()
+    val fieldDescriptors: Set<Int> = seenFieldDescriptors
+    protected open val seenVariableDescriptors = SimpleBitmap()
+    val variableDescriptors: Set<Int> = seenVariableDescriptors
+    protected open val seenStringDescriptors = SimpleBitmap()
+    val strings: Set<Int> = seenStringDescriptors
+    protected open val seenCodeLocationDescriptors = SimpleBitmap()
+    val codeLocations: Set<Int> = seenCodeLocationDescriptors
+    protected open val seenAccessPathDescriptors = SimpleBitmap()
+    val accessPaths: Set<Int> = seenAccessPathDescriptors
+
+    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
+        val bitmap = getBitmapArray(descriptorClass) ?: return false
+        return bitmap.isSet(id)
+    }
+
+    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
+        val bitmap = getBitmapArray(descriptorClass) ?: return
+        bitmap.set(id)
+    }
+
+    private fun getBitmapArray(descriptorClass: KClass<*>): Bitmap? {
+        return when (descriptorClass) {
+            ClassDescriptor::class -> seenClassDescriptors
+            MethodDescriptor::class -> seenMethodDescriptors
+            FieldDescriptor::class -> seenFieldDescriptors
+            VariableDescriptor::class -> seenVariableDescriptors
+            String::class -> seenStringDescriptors
+            CodeLocation::class -> seenCodeLocationDescriptors
+            AccessPath::class -> seenAccessPathDescriptors
+            else -> {
+                Logger.error { "Unknown descriptor class: $descriptorClass" }
+                null
+            }
+        }
+    }
 }

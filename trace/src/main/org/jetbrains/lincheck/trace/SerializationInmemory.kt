@@ -10,115 +10,30 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.descriptors.AccessPath
-import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.util.Logger
 import java.io.DataOutput
 import java.io.DataOutputStream
 import java.io.OutputStream
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.reflect.KClass
 
-private class SimpleTraceContextSavedState: TraceContextSavedState {
-    private var seenClassDescriptors = BooleanArray(1024)
-    private var seenMethodDescriptors = BooleanArray(1024)
-    private var seenFieldDescriptors = BooleanArray(1024)
-    private var seenVariableDescriptors = BooleanArray(1024)
-    private var seenStringDescriptors = BooleanArray(1024)
-    private var seenCodeLocations = BooleanArray(65536)
-    private val accessPathCache = Enumerator<AccessPath>()
-
-    private class Enumerator<T : Any> {
-        private val cache = mutableMapOf<T, Int>()
-
-        fun isSaved(value: T): Int {
-            val id = cache[value]
-            if (id != null && id > 0) {
-                return id
-            }
-            cache[value] = -(cache.size + 1)
-            return -cache.size
-        }
-
-        fun makeSaved(value: T) {
-            val id = cache[value]
-            if (id != null && id < 0) {
-                cache[value] = -id
-            }
-        }
-    }
-
-    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
-        val array = getDescriptorsArray(descriptorClass) ?: return false
-        return id < array.size && array[id]
-    }
-
-    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
-        val array = getDescriptorsArray(descriptorClass) ?: return
-        val newArray = ensureSize(array, id)
-        newArray[id] = true
-        assignDescriptorsArray(descriptorClass, newArray)
-    }
-
-    private fun getDescriptorsArray(descriptorClass: KClass<*>): BooleanArray? {
-        return when (descriptorClass) {
-            ClassDescriptor::class -> seenClassDescriptors
-            MethodDescriptor::class -> seenMethodDescriptors
-            FieldDescriptor::class -> seenFieldDescriptors
-            VariableDescriptor::class -> seenVariableDescriptors
-            String::class -> seenStringDescriptors
-            else -> {
-                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
-                null
-            }
-        }
-    }
-
-    private fun assignDescriptorsArray(descriptorClass: KClass<*>, array: BooleanArray) {
-        when (descriptorClass) {
-            ClassDescriptor::class -> seenClassDescriptors = array
-            MethodDescriptor::class -> seenMethodDescriptors = array
-            FieldDescriptor::class -> seenFieldDescriptors = array
-            VariableDescriptor::class -> seenVariableDescriptors = array
-            String::class -> seenStringDescriptors = array
-            else -> {
-                Logger.error { "Unknown descriptor class: ${descriptorClass::class}" }
-            }
-        }
-    }
-
-    override fun isCodeLocationSaved(id: Int): Boolean {
-        return id < seenCodeLocations.size && seenCodeLocations[id]
-    }
-
-    override fun markCodeLocationSaved(id: Int) {
-        seenCodeLocations = ensureSize(seenCodeLocations, id)
-        seenCodeLocations[id] = true
-    }
-
-    override fun isAccessPathSaved(value: AccessPath): Int {
-        return accessPathCache.isSaved(value)
-    }
-
-    override fun markAccessPathSaved(value: AccessPath) {
-        accessPathCache.makeSaved(value)
-    }
-
-    private fun ensureSize(map: BooleanArray, id: Int): BooleanArray {
-        if (id < map.size) return map
-        val newlen = Integer.max(id + 16, map.size + map.size / 2)
-        return map.copyOf(newlen)
-    }
+private class InMemoryTraceContextSavedState: SimpleTraceContextSavedState() {
+    override val seenClassDescriptors = SimpleBitmap(1024)
+    override val seenMethodDescriptors = SimpleBitmap(1024)
+    override val seenFieldDescriptors = SimpleBitmap(1024)
+    override val seenVariableDescriptors = SimpleBitmap(1024)
+    override val seenStringDescriptors = SimpleBitmap(1024)
+    override val seenCodeLocationDescriptors = SimpleBitmap(65536)
+    override val seenAccessPathDescriptors = SimpleBitmap(1024)
 }
 
 internal class DirectTraceWriter(
     dataStream: OutputStream,
     indexStream: OutputStream,
     context: TraceContext,
+    override val contextState: TraceContextSavedState = InMemoryTraceContextSavedState(),
     private val pos: PositionCalculatingOutputStream = PositionCalculatingOutputStream(dataStream),
-) : TraceWriterBase(
+) : ContextAwareTraceWriter(
     context = context,
-    contextState = SimpleTraceContextSavedState(),
     dataStream = pos,
     dataOutput = DataOutputStream(pos)
 ) {

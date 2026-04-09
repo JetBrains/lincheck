@@ -17,13 +17,13 @@ import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
 import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
 
-internal fun AccessLocation.save(out: TraceWriter, traceContext: TraceContext, savingState: TraceContextSavedState) {
+internal fun AccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     when (this) {
         is LocalVariableAccessLocation       -> save(out, traceContext)
         is StaticFieldAccessLocation         -> save(out, traceContext)
         is ObjectFieldAccessLocation         -> save(out, traceContext)
         is ArrayElementByIndexAccessLocation -> save(out)
-        is ArrayElementByNameAccessLocation  -> save(out, savingState)
+        is ArrayElementByNameAccessLocation  -> save(out, traceContext)
     }
 }
 
@@ -65,10 +65,10 @@ private fun ArrayElementByIndexAccessLocation.save(out: TraceWriter) {
     out.writeInt(index)
 }
 
-private fun ArrayElementByNameAccessLocation.save(out: TraceWriter, savingState: TraceContextSavedState) {
+private fun ArrayElementByNameAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     // register or get existing access path and write its id to output stream
-    val indexId = savingState.isAccessPathSaved(indexAccessPath)
-    check(indexId > 0) { "Access paths saving order must guarantee that inner access paths are already saved" }
+    check(traceContext.accessPathPool.contains(indexAccessPath)) { "Access location references must be saved before-hand, but location $this has unsaved access path $indexAccessPath" }
+    val indexId = traceContext.accessPathPool.getId(indexAccessPath)
     out.writeLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_NAME)
     out.writeInt(indexId)
 }

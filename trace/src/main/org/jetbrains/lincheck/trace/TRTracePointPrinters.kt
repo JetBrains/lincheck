@@ -475,7 +475,7 @@ object DefaultTRCatchTracePointPrinter: AbstractTRCatchTracePointPrinter() {
 
 internal fun <V: TRAppendable> V.append(tracePoint: TRTracePoint, verbose: Boolean): V {
     if (!verbose) return this
-    val cl = CodeLocations.stackTrace(tracePoint.context, tracePoint.codeLocationId)
+    val cl = tracePoint.context.stackTrace(tracePoint.codeLocationId)
     append(" at ").append(cl.fileName).append(":").append(cl.lineNumber.toString())
     return this
 }
