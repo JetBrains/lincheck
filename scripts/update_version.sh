@@ -23,7 +23,6 @@
 #   - common/gradle.properties:    commonVersion=<version>
 #   - jvm-agent/gradle.properties: jvmAgentVersion=<version>
 #   - trace/gradle.properties:     traceVersion=<version>
-#   - lincheck/gradle.properties:  lincheckVersion=<version>
 #   - README.md:                   testImplementation("org.jetbrains.lincheck:lincheck:<version>")
 #   - docs/v.list:                 <var name="lincheckVersion" value="<version>" type="string"/>
 #
@@ -100,15 +99,13 @@ update_version "${repo_root}/gradle.properties" "version"
 update_version "${repo_root}/common/gradle.properties" "commonVersion"
 update_version "${repo_root}/jvm-agent/gradle.properties" "jvmAgentVersion"
 update_version "${repo_root}/trace/gradle.properties" "traceVersion"
-update_version "${repo_root}/lincheck/gradle.properties" "lincheckVersion"
 update_readme
 update_vlist
 
 if [[ "$COMMIT" == false ]]; then
   echo -e "\nDry-run complete. No files were committed."
 else
-  git add gradle.properties common/gradle.properties jvm-agent/gradle.properties trace/gradle.properties lincheck/gradle.properties README.md docs/v.list
+  git add gradle.properties common/gradle.properties jvm-agent/gradle.properties trace/gradle.properties README.md docs/v.list
   git commit -m "Release lincheck-${VERSION}"
   echo -e "\nAll done."
 fi
-

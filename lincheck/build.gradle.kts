@@ -196,11 +196,11 @@ publishing {
         register("maven", MavenPublication::class) {
             val groupId: String by project
             val lincheckArtifactId: String by project
-            val lincheckVersion: String by project
+            val version: String by project
 
             this.groupId = groupId
             this.artifactId = lincheckArtifactId
-            this.version = lincheckVersion
+            this.version = version
 
             from(components["kotlin"])
             artifact(sourcesJar)
