@@ -64,17 +64,25 @@ tasks {
             ":common:publishMavenPublicationToSpacePackagesRepository",
             ":jvm-agent:publishMavenPublicationToSpacePackagesRepository",
             ":trace:publishMavenPublicationToSpacePackagesRepository",
-            ":lincheck:publishMavenPublicationToSpacePackagesRepository"
+            ":lincheck:publishMavenPublicationToSpacePackagesRepository",
+
+            // also publish java agents' fat jars
+            ":trace-recorder:publishMavenPublicationToSpacePackagesRepository",
+            ":live-debugger:publishMavenPublicationToSpacePackagesRepository",
         )
     }
 
     // publishing trace artifact only (and its dependencies) required as IntelliJ plugin dependencies
     val publishTraceArtifactToSpacePackages by registering {
         group = "publishing"
-        println("Publishing all artifacts to Space Packages repository...")
+        println("Publishing trace artifacts to Space Packages repository...")
         dependsOn(
             ":common:publishMavenPublicationToSpacePackagesRepository",
             ":trace:publishMavenPublicationToSpacePackagesRepository",
+
+            // also publish java agents' fat jars
+            ":trace-recorder:publishMavenPublicationToSpacePackagesRepository",
+            ":live-debugger:publishMavenPublicationToSpacePackagesRepository",
         )
     }
 

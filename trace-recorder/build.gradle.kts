@@ -1,6 +1,10 @@
 import org.gradle.kotlin.dsl.named
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+plugins {
+    id("maven-publish")
+}
+
 repositories {
     mavenCentral()
 }
@@ -59,3 +63,30 @@ registerTraceAgentTasks(
     fatJarTaskName = "traceRecorderFatJar",
     premainClass = "org.jetbrains.lincheck.trace.recorder.TraceRecorderAgent"
 )
+
+publishing {
+    publications {
+        register("maven", MavenPublication::class) {
+            val groupId: String by project
+            val traceRecorderFatArtifactId: String by project
+            val traceRecorderFatVersion: String by project
+
+            this.groupId = groupId
+            this.artifactId = traceRecorderFatArtifactId
+            this.version = traceRecorderFatVersion
+
+            artifact(tasks.named("traceRecorderFatJar"))
+
+            configureMavenPublication {
+                name.set(traceRecorderFatArtifactId)
+                description.set("Lincheck trace recorder agent fat jar")
+            }
+        }
+    }
+
+    configureRepositories(
+        artifactsRepositoryUrl = rootProject.run { uri(layout.buildDirectory.dir("artifacts/maven")) }
+    )
+}
+
+configureSigning()

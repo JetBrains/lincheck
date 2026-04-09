@@ -90,7 +90,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
             "net.bytebuddy",
             "org.java_websocket",
         )
-        
+
         packagesToShade.forEach { packageName ->
             relocate(packageName, "org.jetbrains.lincheck.shadow.$packageName")
         }
@@ -105,6 +105,28 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
                     "Can-Retransform-Classes" to "true"
                 )
             )
+        }
+    }
+
+    // Expose the fat jar as the primary artifact of this module's outgoing configurations.
+    // This ensures that when composite builds substitute a dependency
+    // on the fat jar's Maven coordinates with a project dependency,
+    // the fat jar (not the regular jar) is provided to consumers.
+    //
+    // This is safe because these modules (trace-recorder, live-debugger) are leaf modules —
+    // nothing within the lincheck build depends on them via `project(":trace-recorder")` etc.
+    // The integration tests use direct file copies via `copyTraceAgentFatJar()`, not project dependencies.
+
+    configurations.named("runtimeElements").configure {
+        outgoing {
+            artifacts.clear()
+            artifact(traceAgentFatJar)
+        }
+    }
+    configurations.named("apiElements").configure {
+        outgoing {
+            artifacts.clear()
+            artifact(traceAgentFatJar)
         }
     }
 

@@ -1,6 +1,10 @@
 import org.gradle.kotlin.dsl.named
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+plugins {
+    id("maven-publish")
+}
+
 repositories {
     mavenCentral()
 }
@@ -59,3 +63,30 @@ registerTraceAgentTasks(
     fatJarTaskName = "liveDebuggerFatJar",
     premainClass = "org.jetbrains.lincheck.livedebugger.LiveDebuggerAgent"
 )
+
+publishing {
+    publications {
+        register("maven", MavenPublication::class) {
+            val groupId: String by project
+            val liveDebuggerFatArtifactId: String by project
+            val liveDebuggerFatVersion: String by project
+
+            this.groupId = groupId
+            this.artifactId = liveDebuggerFatArtifactId
+            this.version = liveDebuggerFatVersion
+
+            artifact(tasks.named("liveDebuggerFatJar"))
+
+            configureMavenPublication {
+                name.set(liveDebuggerFatArtifactId)
+                description.set("Lincheck live debugger agent fat jar")
+            }
+        }
+    }
+
+    configureRepositories(
+        artifactsRepositoryUrl = rootProject.run { uri(layout.buildDirectory.dir("artifacts/maven")) }
+    )
+}
+
+configureSigning()
