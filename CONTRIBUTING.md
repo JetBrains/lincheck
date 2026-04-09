@@ -67,4 +67,4 @@ to Gradle (in Preferences -> Build, Execution, Deployment -> Build Tools -> Grad
 
 ## Releases
 
-* Full release procedure checklist is [here](RELEASE.md).
+* Full release procedure checklist is [here](LINCHECK_RELEASE.md).

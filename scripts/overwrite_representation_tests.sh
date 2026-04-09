@@ -17,7 +17,8 @@
 # One can use this script to verify trace outputs by looking at the local changes after the script ran.
 # And commit the changes if accepted, to update test outputs.
 
-cd ../
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$script_dir/.."
 
 # Right now only default JDK (17) output is stored, in case if another jdk
 # will be required, it could be added to the list.
@@ -35,5 +36,5 @@ testFilter="org.jetbrains.kotlinx.lincheck_test.representation.*"
 for jdk in "${jdks[@]}"
 do
   echo "[Representation Tests Overwrite] Running tests for jdk: $jdk  ----------------------"
-  ./gradlew clean :test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true
+  ./gradlew clean :lincheck:test --tests "$testFilter" -PjdkToolchainVersion="$jdk" -PoverwriteRepresentationTestsOutput=true
 done

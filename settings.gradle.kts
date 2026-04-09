@@ -25,13 +25,17 @@ plugins {
 val name: String by settings
 rootProject.name = name
 
+// Projects
+include(":lincheck")
+include(":trace-recorder")
+include(":live-debugger")
+// Common modules
 include(":bootstrap")
 include(":jvm-agent")
 include(":common")
 include(":trace")
 include(":tracer")
-include(":trace-recorder")
-include(":live-debugger")
+// Tests
 include(":integration-test")
 include(":integration-test:common")
 include(":integration-test:lincheck")

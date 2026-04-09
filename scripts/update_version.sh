@@ -109,4 +109,3 @@ else
   git commit -m "Release lincheck-${VERSION}"
   echo -e "\nAll done."
 fi
-
