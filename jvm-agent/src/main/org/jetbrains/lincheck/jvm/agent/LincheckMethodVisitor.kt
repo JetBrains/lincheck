@@ -109,6 +109,13 @@ internal open class LincheckMethodVisitor(
         lineNumber = line
         super.visitLineNumber(line, start)
     }
+
+    protected fun createAndDiscardCodeLocationId(
+        accessPath: AccessPath? = null,
+        argumentNames: List<AccessPath?>? = null,
+    ): Int = loadNewCodeLocationId(accessPath, argumentNames).also {
+        adapter.pop()
+    }
     
     protected val currentActiveLocals get() = methodInfo.locals.activeVariables
 }
