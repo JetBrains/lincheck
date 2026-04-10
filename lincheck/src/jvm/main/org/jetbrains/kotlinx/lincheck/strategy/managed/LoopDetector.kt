@@ -33,6 +33,7 @@ interface LoopDetector {
     fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int)
     fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Pair<Boolean, Decision>
     fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Decision
+    fun onAwaitLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Pair<Boolean, Decision>
     fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, isReachableFromOutsideLoop: Boolean): Int?
 
     // TODO: at the moment, method params are only passed, but not used
@@ -179,6 +180,10 @@ class BoundedLoopDetector(
             ?: ActiveLoopInfo(LoopKey(loopId, codeLocation)).also { frame.loops.addLast(it) }
 
         return computeLoopDecision(loop)
+    }
+
+    override fun onAwaitLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Pair<Boolean, LoopDetector.Decision> {
+        return onLoopIteration(threadId, codeLocation, loopId)
     }
 
     override fun afterLoopExit(
