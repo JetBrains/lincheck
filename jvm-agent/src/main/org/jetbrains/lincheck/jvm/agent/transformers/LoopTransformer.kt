@@ -148,25 +148,14 @@ internal class LoopTransformer(
             if (isReducible) {
                 if (loopId !in awaitLoopIds) {
                     adapter.invokeStatic(Injections::onLoopIteration)
+                } else {
+                    adapter.invokeStatic(Injections::onAwaitLoop)
                 }
             } else if (shouldTrackIrreducibleLoops) {
                 adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
             }
             // STACK: <empty>
         }
-
-        // Inject 'onAwaitLoop' at clean back-edge sources of await loops.
-        // This fires only when the iteration actually takes the read-only spin-retry path.
-        awaitInjectionLocation[nonPhonyIndex]?.let { loopId ->
-            // STACK: <empty>
-            invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-            adapter.push(codeLocationIdByLoopId.getValue(loopId))
-            adapter.push(loopId)
-            // STACK: descriptor, codeLocation, loopId
-            adapter.invokeStatic(Injections::onAwaitLoop)
-            // STACK: <empty>
-        }
-
 
         // Inject `onLoopExit` on exceptional transitions from within the loop body to outside exception handlers.
         exceptionExitSites[nonPhonyIndex]?.let { loopIds ->

@@ -2119,7 +2119,7 @@ internal abstract class ManagedStrategy(
             }
         }
     }
-    override fun onAwaitLoopSpin(
+    override fun onAwaitLoopIteration(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         loopId: Int
@@ -2127,7 +2127,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
 
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
-            val (started, decision) = loopDetector.onAwaitLoop(threadId, codeLocation, loopId)
+            val (started, decision) = loopDetector.onAwaitLoopIteration(threadId, codeLocation, loopId)
             collectLoopTrace(started, threadId, codeLocation, loopId)
             getLoopDecision(decision, threadId, loopId, codeLocation)
         }
@@ -2185,7 +2185,7 @@ internal abstract class ManagedStrategy(
                 )
             }
 
-            val iteration = loopDetector.getCurrentIteration(threadId, loopId, codeLocation)
+            val iteration = loopDetector.getCurrentLoopIteration(threadId, loopId, codeLocation)
             traceCollector?.addTracePointInternal(
                 LoopIterationTracePoint(
                     context = context,
