@@ -1077,6 +1077,12 @@ public class Injections {
         );
     }
 
+    public static void onAwaitLoop(ThreadDescriptor descriptor, int codeLocation, int loopId) {
+        EventTracker tracker = getEventTracker(descriptor);
+        if (tracker == null || descriptor == null) return;
+        tracker.onAwaitLoopIteration(descriptor, codeLocation, loopId);
+    }
+
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 

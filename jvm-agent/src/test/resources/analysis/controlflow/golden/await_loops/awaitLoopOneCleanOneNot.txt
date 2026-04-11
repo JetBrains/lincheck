@@ -1,0 +1,17 @@
+=== Loop Information ===
+LOOP 1
+  HEADER: B0
+  BODY: B0, B1, B2, B3
+  BACK EDGES:
+    B1 -> B0 : JUMP(opcode=GOTO)
+    B3 -> B0 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B2 -> B4 : JUMP(opcode=IF_ICMPNE)
+  EXCEPTION EXIT HANDLERS:
+    NONE
+  EXCLUSIVE EXITS:
+    B4
+
+
+=== Await Loop Detection ===
+Await loop 0: header=0, body=[0, 1, 3, 2], cleanBackEdgeSources=[1]

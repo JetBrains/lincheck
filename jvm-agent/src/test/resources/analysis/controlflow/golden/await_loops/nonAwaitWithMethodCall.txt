@@ -1,0 +1,16 @@
+=== Loop Information ===
+LOOP 1
+  HEADER: B0
+  BODY: B0, B1
+  BACK EDGES:
+    B1 -> B0 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B0 -> B2 : JUMP(opcode=IFNE)
+  EXCEPTION EXIT HANDLERS:
+    NONE
+  EXCLUSIVE EXITS:
+    B2
+
+
+=== Await Loop Detection ===
+No await loops detected.
