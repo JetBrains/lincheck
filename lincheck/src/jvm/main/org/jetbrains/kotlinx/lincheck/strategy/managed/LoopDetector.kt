@@ -192,3 +192,192 @@ internal class LoopInstanceState(
     var lastRelevantWriteVersion: Long = 0L
 }
 
+abstract class AbstractLoopDetector : LoopDetector {
+    protected val threadStates = mutableThreadMapOf<LoopDetectorThreadState>()
+
+    protected abstract val recursiveCallsBound: Int
+
+    override fun resetAll() {
+        threadStates.clear()
+    }
+
+    override fun resetThread(threadId: Int) {
+        threadStates.remove(threadId)
+    }
+
+    protected fun state(threadId: Int): LoopDetectorThreadState =
+        threadStates.getOrPut(threadId) {
+            LoopDetectorThreadState(threadId)
+        }
+
+    protected fun currentFrame(threadId: Int): ActiveMethodCallInfo? =
+        threadStates[threadId]?.callStack?.lastOrNull()
+
+    protected fun getOrCreateFrame(threadId: Int): ActiveMethodCallInfo {
+        val state = state(threadId)
+        return state.callStack.lastOrNull() ?: ActiveMethodCallInfo(methodId = -1).also {
+            state.callStack.addLast(it)
+        }
+    }
+
+    override fun getCurrentMethodId(threadId: Int): Int =
+        currentFrame(threadId)?.methodId ?: -1
+
+    protected fun findLoopInCurrentFrame(
+        threadId: Int,
+        loopId: Int,
+        codeLocation: Int
+    ): ActiveLoopInfo? {
+        val frame = currentFrame(threadId) ?: return null
+        return frame.loops.lastOrNull {
+            it.key.loopId == loopId && it.key.codeLocation == codeLocation
+        }
+    }
+
+    protected fun startLoopIfNeeded(
+        threadId: Int,
+        codeLocation: Int,
+        loopId: Int
+    ): Pair<ActiveLoopInfo, Boolean> {
+        var loop = findLoopInCurrentFrame(threadId, loopId, codeLocation)
+        val started = if (loop == null) {
+            beforeLoopEnter(threadId, codeLocation, loopId)
+            loop = findLoopInCurrentFrame(threadId, loopId, codeLocation)
+            true
+        } else {
+            false
+        }
+        return Pair(loop!!, started)
+    }
+
+    protected fun findExitLoop(
+        threadId: Int,
+        loopId: Int,
+        exitCodeLocation: Int
+    ): Pair<ActiveMethodCallInfo, ActiveLoopInfo>? {
+        val state = threadStates[threadId] ?: return null
+        val currentMethod = getCurrentMethodId(threadId)
+
+        var best: Pair<ActiveMethodCallInfo, ActiveLoopInfo>? = null
+        var bestDistance = Int.MAX_VALUE
+
+        for (frame in state.callStack.reversed()) {
+            if (frame.methodId != currentMethod && frame.methodId != -1) continue
+
+            for (loop in frame.loops.reversed()) {
+                if (loop.key.loopId != loopId) continue
+
+                val dist = kotlin.math.abs(loop.key.codeLocation - exitCodeLocation)
+                if (dist < bestDistance) {
+                    best = Pair(frame, loop)
+                    bestDistance = dist
+                }
+                if (dist == 0)
+                    return Pair(frame, loop)
+            }
+        }
+        return best
+    }
+
+    override fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int) {
+        val frame = getOrCreateFrame(threadId)
+        val existing = frame.loops.lastOrNull {
+            it.key.loopId == loopId && it.key.codeLocation == codeLocation
+        }
+        if (existing == null) {
+            frame.loops.addLast(ActiveLoopInfo(LoopKey(loopId, codeLocation)))
+        }
+    }
+
+    override fun onAwaitLoopIteration(
+        threadId: Int,
+        codeLocation: Int,
+        loopId: Int
+    ): Pair<Boolean, LoopDetector.Decision> = onLoopIteration(threadId, codeLocation, loopId)
+
+    override fun afterLoopExit(
+        threadId: Int,
+        codeLocation: Int,
+        loopId: Int,
+        isReachableFromOutsideLoop: Boolean
+    ): Int? {
+        val match = findExitLoop(threadId, loopId, codeLocation)
+
+        if (!isReachableFromOutsideLoop || match != null) {
+            val enterCodeLocation = match?.second?.key?.codeLocation ?: codeLocation
+            match?.let { (frame, loop) ->
+                loop.iterationCount = 0
+                frame.loops.remove(loop)
+            }
+            return enterCodeLocation
+        }
+        return null
+    }
+
+    override fun getCurrentLoopIteration(threadId: Int, loopId: Int, codeLocation: Int): Int {
+        val state = state(threadId)
+        val frame = state.callStack.lastOrNull() ?: return 1
+        val loop = frame.loops.lastOrNull { it.key.loopId == loopId && it.key.codeLocation == codeLocation } ?: return 1
+        return loop.iterationCount
+    }
+
+    // --- Method calls  ---
+
+    override fun onMethodEnter(
+        threadId: Int,
+        codeLocation: Int,
+        methodId: Int,
+        receiver: Any?,
+        params: Array<Any?>
+    ): LoopDetector.Decision {
+        val state = state(threadId)
+        val stack = state.callStack
+        val top = stack.lastOrNull()
+
+        val counters = state.methodCallCounters
+        val methodCallCounter = (counters[methodId] ?: 0) + 1
+        counters[methodId] = methodCallCounter
+        if (methodCallCounter > recursiveCallsBound) {
+            return LoopDetector.Decision.STUCK
+        }
+
+        if (top != null && top.methodId == methodId) {
+            top.depth += 1
+            if (top.depth > recursiveCallsBound) {
+                return LoopDetector.Decision.STUCK
+            }
+        } else {
+            val newFrame = ActiveMethodCallInfo(methodId = methodId)
+            stack.addLast(newFrame)
+        }
+
+        return LoopDetector.Decision.IDLE
+    }
+
+    override fun onMethodExit(
+        threadId: Int,
+        methodId: Int,
+        receiver: Any?,
+        params: Array<Any?>,
+        result: Any?
+    ) {
+        val state = state(threadId)
+        val stack = state.callStack
+        val top = stack.lastOrNull() ?: return
+
+        val counters = state.methodCallCounters
+        val methodCallCounter = (counters[methodId] ?: 1) - 1
+        if (methodCallCounter <= 0) counters.remove(methodId) else counters[methodId] = methodCallCounter
+
+        if (top.methodId == methodId) {
+            if (top.depth > 1) top.depth -= 1 else stack.removeLast()
+            return
+        }
+
+        val idx = stack.indexOfLast { it.methodId == methodId }
+        if (idx == -1) return
+        while (stack.size - 1 > idx) stack.removeLast()
+        val frame = stack.lastOrNull() ?: return
+        if (frame.depth > 1) frame.depth -= 1 else stack.removeLast()
+    }
+}
