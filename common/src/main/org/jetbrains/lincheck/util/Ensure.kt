@@ -10,50 +10,72 @@
 
 package org.jetbrains.lincheck.util
 
+import kotlin.contracts.*
+
+@OptIn(ExperimentalContracts::class)
 fun Boolean.ensureTrue(): Boolean {
-    // TODO: add contracts?
+    contract {
+        returns() implies (this@ensureTrue)
+    }
     check(this == true)
     return this
 }
 
+@OptIn(ExperimentalContracts::class)
 fun Boolean.ensureFalse(): Boolean {
-    // TODO: add contracts?
+    contract {
+        returns() implies (!this@ensureFalse)
+    }
     check(this == false)
     return this
 }
 
 inline fun<T> T.ensure(predicate: (T) -> Boolean): T {
-    // TODO: add contracts?
     check(predicate(this))
     return this
 }
 
 inline fun<T> T.ensure(predicate: (T) -> Boolean, lazyMessage: (T?) -> Any): T {
-    // TODO: add contracts?
     check(predicate(this)) { lazyMessage(this) }
     return this
 }
 
+@OptIn(ExperimentalContracts::class)
 fun<T> T?.ensureNull(): T? {
-    // TODO: add contracts?
+    contract {
+        returns() implies (this@ensureNull == null)
+    }
     check(this == null)
     return this
 }
 
-fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
-    // TODO: add contracts?
+@OptIn(ExperimentalContracts::class)
+inline fun<T> T?.ensureNull(lazyMessage: (T?) -> Any): T? {
+    contract {
+        returns() implies (this@ensureNull == null)
+    }
     check(this == null) { lazyMessage(this) }
     return this
 }
 
+@OptIn(ExperimentalContracts::class)
 fun<T> T?.ensureNotNull(): T {
-    // TODO: add contracts?
+    contract {
+        returns() implies (this@ensureNotNull != null)
+    }
     check(this != null)
     return this
 }
 
-fun<T> T?.ensureNotNull(lazyMessage: (T?) -> Any): T {
-    // TODO: add contracts?
+@OptIn(ExperimentalContracts::class)
+inline fun<T> T?.ensureNotNull(lazyMessage: (T?) -> Any): T {
+    contract {
+        returns() implies (this@ensureNotNull != null)
+    }
     check(this != null) { lazyMessage(this) }
     return this
 }
+
+// alias for `requireNoNulls`, used only for the naming scheme consistency
+fun <T : Any> List<T?>.ensureNoNulls(): List<T> =
+    requireNoNulls()

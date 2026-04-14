@@ -59,8 +59,9 @@ public interface EventTracker {
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 
-    void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId);
-    void beforeReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index);
+    void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor);
+    void beforeReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, ResultInterceptor interceptor);
+
     void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value);
     void afterReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value);
 
@@ -78,9 +79,14 @@ public interface EventTracker {
     void onInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner);
     void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId);
     void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t);
+    
+    void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId, int breakpointId);
 
     void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId);
     void afterLoopExit(ThreadDescriptor descriptor, int codeLocation, int loopId, Throwable exception, boolean isReachableFromOutsideLoop);
+
+    void onThrow(ThreadDescriptor descriptor, int codeLocation, Throwable exception);
+    void onCatch(ThreadDescriptor descriptor, int codeLocation, Throwable exception);
 
     InjectedRandom getThreadLocalRandom();
     int randomNextInt();

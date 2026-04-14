@@ -343,6 +343,8 @@ ImmutableListTest.replaceElements() at ImmutableListTest.kt:91
       StringBuilder@1("index: -1, size: ").append(size ➜ 10): StringBuilder@1("index: -1, size: 10") at ListImplementation.kt:15
       StringBuilder@1("index: -1, size: 10").toString(): "index: -1, size: 10" at ListImplementation.kt:15
       new IndexOutOfBoundsException("index: -1, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:15
+      throw IndexOutOfBoundsException@1 at ListImplementation.kt:15
+  catch(IndexOutOfBoundsException@1) at ImmutableListTest.kt:98
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:98
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:98
   checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:98
@@ -357,6 +359,8 @@ ImmutableListTest.replaceElements() at ImmutableListTest.kt:91
       StringBuilder@1("index: 11, size: ").append(size ➜ 10): StringBuilder@1("index: 11, size: 10") at ListImplementation.kt:15
       StringBuilder@1("index: 11, size: 10").toString(): "index: 11, size: 10" at ListImplementation.kt:15
       new IndexOutOfBoundsException("index: 11, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:15
+      throw IndexOutOfBoundsException@1 at ListImplementation.kt:15
+  catch(IndexOutOfBoundsException@1) at ImmutableListTest.kt:99
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:99
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:99
   checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:99

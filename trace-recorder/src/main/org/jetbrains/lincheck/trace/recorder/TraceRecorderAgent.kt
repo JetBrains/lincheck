@@ -10,27 +10,35 @@
 
 package org.jetbrains.lincheck.trace.recorder
 
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.jvm.agent.TraceAgentTransformer
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINTS_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_EXCLUDE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_INCLUDE
-import org.jetbrains.lincheck.jvm.agent.isInstrumentationInitialized
-import org.jetbrains.lincheck.jvm.agent.isTraceJavaAgentAttached
-import org.jetbrains.lincheck.util.isInTraceDebuggerMode
-import org.jetbrains.lincheck.util.isInTraceRecorderMode
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
+import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
+import org.jetbrains.lincheck.trace.network.TracingServer
+import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
+import org.jetbrains.lincheck.tracer.TraceOutputMode
+import org.jetbrains.lincheck.tracer.Tracer
+import org.jetbrains.lincheck.tracer.TracerAgent
+import org.jetbrains.lincheck.tracer.TracingSession
+import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
 import java.lang.instrument.Instrumentation
+import java.net.InetSocketAddress
 
 /**
- * Agent that is set as `premain` entry class for fat trace debugger jar archive.
- * This archive when attached to the jvm process expects also an option
- * `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true`
- * in order to enable trace debugging plugin or trace recorder functionality accordingly.
+ * Trace recorder JVM agent.
+ *
+ * Trace recorder captures the execution trace of a program and saves it into a file.
  */
 internal object TraceRecorderAgent {
-    const val ARGUMENT_FORMAT = "format"
-    const val ARGUMENT_FOPTION = "formatOption"
-    const val ARGUMENT_PACK = "pack"
 
     // Allowed additional arguments
     private val ADDITIONAL_ARGS = listOf(
@@ -39,38 +47,82 @@ internal object TraceRecorderAgent {
         ARGUMENT_INCLUDE,
         ARGUMENT_EXCLUDE,
         ARGUMENT_PACK,
+        ARGUMENT_BREAKPOINTS_FILE,
+        ARGUMENT_START_SERVER,
+        ARGUMENT_SERVER_PORT,
     )
+    private val agent = object : TracerAgent() {
+        override val modeSystemPropertyName: String = TRACE_RECORDER_MODE_PROPERTY
 
+        override val instrumentationMode: InstrumentationMode = InstrumentationMode.TRACE_RECORDING
+
+        override fun parseArguments(agentArgs: String?) {
+            TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+        }
+
+        override fun validateArguments(attachType: JavaAgentAttachType) {
+            TraceAgentParameters.validateMode()
+
+            if (attachType == JavaAgentAttachType.STATIC) {
+                TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
+            }
+        }
+
+        override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider
+            get() = ::TraceRecorderMethodTransformer
+
+        override fun createTracingServer(): TracingServer? {
+            try {
+                val port = TraceAgentParameters.serverPort
+                val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
+                    override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
+                        val session = Tracer.startTracing(
+                            TraceOutputMode.BinaryFileStream(traceDumpFilePath),
+                            TracingSession.StartMode.Dynamic,
+                        )
+                        session.installOnFinishHook {
+                            dumpTrace(traceDumpFilePath, packTrace)
+                        }
+                    }
+
+                    override fun startNetworkTracing() {
+                        Tracer.startTracing(TraceOutputMode.BinaryNetworkStream(this), TracingSession.StartMode.Dynamic)
+                    }
+
+                    override fun stopTracing() {
+                        Tracer.stopTracing()
+                    }
+
+                    override fun addBreakpoints(breakpoints: List<String>) {
+                        Logger.error { "Add breakpoints is not supported in trace recorder mode" }
+                    }
+
+                    override fun removeBreakpoints(breakpoints: List<String>) {
+                        Logger.error { "Remove breakpoints is not supported in trace recorder mode" }
+                    }
+
+                    override fun onDisconnected() {
+                        // No cleanup needed for trace recorder
+                    }
+                }
+                Logger.info { "Started trace streaming server on port $port" }
+                return server
+            } catch (t: Throwable) {
+                Logger.error(t) { "Cannot start trace server" }
+                return null
+            }
+        }
+    }
+
+    // entry point for a statically attached java agent
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
-        /*
-         * Static agent requires Trace Recorder mode.
-         * For now, the mode is selected by system property.
-         * If you want to run Trace Recorder, you must set `-Dlincheck.traceRecorderMode=true`.
-         *
-         * It is an error not to set it.
-         */
-        // Check if one of the required parameters is set.
-        check(isInTraceRecorderMode) {
-            "When lincheck agent is attached to process, " +
-            "mode should be selected by VM parameter `lincheck.traceRecorderMode`. It is expected to be `true`. " +
-            "Rerun with `-Dlincheck.traceRecorderMode=true`."
-        }
-        // Check that only one parameter is set: one of two must be `false`
-        check(!isInTraceDebuggerMode || !isInTraceRecorderMode) {
-            "When lincheck agent is attached to process, " +
-            "mode should be selected by one of VM parameters `lincheck.traceDebuggerMode` or " +
-            "`lincheck.traceRecorderMode`. Only one of them expected to be `true`. " +
-            "Rerun with `-Dlincheck.traceDebuggerMode=true` or `-Dlincheck.traceRecorderMode=true` but not both."
-        }
-        TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
-        LincheckJavaAgent.instrumentation = inst
-        isTraceJavaAgentAttached = true
-        isInstrumentationInitialized = true
-        // We are in Trace Recorder mode (by exclusion)
-        // This adds turn-on and turn-off of tracing to the method in question
-        LincheckJavaAgent.instrumentation.addTransformer(TraceAgentTransformer(LincheckJavaAgent.context, ::TraceRecorderMethodTransformer), true)
-        // This prepares instrumentation of all future classes
-        TraceRecorderInjections.prepareTraceRecorder()
+        agent.premain(agentArgs, inst)
+    }
+
+    // entry point for a dynamically attached java agent
+    @JvmStatic
+    fun agentmain(agentArgs: String?, inst: Instrumentation) {
+        agent.agentmain(agentArgs, inst)
     }
 }

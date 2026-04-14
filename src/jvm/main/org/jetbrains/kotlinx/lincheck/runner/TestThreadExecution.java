@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner;
 
-import org.jetbrains.kotlinx.lincheck.Result;
+import org.jetbrains.kotlinx.lincheck.util.LincheckResult;
 
 
 /**
@@ -27,7 +27,7 @@ public abstract class TestThreadExecution implements Runnable {
     protected Object[] objArgs;
     public TestThreadExecution[] allThreadExecutions;
 
-    public Result[] results; // for ExecutionResult
+    public LincheckResult[] results; // for ExecutionResult
 
     public int iThread; // thread ID of this execution
     public int[][] clocks; // for HBClock

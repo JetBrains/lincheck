@@ -10,16 +10,15 @@
 
 package org.jetbrains.lincheck.util
 
-import org.jetbrains.lincheck.util.AtomicMethodKind.*
-import org.jetbrains.lincheck.util.AtomicApiKind.*
-import org.jetbrains.lincheck.util.MemoryOrdering.*
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TraceContext
-import java.util.concurrent.atomic.*
-import java.util.concurrent.ConcurrentHashMap
+import org.jetbrains.lincheck.util.AtomicApiKind.*
+import org.jetbrains.lincheck.util.AtomicMethodKind.*
+import org.jetbrains.lincheck.util.MemoryOrdering.*
 import sun.misc.Unsafe
-import kotlin.contracts.contract
+import java.util.concurrent.atomic.*
 import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
 
 internal data class AtomicMethodDescriptor(
     val kind: AtomicMethodKind,
@@ -188,7 +187,7 @@ internal fun AtomicMethodDescriptor.getAtomicObjectAccessInfo(
     }
     return AtomicMethodAccessInfo(
         obj = atomic,
-        clazz = null,
+        clazz = atomic::class.java,
         location = null,
         arguments = arguments.asList()
     )
@@ -365,9 +364,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
         // Static field access case
         isVarHandleStaticFieldClass(varHandleClassName) -> {
             try {
-                val extractor = varHandleStaticFieldExtractors.computeIfAbsent(varHandle.javaClass) {
-                    VarHandleStaticFieldExtractor(it)
-                }
+                val extractor = VarHandleStaticFieldExtractor[varHandle.javaClass]
                 val receiverType = extractor.extractBase(varHandle)
                 val fieldOffset = extractor.extractFieldOffset(varHandle)
                 val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(receiverType, fieldOffset, FieldKind.STATIC)
@@ -395,9 +392,7 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
             }
             try {
                 val targetObject = arguments[0]
-                val extractor = varHandleInstanceFieldExtractors.computeIfAbsent(varHandle.javaClass) {
-                    VarHandleInstanceFieldExtractor(it)
-                }
+                val extractor = VarHandleInstanceFieldExtractor[varHandle.javaClass]
                 val receiverType = extractor.extractReceiverType(varHandle)
                 val fieldOffset = extractor.extractFieldOffset(varHandle)
                 val fieldDescriptor = findFieldDescriptorByOffsetViaUnsafe(receiverType, fieldOffset, FieldKind.INSTANCE)
@@ -420,39 +415,53 @@ internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
     }
 }
 
-private class VarHandleStaticFieldExtractor(private val varHandleClass: Class<*>) {
-    private val baseField =
-        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "base" }!!
-    private val fieldOffsetField =
-        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "fieldOffset" }!!
+private class VarHandleStaticFieldExtractor(varHandleClass: Class<*>) {
+    private val baseField = varHandleClass.allDeclaredFields.find { it.name == "base" }!!
+    private val fieldOffsetField = varHandleClass.allDeclaredFields.find { it.name == "fieldOffset" }!!
 
     fun extractBase(varHandle: Any): Class<*> {
-        return readFieldViaUnsafe(varHandle, baseField, Unsafe::getObject) as Class<*>
+        return readFieldViaUnsafe(varHandle, baseField) as Class<*>
     }
 
     fun extractFieldOffset(varHandle: Any): Long {
-        return readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
+        return readFieldViaUnsafe(varHandle, fieldOffsetField) as Long
+    }
+
+    companion object {
+        private val cache = object : ClassValue<VarHandleStaticFieldExtractor>() {
+            override fun computeValue(varHandleClass: Class<*>): VarHandleStaticFieldExtractor {
+                return VarHandleStaticFieldExtractor(varHandleClass)
+            }
+        }
+
+        operator fun get(varHandleClass: Class<*>): VarHandleStaticFieldExtractor =
+            cache.get(varHandleClass)
     }
 }
 
-private class VarHandleInstanceFieldExtractor(private val varHandleClass: Class<*>) {
-    private val receiverTypeField =
-        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "receiverType" }!!
-    private val fieldOffsetField =
-        varHandleClass.allDeclaredFieldWithSuperclasses.find { it.name == "fieldOffset" }!!
+private class VarHandleInstanceFieldExtractor(varHandleClass: Class<*>) {
+    private val receiverTypeField = varHandleClass.allDeclaredFields.find { it.name == "receiverType" }!!
+    private val fieldOffsetField = varHandleClass.allDeclaredFields.find { it.name == "fieldOffset" }!!
 
     fun extractReceiverType(varHandle: Any): Class<*> {
-        return readFieldViaUnsafe(varHandle, receiverTypeField, Unsafe::getObject) as Class<*>
+        return readFieldViaUnsafe(varHandle, receiverTypeField) as Class<*>
     }
 
     fun extractFieldOffset(varHandle: Any): Long {
-        return readFieldViaUnsafe(varHandle, fieldOffsetField, Unsafe::getLong)
+        return readFieldViaUnsafe(varHandle, fieldOffsetField) as Long
+    }
+
+    companion object {
+        private val cache = object : ClassValue<VarHandleInstanceFieldExtractor>() {
+            override fun computeValue(varHandleClass: Class<*>): VarHandleInstanceFieldExtractor {
+                return VarHandleInstanceFieldExtractor(varHandleClass)
+            }
+        }
+
+        operator fun get(varHandleClass: Class<*>): VarHandleInstanceFieldExtractor =
+            cache.get(varHandleClass)
     }
 }
-
-private val varHandleStaticFieldExtractors = ConcurrentHashMap<Class<*>, VarHandleStaticFieldExtractor>()
-private val varHandleInstanceFieldExtractors = ConcurrentHashMap<Class<*>, VarHandleInstanceFieldExtractor>()
-
 
 internal fun isAtomic(receiver: Any?) =
     isJavaAtomic(receiver) ||
@@ -499,6 +508,13 @@ internal fun isAtomicFUClass(className: String) =
 internal fun isAtomicMethod(className: String, methodName: String) =
     isAtomicClass(className) && methodName in atomicMethods
 
+internal fun getAtomicType(atomic: Any?): Types.Type? = when (atomic) {
+    is AtomicReference<*>       -> Types.OBJECT_TYPE
+    is AtomicBoolean            -> Types.BOOLEAN_TYPE
+    is AtomicInteger            -> Types.INT_TYPE
+    else                        -> null
+}
+
 internal fun isAtomicArray(receiver: Any?) =
     isAtomicArrayJava(receiver) ||
     isAtomicFUArray(receiver)
@@ -538,6 +554,13 @@ internal fun isAtomicFUArrayClass(className: String) =
 
 internal fun isAtomicArrayMethod(className: String, methodName: String) =
     isAtomicArrayClass(className) && methodName in atomicMethods
+
+internal fun getAtomicArrayType(atomic: Any?): Types.Type? = when (atomic) {
+    is AtomicReferenceArray<*>  -> Types.OBJECT_TYPE
+    is AtomicIntegerArray       -> Types.INT_TYPE
+    is AtomicLongArray          -> Types.LONG_TYPE
+    else                        -> null
+}
 
 internal fun isAtomicFieldUpdater(obj: Any?) =
     obj is AtomicReferenceFieldUpdater<*, *> ||
@@ -684,6 +707,23 @@ internal fun isVarHandleInstanceFieldClass(className: String) =
 internal fun isVarHandleMethod(className: String, methodName: String) =
     isVarHandleClass(className) && methodName in varHandleMethods
 
+internal fun getVarHandleAccessType(varHandle: Any?): Types.Type? {
+    val className = varHandle?.javaClass?.name ?: return null
+    return when {
+        "Int"       in className -> Types.INT_TYPE
+        "Long"      in className -> Types.LONG_TYPE
+        "Short"     in className -> Types.SHORT_TYPE
+        "Byte"      in className -> Types.BYTE_TYPE
+        "Char"      in className -> Types.CHAR_TYPE
+        "Boolean"   in className -> Types.BOOLEAN_TYPE
+        "Double"    in className -> Types.DOUBLE_TYPE
+        "Float"     in className -> Types.FLOAT_TYPE
+        "Reference" in className -> Types.OBJECT_TYPE
+        "Object"    in className -> Types.OBJECT_TYPE
+        else                     -> null
+    }
+}
+
 internal fun isUnsafe(receiver: Any?): Boolean =
     if (receiver != null) isUnsafeClass(receiver::class.java.name) else false
 
@@ -693,6 +733,19 @@ internal fun isUnsafeClass(className: String) =
 
 internal fun isUnsafeMethod(className: String, methodName: String) =
     isUnsafeClass(className) && methodName in unsafeMethods
+
+internal fun parseUnsafeMethodAccessType(methodName: String): Types.Type? = when {
+    "Boolean"   in methodName -> Types.BOOLEAN_TYPE
+    "Byte"      in methodName -> Types.BYTE_TYPE
+    "Short"     in methodName -> Types.SHORT_TYPE
+    "Int"       in methodName -> Types.INT_TYPE
+    "Long"      in methodName -> Types.LONG_TYPE
+    "Float"     in methodName -> Types.FLOAT_TYPE
+    "Double"    in methodName -> Types.DOUBLE_TYPE
+    "Reference" in methodName -> Types.OBJECT_TYPE
+    "Object"    in methodName -> Types.OBJECT_TYPE
+    else                      -> null
+}
 
 private val atomicMethods = mapOf(
     // get

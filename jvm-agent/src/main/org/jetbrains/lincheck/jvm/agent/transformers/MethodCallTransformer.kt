@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.OwnerName
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.trace.isThisAccess
 import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.jetbrains.lincheck.util.isIntellijInstrumentationCoverageAgentClass
@@ -95,7 +96,11 @@ internal class MethodCallTransformer(
             else -> null
         }
         val sanitizedMethodName = sanitizeMethodName(owner, name, InstrumentationMode.TRACE_RECORDING)
-        val methodId = context.getOrCreateMethodId(owner.toCanonicalClassName(), sanitizedMethodName, Types.convertAsmMethodType(desc))
+        val methodId = context.createAndRegisterMethodDescriptor(
+            owner.toCanonicalClassName(),
+            sanitizedMethodName,
+            Types.convertAsmMethodType(desc)
+        ).id
 
         val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
@@ -107,11 +112,7 @@ internal class MethodCallTransformer(
         // if configuration disables method result interception,
         // does not create an object and pushes `null` instead
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            if(configuration.interceptMethodCallResults) {
-                invokeStatic(Injections::createResultInterceptor)
-            } else {
-                pushNull()
-            }
+            pushResultInterceptor(threadDescriptorLocal, shouldIntercept = configuration.interceptMethodCallResults)
             storeLocal(it)
         }
 
@@ -207,7 +208,7 @@ internal class MethodCallTransformer(
 
         ifStatement(
             condition = {
-                isMethodIntercepted(resultInterceptorLocal)
+                isResultIntercepted(resultInterceptorLocal)
             },
             thenClause = {
                 getOrThrowInterceptedResult(resultInterceptorLocal, returnType)
@@ -277,24 +278,6 @@ internal class MethodCallTransformer(
         // STACK: descriptor, methodId, receiver, params, exception, interceptor?
         invokeStatic(Injections::onMethodCallException)
         // STACK: <empty>
-    }
-
-    private fun GeneratorAdapter.isMethodIntercepted(resultInterceptorLocal: Int) {
-        // STACK: <empty>
-        loadLocal(resultInterceptorLocal)
-        // STACK: resultInterceptor
-        invokeStatic(Injections::isResultOrExceptionIntercepted)
-        // STACK: empty
-    }
-
-    private fun GeneratorAdapter.getOrThrowInterceptedResult(resultInterceptorLocal: Int, returnType: Type) {
-            // STACK: <empty>
-            loadLocal(resultInterceptorLocal)
-            // STACK: resultInterceptor
-            invokeStatic(Injections::getOrThrowInterceptedResult)
-            // STACK: result
-            if (returnType == VOID_TYPE) pop() else unbox(returnType)
-            // STACK: result?
     }
 
     private fun GeneratorAdapter.runMethod(

@@ -27,6 +27,7 @@ sourceSets {
         implementation(project(":common"))
         implementation(project(":jvm-agent"))
         implementation(project(":trace"))
+        implementation(project(":tracer"))
 
         api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
@@ -35,7 +36,6 @@ sourceSets {
         api("net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}")
     }
 }
-
 
 tasks {
     named<JavaCompile>("compileTestJava") {
@@ -48,7 +48,8 @@ tasks {
     withType<KotlinCompile> {
         getAccessToInternalDefinitionsOf(
             project(":common"),
-            project(":trace")
+            project(":trace"),
+            project(":tracer")
         )
     }
 }

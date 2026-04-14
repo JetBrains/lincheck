@@ -20,6 +20,7 @@ import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.objectweb.asm.commons.Method
 import sun.nio.ch.lincheck.Injections
+import sun.nio.ch.lincheck.ResultInterceptor
 import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KFunction
@@ -184,7 +185,7 @@ internal fun GeneratorAdapter.storeArguments(methodDescriptor: String): IntArray
 
 /**
  * Executes a try-catch-finally block within the context of the GeneratorAdapter.
- * 
+ *
  * **Attention**:
  * * This method does not insert `finally` blocks before inner return and throw statements.
  * * It is forbidden to jump from the blocks outside and between them.
@@ -287,6 +288,61 @@ internal fun GeneratorAdapter.pushArray(locals: IntArray) {
 
 private val Type.requiresBoxing: Boolean
     get() = !(sort == OBJECT || sort == ARRAY)
+
+
+/**
+ * Creates a result interceptor object and pushes it onto the stack,
+ * or pushed a `null` depending on the supplied boolean flag [shouldIntercept].
+ *
+ * @param shouldIntercept Flag indicating whether to intercept results.
+ * @param threadDescriptorLocal The local variable index that holds a reference to the current thread descriptor.
+ */
+internal fun GeneratorAdapter.pushResultInterceptor(threadDescriptorLocal: Int, shouldIntercept: Boolean) {
+    // STACK: <empty>
+    if (shouldIntercept) {
+        // STACK: <empty>
+        loadLocal(threadDescriptorLocal)
+        // STACK: threadDescriptor
+        invokeStatic(Injections::createResultInterceptor)
+        // STACK: interceptor
+    } else {
+        // STACK: <empty>
+        pushNull()
+        // STACK: null
+    }
+    // STACK: interceptor?
+}
+
+/**
+ * Checks if a result or exception was intercepted by the [ResultInterceptor] object
+ * stored in the given local variable.
+ *
+ * @param resultInterceptorLocal the local variable index that holds a reference to the result interceptor.
+ */
+internal fun GeneratorAdapter.isResultIntercepted(resultInterceptorLocal: Int) {
+    // STACK: <empty>
+    loadLocal(resultInterceptorLocal)
+    // STACK: interceptor
+    invokeStatic(Injections::isResultOrExceptionIntercepted)
+    // STACK: isIntercepted
+}
+
+/**
+ * Retrieves the intercepted result or exception from the [ResultInterceptor] object
+ * stored in the given local variable.
+ *
+ * @param resultInterceptorLocal the local variable index that holds a reference to the result interceptor.
+ * @param returnType the type of the intercepted result or exception.
+ */
+internal fun GeneratorAdapter.getOrThrowInterceptedResult(resultInterceptorLocal: Int, returnType: Type) {
+    // STACK: <empty>
+    loadLocal(resultInterceptorLocal)
+    // STACK: interceptor
+    invokeStatic(Injections::getOrThrowInterceptedResult)
+    // STACK: result
+    if (returnType == VOID_TYPE) pop() else unbox(returnType)
+    // STACK: result?
+}
 
 /**
  * Adds invocation of [sun.nio.ch.lincheck.Injections.beforeEvent] method.
@@ -538,40 +594,6 @@ internal fun isCoroutineStateMachineClass(className: String): Boolean {
 private val isCoroutineStateMachineClassMap = ConcurrentHashMap<String, Boolean>()
 
 /**
- * Tests if the provided [className] contains `"ClassLoader"` as a substring.
- */
-internal fun isClassLoaderClassName(className: String): Boolean =
-    className.contains("ClassLoader")
-
-/**
- * Checks if the given method name and descriptor correspond to
- * the `ClassLoader.loadClass(String name)` method.
- */
-internal fun isLoadClassMethod(methodName: String, desc: String) =
-    methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
-
-/**
- * Tests if the provided [className] represents [StackTraceElement] class.
- */
-internal fun isStackTraceElementClass(className: String): Boolean =
-    className == "java.lang.StackTraceElement"
-
-internal fun isJavaUtilArraysClass(className: String): Boolean =
-    className == "java.util.Arrays"
-
-/**
- * Checks if the provided class name matches the [JavaLangAccess] class.
- */
-internal fun isJavaLangAccessClass(className: String): Boolean =
-    className == "jdk.internal.access.JavaLangAccess"
-
-/**
- * Checks whether the given method corresponds to the `toString()` Java method.
- */
-internal fun isToStringMethod(methodName: String, desc: String) =
-    methodName == "toString" && desc == "()Ljava/lang/String;"
-
-/**
  * Extracts the simple class name from a fully qualified canonical class name.
  */
 fun String.toSimpleClassName() =
@@ -590,6 +612,83 @@ fun String.toCanonicalClassName() =
  */
 fun String.toInternalClassName() =
     this.replace('.', '/')
+
+internal fun loadClassFromBytes(userCodeClassLoader: ClassLoader, className: String, classBytes: ByteArray): Class<*> {
+    // defineClass expects canonical class name (with dots, not slashes)
+    val canonicalClassName = className.toCanonicalClassName()
+    // Downgrade the class file version if needed to match the current JVM version.
+    // This is necessary because the IDE may compile condition classes with a newer Java version
+    // than the target application's JVM.
+    val adjustedClassBytes = downgradeClassVersionIfNeeded(classBytes)
+    val customClassLoader = object : ClassLoader(userCodeClassLoader) {
+        override fun loadClass(name: String?): Class<*>? {
+            if (name == canonicalClassName) {
+                return defineClass(name, adjustedClassBytes, 0, adjustedClassBytes.size)
+            }
+            return super.loadClass(name)
+        }
+
+        override fun getResourceAsStream(name: String?): InputStream? {
+            if (name == canonicalClassName.toInternalClassName() + ".class") {
+                return adjustedClassBytes.inputStream()
+            }
+            return super.getResourceAsStream(name)
+        }
+    }
+    return customClassLoader.loadClass(canonicalClassName)!!
+}
+
+/**
+ * Downgrades the class file version in the bytecode if it's higher than the current JVM supports.
+ *
+ * Class file format has the version at bytes 6-7 (major version) and 4-5 (minor version).
+ * Major version mapping: Java 8 = 52, Java 11 = 55, Java 17 = 61, Java 21 = 65, Java 22 = 66, Java 25 = 69, etc.
+ *
+ * This is safe for simple condition classes that don't use features from newer Java versions.
+ */
+private fun downgradeClassVersionIfNeeded(classBytes: ByteArray): ByteArray {
+    if (classBytes.size < 8) return classBytes
+
+    // Read major version from bytes 6-7 (big-endian)
+    val classMajorVersion = ((classBytes[6].toInt() and 0xFF) shl 8) or (classBytes[7].toInt() and 0xFF)
+
+    // Get the current JVM's supported class file version
+    val jvmMajorVersion = getJvmClassFileVersion()
+
+    if (classMajorVersion <= jvmMajorVersion) {
+        // Class version is already compatible
+        return classBytes
+    }
+
+    // Create a copy and downgrade the version
+    val adjusted = classBytes.copyOf()
+    // Set major version (bytes 6-7, big-endian)
+    adjusted[6] = ((jvmMajorVersion shr 8) and 0xFF).toByte()
+    adjusted[7] = (jvmMajorVersion and 0xFF).toByte()
+    // Set minor version to 0 (bytes 4-5)
+    adjusted[4] = 0
+    adjusted[5] = 0
+
+    return adjusted
+}
+
+/**
+ * Returns the maximum class file version supported by the current JVM.
+ * Java version N supports class file major version 44 + N (e.g., Java 8 = 52, Java 17 = 61).
+ */
+private fun getJvmClassFileVersion(): Int {
+    val javaVersion = System.getProperty("java.specification.version")
+    val majorVersion = javaVersion.toIntOrNull() ?: run {
+        // For older format like "1.8", extract the minor part
+        if (javaVersion.startsWith("1.")) {
+            javaVersion.substring(2).toIntOrNull() ?: 8
+        } else {
+            8
+        }
+    }
+    // Class file major version = 44 + Java version
+    return 44 + majorVersion
+}
 
 const val ASM_API = Opcodes.ASM9
 

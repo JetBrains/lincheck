@@ -15,6 +15,7 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.transformers.*
+import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 
@@ -24,6 +25,7 @@ internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
     private val profile: TransformationProfile,
     private val statsTracker: TransformationStatisticsTracker?,
+    private val liveDebuggerSettings: LiveDebuggerSettings,
     private val context: TraceContext
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
@@ -80,12 +82,12 @@ internal class LincheckClassVisitor(
         val config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc)
 
         if (isNative) {
-            Logger.debug { "Skipping transformation of the native method $className.$methodName" }
+            Logger.verbose { "Skipping transformation of the native method $className.$methodName" }
             return mv
         } else if (config == TransformationConfiguration.UNTRACKED) {
-            Logger.debug { "Skipping transformation of the untracked method $className.$methodName" }
+            Logger.verbose { "Skipping transformation of the untracked method $className.$methodName" }
         } else {
-            Logger.debug { "Transforming method $className.$methodName" }
+            Logger.verbose { "Transforming method $className.$methodName" }
         }
 
         if (statsTracker != null) {
@@ -178,6 +180,16 @@ internal class LincheckClassVisitor(
             InlineMethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
+        // ======== Throws ========
+        chain.addTransformer { adapter, mv ->
+            ThrowTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+        }
+
+        // ======== Catch blocks ========
+        chain.addTransformer { adapter, mv ->
+            CatchBlockStartTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+        }
+
         // ======== Loops ========
         // TODO: we put loop transformer at the beginning of the chain,
         //   because it relies on original bytecode instruction numeration
@@ -190,6 +202,15 @@ internal class LincheckClassVisitor(
         //   and most likely we have some bug in one of the transformers.
         chain.addTransformer { adapter, mv ->
             LoopTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+        }
+        
+        // ======== SnapshotBreakpoints ========
+        val breakpoints = liveDebuggerSettings.lineBreakPoints
+            .filter { it.className == className.toCanonicalClassName() }
+        if (breakpoints.isNotEmpty()) {
+            chain.addTransformer { adapter, mv ->
+                SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classVisitor.loader)
+            }
         }
 
         // ======== Analyzers ========

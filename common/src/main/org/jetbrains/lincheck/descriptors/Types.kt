@@ -18,30 +18,48 @@ import org.jetbrains.lincheck.descriptors.Types.DOUBLE_TYPE
 import org.jetbrains.lincheck.descriptors.Types.FLOAT_TYPE
 import org.jetbrains.lincheck.descriptors.Types.INT_TYPE
 import org.jetbrains.lincheck.descriptors.Types.LONG_TYPE
-import org.jetbrains.lincheck.descriptors.Types.ObjectType
 import org.jetbrains.lincheck.descriptors.Types.SHORT_TYPE
+import org.jetbrains.lincheck.descriptors.Types.BOOLEAN_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.BYTE_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.CHAR_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.DOUBLE_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.FLOAT_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.INT_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.LONG_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.SHORT_TYPE_BOXED
+import org.jetbrains.lincheck.descriptors.Types.OBJECT_TYPE
+import org.jetbrains.lincheck.descriptors.Types.ObjectType
 import org.jetbrains.lincheck.descriptors.Types.Type
 import java.util.*
 import kotlin.math.max
+import kotlin.reflect.KClass
 
 object Types {
-    private fun convertAsmTypeName(className: String): Type {
-        when (className) {
-            "V" -> return VOID_TYPE
-            "I" -> return INT_TYPE
-            "J" -> return LONG_TYPE
-            "D" -> return DOUBLE_TYPE
-            "F" -> return FLOAT_TYPE
-            "Z" -> return BOOLEAN_TYPE
-            "B" -> return BYTE_TYPE
-            "S" -> return SHORT_TYPE
-            "C" -> return CHAR_TYPE
-            else -> if (className.startsWith("[")) {
-                return ArrayType(convertAsmTypeName(className.substring(1)))
-            } else {
-                require(!(!className.startsWith("L") || !className.endsWith(";"))) { "Invalid type name: $className" }
-                return ObjectType(className.substring(1, className.length - 1).replace('/', '.'))
-            }
+    fun convertAsmTypeName(asmType: org.objectweb.asm.Type): Type =
+        convertAsmTypeName(asmType.descriptor)
+
+    fun convertAsmTypeName(className: String): Type {
+        return when (className) {
+            "V" -> VOID_TYPE
+            "I" -> INT_TYPE
+            "J" -> LONG_TYPE
+            "D" -> DOUBLE_TYPE
+            "F" -> FLOAT_TYPE
+            "Z" -> BOOLEAN_TYPE
+            "B" -> BYTE_TYPE
+            "S" -> SHORT_TYPE
+            "C" -> CHAR_TYPE
+            else if (className.startsWith("[")) ->
+                ArrayType(convertAsmTypeName(className.substring(1)))
+            else ->
+                // Class name might be given in wrapping L and ; symbols or without them.
+                // L and ; might be missing when the string `className` representation is retrieved from the
+                // asm `Type::getDescriptor` method, which removes these symbols for non-internal OBJECT types.
+                // See the method's javadoc for details.
+                ObjectType(className
+                    .run { if (startsWith("L") && endsWith(";")) substring(1, length - 1) else this }
+                    .replace('/', '.')
+                )
         }
     }
 
@@ -75,18 +93,20 @@ object Types {
     }
 
     fun isPrimitive(type: Type?): Boolean {
-        return (type is IntType ||
-                type is LongType ||
-                type is DoubleType ||
-                type is FloatType ||
-                type is BooleanType ||
-                type is ByteType ||
-                type is ShortType ||
-                type is CharType
-                )
+        return (
+            type is IntType ||
+            type is LongType ||
+            type is DoubleType ||
+            type is FloatType ||
+            type is BooleanType ||
+            type is ByteType ||
+            type is ShortType ||
+            type is CharType
+        )
     }
 
     val VOID_TYPE: VoidType = VoidType()
+
     val INT_TYPE: IntType = IntType()
     val LONG_TYPE: LongType = LongType()
     val DOUBLE_TYPE: DoubleType = DoubleType()
@@ -95,6 +115,17 @@ object Types {
     val BYTE_TYPE: ByteType = ByteType()
     val SHORT_TYPE: ShortType = ShortType()
     val CHAR_TYPE: CharType = CharType()
+
+    val INT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Integer")
+    val LONG_TYPE_BOXED: ObjectType = ObjectType("java.lang.Long")
+    val DOUBLE_TYPE_BOXED: ObjectType = ObjectType("java.lang.Double")
+    val FLOAT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Float")
+    val BOOLEAN_TYPE_BOXED: ObjectType = ObjectType("java.lang.Boolean")
+    val BYTE_TYPE_BOXED: ObjectType = ObjectType("java.lang.Byte")
+    val SHORT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Short")
+    val CHAR_TYPE_BOXED: ObjectType = ObjectType("java.lang.Character")
+
+    val OBJECT_TYPE: ObjectType = ObjectType(Object::class.java.name)
 
     sealed class Type
 
@@ -220,6 +251,68 @@ object Types {
     }
 }
 
+fun Type.getKClass(): KClass<*> = when (this) {
+    INT_TYPE     -> Int::class
+    BYTE_TYPE    -> Byte::class
+    SHORT_TYPE   -> Short::class
+    LONG_TYPE    -> Long::class
+    FLOAT_TYPE   -> Float::class
+    DOUBLE_TYPE  -> Double::class
+    CHAR_TYPE    -> Char::class
+    BOOLEAN_TYPE -> Boolean::class
+
+    INT_TYPE_BOXED      -> Int::class
+    BYTE_TYPE_BOXED     -> Byte::class
+    SHORT_TYPE_BOXED    -> Short::class
+    LONG_TYPE_BOXED     -> Long::class
+    FLOAT_TYPE_BOXED    -> Float::class
+    DOUBLE_TYPE_BOXED   -> Double::class
+    CHAR_TYPE_BOXED     -> Char::class
+    BOOLEAN_TYPE_BOXED  -> Boolean::class
+
+    is ArrayType   -> when (elementType) {
+        INT_TYPE     -> IntArray::class
+        BYTE_TYPE    -> ByteArray::class
+        SHORT_TYPE   -> ShortArray::class
+        LONG_TYPE    -> LongArray::class
+        FLOAT_TYPE   -> FloatArray::class
+        DOUBLE_TYPE  -> DoubleArray::class
+        CHAR_TYPE    -> CharArray::class
+        BOOLEAN_TYPE -> BooleanArray::class
+        else         -> Array::class
+    }
+
+    is ObjectType -> Any::class
+
+    else -> throw IllegalArgumentException()
+}
+
+fun KClass<*>.getType(): Type = when (this) {
+    Int::class      -> INT_TYPE
+    Byte::class     -> BYTE_TYPE
+    Short::class    -> SHORT_TYPE
+    Long::class     -> LONG_TYPE
+    Float::class    -> FLOAT_TYPE
+    Double::class   -> DOUBLE_TYPE
+    Char::class     -> CHAR_TYPE
+    Boolean::class  -> BOOLEAN_TYPE
+    else            -> OBJECT_TYPE
+}
+
+fun KClass<*>.getArrayElementType(): Type = when {
+    this == IntArray::class     -> INT_TYPE
+    this == ByteArray::class    -> BYTE_TYPE
+    this == ShortArray::class   -> SHORT_TYPE
+    this == LongArray::class    -> LONG_TYPE
+    this == FloatArray::class   -> FLOAT_TYPE
+    this == DoubleArray::class  -> DOUBLE_TYPE
+    this == CharArray::class    -> CHAR_TYPE
+    this == BooleanArray::class -> BOOLEAN_TYPE
+    this.java.isArray           -> OBJECT_TYPE // We cannot
+    // TODO: should we handle atomic arrays?
+    else                -> throw IllegalArgumentException("Argument is not array")
+}
+
 fun String.toType(): Type {
     return when (this) {
         "I", "java.lang.Integer" -> INT_TYPE
@@ -230,15 +323,17 @@ fun String.toType(): Type {
         "B", "java.lang.Byte" -> BYTE_TYPE
         "S", "java.lang.Short" -> SHORT_TYPE
         "C", "java.lang.Character" -> CHAR_TYPE
-        else -> if (startsWith("[")) {
+
+        else if startsWith("[") -> {
             ArrayType(substring(1).toType())
-        } else {
-            if (startsWith("L") && endsWith(";")) {
-                ObjectType(substring(1, length - 1))
-            }
-            else {
-                ObjectType(this)
-            }
+        }
+
+        else if startsWith("L") && endsWith(";") -> {
+            ObjectType(substring(1, length - 1))
+        }
+
+        else -> {
+            ObjectType(this)
         }
     }
 }

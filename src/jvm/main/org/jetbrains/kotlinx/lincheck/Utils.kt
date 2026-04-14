@@ -11,18 +11,15 @@ package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.annotations.DummySequentialSpecification
-import org.jetbrains.kotlinx.lincheck.runner.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
-import sun.nio.ch.lincheck.*
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.lang.ref.*
 import java.lang.reflect.*
 import java.lang.reflect.Method
 import java.util.*
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.*
-import kotlin.coroutines.intrinsics.*
 
 fun <T> List<T>.isSuffixOf(list: List<T>): Boolean {
     if (size > list.size) return false
@@ -43,7 +40,7 @@ internal fun executeActor(
     instance: Any,
     actor: Actor,
     completion: Continuation<Any?>?
-): Result {
+): LincheckResult {
     try {
         val m = getMethod(instance, actor.method)
         val args = (if (actor.isSuspendable) actor.arguments + completion else actor.arguments)
@@ -54,8 +51,8 @@ internal fun executeActor(
         if (invE !is InvocationTargetException)
             throw invE
         // Exception thrown not during the method invocation should contain underlying exception
-        return ExceptionResult.create(
-            invE.cause?.takeIf { !isInternalException(it) }
+        return ExceptionResult(
+            invE.cause?.takeIf { !isLincheckInternalException(it) }
                 ?: throw invE
         )
     } catch (e: Exception) {
@@ -100,35 +97,6 @@ internal fun primitiveOrIdentityHashCode(value: Any?): Int {
     return if (value.isPrimitive) value.hashCode() else System.identityHashCode(value)
 }
 
-/**
- * Creates [Result] of corresponding type from any given value.
- *
- * Java [Void] and Kotlin [Unit] classes are represented as [VoidResult].
- *
- * Instances of [Throwable] are represented as [ExceptionResult].
- *
- * The special [COROUTINE_SUSPENDED] value returned when some coroutine suspended its execution
- * is represented as [NoResult].
- *
- * Success values of [kotlin.Result] instances are represented as either [VoidResult] or [ValueResult].
- * Failure values of [kotlin.Result] instances are represented as [ExceptionResult].
- */
-internal fun createLincheckResult(res: Any?) = when {
-    (res != null && res.javaClass.isAssignableFrom(Void.TYPE)) || res is Unit -> VoidResult
-    res != null && res is Throwable -> ExceptionResult.create(res)
-    res === COROUTINE_SUSPENDED -> Suspended
-    res is kotlin.Result<Any?> -> res.toLinCheckResult()
-    else -> ValueResult(res)
-}
-
-internal fun kotlin.Result<Any?>.toLinCheckResult() =
-    if (isSuccess) {
-        when (val value = getOrNull()) {
-            is Unit -> VoidResult
-            else -> ValueResult(value)
-        }
-    } else ExceptionResult.create(exceptionOrNull()!!)
-
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {
         return block()
@@ -170,7 +138,7 @@ internal enum class CancellationResult { CANCELLED_BEFORE_RESUMPTION, CANCELLED_
 /**
  * Returns `true` if the continuation was cancelled by [CancellableContinuation.cancel].
  */
-fun <T> kotlin.Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
+fun <T> Result<T>.cancelledByLincheck() = exceptionOrNull() === cancellationByLincheckException
 
 private val cancellationByLincheckException = Exception("Cancelled by lincheck")
 

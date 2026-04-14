@@ -15,25 +15,24 @@ import org.junit.Test
 
 class TransformationProfileTests {
     private object TestBaseProfile : TransformationProfile {
-        // A distinctive configuration that indicates that the base profile was used
-        val testConfiguration = TransformationConfiguration(trackMethodCalls = true)
+        override fun shouldTransform(className: String): Boolean = true
 
         override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
-            return testConfiguration
+            return TransformationConfiguration()
         }
     }
 
     private fun prof(include: List<String> = emptyList(), exclude: List<String> = emptyList()): TransformationProfile =
         FilteredTransformationProfile(include, exclude, TestBaseProfile)
 
-    private fun isInstrumented(profile: TransformationProfile, clazz: String): Boolean =
-        profile.getMethodConfiguration(clazz, "m", "()V") === TestBaseProfile.testConfiguration
+    private fun isInstrumented(profile: TransformationProfile, className: String): Boolean =
+        profile.shouldTransform(className)
 
-    private fun assertInstrumented(profile: TransformationProfile, clazz: String) =
-        assertTrue("Expected $clazz to be instrumented", isInstrumented(profile, clazz))
+    private fun assertInstrumented(profile: TransformationProfile, className: String) =
+        assertTrue("Expected $className to be instrumented", isInstrumented(profile, className))
 
-    private fun assertNotInstrumented(profile: TransformationProfile, clazz: String) =
-        assertFalse("Expected $clazz to NOT be instrumented", isInstrumented(profile, clazz))
+    private fun assertNotInstrumented(profile: TransformationProfile, className: String) =
+        assertFalse("Expected $className to NOT be instrumented", isInstrumented(profile, className))
 
     // ===== exclude-only =====
 

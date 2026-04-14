@@ -9,12 +9,23 @@
  */
 package org.jetbrains.kotlinx.lincheck.execution
 
-import org.jetbrains.kotlinx.lincheck.Result
+import org.jetbrains.kotlinx.lincheck.util.LincheckResult
 
 data class HBClock(val clock: IntArray) {
     val threads: Int get() = clock.size
 
     operator fun get(i: Int) = clock[i]
+
+    fun set(other: HBClock) {
+        check(clock.size == other.clock.size)
+        for (i in clock.indices) {
+            clock[i] = other.clock[i]
+        }
+    }
+
+    fun copy(): HBClock {
+        return HBClock(clock.copyOf())
+    }
 
     /**
      * Checks whether the clock contains information for any thread
@@ -37,8 +48,8 @@ data class HBClock(val clock: IntArray) {
 fun emptyClock(size: Int) = HBClock(emptyClockArray(size))
 fun emptyClockArray(size: Int) = IntArray(size) { 0 }
 
-data class ResultWithClock(val result: Result?, val clockOnStart: HBClock)
+data class ResultWithClock(val result: LincheckResult?, val clockOnStart: HBClock)
 
-fun Result.withEmptyClock(threads: Int) = ResultWithClock(this, emptyClock(threads))
-fun List<Result>.withEmptyClock(threads: Int): List<ResultWithClock> = map { it.withEmptyClock(threads) }
+fun LincheckResult?.withEmptyClock(threads: Int) = ResultWithClock(this, emptyClock(threads))
+fun List<LincheckResult?>.withEmptyClock(threads: Int): List<ResultWithClock> = map { it.withEmptyClock(threads) }
 fun List<ResultWithClock>.withEmptyClock() = mapNotNull { it.result?.withEmptyClock(it.clockOnStart.threads) }

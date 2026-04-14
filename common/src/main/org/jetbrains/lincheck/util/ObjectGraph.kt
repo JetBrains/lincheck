@@ -162,7 +162,7 @@ internal inline fun traverseObjectFields(
     fieldPredicate: (Field) -> Boolean = { true },
     onField: (obj: Any, field: Field, value: Any?) -> Unit
 ) {
-    for (field in obj.javaClass.allDeclaredFieldWithSuperclasses) {
+    for (field in obj.javaClass.allDeclaredFields) {
         if (!fieldPredicate(field)) continue
         val result = readFieldSafely(obj, field)
         // do not pass non-readable fields

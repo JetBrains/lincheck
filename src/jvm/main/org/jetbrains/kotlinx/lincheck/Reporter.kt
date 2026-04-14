@@ -13,7 +13,8 @@ package org.jetbrains.kotlinx.lincheck
 import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.trace.appendTrace
+import org.jetbrains.kotlinx.lincheck.trace.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.LoggingLevel.*
 import java.io.*
@@ -370,7 +371,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
         }
         if (failure.trace != null) {
             appendLine()
-            appendTrace(failure, failure.trace, exceptionStackTraces)
+            appendTrace(failure, exceptionStackTraces)
         }
         return this
     }
@@ -388,7 +389,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
     }
     if (failure.trace != null) {
         appendLine()
-        appendTrace(failure, failure.trace, exceptionStackTraces)
+        appendTrace(failure, exceptionStackTraces)
     } else {
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
@@ -463,11 +464,11 @@ private fun executionResultsRepresentation(
 private data class ResultActorData(
     val threadId: Int,
     val actor: Actor,
-    val result: Result?,
+    val result: LincheckResult?,
     val exceptionInfo: ExceptionNumberAndStacktrace? = null,
     val hbClock: HBClock? = null
 ) {
-    constructor(threadId: Int, actor: Actor, result: Result?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
+    constructor(threadId: Int, actor: Actor, result: LincheckResult?, exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>, hbClock: HBClock?)
             : this(threadId, actor, result, (result as? ExceptionResult)?.let { exceptionStackTraces[it.throwable] }, hbClock)
 
     override fun toString(): String {
@@ -725,13 +726,108 @@ private fun Appendable.appendObstructionFreedomViolationFailure(
     return this
 }
 
+private fun Appendable.appendDeadlockMessageIfRequired(failure: LincheckFailure) {
+    if (failure is TimeoutFailure || failure is ManagedDeadlockFailure) {
+        appendLine(ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE)
+    }
+}
+
 private fun Appendable.appendException(t: Throwable) {
     val sw = StringWriter()
     t.printStackTrace(PrintWriter(sw))
     appendLine(sw.toString())
 }
 
+@Synchronized
+private fun Appendable.appendTrace(
+    failure: LincheckFailure,
+    exceptionStackTraces: Map<Throwable, ExceptionNumberAndStacktrace>,
+) {
+    val scenario = failure.scenario
+    val isGeneralPurposeModelCheckingMode = isGeneralPurposeModelCheckingScenario(scenario)
+
+    val reporter = TraceReporter(
+        failure.preprocessTrace(),
+        failure.analysisProfile,
+    )
+
+    // append result nodes where needed
+    reporter.appendResultNodes(isGeneralPurposeModelCheckingMode)
+
+    appendLine(TRACE_TITLE)
+    appendTrace(reporter, verbose = false)
+    appendDeadlockMessageIfRequired(failure)
+    appendLine()
+
+    if (!isGeneralPurposeModelCheckingMode) {
+        appendExceptionsStackTracesBlock(exceptionStackTraces)
+    }
+
+    val filter = VerboseTraceFilter()
+    val isEmptyTrace =
+        (reporter.tree.size == 1) &&
+        (reporter.tree.firstOrNull()?.size == 1) &&
+        (reporter.tree.first().first() as? CallNode)?.let { rootNode ->
+            rootNode.children.isEmpty() || rootNode.children.all {
+                (it is ResultNode) || filter.shouldFilter(it.tracePoint)
+            }
+        } ?: false
+
+    if (!isEmptyTrace) {
+        appendLine(DETAILED_TRACE_TITLE)
+        appendTrace(reporter, verbose = true)
+        appendDeadlockMessageIfRequired(failure)
+    }
+}
+
+private fun Appendable.appendTrace(reporter: TraceReporter, verbose: Boolean): Appendable {
+    reporter.appendTrace(appendable = this, verbose = verbose)
+    return this
+}
+
+internal fun TraceReporter.appendResultNodes(isGeneralPurposeModelCheckingMode: Boolean) {
+    if (isGeneralPurposeModelCheckingMode) {
+        // due to current architectural limitations, in this case we have to:
+        // (1) treat the method call as an actor if it is a single top-level call;
+        // (2) set the exception number manually.
+        val nSiblings = tree[0].size
+        val callNode = tree[0].firstOrNull() as? CallNode
+        if (nSiblings == 1) {
+            callNode?.treatAsActor()
+            callNode?.tracePoint?.returnedValue?.let {
+                if (it is ReturnedValueResult.ExceptionResult) it.exceptionNumber = 1
+            }
+        }
+    }
+    // append the result nodes to the trace
+    tree.forEach { it.appendResultNodes() }
+}
+
+/**
+ * Pre-process trace by:
+ * - removing the validation section (in case of no validation failure);
+ * - moving starting switch points outside of method calls (to make the trace more readable);
+ * - moving spin cycle start trace points to the place where the recursive method call trace points are located;
+ * - numbering actor exceptions (to make the trace more readable);
+ * - removing the GPMC lambda section (in case of GPMC mode).
+ */
+private fun LincheckFailure.preprocessTrace(): Trace {
+    val failure = this
+    return this.trace!!.deepCopy()
+        .run { if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda() else this }
+        .run { if (failure !is ValidationFailure) removeValidationSection() else this }
+        .removeRedundantSectionDelimiters()
+        .moveStartingSwitchPointsOutOfMethodCalls()
+        .moveSpinCycleStartTracePoints()
+        .numberExceptionResults()
+}
+
 private const val GENERAL_PURPOSE_MODEL_CHECKING_FAILURE_TITLE  = "= Concurrent test failed ="
 private const val GENERAL_PURPOSE_MODEL_CHECKING_HUNG_TITLE     = "= Concurrent test has hung ="
 
 private const val EXCEPTIONS_TRACES_TITLE = "Exception stack traces:"
+
+internal const val TRACE_TITLE = "The following interleaving leads to the error:"
+internal const val DETAILED_TRACE_TITLE = "Detailed trace:"
+
+internal const val ALL_UNFINISHED_THREADS_IN_DEADLOCK_MESSAGE = "All unfinished threads are in deadlock"

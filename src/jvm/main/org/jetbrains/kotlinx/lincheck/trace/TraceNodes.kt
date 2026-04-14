@@ -10,8 +10,6 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
-import kotlin.collections.plus
-
 /**
  * Represents a single node in the hierarchical trace structure.
  *
@@ -24,7 +22,7 @@ import kotlin.collections.plus
  * @property parent The parent node of this trace node. Can be null if this node is the root.
  * @property isLast Indicates whether this node is the last node of the actor.
  */
-internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open val tracePoint: TracePoint) {
+internal abstract class TraceNode(val eventNumber: Int, open val tracePoint: TracePoint) {
     val iThread = tracePoint.iThread
     val actorId = tracePoint.actorId
     
@@ -34,11 +32,13 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
     var parent: TraceNode? = null
         private set
     
-    // Am i last event. Check at parents and all ancestors
     val isLast: Boolean get() {
         if (parent == null) return true
-        return parent?.children?.last() === this && parent?.isLast != false
+        return isLastChild && parent?.isLast != false
     }
+
+    val isLastChild: Boolean get() =
+        this === parent?.children?.last()
     
     fun addChild(node: TraceNode) {
         _children.add(node)
@@ -48,43 +48,43 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
     internal abstract fun toStringImpl(withLocation: Boolean): String
     override fun toString(): String = toStringImpl(withLocation = true)
 
-    // Sets call depth of this (sub)tree
-    fun setCallDepthOfTree(depth: Int) {
-        callDepth = depth
-        children.forEach { it.setCallDepthOfTree(depth + 1) }
-    }
-
-    // Shifts stackTrace to the left
-    fun decrementCallDepthOfTree() {
-        callDepth--
-        children.forEach { it.decrementCallDepthOfTree() }
-    }
-
     fun lastOrNull(predicate: (TraceNode) -> Boolean): TraceNode? {
         val last = children.mapNotNull { it.lastOrNull(predicate) }.lastOrNull()
         if (last != null) return last
         if (predicate(this)) return this
         return null
     }
-    
-    // for idea plugin
-    fun extractPreExpanded(policy: TraceFlattenPolicy): Pair<List<TraceNode>, Boolean> { 
-        val (preExpanded, shouldChildBeIncluded) = children
-            .map { it.extractPreExpanded(policy) }
-            .unzip()
-            .let { it.first.flatten() to it.second.any() }
-        
-        if (shouldChildBeIncluded) return preExpanded + this to true
-        if (policy.shouldIncludeThisNode(this)) return preExpanded to true
-        check(preExpanded.isEmpty()) { "Expected pre expanded set to be empty" }
-        return preExpanded to false
+
+    /**
+     * Checks if the [predicate] holds for the current node or any of its descendants.
+     */
+    fun contains(predicate: (TraceNode) -> Boolean): Boolean =
+        predicate(this) || children.any { it.contains(predicate) }
+
+    /**
+     * Returns the level of the first node satisfying the [predicate], or -1 if no match was found.
+     *
+     * @param depth Maximum depth to check.
+     * @return level at which the first node satisfying the predicate was found,
+     *   or -1 if no match was found
+     */
+    fun findLevelOf(depth: Int, predicate: (TraceNode) -> Boolean): Int {
+        if (depth <  0) return -1
+        if (depth == 0) return if (predicate(this)) 0 else -1
+
+        if (predicate(this)) return 0
+        for (child in children) {
+            val level = child.findLevelOf(depth - 1, predicate)
+            if (level >= 0) return (level + 1)
+        }
+        return -1
     }
 
     /**
-     * Checks if the [predicate] holds for any of this [TraceNode] descendants including this [TraceNode].
+     * Returns a flattened list of all nodes in the tree, including this node.
      */
-    fun containsDescendant(predicate: (TraceNode) -> Boolean): Boolean =
-        predicate(this) || children.any { it.containsDescendant(predicate) }
+    fun flatten(): List<TraceNode> =
+        children.flatMap { it.flatten() } + this
 
     /**
      * Shallow copy without children
@@ -93,97 +93,95 @@ internal abstract class TraceNode(var callDepth: Int, val eventNumber: Int, open
 }
 
 internal class EventNode(
-    callDepth: Int,
     tracePoint: TracePoint,
     eventNumber: Int,
-): TraceNode(callDepth, eventNumber, tracePoint) {
+): TraceNode(eventNumber, tracePoint) {
 
     override fun toStringImpl(withLocation: Boolean): String =
         tracePoint.toStringImpl(withLocation)
 
-    override fun copy(): TraceNode = EventNode(callDepth, tracePoint, eventNumber)
+    override fun copy(): TraceNode = EventNode(tracePoint, eventNumber)
 }
 
 internal class CallNode(
-    callDepth: Int,
     tracePoint: MethodCallTracePoint,
     eventNumber: Int,
-): TraceNode(callDepth, eventNumber, tracePoint) {
+): TraceNode(eventNumber, tracePoint) {
     override val tracePoint: MethodCallTracePoint get() = super.tracePoint as MethodCallTracePoint
-    val isRootCall get() = callDepth == 0
+    val isRootCall get() = (parent == null)
     var returnEventNumber: Int = -1
+
+    var isActor = tracePoint.isActor
+        private set
+
+    fun treatAsActor() {
+        isActor = true
+    }
 
     override fun toStringImpl(withLocation: Boolean): String =
         tracePoint.toStringImpl(withLocation)
 
-    override fun copy(): TraceNode = CallNode(callDepth, tracePoint, eventNumber)
+    override fun copy(): TraceNode = CallNode(tracePoint, eventNumber)
         .also { it.returnEventNumber = returnEventNumber}
-    
-    internal fun createResultNodeForEmptyActor() =
-        ResultNode(callDepth + 1, tracePoint.returnedValue, eventNumber, tracePoint)
 }
 
-// Is not part of initial graph, is only added during flattening or for empty GPMC result
-internal class ResultNode(callDepth: Int, val actorResult: ReturnedValueResult, eventNumber: Int, tracePoint: TracePoint)
-    : TraceNode(callDepth, eventNumber, tracePoint) {
+// Is not part of an initial tree, is only added during flattening or for empty GPMC result
+internal class ResultNode(val actorResult: ReturnedValueResult, eventNumber: Int, tracePoint: TracePoint)
+    : TraceNode(eventNumber, tracePoint) {
 
     override fun toStringImpl(withLocation: Boolean): String =
         "result: ${actorResult.resultRepresentation}"
 
-    override fun copy(): TraceNode = ResultNode(callDepth, actorResult, eventNumber, tracePoint)
+    override fun copy(): TraceNode = ResultNode(actorResult, eventNumber, tracePoint)
 }
 
 // (stable) Sort on eventNumber
-internal fun SingleThreadedTable<TraceNode>.reorder(): SingleThreadedTable<TraceNode> =
-    map { section -> section.sortedBy { it.eventNumber } }
+internal fun Column<TraceNode>.reorder(): Column<TraceNode> =
+    sortedBy { it.eventNumber }
 
-/**
- * Returns [preActos, parrallelActors, postActors], no threads!!
- */
-internal fun traceToGraph(trace: Trace): SingleThreadedTable<CallNode> {
-    val sections = mutableListOf<List<CallNode>>()
-    var currentSection = mutableListOf<CallNode>()
-
-    val currentNodePerThread = mutableMapOf<Int, CallNode?>()
+internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<TraceNode> {
+    val nodes = MutableList<MutableList<TraceNode>>(threadCount) { mutableListOf() }
+    val currentNodePerThread = MutableList<CallNode?>(threadCount) { null }
 
     // loop over events
     trace.trace.forEachIndexed { eventNumber, event ->
         val currentThreadId = event.iThread
         val currentCallNode = currentNodePerThread[currentThreadId]
 
-        when {
-            event is SectionDelimiterTracePoint -> {
-                currentSection = mutableListOf()
-                sections.add(currentSection)
-            }
-            event is MethodReturnTracePoint -> {
-                currentCallNode?.returnEventNumber = eventNumber
-                currentNodePerThread[currentThreadId] = currentCallNode?.parent as? CallNode
-                if (currentNodePerThread[currentThreadId] == null && currentCallNode?.isRootCall != true) {
-                    // TODO re-enable later on when the problem with actors will be resolved
-//                    error("Return is not allowed here")
+        when (event) {
+            is MethodCallTracePoint -> {
+                val newNode = CallNode(event, eventNumber)
+                if (currentCallNode == null) {
+                    nodes[currentThreadId].add(newNode)
                 }
-            }
-            event is MethodCallTracePoint -> {
-                val newNode = CallNode((currentCallNode?.callDepth ?: -1) + 1, event, eventNumber)
-                if (event.isRootCall) currentSection.add(newNode)
                 currentCallNode?.addChild(newNode)
                 currentNodePerThread[currentThreadId] = newNode
             }
-            currentCallNode != null -> {
-                val eventNode = EventNode(currentCallNode.callDepth + 1, event, eventNumber)
-                currentCallNode.addChild(eventNode)
+
+            is MethodReturnTracePoint -> {
+                currentCallNode?.returnEventNumber = eventNumber
+                currentNodePerThread[currentThreadId] = currentCallNode?.parent as? CallNode
+                if (currentCallNode == null) {
+                    // TODO re-enable later on when the problem with actors will be resolved
+                    // error("Return is not allowed here")
+                }
             }
-            else -> check(false) {
-                "Event has no trace that leads to it"
+
+            else -> {
+                val eventNode = EventNode(event, eventNumber)
+                if (currentCallNode != null) {
+                    currentCallNode.addChild(eventNode)
+                } else {
+                    nodes[currentThreadId].add(eventNode)
+                }
             }
         }
     }
 
     // if an actor was finished unexpectedly, the `MethodReturnTracePoint` could be missing
-    for (callNode in currentNodePerThread.values) {
+    for (callNode in currentNodePerThread) {
         callNode?.returnEventNumber = Int.MAX_VALUE
     }
 
-    return sections
+    return nodes
 }

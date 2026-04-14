@@ -10,15 +10,20 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import org.jetbrains.lincheck.descriptors.LocalKind
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationStrategy
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentationMode
-import org.jetbrains.lincheck.jvm.agent.LincheckJavaAgent.instrumentedClasses
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationStrategy
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClasses
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.transformationProfile
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.settings.LiveDebuggerSettings
+import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.util.TraceClassVisitor
 import java.io.File
 import java.io.PrintWriter
@@ -38,11 +43,13 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     private val transformedClassesCachesByMode =
         ConcurrentHashMap<InstrumentationMode, ConcurrentHashMap<String, ByteArray>>()
 
-    val transformedClassesCache
+    val transformedClassesCache: MutableMap<String, ByteArray>
         get() = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) { ConcurrentHashMap() }
 
     private val statsTracker: TransformationStatisticsTracker? =
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
+    
+    val liveDebuggerSettings = LiveDebuggerSettings()
 
     override fun transform(
         loader: ClassLoader?,
@@ -74,14 +81,20 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         ) {
             return null
         }
-        return transformImpl(loader, internalClassName, classBytes)
+
+        if (!instrumentationMode.useBytecodeCache) {
+            return transformImpl(loader, internalClassName, classBytes)
+        }
+        return transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
+            transformImpl(loader, internalClassName, classBytes)
+        }
     }
 
     fun transformImpl(
         loader: ClassLoader?,
         internalClassName: String,
         classBytes: ByteArray
-    ): ByteArray = transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
+    ): ByteArray {
         Logger.debug { "Transforming $internalClassName" }
 
         val reader = ClassReader(classBytes)
@@ -90,16 +103,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val classNode = ClassNode()
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
-        val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
-            TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
-        } else {
-            emptyList<String>() to emptyList<String>()
-        }
-        val profile = createTransformationProfile(
-            instrumentationMode,
-            includeClasses = includeClasses,
-            excludeClasses = excludeClasses,
-        )
+        val profile = transformationProfile
 
         // Don't use class/method visitors on classNode to collect labels, as
         // MethodNode reset all labels on a re-visit (WHY?!).
@@ -117,13 +121,13 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         )
 
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, LincheckJavaAgent.context)
+        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, liveDebuggerSettings, LincheckInstrumentation.context)
 
         try {
             val timeNano = measureTimeNano {
                 classNode.accept(visitor)
             }
-            writer.toByteArray().also { transformedBytes ->
+            return writer.toByteArray().also { transformedBytes ->
                 if (dumpTransformedSources) {
                     dumpClassBytecode(classNode.name, transformedBytes)
                 }
@@ -135,9 +139,8 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                 )
             }
         } catch (e: Throwable) {
-            Logger.error { "Unable to transform $internalClassName" }
-            Logger.error(e)
-            classBytes
+            Logger.warn(e) { "Unable to transform $internalClassName, proceeding without instrumentation" }
+            return classBytes
         }
     }
 
@@ -170,8 +173,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
                         val index = local.index
                         val type = Type.getType(local.desc)
                         val name = sanitizeVariableName(classNode.name, local.name, config, type) ?: return@forEach
+                        val localKind = computeLocalKind(name, index, m)
                         val info = LocalVariableInfo(
-                            name, local.index, type, local.start.label to local.end.label
+                            name, local.index, type, local.start.label to local.end.label, localKind
                         )
                         map.getOrPut(index) { mutableListOf() }.add(info)
                     }
@@ -179,6 +183,17 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             }
         )
         .mapValues { MethodVariables(it.value) }
+    }
+    
+    private fun computeLocalKind(name: String, index: Int, methodNode: MethodNode): LocalKind {
+        val isStatic = (methodNode.access and Opcodes.ACC_STATIC) != 0
+        val parameterSlotCount = Type.getArgumentTypes(methodNode.desc).sumOf { it.size }
+        val firstLocalVarIndex = parameterSlotCount + if (isStatic) 0 else 1
+        return when {
+            isThisName(name) -> LocalKind.THIS
+            index < firstLocalVarIndex -> LocalKind.PARAMETER
+            else -> LocalKind.VARIABLE
+        }
     }
 
     private fun sanitizeVariableName(owner: String, originalName: String, config: TransformationConfiguration, type: Type): String? {
@@ -219,13 +234,15 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         return classNode.methods.associateBy(
             keySelector = { m -> m.name + m.desc },
             valueTransform = { m ->
-                mutableMapOf<Label, Int>().also { map ->
+                val labels = mutableMapOf<Label, Int>().also { map ->
                     val extractor = LabelCollectorMethodVisitor(map)
                     m.instructions.accept(extractor)
                 }
+                val catches = m.tryCatchBlocks.map { it.handler.label }.toSet()
+                labels to catches
             }
         )
-        .mapValues { MethodLabels(it.value) }
+        .mapValues { MethodLabels(it.value.first, it.value.second) }
     }
 
 
@@ -386,31 +403,23 @@ object LincheckClassFileTransformer : ClassFileTransformer {
 
     @Suppress("SpellCheckingInspection")
     fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {
-        // In the stress testing mode, we can simply skip the standard
-        // Java and Kotlin classes -- they do not have coroutine suspension points.
-        if (instrumentationMode == STRESS) {
-            if (className.startsWith("java.") || className.startsWith("kotlin.")) return false
-        }
-        if (instrumentationMode == TRACE_RECORDING) {
-            if (className == "java.lang.Thread") return true
-            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
-            if (className.startsWith("java.") || className.startsWith("kotlin.") || className.startsWith("jdk.")) return false
-            // there is a bug with instrumentation of android tools classes,
-            // see https://youtrack.jetbrains.com/issue/JBRes-7051
-            if (className.startsWith("com.android.tools.")) return false
-        }
-        if (isEagerlyInstrumentedClass(className)) return true
+        // NEVER instrument the Lincheck classes.
+        // Perform these checks FIRST to avoid potential class loading circularity errors.
+        if (isInLincheckPackage(className)) return false
 
-        return AnalysisProfile.DEFAULT.shouldTransform(className, "")
+        // Under lazy strategy instrument eagerly instrumented classes early-on.
+        if (instrumentationStrategy == InstrumentationStrategy.LAZY && isEagerlyInstrumentedClass(className))
+            return true
+
+        return transformationProfile.shouldTransform(className)
     }
-
 
     // We should always eagerly transform the following classes.
     internal fun isEagerlyInstrumentedClass(className: String): Boolean =
         // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
-        (instrumentationMode != TRACE_RECORDING && isClassLoaderClassName(className)) ||
+        isClassLoaderClassName(className) ||
         // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
-        (instrumentationMode != TRACE_RECORDING && isMethodHandleRelatedClass(className)) ||
+        isMethodHandleRelatedClass(className) ||
         // `StackTraceElement` class, to wrap all its methods into the ignored section.
         isStackTraceElementClass(className) ||
         // IntelliJ runtime agents, to wrap all their methods into the ignored section.
@@ -428,5 +437,9 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
         return String(buffer, 0, utfLength, Charsets.UTF_8)
     }
+}
 
+private val InstrumentationMode.useBytecodeCache: Boolean get() = when (this) {
+    LIVE_DEBUGGING -> false
+    else -> true
 }

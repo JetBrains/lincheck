@@ -10,10 +10,8 @@
 
 package org.jetbrains.lincheck.util
 
-import org.jetbrains.lincheck.descriptors.FieldDescriptor
-import org.jetbrains.lincheck.descriptors.toDescriptor
-import org.jetbrains.lincheck.trace.TraceContext
-import java.util.concurrent.ConcurrentHashMap
+import org.jetbrains.lincheck.descriptors.FieldKind
+import java.lang.reflect.Array as ReflectArray
 import java.lang.reflect.Modifier
 import java.lang.reflect.Field
 import sun.misc.Unsafe
@@ -28,23 +26,14 @@ object UnsafeHolder {
     }
 }
 
-val fieldOffsetCache = ConcurrentHashMap<Field, Long>()
-val fieldBaseObjectCache = ConcurrentHashMap<Field, Any>()
-
 @Suppress("DEPRECATION")
-inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
+private inline fun <T> readFieldViaUnsafe(obj: Any?, field: Field, getter: Unsafe.(Any?, Long) -> T): T {
     if (Modifier.isStatic(field.modifiers)) {
-        val base = fieldBaseObjectCache.computeIfAbsent(field) {
-            UnsafeHolder.UNSAFE.staticFieldBase(it)
-        }
-        val offset = fieldOffsetCache.computeIfAbsent(field) {
-            UnsafeHolder.UNSAFE.staticFieldOffset(it)
-        }
+        val base = field.staticFieldBase
+        val offset = field.staticFieldOffset
         return UnsafeHolder.UNSAFE.getter(base, offset)
     } else {
-        val offset = fieldOffsetCache.computeIfAbsent(field) {
-            UnsafeHolder.UNSAFE.objectFieldOffset(it)
-        }
+        val offset = field.objectFieldOffset
         return UnsafeHolder.UNSAFE.getter(obj, offset)
     }
 }
@@ -70,25 +59,26 @@ fun readFieldViaUnsafe(obj: Any?, field: Field): Any? {
  * Reads a [field] of the owner object [obj] via Unsafe,
  * in case of failure fallbacks into reading the field via reflection.
  */
-fun readFieldSafely(obj: Any?, field: Field): Result<Any?> =
-    // we wrap an unsafe read into `runCatching` to handle `UnsupportedOperationException`,
-    // which can be thrown, for instance, when attempting to read
-    // a field of a hidden or record class (starting from Java 15);
-    // in this case we fall back to read via reflection
-    runCatching {
-        readFieldViaUnsafe(obj, field)
+fun readFieldSafely(obj: Any?, field: Field): Result<Any?> {
+    if (canAccessFieldViaUnsafe(field)) {
+        // shouldn't throw as we performed the `canAccessFieldViaUnsafe` check above,
+        // but still wrap into try-catch just to be sure.
+        try {
+            return Result.success(readFieldViaUnsafe(obj, field))
+        } catch (t: Throwable) {
+            Logger.debug(t) { "Failed to read field ${field.name} via Unsafe" }
+        }
     }
-    .onFailure { exception ->
-        Logger.debug { "Failed to read field ${field.name} via Unsafe" }
-        Logger.debug(exception)
+
+    // Fall back to reflection if the field cannot be read via Unsafe.
+    try {
+        val obj = field.apply { isAccessible = true }.get(obj)
+        return Result.success(obj)
+    } catch (exception: Exception) {
+        Logger.debug(exception) { "Failed to read field ${field.name} via reflection." }
+        return Result.failure(exception)
     }
-    .recoverCatching {
-        field.apply { isAccessible = true }.get(obj)
-    }
-    .onFailure { exception ->
-        Logger.debug { "Failed to read field ${field.name} via reflection." }
-        Logger.debug(exception)
-    }
+}
 
 fun readArrayElementViaUnsafe(arr: Any, index: Int): Any? {
     val offset = getArrayElementOffsetViaUnsafe(arr, index)
@@ -119,13 +109,13 @@ fun getArrayElementOffsetViaUnsafe(arr: Any, index: Int): Long {
 }
 
 @Suppress("DEPRECATION")
-inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Unsafe.(Any?, Long, Any?) -> Unit) {
+private inline fun writeFieldViaUnsafe(obj: Any?, field: Field, value: Any?, setter: Unsafe.(Any?, Long, Any?) -> Unit) {
     if (Modifier.isStatic(field.modifiers)) {
-        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
-        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+        val base = field.staticFieldBase
+        val offset = field.staticFieldOffset
         return UnsafeHolder.UNSAFE.setter(base, offset, value)
     } else {
-        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+        val offset = field.objectFieldOffset
         return UnsafeHolder.UNSAFE.setter(obj, offset, value)
     }
 }
@@ -179,8 +169,57 @@ fun getFieldOffsetViaUnsafe(field: Field): Long {
     }
 }
 
-private val fieldDescriptorByOffsetCache = ConcurrentHashMap<Pair<Class<*>, Long>, Any /* FieldDescriptor */>()
-private val DESCRIPTOR_NOT_FOUND = Any() // cannot store `null` in the cache.
+fun findFieldsForObject(obj: Any?): Map<String, Any?> {
+    // Null fields and primitives do not have fields
+    if (obj == null || obj::class.javaPrimitiveType != null) return emptyMap()
+
+    val clazz = obj::class.java
+    // Skip primitive box types and strings
+    if (clazz.isPrimitive || clazz == String::class.java) return emptyMap()
+
+    return buildMap {
+        clazz.allDeclaredInstanceFields.forEach { field ->
+            val result = readFieldSafely(obj, field)
+            if (result.isSuccess) put(field.name, result.getOrNull())
+        }
+    }
+}
+
+fun findArrayLength(arr: Any?): Int = when (arr) {
+    is Array<*> -> arr.size
+    is IntArray -> arr.size
+    is LongArray -> arr.size
+    is ByteArray -> arr.size
+    is ShortArray -> arr.size
+    is CharArray -> arr.size
+    is FloatArray -> arr.size
+    is DoubleArray -> arr.size
+    is BooleanArray -> arr.size
+    else -> ReflectArray.getLength(arr)
+}
+
+fun findElementsForArray(arr: Any?, nElements: Int): List<Any?> {
+    // Null or non-array returns empty list
+    if (arr == null || !arr::class.java.isArray) return emptyList()
+    return buildList {
+        for (i in 0 until nElements) {
+            val result = runCatching {
+                readArrayElementViaUnsafe(arr, i)
+            }.recoverCatching {
+                ReflectArray.get(arr, i)
+            }.onFailure { exception -> 
+                Logger.debug { "Failed to read elements from index $i: $exception" }
+                Logger.debug(exception)
+            }
+            
+            if (result.isSuccess) {
+                add(result.getOrNull())
+            } else {
+                add(null)
+            }
+        }
+    }
+}
 
 @Suppress("DEPRECATION")
 fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kind: FieldKind): String? =
@@ -188,27 +227,84 @@ fun findFieldNameByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kind: Fie
 
 @Suppress("DEPRECATION")
 fun findFieldDescriptorByOffsetViaUnsafe(targetType: Class<*>, offset: Long, kind: FieldKind): Field? =
-    fieldDescriptorByOffsetCache.getOrPut(targetType to offset) {
-        findFieldNameByOffsetViaUnsafeImpl(targetType, offset, kind) ?: DESCRIPTOR_NOT_FOUND
-    }.let { if (it === DESCRIPTOR_NOT_FOUND) null else (it as Field) }
+    ClassUnsafeCache[targetType].let { cache ->
+        if (kind == FieldKind.STATIC) cache.staticFieldByOffset[offset] else cache.objectFieldByOffset[offset]
+    }
 
-private fun findFieldNameByOffsetViaUnsafeImpl(targetType: Class<*>, offset: Long, kind: FieldKind): Field? {
-    for (field in targetType.allDeclaredFieldWithSuperclasses) {
-        try {
-            val isStatic = Modifier.isStatic(field.modifiers)
-            if (Modifier.isNative(field.modifiers)) continue
-            if (kind == FieldKind.STATIC && !isStatic) continue
-            if (kind == FieldKind.INSTANCE && isStatic) continue
+private fun canAccessFieldViaUnsafe(field: Field): Boolean {
+    val offset = if (Modifier.isStatic(field.modifiers)) {
+        ClassUnsafeCache[field.declaringClass].staticFieldOffset[field]
+    } else {
+        ClassUnsafeCache[field.declaringClass].objectFieldOffset[field]
+    }
+    return (offset != null)
+}
 
-            val fieldOffset = if (isStatic) {
-                UnsafeHolder.UNSAFE.staticFieldOffset(field)
-            } else {
-                UnsafeHolder.UNSAFE.objectFieldOffset(field)
+private val Field.staticFieldBase: Any get() =
+    ClassUnsafeCache[declaringClass].staticFieldBase[this] ?: error("Cannot get static base of field $name")
+
+private val Field.staticFieldOffset: Long get() =
+    ClassUnsafeCache[declaringClass].staticFieldOffset[this] ?: error("Cannot get static offset of field $name")
+
+private val Field.objectFieldOffset: Long get() =
+    ClassUnsafeCache[declaringClass].objectFieldOffset[this] ?: error("Cannot get object offset of field $name")
+
+private object ClassUnsafeCache {
+    data class ReflectionData(
+        val staticFieldBase: HashMap<Field, Any>,
+        val staticFieldOffset: HashMap<Field, Long>,
+        val objectFieldOffset: HashMap<Field, Long>,
+        val staticFieldByOffset: HashMap<Long, Field>,
+        val objectFieldByOffset: HashMap<Long, Field>,
+    )
+
+    private val cache = object : ClassValue<ReflectionData>() {
+        override fun computeValue(type: Class<*>): ReflectionData {
+            val staticFieldBase = HashMap<Field, Any>()
+            val staticFieldOffset = HashMap<Field, Long>()
+            val objectFieldOffset = HashMap<Field, Long>()
+            val staticFieldByOffset = HashMap<Long, Field>()
+            val objectFieldByOffset = HashMap<Long, Field>()
+
+            for (field in type.allDeclaredFields) {
+                // Skip native fields since they are not accessible via Unsafe
+                if (Modifier.isNative(field.modifiers)) continue
+
+                // We wrap base and offset calculation into `runCatching`
+                // mainly to handle `UnsupportedOperationException` (but also any other exceptions just in case).
+                // The `UnsupportedOperationException` exception can be thrown on newer JVMs,
+                // when attempting to read a field of a hidden or record class (starting from Java 15).
+
+                if (Modifier.isStatic(field.modifiers)) {
+                    try {
+                        val base = UnsafeHolder.UNSAFE.staticFieldBase(field)
+                        val offset = UnsafeHolder.UNSAFE.staticFieldOffset(field)
+                        staticFieldBase[field] = base
+                        staticFieldOffset[field] = offset
+                        staticFieldByOffset[offset] = field
+                    } catch (_: Throwable) {
+                        Logger.warn { "Failed to get static field base and offset for field ${field.name}" }
+                    }
+                } else {
+                    try {
+                        val offset = UnsafeHolder.UNSAFE.objectFieldOffset(field)
+                        objectFieldOffset[field] = offset
+                        objectFieldByOffset[offset] = field
+                    } catch (_: Throwable) {
+                        Logger.warn { "Failed to get object field offset for field ${field.name}" }
+                    }
+                }
             }
-            if (fieldOffset == offset) return field
-        } catch (t: Throwable) {
-            t.printStackTrace()
+
+            return ReflectionData(
+                staticFieldBase = staticFieldBase,
+                staticFieldOffset = staticFieldOffset,
+                objectFieldOffset = objectFieldOffset,
+                staticFieldByOffset = staticFieldByOffset,
+                objectFieldByOffset = objectFieldByOffset,
+            )
         }
     }
-    return null // Field not found
+
+    operator fun get(type: Class<*>): ReflectionData = cache.get(type)
 }

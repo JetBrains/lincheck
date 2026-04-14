@@ -13,6 +13,7 @@ package sun.nio.ch.lincheck;
 import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
+import java.util.function.BooleanSupplier;
 
 /**
  * Methods of this object are called from the instrumented code.
@@ -295,6 +296,45 @@ public class Injections {
         // will trigger thread descriptors creation for a yet-untracked thread.
         ThreadDescriptor descriptor = getCurrentThreadDescriptorIfInAnalyzedCode();
         return (descriptor != null);
+    }
+
+    /**
+     * Marks the current thread as being inside a breakpoint condition evaluation.
+     */
+    public static void enterBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return;
+        descriptor.enterBreakpointCondition();
+    }
+
+    /**
+     * Marks the current thread as having exited a breakpoint condition evaluation.
+     */
+    public static void leaveBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return;
+        descriptor.leaveBreakpointCondition();
+    }
+
+    /**
+     * Checks if the current thread is not inside a breakpoint condition evaluation.
+     *
+     * @return true if not inside a condition evaluation, false otherwise.
+     */
+    public static boolean isNotInsideBreakpointCondition(ThreadDescriptor descriptor) {
+        if (descriptor == null) return true;
+        return !descriptor.isInsideBreakpointCondition();
+    }
+
+    /**
+     * Creates a BooleanSupplier instance for a breakpoint condition.
+     * Delegates to {@link BreakpointStorage}.
+     *
+     * @param breakpointId the unique integer id of the breakpoint
+     * @param args         the captured local variable values to pass to the condition
+     * @return a BooleanSupplier instance that evaluates the condition
+     * @throws IllegalStateException if no state or factory is registered for the given id
+     */
+    public static BooleanSupplier createConditionInstance(int breakpointId, Object[] args) {
+        return BreakpointStorage.createConditionInstance(breakpointId, args);
     }
 
     /**
@@ -618,19 +658,19 @@ public class Injections {
     /**
      * Called from the instrumented code before each field read.
      */
-    public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId) {
+    public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId);
+        eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId, interceptor);
     }
 
     /**
      * Called from the instrumented code before any array cell read.
      */
-    public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index) {
+    public static void beforeReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index);
+        eventTracker.beforeReadArrayElement(descriptor, codeLocation, array, index, interceptor);
     }
 
     /**
@@ -654,19 +694,21 @@ public class Injections {
     /**
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
-    public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value) {
+    public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
         eventTracker.afterReadField(descriptor, codeLocation, obj, fieldId, value);
+        recycleResultInterceptor(descriptor, interceptor);
     }
 
     /**
      * Called from the instrumented code after each array read.
      */
-    public static void afterReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value) {
+    public static void afterReadArray(ThreadDescriptor descriptor, int codeLocation, Object array, int index, Object value, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
         eventTracker.afterReadArrayElement(descriptor, codeLocation, array, index, value);
+        recycleResultInterceptor(descriptor, interceptor);
     }
 
     /**
@@ -747,6 +789,7 @@ public class Injections {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
         eventTracker.onMethodCallReturn(descriptor, methodId, receiver, params, result, interceptor);
+        recycleResultInterceptor(descriptor, interceptor);
     }
 
     /**
@@ -771,15 +814,72 @@ public class Injections {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
         eventTracker.onMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
+        recycleResultInterceptor(descriptor, interceptor);
     }
 
     /**
-     * Creates and returns a new instance of result interceptor.
+     * Called from instrumented code when execution reaches a Live Debugger line breakpoint.
+     * <br>
+     * <p>
+     * A snapshot line breakpoint is a special type of breakpoint used for capturing the program state
+     * at a specific line of code without interrupting execution. This method is invoked at the breakpoint
+     * location and forwards the current execution context to the event tracker for state recording.
      *
-     * @return a new {@link ResultInterceptor} instance.
+     * @param descriptor   The thread descriptor of the current thread.
+     * @param codeLocation The location of the breakpoint in the source code. Holds local variable names.
+     * @param locals       An array containing the current values of local variables at the breakpoint location.
+     *                     This includes: this, function parameters, and local variables.
+     * @param traceId      ID to correlate snapshot breakpoints. Can be provided by frameworks like OpenTelemetry.
+     * @param breakpointId The unique integer id of the breakpoint that was hit.
      */
-    public static ResultInterceptor createResultInterceptor() {
+    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId, int breakpointId) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, locals, traceId, breakpointId);
+    }
+
+    /**
+     * Called before traced method throws exception
+     */
+    public static void onThrow(ThreadDescriptor descriptor, int codeLocation, Throwable exception) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onThrow(descriptor, codeLocation, exception);
+    }
+
+    /**
+     * Called before traced method starts any catch block
+     */
+    public static void onCatch(ThreadDescriptor descriptor, int codeLocation, Throwable exception) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (eventTracker == null || descriptor == null) return;
+        eventTracker.onCatch(descriptor, codeLocation, exception);
+    }
+
+    /**
+     * Creates and returns a result interceptor object.
+     * Attempts to re-use one from the per-thread pool if available,
+     * or allocates a new instance otherwise.
+     *
+     * @param descriptor the thread descriptor of the current thread, or {@code null}.
+     * @return a {@link ResultInterceptor} instance or null if the {@code descriptor} is null.
+     */
+    public static ResultInterceptor createResultInterceptor(ThreadDescriptor descriptor) {
+        if (descriptor == null) return null;
+        ResultInterceptor interceptor = descriptor.takeResultInterceptor();
+        if (interceptor != null) return interceptor;
         return new ResultInterceptor();
+    }
+
+    /**
+     * Recycles a result interceptor back into the per-thread pool for re-use.
+     *
+     * @param descriptor the thread descriptor of the current thread, or {@code null}.
+     * @param interceptor the interceptor to recycle, or {@code null}.
+     */
+    public static void recycleResultInterceptor(ThreadDescriptor descriptor, ResultInterceptor interceptor) {
+        if (descriptor == null || interceptor == null) return;
+        descriptor.giveResultInterceptor(interceptor);
     }
 
     /**

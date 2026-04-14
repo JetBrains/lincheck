@@ -148,12 +148,22 @@ fun leaveIgnoredSection() {
  * @return result of the [block] invocation.
  */
 inline fun <R> ThreadDescriptor?.runInsideIgnoredSection(block: () -> R): R {
-    if (this == null) return block()
-    this.enterIgnoredSection()
+    this?.enterIgnoredSection()
     try {
         return block()
+    } catch (t: Throwable) {
+        // print the exception to see it in logs and hide it, so that methods like
+        // `EventTracker::onThreadRunException` only accept exceptions thrown from the
+        // user code and not our injections
+        if (!isLincheckInternalException(t)) {
+            Logger.error(t)
+        } else {
+            // print internal exceptions only in verbose mode
+            Logger.verbose(t)
+        }
+        throw t
     } finally {
-        this.leaveIgnoredSection()
+        this?.leaveIgnoredSection()
     }
 }
 
@@ -214,11 +224,16 @@ inline fun <R> ThreadDescriptor?.runInsideInjectedCode(block: () -> R): R? {
     this.enterIgnoredSection()
     try {
         return block()
-    } catch (e: Throwable) {
+    } catch (t: Throwable) {
         // print the exception to see it in logs and hide it, so that methods like
         // `EventTracker::onThreadRunException` only accept exceptions thrown from the
         // user code and not our injections
-        Logger.error(e)
+        if (!isLincheckInternalException(t)) {
+            Logger.error(t)
+        } else {
+            // print internal exceptions only in verbose mode
+            Logger.verbose(t)
+        }
         return null
     } finally {
         this.leaveIgnoredSection()
@@ -277,94 +292,6 @@ inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
 class AnalysisProfile(val analyzeStdLib: Boolean) {
 
     /**
-     * Determines whether a given class and method should be transformed (instrumented) for analysis.
-     *
-     * @param className The fully qualified name of the class to check
-     * @param methodName The name of the method to check
-     * @return true if the class/method should be transformed, false otherwise
-     */
-    @Suppress("UNUSED_PARAMETER") // methodName is here for uniformity and might become useful in the future  
-    fun shouldTransform(className: String, methodName: String): Boolean {
-        // We do not need to instrument most standard Java classes.
-        // It is fine to inject the Lincheck analysis only into the
-        // `java.util.*` ones, ignored the known atomic constructs.
-        if (className.startsWith("java.")) {
-            // Instrument `Thread` to intercept thread events.
-            if (className == "java.lang.Thread") return true
-            // Instrument `Throwable` as it has `synchronized` methods,
-            // and corresponding monitor events should be intercepted.
-            if (className == "java.lang.Throwable") return true
-            // Instrument `java.util.concurrent` classes, except atomics.
-            if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
-            // Instrument `java.util` classes.
-            if (className.startsWith("java.util.")) return true
-            if (isInTraceDebuggerMode) {
-                if (className.startsWith("java.io.")) return true
-                if (className.startsWith("java.nio.")) return true
-                if (className.startsWith("java.time.")) return true
-            }
-            return false
-        }
-        if (className.startsWith("com.sun.")) return false
-        if (className.startsWith("sun.")) {
-            // We should never instrument the Lincheck classes.
-            if (className.startsWith("sun.nio.ch.lincheck.")) return false
-            if (isInTraceDebuggerMode && className.startsWith("sun.nio.")) return true
-            return false
-        }
-        if (className.startsWith("javax.")) return false
-        if (className.startsWith("jdk.")) {
-            // Transform `ThreadContainer.start` to detect thread forking.
-            if (isThreadContainerClass(className)) return true
-            return false
-        }
-        // We do not need to instrument most standard Kotlin classes.
-        // However, we need to inject the Lincheck analysis into the classes
-        // related to collections, iterators, random and coroutines.
-        if (className.startsWith("kotlin.")) {
-            if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
-            if (className.startsWith("kotlin.collections.")) return true
-            if (className.startsWith("kotlin.jvm.internal.Array") && className.contains("Iterator")) return true
-            if (className.startsWith("kotlin.ranges.")) return true
-            if (className.startsWith("kotlin.random.")) return true
-            if (className.startsWith("kotlin.coroutines.jvm.internal.")) return false
-            if (className.startsWith("kotlin.coroutines.")) return true
-            if (isInTraceDebuggerMode && className.startsWith("kotlin.io.")) return true
-            return false
-        }
-        // We do not instrument AtomicFU atomics.
-        if (className.startsWith("kotlinx.atomicfu.")) {
-            if (className.contains("Atomic")) return false
-            return true
-        }
-        // We need to skip the classes related to the debugger support in Kotlin coroutines.
-        if (className.startsWith("kotlinx.coroutines.debug.")) return false
-        if (className == "kotlinx.coroutines.DebugKt") return false
-        // We should never transform IntelliJ runtime classes (debugger and coverage agents).
-        if (isIntellijRuntimeAgentClass(className)) return false
-        // We should never instrument the JetBrains coverage package classes (for instance, relocated ASM library).
-        if (isJetBrainsCoverageClass(className)) return false
-        // We can also safely do not instrument some libraries for performance reasons.
-        if (className.startsWith("com.esotericsoftware.kryo.")) return false
-        if (className.startsWith("net.bytebuddy.")) return false
-        if (className.startsWith("net.rubygrapefruit.platform.")) return false
-        if (className.startsWith("io.mockk.")) return false
-        if (className.startsWith("it.unimi.dsi.fastutil.")) return false
-        if (className.startsWith("worker.org.gradle.")) return false
-        if (className.startsWith("org.objectweb.asm.")) return false
-        if (className.startsWith("org.gradle.")) return false
-        if (className.startsWith("org.slf4j.")) return false
-        if (className.startsWith("org.apache.commons.lang.")) return false
-        if (className.startsWith("org.junit.")) return false
-        if (className.startsWith("junit.framework.")) return false
-        // Finally, we should never instrument the Lincheck classes.
-        if (className.startsWith(LINCHECK_PACKAGE_NAME)) return false
-        if (className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME)) return false
-        // All the classes that were not filtered out are eligible for transformation.
-        return true
-    }
-
-    /**
      * Determines what type of analysis section should be applied to a given class and method.
      *
      * @param className The fully qualified name of the class to check
@@ -399,85 +326,25 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
     }
 }
 
-private val COLLECTION_LIBRARIES = setOf(
-    // Interfaces
-    "java.lang.Iterable",
-    "java.util.Collection",
-    "java.util.List",
-    "java.util.Set",
-    "java.util.Queue",
-    "java.util.Deque",
-    "java.util.NavigableSet",
-    "java.util.SortedSet",
-    "java.util.Map",
-    "java.util.SortedMap",
-    "java.util.NavigableMap",
+/**
+ * This exception is used by a Lincheck analysis to abort the execution of a thread,
+ * for instance, in case when a deadlock is detected.
+ */
+internal class LincheckAnalysisAbortedError : Error() {
+    // do not create a stack trace -- it simply can be unsafe
+    override fun fillInStackTrace() = this
 
+    private fun readResolve(): Any = LincheckAnalysisAbortedError()
+}
 
-    // Abstract implementations
-    "java.util.AbstractCollection",
-    "java.util.AbstractList",
-    "java.util.AbstractQueue",
-    "java.util.AbstractSequentialList",
-    "java.util.AbstractSet",
-    "java.util.AbstractMap",
-
-    // Concrete implementations
-    "java.util.ArrayDeque",
-    "java.util.ArrayList",
-    "java.util.AttributeList",
-    "java.util.EnumSet",
-    "java.util.HashSet",
-    "java.util.LinkedHashSet",
-    "java.util.LinkedList",
-    "java.util.PriorityQueue",
-    "java.util.Stack",
-    "java.util.TreeSet",
-    "java.util.Vector",
-    "java.util.HashMap",
-    "java.util.LinkedHashMap",
-    "java.util.WeakHashMap",
-    "java.util.TreeMap",
-)
-
-internal fun isCollectionsLibrary(className: String) = className in COLLECTION_LIBRARIES
-
-private val CONCURRENT_COLLECTION_LIBRARIES = setOf(
-    // Interfaces
-    "java.util.concurrent.BlockingDeque",
-    "java.util.concurrent.BlockingQueue",
-    "java.util.concurrent.TransferQueue",
-    "java.util.concurrent.ConcurrentMap",
-    "java.util.concurrent.ConcurrentNavigableMap",
-
-    // Concrete implementations
-    // Concurrent collections
-    "java.util.concurrent.ConcurrentHashMap",
-    "java.util.concurrent.ConcurrentLinkedDeque",
-    "java.util.concurrent.ConcurrentLinkedQueue",
-    "java.util.concurrent.ConcurrentSkipListMap",
-    "java.util.concurrent.ConcurrentSkipListSet",
-
-    // Blocking queues
-    "java.util.concurrent.ArrayBlockingQueue",
-    "java.util.concurrent.LinkedBlockingDeque",
-    "java.util.concurrent.LinkedBlockingQueue",
-    "java.util.concurrent.DelayQueue",
-    "java.util.concurrent.PriorityBlockingQueue",
-    "java.util.concurrent.SynchronousQueue",
-    "java.util.concurrent.LinkedTransferQueue",
-
-    // Copy-on-write collections
-    "java.util.concurrent.CopyOnWriteArrayList",
-    "java.util.concurrent.CopyOnWriteArraySet",
-
-    // Inner class view
-    "java.util.concurrent.ConcurrentHashMap\$KeySetView"
-)
-
-internal fun isConcurrentCollectionsLibrary(className: String) = className in CONCURRENT_COLLECTION_LIBRARIES
-
-private fun isJavaExecutorService(className: String) =
-    className.startsWith("java.util.concurrent.AbstractExecutorService") ||
-    className.startsWith("java.util.concurrent.ThreadPoolExecutor") ||
-    className.startsWith("java.util.concurrent.ForkJoinPool")
+/**
+ * Checks if the provided exception is considered an internal exception.
+ * Internal exceptions are those used by the Lincheck itself
+ * to control execution of the analyzed code.
+ */
+@Suppress("DEPRECATION") // ThreadDeath
+fun isLincheckInternalException(exception: Throwable): Boolean =
+    // is used to stop thread in `AbstractActiveThreadPoolRunner` via `thread.stop()`
+    exception is ThreadDeath ||
+    // is used to abort thread in `ManagedStrategy`
+    exception is LincheckAnalysisAbortedError

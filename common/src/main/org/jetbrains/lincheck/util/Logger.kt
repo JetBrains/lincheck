@@ -11,10 +11,20 @@
 package org.jetbrains.lincheck.util
 
 import java.io.*
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 
+/**
+ * Logging utilities for the Lincheck framework.
+ *
+ * Supports logging to `stderr` or to a specified file.
+ * If a log file is specified through the `lincheck.logFile` system property,
+ * then the file-based logging is used. Otherwise, messages are logged to the standard error stream.
+ *
+ * Logging levels can be configured using the `lincheck.logLevel` system property, see [LoggingLevel].
+ *
+ * NOTE: when stderr is used, log messages from shutdown hooks are not guaranteed to be written.
+ */
 object Logger {
+
     val logFile: File? = System.getProperty("lincheck.logFile")?.let { fileName ->
         File(fileName).also { runCatching { initFile(it) }.getOrNull() }
     }
@@ -28,60 +38,101 @@ object Logger {
         runCatching { LoggingLevel.valueOf(it) }.getOrElse { DEFAULT_LOG_LEVEL }
     } ?: DEFAULT_LOG_LEVEL
 
-    inline fun error(lazyMessage: () -> String) = log(LoggingLevel.ERROR, lazyMessage)
+    inline fun error(lazyMessage: () -> String) {
+        log(LoggingLevel.ERROR, lazyMessage)
+    }
 
-    inline fun warn(lazyMessage: () -> String) = log(LoggingLevel.WARN, lazyMessage)
+    inline fun warn(lazyMessage: () -> String) {
+        log(LoggingLevel.WARN, lazyMessage)
+    }
 
-    inline fun info(lazyMessage: () -> String) = log(LoggingLevel.INFO, lazyMessage)
+    inline fun info(lazyMessage: () -> String) {
+        log(LoggingLevel.INFO, lazyMessage)
+    }
 
-    inline fun debug(lazyMessage: () -> String) = log(LoggingLevel.DEBUG, lazyMessage)
+    inline fun debug(lazyMessage: () -> String) {
+        log(LoggingLevel.DEBUG, lazyMessage)
+    }
 
-    fun error(e: Throwable) = log(LoggingLevel.ERROR, e)
+    inline fun verbose(lazyMessage: () -> String) {
+        log(LoggingLevel.VERBOSE, lazyMessage)
+    }
 
-    fun warn(e: Throwable) = log(LoggingLevel.WARN, e)
+    inline fun error(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.ERROR, e, lazyMessage)
+    }
 
-    fun info(e: Throwable) = log(LoggingLevel.INFO, e)
+    inline fun warn(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.WARN, e, lazyMessage)
+    }
 
-    fun debug(e: Throwable) = log(LoggingLevel.DEBUG, e)
+    inline fun info(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.INFO, e, lazyMessage)
+    }
+
+    inline fun debug(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.DEBUG, e, lazyMessage)
+    }
+
+    inline fun verbose(e: Throwable, lazyMessage: () -> String = { e.message ?: "" }) {
+        log(LoggingLevel.VERBOSE, e, lazyMessage)
+    }
 
     inline fun log(logLevel: LoggingLevel, lazyMessage: () -> String) {
         if (logLevel >= this.logLevel) {
-            write(logLevel, lazyMessage(), logWriter)
+            write("[${logLevel.name}] ${lazyMessage()}$LINE_SEPARATOR")
         }
     }
 
-    fun write(logLevel: LoggingLevel, s: String, writer: Writer) {
+    inline fun log(logLevel: LoggingLevel, throwable: Throwable, lazyMessage: () -> String = { throwable.message ?: "" }) {
+        log(logLevel) {
+            createExceptionMessage(lazyMessage(), throwable)
+        }
+    }
+
+    fun write(message: String) {
         try {
-            writer.write("[${logLevel.name}] $s$LINE_SEPARATOR")
-            writer.flush()
+            logWriter.write(message)
+            logWriter.flush()
         } catch (e: IOException) {
             e.printStackTrace()
         }
     }
 
-    private fun log(logLevel: LoggingLevel, throwable: Throwable) {
-        log(logLevel) {
-            StringWriter().use { writer ->
-                throwable.printStackTrace(PrintWriter(writer))
-                writer.toString()
+    fun createExceptionMessage(message: String, throwable: Throwable): String {
+        val writer = StringWriter().apply {
+            PrintWriter(this).use { printer ->
+                throwable.printStackTrace(printer)
             }
+        }
+        val stackTrace = writer.toString()
+        if (message.isNotEmpty()) {
+            val paddedStackTrace = stackTrace.lines().joinToString(separator = LINE_SEPARATOR) { TAB + it }
+            return "${message}${LINE_SEPARATOR}${paddedStackTrace}"
+        } else {
+            return stackTrace
         }
     }
 
     private fun initFile(file: File) {
         // create parent directories
-        file.parentFile?.let { if (!it.exists()) it.mkdirs() }
+        file.parentFile?.let { parent ->
+            if (!parent.exists()) parent.mkdirs()
+        }
 
-        // create file
-        if (file.exists()) file.delete()
+        // create the file
+        if (file.exists()) {
+            file.delete()
+        }
         file.createNewFile()
     }
-}
 
-private val LINE_SEPARATOR = System.lineSeparator()
+    val TAB: String = "\t"
+    val LINE_SEPARATOR: String = System.lineSeparator()
+}
 
 @JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
 
 enum class LoggingLevel {
-    DEBUG, INFO, WARN, ERROR, OFF
+    VERBOSE, DEBUG, INFO, WARN, ERROR, OFF
 }

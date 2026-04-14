@@ -33,17 +33,24 @@ import java.lang.management.ManagementFactory
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 14
+internal const val TRACE_VERSION : Long = 19
 
 // This suffix is not enforced, but IDEA plugin rely on it
 const val DATA_FILENAME_EXT = "trace"
-// These two are enforced
+// These are enforced
 const val INDEX_FILENAME_EXT = "idx"
 const val PACK_FILENAME_EXT = "packedtrace"
+internal const val ID_MAP_FILENAME_EXT = "idmap"
+internal const val THREAD_MAP_FILENAME_EXT = "threadmap"
 
 internal const val PACKED_DATA_ITEM_NAME = "trace.$DATA_FILENAME_EXT"
 internal const val PACKED_INDEX_ITEM_NAME = "trace.$INDEX_FILENAME_EXT"
 internal const val PACKED_META_ITEM_NAME = "info.txt"
+internal const val PACKED_DIFF_MARKER_ITEM_NAME = ".diff"
+internal const val PACKED_ID_MAP_ITEM_NAME = "diff.${ID_MAP_FILENAME_EXT}"
+internal const val PACKED_THREAD_MAP_ITEM_NAME = "diff.${THREAD_MAP_FILENAME_EXT}"
+internal const val PACKED_LEFT_META_ITEM_NAME = "info.left.txt"
+internal const val PACKED_RIGHT_META_ITEM_NAME = "info.right.txt"
 
 internal const val BLOCK_HEADER_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES
 internal const val BLOCK_FOOTER_SIZE: Int = Byte.SIZE_BYTES
@@ -53,10 +60,10 @@ internal const val INDEX_CELL_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES + Lon
 /**
  * Information about conditions in which trace was collected.
  *
- *  - [className] — Name of traced class.
- *  - [methodName] — Name of traced method.
- *  - [startTime] — start time of trace collection, as returned by [System.currentTimeMillis]
- *  - [endTime] — end time of trace collection, as returned by [System.currentTimeMillis]
+ *  - [className] — Name of traced class; can be null if tracing started not from a specific method.
+ *  - [methodName] — Name of traced method; can be null if tracing started not from a specific method.
+ *  - [startTime] — start time of the trace collection, as returned by [System.currentTimeMillis].
+ *  - [endTime] — end time of the trace collection, as returned by [System.currentTimeMillis].
  *  - [systemProperties] — state of system properties ([System.getProperties]) at the beginning of trace collection.
  *  - [environment] — state of system environment ([System.getenv]) at the beginning of trace collection.
  */
@@ -67,24 +74,16 @@ data class TraceMetaInfo private constructor(
     val className: String,
     val methodName: String,
     val startTime: Long,
+    val endTime: Long,
     val isDiff: Boolean = false,
     val leftTraceMetaInfo: TraceMetaInfo? = null,
     val rightTraceMetaInfo: TraceMetaInfo? = null
 ) {
-    var endTime: Long = -1
-        private set
-
     private val props: MutableMap<String, String> = mutableMapOf()
     private val env: MutableMap<String, String> = mutableMapOf()
 
     val systemProperties: Map<String, String> get() = props
     val environment: Map<String, String> get() = env
-
-    fun traceEnded() {
-        if (endTime <= 0) {
-            endTime = System.currentTimeMillis()
-        }
-    }
 
     /**
      * Prints this meta info in human-readable way to given [Appendable].
@@ -115,12 +114,48 @@ data class TraceMetaInfo private constructor(
          * Creates new object: sets [className] and [methodName] to passed parameters,
          * [startTime] to current time and fetch current system properties and environment.
          */
-        fun start(agentArgs: String, className: String, methodName: String): TraceMetaInfo {
+        fun create(
+            agentArgs: String,
+            className: String,
+            methodName: String,
+            startTime: Long,
+            endTime: Long
+        ): TraceMetaInfo {
             val bean = ManagementFactory.getRuntimeMXBean()
             // Read JVM args
             val jvmArgs = bean.inputArguments.joinToString(" ") { arg -> arg.escapeShell() }
 
-            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, System.currentTimeMillis())
+            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime, endTime)
+            with (meta) {
+                System.getProperties().forEach {
+                    props[it.key as String] = it.value as String
+                }
+                env.putAll(System.getenv())
+            }
+            return meta
+        }
+
+        fun createDiff(
+            leftMetaInfo: TraceMetaInfo?,
+            rightMetaInfo: TraceMetaInfo?,
+            startTime: Long,
+            endTime: Long
+        ): TraceMetaInfo {
+            val bean = ManagementFactory.getRuntimeMXBean()
+            // Read JVM args
+            val jvmArgs = bean.inputArguments.joinToString(" ") { arg -> arg.escapeShell() }
+
+            val meta = TraceMetaInfo(
+                jvmArgs = jvmArgs,
+                agentArgs = "",
+                className = "",
+                methodName = "",
+                startTime = startTime,
+                endTime = endTime,
+                isDiff = true,
+                leftTraceMetaInfo = leftMetaInfo,
+                rightTraceMetaInfo = rightMetaInfo
+            )
             with (meta) {
                 System.getProperties().forEach {
                     props[it.key as String] = it.value as String
@@ -133,7 +168,12 @@ data class TraceMetaInfo private constructor(
         /**
          * Read meta info in same format as [print] writes.
          */
-        fun read(input: InputStream): TraceMetaInfo? {
+        fun read(
+            input: InputStream,
+            isDiff: Boolean = false,
+            leftTraceMetaInfo: TraceMetaInfo? = null,
+            rightTraceMetaInfo: TraceMetaInfo? = null
+        ): TraceMetaInfo? {
             val reader = BufferedReader(InputStreamReader(input))
 
             val className = reader.readLine(CLASS_HEADER) ?: return null
@@ -143,8 +183,17 @@ data class TraceMetaInfo private constructor(
             val jvmArgs = reader.readLine(JVM_ARGS_HEADER) ?: return null
             val agentArgs = reader.readLine(AGENT_ARGS_HEADER) ?: return null
 
-            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime)
-            meta.endTime = endTime
+            val meta = TraceMetaInfo(
+                jvmArgs = jvmArgs,
+                agentArgs = agentArgs,
+                className = className,
+                methodName = methodName,
+                startTime = startTime,
+                endTime = endTime,
+                isDiff = isDiff,
+                leftTraceMetaInfo = leftTraceMetaInfo,
+                rightTraceMetaInfo = rightTraceMetaInfo
+            )
 
             if (!reader.readMap(PROPERTIES_HEADER, meta.props)) return null
             if (!reader.readMap(ENV_HEADER, meta.env)) return null
@@ -153,21 +202,23 @@ data class TraceMetaInfo private constructor(
         }
 
         private fun BufferedReader.readLine(prefix: String): String? {
-            val line = readLine() ?: return readError("No \"$prefix\" line")
-            if (!line.startsWith(prefix)) return readError("Wrong \"$prefix\" line")
+            val line = readLine().ensureValueRead { "Unexpected EOF" } ?: return null
+            if (!line.startsWith(prefix)) {
+                readError { "Wrong \"$prefix\" line" }
+                return null
+            }
             return line.substring(prefix.length)
         }
 
         private fun BufferedReader.readLong(prefix: String): Long? {
             val str = readLine(prefix) ?: return null
-            val long = str.toLongOrNull() ?: return readError("Invalid format for \"$prefix\": not a number")
-            return long
+            return str.toLongOrNull().ensureValueRead { "Invalid format for \"$prefix\": not a number" }
         }
 
         private fun BufferedReader.checkHeader(prefix: String): Boolean {
             val str = readLine(prefix) ?: return false
             if (str.isEmpty()) return true
-            readError<Any>("Section header \"$prefix\" contains unexpected characters")
+            readError { "Section header \"$prefix\" contains unexpected characters" }
             return false
         }
 
@@ -177,12 +228,12 @@ data class TraceMetaInfo private constructor(
                 val line = readLine() ?: break // EOF is Ok
                 if (line.isEmpty()) break // Empty line is end-of-map, Ok
                 if (line[0] != ' ') {
-                    readError<Any>("Wrong line in \"$header\" section: must start from space")
+                    readError { "Wrong line in \"$header\" section: must start from space" }
                     return false
                 }
                 val p = line.parseKV()
                 if (p == null) {
-                    readError<Any>("Wrong line in \"$header\" section: doesn't contains '='")
+                    readError { "Wrong line in \"$header\" section: doesn't contains '='" }
                     return false
                 }
                 map[p.first] = p.second
@@ -227,8 +278,13 @@ data class TraceMetaInfo private constructor(
             return idx to sb.toString()
         }
 
-        private fun <T> readError(msg: String): T? {
-            Logger.error { "Cannot read trace meta info: $msg" }
+        private fun readError(lazyMessage: () -> String) {
+            Logger.error { "Cannot read trace meta info: ${lazyMessage()}" }
+        }
+
+        private fun <T> T?.ensureValueRead(lazyMessage: () -> String): T? {
+            if (this != null) return this
+            Logger.error { "Cannot read trace meta info: ${lazyMessage()}" }
             return null
         }
 
@@ -346,8 +402,8 @@ internal fun DataOutput.writeClassDescriptor(value: ClassDescriptor) {
     writeUTF(value.name)
 }
 
-internal fun DataInput.readClassDescriptor(): ClassDescriptor {
-    return ClassDescriptor(readUTF())
+internal fun DataInput.readClassDescriptor(context: TraceContext): ClassDescriptor {
+    return ClassDescriptor(context, readUTF())
 }
 
 internal fun DataOutput.writeMethodDescriptor(value: MethodDescriptor) {
@@ -371,6 +427,7 @@ internal fun DataInput.readMethodSignature(): MethodSignature {
 internal fun DataOutput.writeFieldDescriptor(value: FieldDescriptor) {
     writeInt(value.classId)
     writeUTF(value.fieldName)
+    writeType(value.type)
     writeBoolean(value.isStatic)
     writeBoolean(value.isFinal)
 }
@@ -380,17 +437,19 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
         context = context,
         classId = readInt(),
         fieldName = readUTF(),
-        isStatic = readBoolean(),
+        type = readType(),
+        fieldKind = FieldKind.fromIsStatic(isStatic = readBoolean()),
         isFinal = readBoolean()
     )
 }
 
 internal fun DataOutput.writeVariableDescriptor(value: VariableDescriptor) {
     writeUTF(value.name)
+    writeType(value.type)
 }
 
-internal fun DataInput.readVariableDescriptor(): VariableDescriptor {
-    return VariableDescriptor(readUTF())
+internal fun DataInput.readVariableDescriptor(context: TraceContext): VariableDescriptor {
+    return VariableDescriptor(context, readUTF(), readType())
 }
 
 internal fun DataInput.readAccessLocation(): ShallowAccessLocation {
@@ -446,6 +505,26 @@ internal fun DataInput.readDiffStatus(): DiffStatus? {
         throw IOException("Cannot read DiffStatus: unknown ordinal $ordinal")
     }
     return values[ordinal]
+}
+
+data class TraceOutputStreams(
+    val dataStream: OutputStream,
+    val indexStream: OutputStream,
+)
+
+/**
+ * This function is used to create a pair of files for data and index in once.
+ *
+ * It uses [openNewFile] to open files and add [OUTPUT_BUFFER_SIZE] buffering
+ * around "naked" stream.
+ *
+ * Data stream is created with passed name (without any additional extension),
+ * and index file is named by adding [INDEX_FILENAME_EXT] extension to base name.
+ */
+internal fun openNewStandardDataAndIndex(baseFileName: String): TraceOutputStreams {
+    val dataStream = openNewFile(baseFileName).buffered(OUTPUT_BUFFER_SIZE)
+    val indexStream = openNewFile("$baseFileName.$INDEX_FILENAME_EXT").buffered(OUTPUT_BUFFER_SIZE)
+    return TraceOutputStreams(dataStream, indexStream)
 }
 
 internal fun openNewFile(name: String): OutputStream {
