@@ -8,7 +8,7 @@ test reports.
 You will:
 * Create a new IntelliJ IDEA project and install Lincheck.
 * Write your first concurrent test and run it with Lincheck.
-* Create a concurrent structure and test it with Lincheck using two testing strategies.
+* Create a concurrent data structure and test it with Lincheck using two testing strategies.
 
 ## Create a project
 
@@ -156,7 +156,9 @@ incorrect behavior.
 
 ## Write a test for a data structure
 
-To test a data structure in Lincheck, you need to only declare the concurrent methods of the structure and a test 
+In addition to basic concurrent tests, Lincheck supports a declarative approach to testing concurrent data structures.
+
+To test a data structure in Lincheck, you only need to declare the concurrent methods of the structure and a test 
 function. Lincheck generates random concurrent scenarios, executes them using the specified testing strategy, and 
 provides error reports.
 
@@ -234,11 +236,5 @@ In this section, you will test a simple counter:
 
 ## What’s next
 
-Read more about [testing strategies and how they are implemented](testing-strategies.md).
-
-## See also
-
-* Configure [argument generation](operation-arguments.md) for operations.
-* Enable [execution order constraints](constraints.md).
-* Check algorithms for [non-blocking progress guarantees](progress-guarantees.md).
-* Define the [sequential specification](sequential-specification.md) of an algorithm.
+Read more about the declarative approach to testing data structures and supported testing strategies in the
+[Testing strategies](testing-strategies.md) article.

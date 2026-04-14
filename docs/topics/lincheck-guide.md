@@ -3,7 +3,7 @@
 [//]: # (thread interleavings in your code to find the ones that lead to incorrect behavior.)
 
 Lincheck is a framework for testing concurrent code on the JVM. When running tests, Lincheck explores the potential 
-thread interleavings in the program and reports the ones that lead to incorrect behavior.
+thread interleavings of the program and reports the ones that lead to incorrect behavior.
 
 > In [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform/get-started.html) projects, you can use Lincheck 
 > to test code only on the JVM.
@@ -71,7 +71,7 @@ by the second operation.](scenario-vs-schedule.png){ width="700" }
 > An _execution scenario_ defines how operations are distributed across the threads and the order of execution 
 > within each thread.
 > 
-> An _execution schedule_ defines the order of execution for all operations across all threads.
+> An _execution schedule_ (also called _thread interleaving_) defines the order of execution for all operations across all threads.
 {style="tip"}
 
 Lincheck implements two testing strategies to find execution schedules that lead to incorrect behavior:
@@ -84,11 +84,7 @@ Lincheck implements two testing strategies to find execution schedules that lead
 ## Explore Lincheck
 
 * Learn Lincheck features step-by-step in the [Lincheck getting started](lincheck-getting-started.md).
-* Read more about [testing strategies](testing-strategies.md).
-* Configure [argument generation](operation-arguments.md) for operations.
-* Enable [execution order constraints](constraints.md).
-* Check an algorithm for [non-blocking progress guarantees](progress-guarantees.md).
-* Define the [sequential specification](sequential-specification.md) of an algorithm.
+* Learn about the declarative approach to testing concurrent data structures in the [Testing strategies](testing-strategies.md) article.
 
 ## Learn more
 
