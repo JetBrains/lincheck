@@ -7,6 +7,7 @@ thread interleavings of the program and reports the ones that lead to incorrect 
 
 > In [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform/get-started.html) projects, you can use Lincheck 
 > to test code only on the JVM.
+> 
 {style="note"}
 
 A concurrency test in Lincheck only requires you to list the operations for each thread and the expected assertions. 
@@ -72,6 +73,7 @@ by the second operation.](scenario-vs-schedule.png){ width="700" }
 > within each thread.
 > 
 > An _execution schedule_ (also called _thread interleaving_) defines the order of execution for all operations across all threads.
+>
 {style="tip"}
 
 Lincheck implements two testing strategies to find execution schedules that lead to incorrect behavior:
@@ -83,7 +85,7 @@ Lincheck implements two testing strategies to find execution schedules that lead
 
 ## Explore Lincheck
 
-* Learn Lincheck features step-by-step in the [Lincheck getting started](lincheck-getting-started.md).
+* Learn Lincheck features step-by-step in the [Getting started with Lincheck](lincheck-getting-started.md).
 * Learn about the declarative approach to testing concurrent data structures in the [Testing strategies](testing-strategies.md) article.
 
 ## Learn more

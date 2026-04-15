@@ -84,6 +84,7 @@ incorrect behavior.
 
 1. In the `src/test` directory, create a `CounterTest.kt` file.
 2. Import the `org.jetbrains.lincheck`, `kotlinx.concurrent`, and `kotlin.test` libraries: 
+    
     ```kotlin
     import org.jetbrains.lincheck.*
     import kotlin.concurrent.*
@@ -98,16 +99,13 @@ incorrect behavior.
         fun test() = Lincheck.runConcurrentTest {
             var counter = 0
 
-
             // Increments the counter concurrently
             val t1 = thread { counter++ }
             val t2 = thread { counter++ }
 
-
             // Waits for the threads to finish
             t1.join()
             t2.join()
-
 
             // Checks that both increments have been applied
             assertEquals(2, counter)
@@ -119,6 +117,7 @@ incorrect behavior.
 
     > Install the [Lincheck plugin](https://plugins.jetbrains.com/plugin/24171-lincheck) to
     > visualize the error trace.
+    > 
     {style="note"}
    
     ```text
@@ -143,16 +142,20 @@ incorrect behavior.
     ```
 
     Lincheck found a thread interleaving where one of the `inc()` operations overwrites the `counter` value.
-    <procedure title="Step-by-step report explanation" id="report_explanation" collapsible="true">
-        <step>In Thread 2, the JVM reads the initial <code>counter</code> value.</step>
-        <step>The execution switches from Thread 2 to Thread 1.</step>
-        <step>In Thread 1, the JVM increments the counter. All steps of the <code>inc()</code> operation are performed 
-              without interruptions: reading the value from the variable, incrementing the value, and writing the value 
-              back to the variable.</step>
-        <step>The execution switches back to Thread 2.</step>
-        <step>In Thread 2, the JVM increments the value acquired at step 1 and writes the result to the 
-              <code>counter</code> variable.</step>
-    </procedure>
+    <deflist collapsible="true">
+        <def title="Step-by-step report explanation" default-state="collapsed">
+        <list type="decimal">
+            <li> In Thread 2, the JVM reads the initial <code>counter</code> value.</li>
+            <li> The execution switches from Thread 2 to Thread 1.</li>
+            <li> In Thread 1, the JVM increments the counter. All steps of the <code>inc()</code> operation are performed 
+                 without interruptions: reading the value from the variable, incrementing the value, and writing the value 
+                 back to the variable.</li>
+            <li> The execution switches back to Thread 2.</li>
+            <li> In Thread 2, the JVM increments the value acquired at step 1 and writes the result to the 
+                 <code>counter</code> variable.</li>
+            </list>
+            </def>
+    </deflist>
 
 ## Write a test for a data structure
 
@@ -173,6 +176,7 @@ In this section, you will test a simple counter:
     ```
 
 3. Create a `Counter` structure:
+
     ```kotlin
     class Counter {
         @Volatile
@@ -185,6 +189,7 @@ In this section, you will test a simple counter:
    
 4. Create a `CounterStructureTest` class. Set the initial state of the structure and mark the concurrent operations 
    of the structure with the `@Operation` annotation:
+
     ```kotlin
     class CounterStructureTest {
         // Initial state
@@ -200,6 +205,7 @@ In this section, you will test a simple counter:
     ```
    
 5. In the `CounterTest` class, declare a test function using `ModelCheckingOptions()`:
+    
     ```kotlin
     @Test
     fun stressTest() = ModelCheckingOptions().check(this::class)
@@ -207,10 +213,12 @@ In this section, you will test a simple counter:
    
     > Learn how model checking works in the [Testing Strategies](testing-strategies.md#how-model-checking-works) 
     > article.
+    > 
     {style=”tip”}
 
 6. Run the test. Lincheck generates an error report with the concurrent scenario and the specific thread interleaving 
    that led to incorrect behavior:
+    
     ```text
     | ------------------- |
     | Thread 1 | Thread 2 |
@@ -234,7 +242,7 @@ In this section, you will test a simple counter:
     | ------------------------ |
     ```
 
-## What’s next
+## What's next
 
 Read more about the declarative approach to testing data structures and supported testing strategies in the
 [Testing strategies](testing-strategies.md) article.
