@@ -150,8 +150,9 @@ internal class EventStructureStrategy(
             .map { it.map { resultWithClock -> ResultWithClock(resultWithClock.result, resultWithClock.clockOnStart) }}
         val (actorsExecution, _) = execution.aggregate(ActorAggregator(execution))
 
-        //TODO: This check fails our operation. Figure out a fix for that
-        // check(actorsExecution.threadIDs.size == hbClockSize + 1)
+        // NOTE: This check is only valid if it is an ExecutionScenarioRunner. If we have a lambda runner then hbClockSize is just 1 (for the main) thread
+        // and extra threads that are forked are not considered
+        check((runner is ExecutionScenarioRunner) implies (actorsExecution.threadIDs.size == hbClockSize + 1))
         for (tid in patchedParallelResults.indices) {
             var actorEvents: List<HyperThreadEvent> = actorsExecution[tid]!!
             // cut init/post part
