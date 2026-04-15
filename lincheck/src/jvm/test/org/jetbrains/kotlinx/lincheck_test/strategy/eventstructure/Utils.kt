@@ -45,7 +45,7 @@ internal fun<Outcome> litmusTest(
 ) {
     require(executionCount >= 0 || executionCount == UNIQUE || executionCount == UNKNOWN)
     val outcomes: MutableSet<Outcome> = mutableSetOf()
-    val verifier = createVerifier(testScenario) { results ->
+    val verifier = getResultsVerifier { results ->
         outcomes.add(getOutcome(results))
         true
     }
@@ -84,22 +84,6 @@ internal fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): E
         ) as EventStructureStrategy
 }
 
-internal fun createVerifier(testScenario: ExecutionScenario?, verify: (ExecutionResult) -> Boolean): Verifier =
-    object : Verifier {
-
-        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
-            require(testScenario == scenario)
-            require(results != null)
-            results.parallelResults.flatten().forEach {
-                if(it is ExceptionResult) {
-                    throw it.throwable
-                }
-            }
-            return verify(results)
-        }
-
-    }
-
 internal inline fun<reified T> getValue(result: LincheckResult): T =
     (result as ValueResult).value as T
 
@@ -111,8 +95,6 @@ internal fun getValueSuspended(result: LincheckResult): Any? = when (result) {
     else -> throw IllegalArgumentException()
 }
 
-// NOTE: This is exactly the same as createVerifier from above but we do not check that the execution scenario is the same
-// perhaps we should just use this instead of create verifier? the ExecutionScenario is used for one little assertion only
 internal fun getResultsVerifier(verify: (ExecutionResult) -> Boolean): Verifier =
     object : Verifier {
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
