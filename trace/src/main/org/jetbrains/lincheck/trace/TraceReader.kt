@@ -10,11 +10,13 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.AccessCodeLocation
 import org.jetbrains.lincheck.descriptors.AccessLocation
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.ActiveLocal
-import org.jetbrains.lincheck.descriptors.CodeLocation
+import org.jetbrains.lincheck.descriptors.LineCodeLocation
 import org.jetbrains.lincheck.descriptors.LocalKind
+import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.util.Logger
 import java.io.DataInput
 import java.io.DataInputStream
@@ -382,6 +384,7 @@ internal fun loadCodeLocation(
     context: TraceContext,
     restore: Boolean
 ): Int {
+    val kind = input.readCodeLocationKind()
     val id = input.readInt()
 
     val fileNameId = input.readInt()
@@ -407,21 +410,24 @@ internal fun loadCodeLocation(
 
     if (restore) {
         val stringPool = context.stringPool
-        val codeLocation = CodeLocation(
-            stackTraceElement = StackTraceElement(
-                stringPool.getOrNull(classNameId) ?: "<unknown class>",
-                stringPool.getOrNull(methodNameId) ?: "<unknown method>",
-                stringPool.getOrNull(fileNameId) ?: "<unknown file>",
-                lineNumber
-            ),
-            accessPath = if (accessPathId != -1) context.getAccessPath(accessPathId) else null,
-            argumentNames = argumentNameIds?.map { if (it != -1) context.getAccessPath(it) else null },
-            activeLocals = if (activeLocalsNamesIds == null || activeLocalsKinds == null) null
+        val stackTraceElement = StackTraceElement(
+            stringPool.getOrNull(classNameId) ?: "<unknown class>",
+            stringPool.getOrNull(methodNameId) ?: "<unknown method>",
+            stringPool.getOrNull(fileNameId) ?: "<unknown file>",
+            lineNumber
+        )
+        val accessPath = if (accessPathId != -1) context.getAccessPath(accessPathId) else null
+        val argumentNames = argumentNameIds?.map { if (it != -1) context.getAccessPath(it) else null }
+        val activeLocals = if (activeLocalsNamesIds == null || activeLocalsKinds == null) null
                            else activeLocalsNamesIds.map { stringPool.getOrNull(it) ?: "<unknown local>" }
                                                     .zip(activeLocalsKinds)
                                                     .map { (name, kind) -> ActiveLocal(name, LocalKind.entries[kind]) }
-        )
-        context.restoreCodeLocation(id, codeLocation)
+        val codeLocation = when (kind) {
+            CodeLocationKind.LINE -> LineCodeLocation(stackTraceElement, activeLocals)
+            CodeLocationKind.ACCESS -> AccessCodeLocation(stackTraceElement, accessPath, activeLocals)
+            CodeLocationKind.METHOD_CALL -> MethodCallCodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
+        }
+        context.codeLocationsPool.restore(id, codeLocation)
     }
     return id
 }

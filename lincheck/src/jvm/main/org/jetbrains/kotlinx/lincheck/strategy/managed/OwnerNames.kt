@@ -116,7 +116,7 @@ internal fun findAtomicOwnerName(
 
     fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
         val owner = findOwnerName(context, owner, className, UNKNOWN_CODE_LOCATION, shadowStackFrame, objectTracker) {
-            val codeLocation = context.codeLocation(codeLocationId)
+            val codeLocation = context.codeLocationsPool.getOrNull(codeLocationId)
             val ownerIndex = atomicMethodDescriptor.getAccessedObjectIndex(atomic, arguments)
             if (ownerIndex == -1) codeLocation?.accessPath else codeLocation?.argumentNames?.getOrNull(ownerIndex)
         }

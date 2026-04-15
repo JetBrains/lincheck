@@ -91,7 +91,7 @@ internal class SharedMemoryAccessTransformer(
 
         // STACK: <empty>
         loadLocal(threadDescriptorLocal)
-        val codeLocationId = loadNewCodeLocationId()
+        val codeLocationId = loadNewCodeLocationId(createCurrentAccessCodeLocation())
         pushNull()
         push(fieldId)
         loadLocal(resultInterceptorLocal)
@@ -137,7 +137,7 @@ internal class SharedMemoryAccessTransformer(
         }
 
         loadLocal(threadDescriptorLocal)
-        val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
+        val codeLocationId = loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
         loadLocal(ownerLocal)
         push(fieldId)
         loadLocal(resultInterceptorLocal)
@@ -179,7 +179,7 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(valueLocal)
         // STACK: value
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(createCurrentAccessCodeLocation())
         pushNull()
         loadLocal(valueLocal)
         box(valueType)
@@ -210,7 +210,7 @@ internal class SharedMemoryAccessTransformer(
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(valueType.size)
 
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        loadNewCodeLocationId(accessPath = ownerName)
+        loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
         loadLocal(ownerLocal)
         loadLocal(valueLocal)
         box(valueType)
@@ -270,7 +270,7 @@ internal class SharedMemoryAccessTransformer(
 
         // STACK: <empty>
         loadLocal(threadDescriptorLocal)
-        val codeLocationId = loadNewCodeLocationId(accessPath = ownerName)
+        val codeLocationId = loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         loadLocal(resultInterceptorLocal)
@@ -312,7 +312,7 @@ internal class SharedMemoryAccessTransformer(
 
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        loadNewCodeLocationId(accessPath = ownerName)
+        loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         loadLocal(valueLocal)

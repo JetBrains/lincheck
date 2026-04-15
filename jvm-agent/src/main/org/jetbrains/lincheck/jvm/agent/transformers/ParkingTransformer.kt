@@ -51,7 +51,7 @@ internal class ParkingTransformer(
                         // Stack: descriptor
                         dup()
                         // Stack: descriptor, descriptor
-                        val codeLocationId = loadNewCodeLocationId()
+                        val codeLocationId = loadNewCodeLocationId(createCurrentLineCodeLocation())
                         // Stack: descriptor, descriptor, codeLocation
                         invokeStatic(Injections::beforePark)
                         // Stack: descriptor
@@ -77,7 +77,7 @@ internal class ParkingTransformer(
                         pop() // drop Unsafe object
                         // STACK: <empty>
                         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                        loadNewCodeLocationId()
+                        loadNewCodeLocationId(createCurrentLineCodeLocation())
                         loadLocal(threadLocal)
                         // STACK: descriptor, codeLocation, thread
                         invokeStatic(Injections::unpark)

@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.Types.convertAsmMethodType
-import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.*
 import org.objectweb.asm.*
@@ -118,7 +117,7 @@ internal class LocalVariablesAccessTransformer(
     private fun GeneratorAdapter.trackLocalVariableAccess(variableInfo: LocalVariableInfo, accessType: AccessType) {
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(createCurrentLineCodeLocation())
         val variableId = context.createAndRegisterVariableDescriptor(
             variableInfo.name,
             Types.convertAsmTypeName(variableInfo.type)

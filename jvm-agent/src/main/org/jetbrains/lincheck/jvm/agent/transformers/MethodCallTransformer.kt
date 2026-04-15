@@ -177,7 +177,7 @@ internal class MethodCallTransformer(
         // STACK: <empty>
         loadLocal(threadDescriptorLocal)
         // STACK: descriptor
-        loadNewCodeLocationId(accessPath = ownerName, argumentNames = argumentNames)
+        loadNewCodeLocationId(createCurrentMethodCallCodeLocation(accessPath = ownerName, argumentNames = argumentNames))
         // STACK: descriptor, codeLocation
         push(methodId)
         pushReceiver(receiverLocal)

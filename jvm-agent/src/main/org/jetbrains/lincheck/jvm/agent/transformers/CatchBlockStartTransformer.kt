@@ -15,10 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Opcodes
-import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
-import sun.misc.Unsafe
 
 /**
  * [CatchBlockStartTransformer] tracks all starts of `catch` blocks
@@ -46,7 +43,7 @@ internal class CatchBlockStartTransformer(
         // Stack: exception, exception, threadDescriptor
         swap()
         // Stack: exception, threadDescriptor, exception
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(createCurrentLineCodeLocation())
         // Stack: exception, threadDescriptor, exception, locationId
         swap()
         // Stack: exception, threadDescriptor, locationId, exception

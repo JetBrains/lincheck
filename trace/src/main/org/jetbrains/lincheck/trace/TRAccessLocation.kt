@@ -42,26 +42,26 @@ internal fun AccessLocation.saveReferences(out: TraceWriter, traceContext: Trace
 private fun LocalVariableAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     check(traceContext.variablePool.contains(variableDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved variable $variableDescriptor" }
     val variableDescriptorId = traceContext.variablePool.getId(variableDescriptor.key)
-    out.writeLocationKind(AccessLocationKind.LOCAL_VARIABLE)
+    out.writeAccessLocationKind(AccessLocationKind.LOCAL_VARIABLE)
     out.writeInt(variableDescriptorId)
 }
 
 private fun StaticFieldAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     check(traceContext.fieldPool.contains(fieldDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved field $fieldDescriptor" }
     val fieldDescriptorId = traceContext.fieldPool.getId(fieldDescriptor.key)
-    out.writeLocationKind(AccessLocationKind.STATIC_FIELD)
+    out.writeAccessLocationKind(AccessLocationKind.STATIC_FIELD)
     out.writeInt(fieldDescriptorId)
 }
 
 private fun ObjectFieldAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     check(traceContext.fieldPool.contains(fieldDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved field $fieldDescriptor" }
     val fieldDescriptorId = traceContext.fieldPool.getId(fieldDescriptor.key)
-    out.writeLocationKind(AccessLocationKind.OBJECT_FIELD)
+    out.writeAccessLocationKind(AccessLocationKind.OBJECT_FIELD)
     out.writeInt(fieldDescriptorId)
 }
 
 private fun ArrayElementByIndexAccessLocation.save(out: TraceWriter) {
-    out.writeLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_INDEX)
+    out.writeAccessLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_INDEX)
     out.writeInt(index)
 }
 
@@ -69,7 +69,7 @@ private fun ArrayElementByNameAccessLocation.save(out: TraceWriter, traceContext
     // register or get existing access path and write its id to output stream
     check(traceContext.accessPathPool.contains(indexAccessPath)) { "Access location references must be saved before-hand, but location $this has unsaved access path $indexAccessPath" }
     val indexId = traceContext.accessPathPool.getId(indexAccessPath)
-    out.writeLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_NAME)
+    out.writeAccessLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_NAME)
     out.writeInt(indexId)
 }
 

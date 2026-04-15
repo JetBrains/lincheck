@@ -167,7 +167,7 @@ internal class SnapshotBreakpointTransformer(
         val capturedLocals = argNames.map { argName ->
             // Look up each captured variable name in the current method's active locals.
             // If a variable isn't found, throw an error (this indicates a bug in condition analysis).
-            currentActiveLocals.firstOrNull { it.name == argName }
+            currentActiveLocalVariablesInfo.firstOrNull { it.name == argName }
                 ?: throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpointSettings.lineNumber}")
         }
 
@@ -268,8 +268,8 @@ internal class SnapshotBreakpointTransformer(
         breakpointId: Int,
     ) {
         loadLocal(threadDescriptorLocal)
-        loadNewCodeLocationId()
-        val activeLocals = currentActiveLocals
+        loadNewCodeLocationId(createCurrentLineCodeLocation())
+        val activeLocals = currentActiveLocalVariablesInfo
 
         // Pushes local variable values onto the stack as Object[], including
         // - this

@@ -10,20 +10,23 @@
 
 package org.jetbrains.lincheck.trace
 
+import org.jetbrains.lincheck.descriptors.AccessCodeLocation
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.AccessPathPool
 import org.jetbrains.lincheck.descriptors.ActiveLocal
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
-import org.jetbrains.lincheck.descriptors.CodeLocation
 import org.jetbrains.lincheck.descriptors.CodeLocationPool
 import org.jetbrains.lincheck.descriptors.DescriptorPool
 import org.jetbrains.lincheck.descriptors.FieldDescriptor
 import org.jetbrains.lincheck.descriptors.FieldKind
+import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.MethodDescriptor
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.StringPool
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.descriptors.accessPath
+import org.jetbrains.lincheck.descriptors.argumentNames
 import java.util.concurrent.ConcurrentHashMap
 
 const val UNKNOWN_CODE_LOCATION_ID = -1
@@ -55,48 +58,29 @@ class TraceContext {
 
     fun threadNames(): List<String> = threadNames.values.toList()
 
-    fun newCodeLocation(
-        stackTraceElement: StackTraceElement,
-        accessPath: AccessPath? = null,
-        argumentNames: List<AccessPath?>? = null,
-        activeLocals: List<ActiveLocal>? = null
-    ): Int {
-        val location = CodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
-        val id = codeLocationsPool.register(location)
-        return id
-    }
-
-    fun codeLocation(codeLocationId: Int): CodeLocation? = codeLocationsPool.getOrNull(codeLocationId)
-
     fun stackTrace(codeLocationId: Int): StackTraceElement {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return EMPTY_STACK_TRACE
-        val loc = codeLocationsPool[codeLocationId]
-        return loc.stackTraceElement
+        return codeLocationsPool[codeLocationId].stackTraceElement
     }
 
     fun accessPath(codeLocationId: Int): AccessPath? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = codeLocationsPool[codeLocationId]
-        return loc.accessPath
+        return codeLocationsPool[codeLocationId].accessPath
     }
-    
+
     fun methodCallArgumentNames(codeLocationId: Int): List<AccessPath?>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = codeLocationsPool[codeLocationId]
-        return loc.argumentNames
+        return codeLocationsPool[codeLocationId].argumentNames
     }
 
     fun activeLocals(codeLocationId: Int): List<ActiveLocal>? {
         if (codeLocationId == UNKNOWN_CODE_LOCATION_ID) return null
-        val loc = codeLocationsPool[codeLocationId]
-        return loc.activeLocals
+        return codeLocationsPool[codeLocationId].activeLocals
     }
 
     fun getAccessPath(id: Int): AccessPath = accessPathPool[id]
 
     fun restoreAccessPath(id: Int, accessPath: AccessPath) = accessPathPool.restore(id, accessPath)
-
-    fun restoreCodeLocation(id: Int, location: CodeLocation) = codeLocationsPool.restore(id, location)
 
     fun clear() {
         threadNames.clear()

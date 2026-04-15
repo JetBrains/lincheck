@@ -33,7 +33,7 @@ import java.lang.management.ManagementFactory
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 19
+internal const val TRACE_VERSION : Long = 20
 
 // This suffix is not enforced, but IDEA plugin rely on it
 const val DATA_FILENAME_EXT = "trace"
@@ -331,6 +331,18 @@ internal enum class ObjectKind {
     EOF
 }
 
+internal enum class CodeLocationKind {
+    LINE,
+    ACCESS,
+    METHOD_CALL
+}
+
+internal val CodeLocation.kind: CodeLocationKind get() = when (this) {
+    is LineCodeLocation -> CodeLocationKind.LINE
+    is AccessCodeLocation -> CodeLocationKind.ACCESS
+    is MethodCallCodeLocation -> CodeLocationKind.METHOD_CALL
+}
+
 internal enum class AccessLocationKind {
     LOCAL_VARIABLE,
     STATIC_FIELD,
@@ -487,13 +499,24 @@ internal fun DataInput.readAccessLocation(context: TraceContext): AccessLocation
 
 internal fun DataOutput.writeKind(value: ObjectKind): Unit = writeByte(value.ordinal)
 
-internal fun DataOutput.writeLocationKind(value: AccessLocationKind): Unit = writeByte(value.ordinal)
+internal fun DataOutput.writeCodeLocationKind(value: CodeLocationKind): Unit = writeByte(value.ordinal)
+
+internal fun DataOutput.writeAccessLocationKind(value: AccessLocationKind): Unit = writeByte(value.ordinal)
 
 internal fun DataInput.readKind(): ObjectKind {
     val ordinal = readByte()
     val values = ObjectKind.entries
     if (ordinal < 0 || ordinal > values.size) {
         throw IOException("Cannot read ObjectKind: unknown ordinal $ordinal")
+    }
+    return values[ordinal.toInt()]
+}
+
+internal fun DataInput.readCodeLocationKind(): CodeLocationKind {
+    val ordinal = readByte()
+    val values = CodeLocationKind.entries
+    if (ordinal < 0 || ordinal > values.size) {
+        throw IOException("Cannot read CodeLocationKind: unknown ordinal $ordinal")
     }
     return values[ordinal.toInt()]
 }

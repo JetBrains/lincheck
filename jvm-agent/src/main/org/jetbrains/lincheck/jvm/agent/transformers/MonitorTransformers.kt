@@ -47,7 +47,7 @@ internal class MonitorTransformer(
                         // STACK: <empty>
                         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                         // STACK: descriptor
-                        loadNewCodeLocationId()
+                        loadNewCodeLocationId(createCurrentLineCodeLocation())
                         // STACK: descriptor, codeLocation
                         invokeStatic(Injections::beforeLock)
                         // STACK: <empty>
@@ -70,7 +70,7 @@ internal class MonitorTransformer(
                         val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                         // STACK: <empty>
                         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                        loadNewCodeLocationId()
+                        loadNewCodeLocationId(createCurrentLineCodeLocation())
                         loadLocal(monitorLocal)
                         // STACK: descriptor, codeLocation, monitor
                         invokeStatic(Injections::unlock)
@@ -135,7 +135,7 @@ internal class SynchronizedMethodTransformer(
                 // STACK: descriptor
                 dup()
                 // STACK: descriptor, descriptor
-                loadNewCodeLocationId()
+                loadNewCodeLocationId(createCurrentLineCodeLocation())
                 // STACK: descriptor, descriptor, codeLocation
                 invokeStatic(Injections::beforeLock)
                 // STACK: descriptor
@@ -156,7 +156,7 @@ internal class SynchronizedMethodTransformer(
             instrumented = {
                 // STACK: <empty>
                 invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                loadNewCodeLocationId()
+                loadNewCodeLocationId(createCurrentLineCodeLocation())
                 loadSynchronizedMethodMonitorOwner()
                 // STACK: descriptor, codeLocation, monitor
                 invokeStatic(Injections::unlock)
@@ -182,7 +182,7 @@ internal class SynchronizedMethodTransformer(
                     instrumented = {
                         // STACK: <empty>
                         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                        loadNewCodeLocationId()
+                        loadNewCodeLocationId(createCurrentLineCodeLocation())
                         loadSynchronizedMethodMonitorOwner()
                         // STACK: descriptor, monitor, codeLocation
                         invokeStatic(Injections::unlock)
@@ -246,7 +246,7 @@ internal class WaitNotifyTransformer(
                             val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                             // STACK: <empty>
                             invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                            loadNewCodeLocationId()
+                            loadNewCodeLocationId(createCurrentLineCodeLocation())
                             // STACK: descriptor, codeLocation
                             invokeStatic(Injections::beforeWait)
                             // STACK: <empty>
@@ -272,7 +272,7 @@ internal class WaitNotifyTransformer(
                             val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                             // STACK: <empty>
                             invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                            loadNewCodeLocationId()
+                            loadNewCodeLocationId(createCurrentLineCodeLocation())
                             // STACK: descriptor, codeLocation
                             invokeStatic(Injections::beforeWait)
                             // STACK: <empty>
@@ -300,7 +300,7 @@ internal class WaitNotifyTransformer(
                             val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                             // STACK: <empty>
                             invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                            loadNewCodeLocationId()
+                            loadNewCodeLocationId(createCurrentLineCodeLocation())
                             // STACK: descriptor, codeLocation
                             invokeStatic(Injections::beforeWait)
                             // STACK: <empty>
@@ -324,7 +324,7 @@ internal class WaitNotifyTransformer(
                             val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                             // STACK: <empty>
                             invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                            loadNewCodeLocationId()
+                            loadNewCodeLocationId(createCurrentLineCodeLocation())
                             loadLocal(monitorLocal)
                             // STACK: descriptor, codeLocation, monitor
                             invokeStatic(Injections::notify)
@@ -345,7 +345,7 @@ internal class WaitNotifyTransformer(
                             val monitorLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                             // STACK: <empty>
                             invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                            loadNewCodeLocationId()
+                            loadNewCodeLocationId(createCurrentLineCodeLocation())
                             loadLocal(monitorLocal)
                             // STACK: descriptor, codeLocation, monitor
                             invokeStatic(Injections::notifyAll)

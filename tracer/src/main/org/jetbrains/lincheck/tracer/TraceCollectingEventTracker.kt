@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
+import org.jetbrains.lincheck.descriptors.LineCodeLocation
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
@@ -708,7 +709,7 @@ class TraceCollectingEventTracker(
         
         val stackTraceCodeLocationIds = stackTrace.map { stackTraceElement ->
             // TODO JBRes-7631 prevent duplicate code locations
-            context.newCodeLocation(stackTraceElement)
+            context.codeLocationsPool.register(LineCodeLocation(stackTraceElement))
         }
         
         val timeStamp = System.currentTimeMillis()

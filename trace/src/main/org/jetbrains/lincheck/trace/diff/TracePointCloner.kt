@@ -266,9 +266,12 @@ class TracePointCloner(
     private fun cloneCodeLocation(tracePoint: TRTracePoint, srcId: Int, codeLocationMap: MutableList<Int>): Int {
         if (srcId == UNKNOWN_CODE_LOCATION_ID) return UNKNOWN_CODE_LOCATION_ID
         if (srcId < codeLocationMap.size && codeLocationMap[srcId] != UNKNOWN_CODE_LOCATION_ID) return codeLocationMap[srcId]
-        val srcLoc = tracePoint.context.codeLocation(srcId)!!
-        val argumentNames = srcLoc.argumentNames?.map { cloneAccessPath(it) }
-        val dstId = context.newCodeLocation(srcLoc.stackTraceElement, cloneAccessPath(srcLoc.accessPath), argumentNames, srcLoc.activeLocals)
+        val dstLoc = when (val srcLoc = tracePoint.context.codeLocationsPool[srcId]) {
+            is LineCodeLocation -> LineCodeLocation(srcLoc.stackTraceElement, srcLoc.activeLocals)
+            is AccessCodeLocation -> AccessCodeLocation(srcLoc.stackTraceElement, cloneAccessPath(srcLoc.accessPath), srcLoc.activeLocals)
+            is MethodCallCodeLocation -> MethodCallCodeLocation(srcLoc.stackTraceElement, cloneAccessPath(srcLoc.accessPath), srcLoc.argumentNames?.map { cloneAccessPath(it) }, srcLoc.activeLocals)
+        }
+        val dstId = context.codeLocationsPool.register(dstLoc)
         addToMap(codeLocationMap, srcId, dstId)
         return dstId
     }

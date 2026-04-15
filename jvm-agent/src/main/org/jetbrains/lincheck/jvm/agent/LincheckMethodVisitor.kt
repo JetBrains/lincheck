@@ -10,7 +10,11 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import org.jetbrains.lincheck.descriptors.AccessCodeLocation
 import org.jetbrains.lincheck.descriptors.AccessPath
+import org.jetbrains.lincheck.descriptors.CodeLocation
+import org.jetbrains.lincheck.descriptors.LineCodeLocation
+import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.objectweb.asm.Label
@@ -48,12 +52,9 @@ internal open class LincheckMethodVisitor(
         }
     }
 
-    protected fun loadNewCodeLocationId(
-        accessPath: AccessPath? = null,
-        argumentNames: List<AccessPath?>? = null,
-    ): Int = adapter.run {
+    protected fun getCurrentLineStackTraceElement(): StackTraceElement {
         val mappedLocation = methodInfo.smap.getLine("Kotlin", lineNumber)
-        val stackTraceElement = if (mappedLocation != null) {
+        return if (mappedLocation != null) {
             if (mappedLocation.className == className) {
                 if (mappedLocation.line in methodInfo.lineRange.first .. methodInfo.lineRange.second) {
                     // See comment in `else` branch
@@ -92,15 +93,25 @@ internal open class LincheckMethodVisitor(
                 /* fileName = */ fileName,
                 /* lineNumber = */ lineNumber)
         }
-        val codeLocationId = context.newCodeLocation(
-            stackTraceElement,
-            accessPath,
-            argumentNames,
-            currentActiveLocals.map { it.toActiveLocal() }.toList()
-        )
+    }
+
+    protected fun loadNewCodeLocationId(codeLocation: CodeLocation): Int = adapter.run {
+        val codeLocationId = context.codeLocationsPool.register(codeLocation)
         push(codeLocationId)
         return codeLocationId
     }
+
+    protected fun createCurrentLineCodeLocation(): CodeLocation =
+        LineCodeLocation(getCurrentLineStackTraceElement(), currentActiveLocals)
+
+    protected fun createCurrentAccessCodeLocation(accessPath: AccessPath? = null): CodeLocation =
+        AccessCodeLocation(getCurrentLineStackTraceElement(), accessPath, currentActiveLocals)
+
+    protected fun createCurrentMethodCallCodeLocation(
+        accessPath: AccessPath? = null,
+        argumentNames: List<AccessPath?>? = null,
+    ): CodeLocation =
+        MethodCallCodeLocation(getCurrentLineStackTraceElement(), accessPath, argumentNames, currentActiveLocals)
 
     protected fun isKnownLineNumber(): Boolean =
         lineNumber > 0
@@ -109,6 +120,7 @@ internal open class LincheckMethodVisitor(
         lineNumber = line
         super.visitLineNumber(line, start)
     }
-    
-    protected val currentActiveLocals get() = methodInfo.locals.activeVariables
+
+    protected val currentActiveLocalVariablesInfo get() = methodInfo.locals.activeVariables
+    private val currentActiveLocals get() = currentActiveLocalVariablesInfo.map { it.toActiveLocal() }
 }

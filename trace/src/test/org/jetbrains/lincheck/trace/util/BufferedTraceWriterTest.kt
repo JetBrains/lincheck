@@ -10,8 +10,10 @@
 
 package org.jetbrains.lincheck.trace.util
 
+import org.jetbrains.lincheck.descriptors.AccessCodeLocation
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
+import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.Logger
@@ -292,8 +294,8 @@ class BufferedTraceWriterTest {
     ): TRMethodCallTracePoint {
         val methodType = Types.MethodType(Types.OBJECT_TYPE)
         val md = context.createAndRegisterMethodDescriptor(className, methodName, methodType)
-        val codeLocationId = context.newCodeLocation(
-            StackTraceElement(md.className, md.methodName, "Example.java", 10)
+        val codeLocationId = context.codeLocationsPool.register(
+            MethodCallCodeLocation(StackTraceElement(md.className, md.methodName, "Example.java", 10), accessPath = null, argumentNames = null)
         )
         val tracepoint = TRMethodCallTracePoint(
             context,
@@ -317,9 +319,8 @@ class BufferedTraceWriterTest {
         // Create an access path for the variable
         val accessPath = AccessPath(listOf(LocalVariableAccessLocation(vd)))
 
-        val codeLocationId = context.newCodeLocation(
-            stackTraceElement = StackTraceElement("com.example.SomeClass", "someMethod", "Example.java", 20),
-            accessPath = accessPath
+        val codeLocationId = context.codeLocationsPool.register(
+            AccessCodeLocation(StackTraceElement("com.example.SomeClass", "someMethod", "Example.java", 20), accessPath = accessPath)
         )
         return TRWriteLocalVariableTracePoint(
             context,

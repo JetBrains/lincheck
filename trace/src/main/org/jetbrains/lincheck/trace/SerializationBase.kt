@@ -321,15 +321,18 @@ internal sealed class ContextAwareTraceWriter(
         if (id == UNKNOWN_CODE_LOCATION_ID) return
         if (contextState.isDescriptorSaved<CodeLocation>(id)) return
 
-        val codeLocation = context.stackTrace(id)
-        val accessPath = context.accessPath(id)
-        val argumentNames = context.methodCallArgumentNames(id)
-        val activeLocals = context.activeLocals(id)
+        // Code location with id UNKNOWN_CODE_LOCATION_ID is not considered here,
+        // so context will contain a requested code location
+        val codeLocation = context.codeLocationsPool[id] // make a single context search instead of 4
+        val stackTrace = codeLocation.stackTraceElement
+        val accessPath = codeLocation.accessPath
+        val argumentNames = codeLocation.argumentNames
+        val activeLocals = codeLocation.activeLocals
         // All strings only once. It will have duplications with class and method descriptors,
         // but size loss is negligible and this way is simpler
-        val fileNameId = writeString(codeLocation.fileName)
-        val classNameId = writeString(codeLocation.className)
-        val methodNameId = writeString(codeLocation.methodName)
+        val fileNameId = writeString(stackTrace.fileName)
+        val classNameId = writeString(stackTrace.className)
+        val methodNameId = writeString(stackTrace.methodName)
         val accessPathId = writeAccessPath(accessPath)
         val argumentNamesIds = argumentNames?.map { writeAccessPath(it) }
         val activeLocalNameIds = activeLocals?.map { writeString(it.localName) }
@@ -337,11 +340,12 @@ internal sealed class ContextAwareTraceWriter(
         // Code location into data and position into index
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.CODE_LOCATION)
+        dataOutput.writeCodeLocationKind(codeLocation.kind)
         dataOutput.writeInt(id)
         dataOutput.writeInt(fileNameId)
         dataOutput.writeInt(classNameId)
         dataOutput.writeInt(methodNameId)
-        dataOutput.writeInt(codeLocation.lineNumber)
+        dataOutput.writeInt(stackTrace.lineNumber)
         dataOutput.writeInt(accessPathId)
         dataOutput.writeInt(argumentNamesIds?.size ?: 0)
         argumentNamesIds?.forEach { dataOutput.writeInt(it) }

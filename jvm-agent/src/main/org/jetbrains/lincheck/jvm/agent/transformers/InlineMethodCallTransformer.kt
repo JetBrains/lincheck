@@ -314,7 +314,7 @@ internal class InlineMethodCallTransformer(
         // STACK: <empty>
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         // STACK: descriptor
-        loadNewCodeLocationId()
+        loadNewCodeLocationId(createCurrentMethodCallCodeLocation())
         // STACK: descriptor, codeLocation
         push(methodId)
         // STACK: descriptor, codeLocation, methodId

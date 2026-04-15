@@ -97,7 +97,7 @@ internal class LoopTransformer(
                     ?.contains(loopId) ?: true
                 // STACK: <empty>
                 invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-                loadNewCodeLocationId()
+                loadNewCodeLocationId(createCurrentLineCodeLocation())
                 adapter.push(loopId)
                 pushNull()
                 push(isReachableFromOutsideLoop)
@@ -113,7 +113,7 @@ internal class LoopTransformer(
             val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
             // STACK: <empty>
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-            loadNewCodeLocationId()
+            loadNewCodeLocationId(createCurrentLineCodeLocation())
             adapter.push(loopId)
             // STACK: descriptor, codeLocation, loopId
             if (isReducible) {
@@ -138,7 +138,7 @@ internal class LoopTransformer(
                     ?.contains(loopId) ?: true
                 // STACK: <empty>
                 invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-                loadNewCodeLocationId()
+                loadNewCodeLocationId(createCurrentLineCodeLocation())
                 push(loopId)
                 loadLocal(exceptionLocal)
                 push(isReachableFromOutsideLoop)
