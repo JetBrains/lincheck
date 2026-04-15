@@ -304,7 +304,7 @@ internal class EventStructureStrategy(
         //NOTE: Since the IdentityHashCode of the test instance changes between invocations
         // we cannot keep it as an external object. Instead, we register it as an "internal"
         // object on each invocation
-        if(testInstance != null) {
+        if (testInstance != null) {
             (objectTracker as EventStructureObjectTracker).registerNewObject(testInstance)
         }
         isTestInstanceRegistered = true
@@ -321,13 +321,15 @@ internal class EventStructureStrategy(
         threadDescriptor: ThreadDescriptor,
         startingThread: Thread,
         startingThreadDescriptor: ThreadDescriptor
-    ) : ThreadId {
-        val newThreadId = super.beforeThreadStart(threadDescriptor, startingThread, startingThreadDescriptor)
-        if ( newThreadId != -1 || newThreadId != eventStructure.mainThreadId ) {
+    ) {
+        super.beforeThreadStart(threadDescriptor, startingThread, startingThreadDescriptor)
+        val newThreadId = threadScheduler.getThreadId(startingThread)
+        //NOTE: Main thread is special cased, since it is forked from the "initial" thread
+        //      which is not tracked in the eventstrcuture. Therefore, we want to skip tracking it
+        if (newThreadId != -1 || newThreadId != eventStructure.mainThreadId) {
             val currentThreadId = threadScheduler.getCurrentThreadId()
             eventStructure.addThreadForkEvent(currentThreadId, setOf(newThreadId))
         }
-        return newThreadId
     }
 
     override fun onThreadFinish(threadId: Int) {
