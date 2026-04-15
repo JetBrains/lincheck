@@ -507,13 +507,13 @@ internal class LocalObjectManager : BaseObjectTracker() {
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
+        obj: Any,
         kind: ObjectKind
     ): ObjectEntry = LocalObjectManagerEntry(
         objNumber = objNumber,
         objHashCode = objHashCode,
         objDisplayNumber = objDisplayNumber,
-        objReference = objReference,
+        objReference = createWeakReference(obj),
         isLocal = when (kind) {
             // every newly registered object is considered local initially
             ObjectKind.NEW -> true

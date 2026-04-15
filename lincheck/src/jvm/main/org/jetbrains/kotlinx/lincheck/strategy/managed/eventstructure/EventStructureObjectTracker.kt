@@ -42,32 +42,21 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     //   Most often these are the initial threads, and the initial values of the fields of the test instance class
     //   Since these values are persistent across invocations, we keep them in the object tracker after invocations
     //   We also hold a reference to them to prevent the GC from removing them, while they are still in use
-    private abstract class EventStructureObjectEntry(
+    private class EventStructureObjectEntry(
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
+        objWeakReference: WeakReference<Any>,
+        objStrongReference: Any?,
         val allocation: AtomicThreadEvent,
-    ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
-
-    private class InternalEventStructureObjectEntry(
-        objNumber: Int,
-        objHashCode: Int,
-        objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
-        allocation: AtomicThreadEvent,
-    ) : EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocation)
-
-    private class ExternalEventStructureObjectEntry(
-        objNumber: Int,
-        objHashCode: Int,
-        objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
-        @Suppress("unused")
-        val hardRef: Any, // Prevent the gc from gc
-        allocation: AtomicThreadEvent,
-    ) : EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocation)
-
+        val isExternal: Boolean,
+    ) : ObjectEntry(
+        objNumber,
+        objHashCode,
+        objDisplayNumber,
+        objWeakReference,
+        objStrongReference
+    ) {}
 
 
     private var initEvent: AtomicThreadEvent? = null
@@ -88,13 +77,22 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
+        obj: Any,
         kind: ObjectKind
     ): ObjectEntry {
-        val obj = objReference.get()!!
+        // We create a base entry just for the weak reference inside it
+        val objWeakReference = createWeakReference(obj)
         if (kind == ObjectKind.EXTERNAL) {
             (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objNumber)
-            return ExternalEventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, obj, initEvent!!)
+            return EventStructureObjectEntry(
+                objNumber,
+                objHashCode,
+                objDisplayNumber,
+                objWeakReference,
+                obj,
+                initEvent!!,
+                true,
+            )
         } else {
             val iThread = (Thread.currentThread() as? TestThread)?.threadId ?: eventStructure.mainThreadId
             // We create a new object allocation event and we "suggest" an objNumber
@@ -103,7 +101,15 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
             val allocationEvent = eventStructure.addObjectAllocationEvent(iThread!!,obj.opaque(), objNumber)
             val actualObjectNumber = (allocationEvent.label as ObjectAllocationLabel).objectID
             check(actualObjectNumber <= objNumber)
-            return InternalEventStructureObjectEntry(actualObjectNumber, objHashCode, objDisplayNumber, objReference, allocationEvent)
+            return EventStructureObjectEntry(
+                actualObjectNumber,
+                objHashCode,
+                objDisplayNumber,
+                objWeakReference,
+                null,
+                allocationEvent,
+                false,
+            )
         }
     }
 
@@ -117,11 +123,11 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 
     fun getObject(id: ObjectNumber): OpaqueValue? {
-        return lookupByNumber(id)?.objectReference?.get()?.opaque()
+        return lookupByNumber(id)?.objectWeakReference?.get()?.opaque()
     }
 
     override fun reset() {
-        retain { (it is ExternalEventStructureObjectEntry)  }
+        retain { (it as? EventStructureObjectEntry)?.isExternal ?: false }
     }
 }
 

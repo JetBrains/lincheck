@@ -174,13 +174,16 @@ typealias ObjectNumber = Int
  * @property objectNumber A unique serial number for the object.
  * @property objectHashCode The identity hash code of the object.
  * @property objectDisplayNumber The number used in string representation of the object.
- * @property objectReference A weak reference to the associated object.
+ * @property objectWeakReference A weak reference to the associated object.
+ * @property objectStrongReference An optional strong reference to the associated object.
+ *      It exists solely to prevent garbage collection of the tracked object
  */
 open class ObjectEntry(
     val objectNumber: Int,
     val objectHashCode: Int,
     val objectDisplayNumber: Int,
-    val objectReference: WeakReference<Any>,
+    val objectWeakReference: WeakReference<Any>,
+    val objectStrongReference: Any? = null,
 )
 
 /**
@@ -239,7 +242,7 @@ fun ObjectTracker.getObjectDisplayNumber(obj: Any): Int =
 internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
     for (objectEntry in enumerateObjectEntries()) {
-        val obj = objectEntry.objectReference.get() ?: continue
+        val obj = objectEntry.objectWeakReference.get() ?: continue
         objectNumberMap[obj] = objectEntry.objectDisplayNumber
     }
     return objectNumberMap
@@ -447,11 +450,13 @@ open class BaseObjectTracker(
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
+        obj: Any,
         kind: ObjectKind = ObjectKind.NEW,
     ): ObjectEntry {
-        return ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
+        return ObjectEntry(objNumber, objHashCode, objDisplayNumber, createWeakReference(obj))
     }
+
+    protected fun createWeakReference(obj: Any): WeakReference<Any> = WeakReference(obj, referenceQueue)
 
     protected fun computeObjectDisplayNumber(obj: Any): Int {
         val classRepr = obj.getSpecialClassNameRepresentation()
@@ -482,7 +487,7 @@ open class BaseObjectTracker(
             objNumber = ++objectCounter,
             objHashCode = System.identityHashCode(obj),
             objDisplayNumber = computeObjectDisplayNumber(obj),
-            objReference = WeakIdentityReference(obj, referenceQueue),
+            obj = obj,
             kind = kind,
         )
         objectIndex.updateInplace(entry.objectHashCode, default = mutableListOf()) {
@@ -525,7 +530,7 @@ open class BaseObjectTracker(
     override operator fun get(obj: Any?): ObjectEntry? {
         val objHashCode = System.identityHashCode(obj)
         val entries = getEntries(objHashCode) ?: return null
-        return entries.find { it.objectReference.get() === obj }
+        return entries.find { it.objectWeakReference.get() === obj }
     }
 
     override fun enumerateObjectEntries(): Sequence<ObjectEntry> =
@@ -568,7 +573,7 @@ open class BaseObjectTracker(
      */
     private fun MutableList<ObjectEntry>.cleanup() {
         retainAll {
-            val isAlive = (it.objectReference.get() != null)
+            val isAlive = (it.objectWeakReference.get() != null)
             if (!isAlive) {
                 objectNumberIndex.remove(it.objectNumber)
             }
@@ -579,7 +584,7 @@ open class BaseObjectTracker(
     // For debugging
     override fun toString(): String {
         return "${objectIndex.entries.map { idToEntries -> 
-            "#${idToEntries.key} -> [${idToEntries.value.map { objectEntry -> objectEntry.objectReference.get() }.joinToString()}]" 
+            "#${idToEntries.key} -> [${idToEntries.value.map { objectEntry -> objectEntry.objectWeakReference.get() }.joinToString()}]" 
         }.joinToString("\n")}"
     }
 
