@@ -105,43 +105,6 @@ class MemoryModelTest {
         }
     }
 
-    //OG version
-    @Ignore
-    @Test
-    fun testRRWWOpaque2() {
-        class TestRRRW {
-            val x = AtomicInteger(0)
-            fun  one(): Pair<Int,Int> {
-                val r1 = x.getOpaque()
-                val r2 = x.getOpaque()
-                return r1 to r2
-            }
-            fun two() {
-                x.setOpaque(1)
-            }
-        }
-        val testScenario = scenario {
-            thread {
-                actor(TestRRRW::one)
-            }
-            thread {
-                actor(TestRRRW::two)
-            }
-        }
-        // Do not focus on the expected outcomes too much. You can leave them empty if confused
-        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
-            Pair(0, 0),
-            Pair(0, 1),
-            Pair(1, 0),
-            Pair(1, 1),
-        )
-        litmusTest(SharedMemory::class.java, testScenario, expectedOutcomes) { results ->
-            val r1 = getValue<Pair<Int, Int>>(results.parallelResults[0][0]!!).first
-            val r2 = getValue<Pair<Int, Int>>(results.parallelResults[0][0]!!).first
-            Pair(r1,r2)
-        }
-    }
-
     // New version
     @Test
     fun testRRWOpaque() {
