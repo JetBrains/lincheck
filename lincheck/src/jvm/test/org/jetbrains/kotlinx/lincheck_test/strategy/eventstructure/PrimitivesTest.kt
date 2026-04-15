@@ -1134,9 +1134,8 @@ class PrimitivesTest {
         }
     }
 
-
     @Test
-    fun testObjectsObjectsIDsDoNotBreakOnBackwardRevisit() {
+    fun testObjectIdsAreNotBrokenOnBackwardRevisit() {
         // This test is specifically made to make break during backward revisit of allocated objects
         // We had a bug in the object tracker where the replay order of the events affected the ObjectIDs of the replayed objects
         // In the initial invocation, we first assigned objectID 1 to Bar(1) and 2 to Bar(2)
@@ -1179,7 +1178,41 @@ class PrimitivesTest {
     }
 
     @Test
-    fun testDoNotGCExternalObjects() {
+    fun testStringsIdsAreNotBrokenOnBackwardRevisit() {
+        // Same thing as the test above, but with strings, which work a bit differently
+        class Foo {
+            var x = AtomicInteger(0)
+            @Volatile var y = ""
+
+            fun one() {
+                x.get() == 0
+                y = "a"
+            }
+
+            fun two() {
+                y = "b"
+                x.set(1)
+            }
+
+        }
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(Foo::one)
+                }
+                thread {
+                    actor(Foo::two)
+                }
+            }
+        }
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            Unit
+        }
+    }
+
+    @Test
+    fun testExternalObjectIdsAreNotBrokenOnGarbageCollection() {
         // This test tries to force the GC to collect the external Baz(0), which is left unused after each testInvocation
         // The ObjectTracker used to rely on a weak reference to the GC'd object, which would cause trouble
         class Baz(a: Int) {
@@ -1216,13 +1249,12 @@ class PrimitivesTest {
         litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
             val b1 = getValue<Int>(results.parallelResults[0][0]!!)
             System.gc() // Kindly suggest the GC to do its thing. Should make the test fail more consistently.
-            System.gc()
             return@litmusTest b1
         }
     }
 
     @Test
-    fun testObjectIdsStableCrazy() {
+    fun testObjectIdsAreNotBrokenOnReplays() {
         // This test tries various nesting levels to see if we can break the replay order of the object tracker
         // Kind of a throw stuff at the wall and see what sticks approach
         class Bar(a: AtomicInteger) {
@@ -1265,42 +1297,6 @@ class PrimitivesTest {
         litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
             val b1 = getValue<Int>(results.parallelResults[0][0]!!)
             return@litmusTest b1
-        }
-    }
-
-
-
-    @Test
-    fun testStringsObjectsIDsDoNotBreakOnBackwardRevisit() {
-        // Same thing as the test above, but with strings, which work a bit differently
-        class Foo {
-            var x = AtomicInteger(0)
-            @Volatile var y = ""
-
-            fun one() {
-                x.get() == 0
-                y = "a"
-            }
-
-            fun two() {
-                y = "b"
-                x.set(1)
-            }
-
-        }
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(Foo::one)
-                }
-                thread {
-                    actor(Foo::two)
-                }
-            }
-        }
-        val outcomes: Set<Unit> = setOf(Unit)
-        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
-            Unit
         }
     }
 }

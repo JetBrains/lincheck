@@ -576,9 +576,12 @@ open class BaseObjectTracker(
             return@retainAll isAlive
         }
     }
+
     // For debugging
     override fun toString(): String {
-        return "${objectIndex.entries.map { entry -> "#${entry.key} -> [${entry.value.map { foo -> foo.objectReference.get() }.joinToString()}]" }.joinToString("\n")}"
+        return "${objectIndex.entries.map { idToEntries -> 
+            "#${idToEntries.key} -> [${idToEntries.value.map { objectEntry -> objectEntry.objectReference.get() }.joinToString()}]" 
+        }.joinToString("\n")}"
     }
 
     private fun overwriteIdentityHashCode(obj: Any) {
