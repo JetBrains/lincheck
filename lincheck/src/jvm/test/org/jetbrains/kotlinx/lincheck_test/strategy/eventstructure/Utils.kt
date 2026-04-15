@@ -22,6 +22,8 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -109,9 +111,9 @@ internal fun getResultsVerifier(verify: (ExecutionResult) -> Boolean): Verifier 
     }
 
 
-internal fun <T> createStrategy(testCfg: ModelCheckingCTestConfiguration, block: () -> T): EventStructureStrategy {
-    val runner = LambdaRunner(timeoutMs = testCfg.timeoutMs, block)
-    return EventStructureStrategy(runner, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+internal fun <T> createStrategy(timeoutMs: Long, settings: ManagedStrategySettings, inIdeaPluginReplayMode: Boolean = false,  block: () -> T): EventStructureStrategy {
+    val runner = LambdaRunner(timeoutMs = timeoutMs, block)
+    return EventStructureStrategy(runner, settings, inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
         runner.initializeStrategy(it)
     }
 }
@@ -132,7 +134,7 @@ internal inline fun<reified Outcome> litmustTestv2 (
     }
     withLincheckTestContext( testCfg.instrumentationMode) {
         ensureObjectIsTransformed(block)
-        createStrategy(testCfg, block).use { strategy ->
+        createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, block).use { strategy ->
             val failure = strategy.runIteration(INVOCATIONS, verifier)
             assert(failure == null) { failure.toString() }
             val missingOutcomes = expectedOutcomes - outcomes;
