@@ -788,10 +788,10 @@ internal class EventStructure(
     private fun addResponseEvents(requestEvent: AtomicThreadEvent): Pair<AtomicThreadEvent?, List<AtomicThreadEvent>> {
         require(requestEvent.label.isRequest)
         tryReplayEvent(requestEvent.threadId)?.let { event ->
-            val resync = event.resynchronize(syncAlgebra)
+            val resyncLabel = event.resynchronize(syncAlgebra)
             check(event.label.isResponse)
             check(event.parent == requestEvent)
-            check(event.label == resync)
+            check(event.label == resyncLabel)
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
@@ -949,6 +949,11 @@ internal class EventStructure(
     fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue, objectID: ObjectNumber): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
             check(event.label is ObjectAllocationLabel)
+            //NOTE: Currently the objectID value represents the "suggested" objectID from the object tracker.
+            //      The objectID is incremented each time a new object is added to the object tracker and this value is not
+            //      reset between invocations.
+            //      When replaying events, we need to keep the old objectID, which needs to be at least smaller or equal
+            //      to the new objectID suggested by the object tracker.
             check(event.label.objectID <= objectID)
             addEventToCurrentExecution(event)
             return event
