@@ -21,7 +21,7 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.LambdaResultRunner
+import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -128,7 +128,7 @@ internal fun getResultsVerifier(verify: (ExecutionResult) -> Boolean): Verifier 
 
 
 internal fun <T> createStrategy(testCfg: ModelCheckingCTestConfiguration, block: () -> T): EventStructureStrategy {
-    val runner = LambdaResultRunner(timeoutMs = testCfg.timeoutMs, block)
+    val runner = LambdaRunner(timeoutMs = testCfg.timeoutMs, block)
     return EventStructureStrategy(runner, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
         runner.initializeStrategy(it)
     }

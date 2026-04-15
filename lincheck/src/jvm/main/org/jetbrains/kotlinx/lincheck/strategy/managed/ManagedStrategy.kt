@@ -51,8 +51,7 @@ internal abstract class ManagedStrategy(
 ) : Strategy(), EventTracker {
 
     val executionMode: ExecutionMode = when {
-        (runner is LambdaRunner) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
-        (runner is LambdaResultRunner<*>) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
+        (runner is LambdaRunner<*>) -> ExecutionMode.GENERAL_PURPOSE_MODEL_CHECKER
         (runner is ExecutionScenarioRunner) -> ExecutionMode.DATA_STRUCTURES
 
         else -> error("Unexpected runner type: ${runner.javaClass.name}")
@@ -113,7 +112,7 @@ internal abstract class ManagedStrategy(
 
     // Snapshot of the memory, which will be restored between invocations
     protected val memorySnapshot = SnapshotTracker().apply {
-        if (runner is LambdaRunner) {
+        if (runner is LambdaRunner<*>) {
             // save fields referenced by lambda for restoring by the snapshot tracker
             val lambdaBlock = runner.block
             lambdaBlock.javaClass.declaredFields
@@ -234,7 +233,7 @@ internal abstract class ManagedStrategy(
         // To achieve this, in the case of data structures testing mode,
         // we register the first placeholder main thread in the object tracker,
         // so it would take the thread number 0.
-        val isFirstThreadMain = (runner is LambdaRunner)
+        val isFirstThreadMain = (runner is LambdaRunner<*>)
         if (!isFirstThreadMain) {
             objectTracker.registerExternalObject(PLACEHOLDER_MAIN_THREAD)
         }

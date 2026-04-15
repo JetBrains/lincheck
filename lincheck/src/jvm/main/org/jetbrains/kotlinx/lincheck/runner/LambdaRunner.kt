@@ -22,9 +22,9 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 
-internal class LambdaRunner(
+internal class LambdaRunner<T>(
     private val timeoutMs: Long, // for deadlock or livelock detection
-    val block: Runnable
+    val block: () -> T
 ) : AbstractActiveThreadPoolRunner() {
 
     private val testName =
@@ -53,14 +53,14 @@ internal class LambdaRunner(
         }
     }
 
-    private class LambdaWrapper(val strategy: Strategy, val block: Runnable) : Runnable {
-        var result: Result<Unit>? = null
+    private class LambdaWrapper<T>(val strategy: Strategy, val block: () -> T) : Runnable {
+        var result: Result<T>? = null
 
         override fun run() {
             result = kotlin.runCatching {
                 onStart()
                 try {
-                    block.run()
+                    block()
                 } finally {
                     onFinish()
                 }
@@ -87,14 +87,14 @@ internal class LambdaRunner(
 
     // TODO: currently we have to use `ExecutionResult`,
     //   even though in case of `LambdaRunner` the result can be simplified
-    private fun collectExecutionResults(wrapper: LambdaWrapper) =
+    private fun collectExecutionResults(wrapper: LambdaWrapper<T>) =
         emptyExecutionResult().copy(
             parallelResultsWithClock = listOf(listOf(
                 ResultWithClock(wrapper.result?.toLincheckResult() ?: NoResult, emptyClock(1))
             ))
         )
 
-    private fun RunnerTimeoutInvocationResult(wrapper: LambdaWrapper): RunnerTimeoutInvocationResult {
+    private fun RunnerTimeoutInvocationResult(wrapper: LambdaWrapper<T>): RunnerTimeoutInvocationResult {
         val threadDump = collectThreadDump()
         return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults(wrapper))
     }
