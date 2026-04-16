@@ -398,6 +398,38 @@ internal class EventStructureStrategy(
         super.onActorFinish(iThread)
     }
 
+    override fun afterReadField(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        obj: Any?,
+        fieldId: Int,
+        value: Any?
+    ) {
+        threadDescriptor.runInsideIgnoredSection {
+            // In the case of eventstrcutre this object should already be registered
+            if (value !== null && objectTracker.shouldTrackObject(value)) {
+                check(objectTracker.get(value) != null)
+            }
+        }
+        super.afterReadField(threadDescriptor, codeLocation, obj, fieldId, value)
+    }
+
+    override fun afterReadArrayElement(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        array: Any?,
+        index: Int,
+        value: Any?
+    ) {
+        threadDescriptor.runInsideIgnoredSection {
+            // In the case of eventstrcutre this object should already be registered
+            if (value !== null && objectTracker.shouldTrackObject(value)) {
+                check(objectTracker.get(value) != null)
+            }
+        }
+        super.afterReadArrayElement(threadDescriptor, codeLocation, array, index, value)
+    }
+
     private fun onInconsistency(inconsistency: Inconsistency) {
         abortWithSuddenInvocationResult(InconsistentInvocationResult(inconsistency))
     }
