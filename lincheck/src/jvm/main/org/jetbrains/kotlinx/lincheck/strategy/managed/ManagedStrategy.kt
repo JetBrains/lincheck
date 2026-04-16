@@ -1352,7 +1352,6 @@ internal abstract class ManagedStrategy(
             val type = array.javaClass.kotlin.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             // TODO: Should we use threadID or thread Descriptor here?
-            // NOTE: For now the memory ordering is plain. Not sure how we handle AtomicIntegerArray
             memoryTracker!!.beforeRead(threadId, codeLocation, location, MemoryOrdering.PLAIN)
             resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         }

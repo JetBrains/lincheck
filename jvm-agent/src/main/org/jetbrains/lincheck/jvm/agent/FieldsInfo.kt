@@ -10,42 +10,49 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.jvm.agent.FinalFields.addField
-import org.jetbrains.lincheck.jvm.agent.FinalFields.collectFieldInformation
-import org.jetbrains.lincheck.jvm.agent.FinalFields.isFinalField
+import jdk.internal.org.objectweb.asm.Opcodes.ACC_FINAL
+import jdk.internal.org.objectweb.asm.Opcodes.ACC_VOLATILE
+import org.jetbrains.lincheck.jvm.agent.FieldsInfo.addField
+import org.jetbrains.lincheck.jvm.agent.FieldsInfo.collectFieldInformation
+import org.jetbrains.lincheck.jvm.agent.FieldsInfo.isFinalField
 import java.util.concurrent.ConcurrentHashMap
 import org.objectweb.asm.*
 
 /**
- * [FinalFields] object is used to track final fields across different classes.
+ * [FieldsInfo] object is used to track final/volatile fields across different classes.
  * It is used only during byte-code transformation to get information about fields
  * and decide should we track reads of a field or not.
  *
  * During transformation [addField] and [addMutableField] methods are called when
- * we meet a field declaration. Then, when we are faced with field read instruction, [isFinalField] method
- * is called.
+ * we meet a field declaration. Then, when we are faced with field read instruction, [isFinalField] and [isVolatileField] methods
+ * are called.
  *
  * However, sometimes due to the order of class processing, we may not have information about this field yet,
  * as its class it is not loaded for now.
- * Then, we fall back to the slow-path algorithm [collectFieldInformation]: we read bytecode and analyze it using [FinalFieldsVisitor].
+ * Then, we fall back to the slow-path algorithm [collectFieldInformation]: we read bytecode and analyze it using [FieldInfoVisitor].
  * If field is found, we record this information and return the result, otherwise we scan superclass and all implemented
  * interfaces in the same way.
  */
 // TODO or create a ticket to refactor this and use FieldDescriptor and ClassNode visitor instead.
-internal object FinalFields {
+internal object FieldsInfo {
 
     /**
      * Stores a map INTERNAL_CLASS_NAME -> { FIELD_NAME -> IS FINAL } for each processed class.
      */
     private val classToFieldsMap = ConcurrentHashMap<String, HashMap<String, FieldInfo>>()
 
-     //TODO: comments
-    fun addField(internalClassName: String, fieldName: String, isFinal: Boolean, isVolatile: Boolean) {
+     /**
+     * Registers the field [fieldName] as a final field of the class [internalClassName].
+     */
+    fun addField(internalClassName: String, fieldName: String, access: Int) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = FinalFields.FieldInfo(isFinal, isVolatile)
+        fields[fieldName] = FieldsInfo.FieldInfo(access and ACC_FINAL != 0, access and ACC_VOLATILE != 0)
     }
 
-    // TODO: probably better to just expose this method
+    /**
+     * Determines the FieldInfo for the specified [fieldName]. First checks if we have already recorded the information.
+     * If not it falls back to the slow path of analyzing the bytecode and stores the results
+     */
     private fun getFieldInfo(internalClassName: String, fieldName: String): FieldInfo? {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
         // Fast-path, in case we already have information about this field.
@@ -67,7 +74,9 @@ internal object FinalFields {
         return getFieldInfo(internalClassName, fieldName)?.isFinal ?: false
     }
 
-    // TODO: comments
+    /**
+     * Determines if this field is volatile or not.
+     */
     fun isVolatileField(internalClassName: String, fieldName: String): Boolean {
         return getFieldInfo(internalClassName, fieldName)?.isVolatile ?: false
     }
@@ -84,7 +93,7 @@ internal object FinalFields {
     ): Boolean {
         // Read the class from classLoader.
         val classReader = getClassReader(internalClassName) ?: return false
-        val visitor = FinalFieldsVisitor()
+        val visitor = FieldInfoVisitor()
         // Scan class.
         classReader.accept(visitor, 0)
         // Store information about all final and mutable fields.
@@ -141,7 +150,7 @@ internal object FinalFields {
      * This visitor collects information about fields, declared in this class,
      * about superclass and implemented interfaces.
      */
-    private class FinalFieldsVisitor : ClassVisitor(ASM_API) {
+    private class FieldInfoVisitor : ClassVisitor(ASM_API) {
         val implementedInterfaces = arrayListOf<String>()
         val fieldInfoMap = hashMapOf<String, FieldInfo>()
 

@@ -453,7 +453,7 @@ internal fun DataInput.readFieldDescriptor(context: TraceContext): FieldDescript
         type = readType(),
         fieldKind = FieldKind.fromIsStatic(isStatic = readBoolean()),
         isFinal = readBoolean(),
-        isVolatile = readBoolean() // TODO this is most definitely wrong
+        isVolatile = readBoolean(),
     )
 }
 

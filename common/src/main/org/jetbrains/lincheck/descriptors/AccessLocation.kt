@@ -64,7 +64,7 @@ data class ObjectFieldAccessLocation(
                 type = Types.INT_TYPE,
                 fieldKind = FieldKind.INSTANCE,
                 isFinal = true,
-                isVolatile = false // TODO: is this really the case?
+                isVolatile = false
             )
         )
     }

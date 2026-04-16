@@ -75,13 +75,11 @@ internal fun MemoryTracker.trackAtomicMethodMemoryAccess(
     argOffset += if (location is ArrayElementMemoryLocation && !isUnsafe(owner)) 1 else 0
     when (methodDescriptor.kind) {
         AtomicMethodKind.SET -> {
-            // TODO: add memory ordering
             beforeWrite(iThread, codeLocation, location, methodDescriptor.ordering,
                 value = params[argOffset]
             )
         }
         AtomicMethodKind.GET -> {
-            // TODO: add memory ordering
             beforeRead(iThread, codeLocation, location, methodDescriptor.ordering)
         }
         AtomicMethodKind.GET_AND_SET -> {

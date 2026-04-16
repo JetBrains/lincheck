@@ -545,7 +545,12 @@ private class EventStructureMemoryTracker(
         addWriteEvent(iThread, codeLocation, location, memoryOrder, value?.opaque())
     }
 
-    override fun beforeRead(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering) {
+    override fun beforeRead(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering
+    ) {
         addReadRequest(iThread, codeLocation, location, memoryOrder)
     }
 
@@ -638,7 +643,6 @@ private class EventStructureMemoryTracker(
             val readLocation  = objectTracker.getArrayAccessMemoryLocation(srcArray, srcPos + i, srcType)
             val writeLocation = objectTracker.getArrayAccessMemoryLocation(dstArray, dstPos + i, dstType)
             val value = run {
-                // TODO: not sure what memory order we should have here. I assume plain?
                 beforeRead(iThread, codeLocation, readLocation, MemoryOrdering.PLAIN)
                 interceptReadResult(iThread)
             }
