@@ -356,7 +356,9 @@ internal class EventStructureStrategy(
     private fun registerTestInstance() {
         check(!isTestInstanceRegistered)
         val testInstance = (runner as ExecutionScenarioRunner).testInstance
-        //NOTE: The threadID may be messed up. See how this can be fixed.
+        //NOTE: Since the IdentityHashCode of the test instance changes between invocations
+        // we cannot keep it as an external object. Instead, we register it as an "internal"
+        // object on each invocation
         (objectTracker as EventStructureObjectTracker).registerNewObject(testInstance)
         isTestInstanceRegistered = true
     }
