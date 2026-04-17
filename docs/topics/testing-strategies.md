@@ -1,7 +1,7 @@
 [//]: # (title: Stress testing and model checking)
 
 Lincheck offers two testing strategies: stress testing and model checking. Learn what happens under the hood of both
-approaches using the `Counter` we coded in the `BasicCounterTest.kt` file in the [previous step](introduction.md):
+approaches using the `Counter` we coded in the `BasicCounterTest.kt` file in the [previous step](lincheck-getting-started.md):
 
 ```kotlin
 class Counter {
@@ -108,7 +108,7 @@ the testing code on the fly using the ASM framework, adding internal function in
 
 As the model checking strategy controls the execution, Lincheck can provide the trace that leads to the invalid
 interleaving, which is extremely helpful in practice. You can see the example of trace for the incorrect execution of the `Counter` in
-the [Write your first test with Lincheck](introduction.md#trace-the-invalid-execution) tutorial.
+the [Write your first test with Lincheck](lincheck-getting-started.md#write-your-first-test) tutorial.
 
 ## Which testing strategy is better?
 
