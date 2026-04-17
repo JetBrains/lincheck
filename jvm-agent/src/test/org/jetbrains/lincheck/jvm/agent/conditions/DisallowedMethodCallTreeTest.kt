@@ -16,7 +16,7 @@ import org.junit.*
 import org.junit.Assert.*
 
 /**
- * Tests for the tree structure representation of [SideEffectViolation.DisallowedMethodCall].
+ * Tests for the tree structure representation of [SafetyViolation.DisallowedMethodCall].
  * Verifies that the toString() method properly formats nested violations as a tree
  * by analyzing actual code with the ConditionSafetyChecker.
  */

@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.livedebugger
 
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
@@ -124,6 +125,22 @@ internal object LiveDebugger {
     }
 
     /**
+     * Disables the breakpoint by removing it and retransforming the affected class.
+     *
+     */
+    private fun disableBreakpoint(breakpoint: SnapshotBreakpoint) {
+        // Remove specifically by id, not by location equality.
+        // If the user re-added the breakpoint at the same location in the window between
+        // the hit-limit callback firing and this executor task running,
+        // the re-added breakpoint will have a different id and must not be touched.
+        val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
+            .removeBreakpointById(breakpoint.id)
+        if (removedBreakpoint != null) {
+            retransformBreakpointClasses(listOf(removedBreakpoint))
+        }
+    }
+
+    /**
      * Retransforms the classes that contain the given breakpoints.
      */
     private fun retransformBreakpointClasses(breakpoints: List<SnapshotBreakpoint>) {
@@ -152,6 +169,7 @@ internal object LiveDebugger {
         BreakpointStorage.setOnHitLimitReached { userData ->
             onHitLimitReached(userData as SnapshotBreakpoint)
         }
+        Logger.debug { "Hit limit callback installed" }
     }
 
     /**
@@ -167,6 +185,8 @@ internal object LiveDebugger {
         }
 
         notificationsExecutor.submit {
+            disableBreakpoint(breakpoint)
+
             val notification = LiveDebuggerNotification.BreakpointHitLimitReached(
                 timestamp = timestamp,
                 breakpointData = LiveDebuggerNotification.BreakpointData(
@@ -175,18 +195,55 @@ internal object LiveDebugger {
                     lineNumber = breakpoint.lineNumber,
                 ),
             )
+            notificationListener.get()?.invoke(notification)
+        }
+    }
 
-            // Remove specifically by id, not by location equality.
-            // If the user re-added the breakpoint at the same location in the window between
-            // the hit-limit callback firing and this executor task running,
-            // the re-added breakpoint will have a different id and must not be touched.
-            val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
-                .removeBreakpointById(breakpoint.id)
+    /** Guard ensuring the condition-unsafety callback is registered exactly once. */
+    private val conditionUnsafetyCallbackInstalled = AtomicBoolean(false)
 
-            if (removedBreakpoint != null) {
-                retransformBreakpointClasses(listOf(removedBreakpoint))
+    /**
+     * Registers the condition-unsafety callback on [BreakpointStorage], if not yet installed.
+     *
+     * The callback is fired at class-transformation time when a breakpoint's condition
+     * is detected to have side effects.
+     *
+     * Must be called before any class transformation can occur so that no
+     * condition-unsafety event can fire before the callback is in place.
+     */
+    fun ensureConditionUnsafetyCallbackInstalled() {
+        if (!conditionUnsafetyCallbackInstalled.compareAndSet(false, true)) return
+
+        BreakpointStorage.setOnConditionUnsafetyDetected { userData, safetyViolation ->
+            onConditionUnsafetyDetected(userData as SnapshotBreakpoint, safetyViolation as SafetyViolation)
+        }
+        Logger.debug { "Condition unsafety callback installed" }
+    }
+
+    /**
+     * Called when a breakpoint's condition is detected to be unsafe (has side effects).
+     * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
+     */
+    private fun onConditionUnsafetyDetected(breakpoint: SnapshotBreakpoint, safetyViolation: SafetyViolation) {
+        val timestamp = System.currentTimeMillis()
+        Logger.info {
+            with (breakpoint) {
+                "Unsafe condition detected for breakpoint in $className at $fileName:$lineNumber"
             }
+        }
 
+        notificationsExecutor.submit {
+            disableBreakpoint(breakpoint)
+
+            val notification = LiveDebuggerNotification.BreakpointConditionUnsafetyDetected(
+                timestamp = timestamp,
+                breakpointData = LiveDebuggerNotification.BreakpointData(
+                    className = breakpoint.className,
+                    fileName = breakpoint.fileName,
+                    lineNumber = breakpoint.lineNumber,
+                ),
+                safetyViolationMessage = safetyViolation.toString(),
+            )
             notificationListener.get()?.invoke(notification)
         }
     }

@@ -11,15 +11,27 @@
 package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.jvm.agent.*
-import org.jetbrains.lincheck.jvm.agent.analysis.SideEffectViolation.*
+import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.tree.*
 
 /**
- * Represents a side-effect violation found during bytecode analysis.
+ * Represents a safety violation found during bytecode analysis.
+ * In this context "safety" means purity, that is side-effect-free behavior.
+ *
+ * Safety violations include:
+ * - field writes;
+ * - array writes;
+ * - uninitialized class static field reads (causes class initialization);
+ * - monitor operations (synchronized blocks);
+ * - disallowed method calls;
+ * - disallowed dynamic invocations;
+ * - non-final method calls;
+ * - recursion depth exceeding;
+ * - loop detected.
  */
-sealed class SideEffectViolation {
+sealed class SafetyViolation {
     abstract val fileName: String?
     abstract val lineNumber: Int
 
@@ -30,7 +42,7 @@ sealed class SideEffectViolation {
         override val lineNumber: Int,
         val owner: String,
         val fieldName: String
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString() = "Field write: $fieldName at $fileNameOrUnknown:$lineNumber"
     }
 
@@ -39,21 +51,21 @@ sealed class SideEffectViolation {
         override val lineNumber: Int,
         val owner: String,
         val fieldName: String
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString() = "Field read of uninitialized class: ${owner.toCanonicalClassName().toSimpleClassName()}.$fieldName at $fileNameOrUnknown:$lineNumber"
     }
 
     data class ArrayWrite(
         override val fileName: String?,
         override val lineNumber: Int
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString() = "Array write: at $fileNameOrUnknown:$lineNumber"
     }
 
     data class MonitorOperation(
         override val fileName: String?,
         override val lineNumber: Int
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString() = "Monitor operation (synchronized block) at $fileNameOrUnknown:$lineNumber"
     }
 
@@ -62,8 +74,8 @@ sealed class SideEffectViolation {
         override val lineNumber: Int,
         val owner: String,
         val methodName: String,
-        val causes: List<SideEffectViolation> = emptyList()
-    ) : SideEffectViolation() {
+        val causes: List<SafetyViolation> = emptyList()
+    ) : SafetyViolation() {
         override fun toString(): String {
             val sb = StringBuilder()
             buildTree(sb, "", true)
@@ -100,7 +112,7 @@ sealed class SideEffectViolation {
         override val lineNumber: Int,
         val owner: String,
         val methodName: String
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString(): String {
             return "Maximum call depth exceeded: $methodName at $fileNameOrUnknown:$lineNumber"
         }
@@ -111,7 +123,7 @@ sealed class SideEffectViolation {
         override val lineNumber: Int,
         val bootstrapOwner: String,
         val bootstrapName: String
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString(): String {
             return "Disallowed dynamic invocation: $bootstrapName at $fileNameOrUnknown:$lineNumber"
         }
@@ -121,7 +133,7 @@ sealed class SideEffectViolation {
         override val fileName: String?,
         override val lineNumber: Int,
         val className: String
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString() = "Class $className is not accessible or its bytecode cannot be loaded"
     }
 
@@ -129,20 +141,20 @@ sealed class SideEffectViolation {
         override val fileName: String?,
         override val lineNumber: Int,
         val methodName: String
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString() = "Method $methodName is not final and can be overridden at runtime at $fileNameOrUnknown:$lineNumber"
     }
 
     data class LoopDetected(
         override val fileName: String?,
         override val lineNumber: Int
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override fun toString() = "Loop detected at $fileNameOrUnknown:$lineNumber"
     }
 
     data class AnalysisFailed(
         val cause: Throwable? = null
-    ) : SideEffectViolation() {
+    ) : SafetyViolation() {
         override val fileName = null
         override val lineNumber = -1
 
@@ -269,7 +281,7 @@ object ConditionSafetyChecker {
     private fun checkForLoops(
         classNode: ClassNode,
         methodNode: MethodNode
-    ): List<SideEffectViolation> {
+    ): List<SafetyViolation> {
         // Build a control-flow graph and compute back edges.
         val cfg = buildControlFlowGraph(classNode.name, methodNode)
         cfg.computeLoopInformation()
@@ -346,8 +358,8 @@ object ConditionSafetyChecker {
         private var fileName: String? = null
         private var currentClassName: String? = null
 
-        private var _violations = mutableListOf<SideEffectViolation>()
-        val violations: List<SideEffectViolation> get() = _violations.distinct()
+        private var _violations = mutableListOf<SafetyViolation>()
+        val violations: List<SafetyViolation> get() = _violations.distinct()
 
         override fun visit(
             version: Int,
@@ -398,7 +410,7 @@ object ConditionSafetyChecker {
     private class SafetyMethodAnalyzer(
         private val fileName: String?,
         private val currentClassName: String?,
-        private val violations: MutableList<SideEffectViolation>,
+        private val violations: MutableList<SafetyViolation>,
         private val classLoader: ClassLoader,
         private val maxCallDepth: Int,
         private val allowedFunctionCalls: FunctionCallPredicate

@@ -18,8 +18,18 @@ import java.io.Closeable
  * This is implemented by the client (controller).
  */
 interface TracingCallbacks : Closeable {
-    fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long)
-    fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long)
+
+    fun hitLimitReached(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        timestamp: Long
+    )
+
+    fun conditionUnsafe(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        safetyViolationMessage: String,
+        timestamp: Long
+    )
+
     fun binaryTraceData(data: ByteArray)
     
     companion object {

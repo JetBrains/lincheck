@@ -109,9 +109,17 @@ internal object LiveDebuggerAgent {
                 LiveDebugger.installNotificationListener { notification ->
                     when (notification) {
                         is LiveDebuggerNotification.BreakpointHitLimitReached ->
-                            server.connection.hitLimitReached(notification.breakpointData, notification.timestamp)
+                            server.connection.hitLimitReached(
+                                notification.breakpointData,
+                                notification.timestamp
+                            )
+
                         is LiveDebuggerNotification.BreakpointConditionUnsafetyDetected ->
-                            server.connection.conditionUnsafe(notification.breakpointData, notification.timestamp)
+                            server.connection.conditionUnsafe(
+                                notification.breakpointData,
+                                notification.safetyViolationMessage,
+                                notification.timestamp
+                            )
                     }
                 }
                 return server
@@ -161,5 +169,6 @@ internal object LiveDebuggerAgent {
     @JvmStatic
     private fun installCallbacks() {
         LiveDebugger.ensureHitLimitCallbackInstalled()
+        LiveDebugger.ensureConditionUnsafetyCallbackInstalled()
     }
 }

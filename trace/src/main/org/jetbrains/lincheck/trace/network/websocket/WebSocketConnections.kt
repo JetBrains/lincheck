@@ -49,12 +49,20 @@ class WebSocketTracingController(private val webSocketConnection: WebSocketClien
  * Server-side [TracingCallbacks] that sends notifications and binary trace data to the connected client over WebSocket.
  */
 class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
-    override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
+
+    override fun hitLimitReached(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        timestamp: Long
+    ) {
         webSocket.send("${TracingCallbacks.HIT_LIMIT_REACHED}:$timestamp:$breakpointData")
     }
 
-    override fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
-        webSocket.send("${TracingCallbacks.CONDITION_UNSAFE}:$timestamp:$breakpointData")
+    override fun conditionUnsafe(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        safetyViolationMessage: String,
+        timestamp: Long
+    ) {
+        webSocket.send("${TracingCallbacks.CONDITION_UNSAFE}:$timestamp:$breakpointData;$safetyViolationMessage")
     }
 
     override fun binaryTraceData(data: ByteArray) {
@@ -73,8 +81,8 @@ class ClientSink: Closeable, TracingCallbacks {
     override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
         Logger.warn { "hitLimitReached dropped: no client connected (breakpoint=$breakpointData)" }
     }
-    override fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
-        Logger.warn { "conditionUnsafe dropped: no client connected (breakpoint=$breakpointData)" }
+    override fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, safetyViolationMessage: String, timestamp: Long) {
+        Logger.warn { "conditionUnsafe dropped: no client connected (breakpoint=$breakpointData, violation=$safetyViolationMessage)" }
     }
     override fun binaryTraceData(data: ByteArray) {
         Logger.warn { "binaryTraceData dropped: no client connected (${data.size} bytes)" }

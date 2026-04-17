@@ -12,16 +12,18 @@ package sun.nio.ch.lincheck;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * Central registry for all live-debugger breakpoint runtime state.
+ * Central registry for the live-debugger breakpoint runtime state.
  * <p>
- * Lives in the bootstrap module (boot classloader) so it is reachable from every
- * other module without introducing circular dependencies.  Callers that need to
- * store module-specific data (e.g. {@code SnapshotBreakpoint}) pass it as an
+ *
+ * Lives in the bootstrap module (boot classloader), so it is reachable from every
+ * other module without introducing circular dependencies.
+ * Callers that need to store module-specific data (e.g. {@code SnapshotBreakpoint}) pass it as an
  * opaque {@code Object userData}; the bootstrap layer never needs to know its type.
  */
 public class BreakpointStorage {
@@ -33,7 +35,7 @@ public class BreakpointStorage {
     // -------------------------------------------------------------------------
 
     /**
-     * All mutable runtime state for a single registered breakpoint.
+     * Mutable runtime state for a single registered breakpoint.
      */
     public static class BreakpointState {
         /** Maximum number of hits before the hit-limit callback fires. */
@@ -42,7 +44,7 @@ public class BreakpointStorage {
         public final AtomicInteger hitCount = new AtomicInteger(0);
         /**
          * Caller-supplied payload stored at registration time.
-         * Typically a {@code SnapshotBreakpoint}, but the bootstrap layer treats it as opaque.
+         * Typically, a {@code SnapshotBreakpoint}, but the bootstrap layer treats it as opaque.
          */
         public final Object userData;
         /**
@@ -69,9 +71,15 @@ public class BreakpointStorage {
 
     /**
      * Called exactly once when the hit-count of a breakpoint reaches its limit.
-     * Receives {@link BreakpointState#userData} directly — no id look-up needed.
+     * Receives {@link BreakpointState#userData}.
      */
     private static volatile Consumer<Object> onHitLimitReached = null;
+
+    /**
+     * Called when a breakpoint's condition is detected to be unsafe (has side effects).
+     * Receives {@link BreakpointState#userData} and `SafetyViolation`.
+     */
+    private static volatile BiConsumer<Object, Object> onConditionUnsafetyDetected = null;
 
     // -------------------------------------------------------------------------
     // Public API
@@ -169,6 +177,33 @@ public class BreakpointStorage {
      */
     public static void setOnHitLimitReached(Consumer<Object> callback) {
         onHitLimitReached = callback;
+    }
+
+    /**
+     * Registers the callback that fires when a breakpoint's condition is detected to be unsafe.
+     * The callback receives the breakpoint's {@code userData} directly.
+     * <p>
+     *
+     * Should be called before any class transformation can occur, so that no
+     * condition-unsafety event can fire before the callback is in place.
+     *
+     * @param callback invoked (on the transformation thread) with the breakpoint's {@code userData}
+     *                 and safety violation.
+     */
+    public static void setOnConditionUnsafetyDetected(BiConsumer<Object, Object> callback) {
+        onConditionUnsafetyDetected = callback;
+    }
+
+    /**
+     * Fires the condition-unsafety callback for the given breakpoint.
+     * Called at class-transformation time when a breakpoint's condition is found to have
+     * side effects and is therefore unsafe to evaluate at runtime.
+     *
+     * @param userData the breakpoint's {@code userData} (typically a {@code SnapshotBreakpoint})
+     */
+    public static void notifyConditionUnsafetyDetected(Object userData, Object safetyViolation) {
+        BiConsumer<Object, Object> callback = onConditionUnsafetyDetected;
+        if (callback != null) callback.accept(userData, safetyViolation);
     }
 
     /**

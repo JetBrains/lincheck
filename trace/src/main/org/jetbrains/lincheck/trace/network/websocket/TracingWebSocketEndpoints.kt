@@ -86,12 +86,14 @@ fun TracingCallbacks.handleMessage(message: String?) {
                 hitLimitReached(breakpointData, timestamp)
             }
             TracingCallbacks.CONDITION_UNSAFE -> {
-                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
+                val dataParts = data.split(";", limit = 2)
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[0])
+                val safetyViolationMessage = dataParts[1]
                 if (breakpointData == null) {
                     Logger.warn { "Failed to parse breakpoint data from conditionUnsafe notification: $data" }
                     return
                 }
-                conditionUnsafe(breakpointData, timestamp)
+                conditionUnsafe(breakpointData, safetyViolationMessage, timestamp)
             }
             else -> Logger.warn { "Unknown notification received: $type" }
         }
