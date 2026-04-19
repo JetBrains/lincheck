@@ -23,8 +23,8 @@ import org.objectweb.asm.*
  * It is used only during byte-code transformation to get information about fields
  * and decide should we track reads of a field or not.
  *
- * During transformation [addField] and [addMutableField] methods are called when
- * we meet a field declaration. Then, when we are faced with field read instruction, [isFinalField] and [isVolatileField] methods
+ * During transformation [addField] methods is called when we meet a field declaration.
+ * Then, when we are faced with field read instruction, [isFinalField] and [isVolatileField] methods
  * are called.
  *
  * However, sometimes due to the order of class processing, we may not have information about this field yet,
