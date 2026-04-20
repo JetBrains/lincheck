@@ -3,7 +3,7 @@
 This repository contains three main products:
 - **Lincheck** — a framework for testing concurrent code on the JVM. It explores thread interleavings to find concurrency bugs via stress testing and bounded model checking, verifying correctness properties like linearizability and quiescent consistency. See [README.md](README.md) for usage examples and quick start.
 - **Trace Recorder** — a JVM agent that records execution traces for later analysis.
-- **Live Debugger** — a JVM agent for real-time debugging of concurrent code via WebSocket.
+- **Live Debugger** — a JVM agent that allows inserting dynamic non-suspendable breakpoints.
 
 ## Build Commands
 
