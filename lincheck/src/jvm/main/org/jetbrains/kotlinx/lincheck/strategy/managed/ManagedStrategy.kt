@@ -1327,7 +1327,8 @@ internal abstract class ManagedStrategy(
                 isStatic = fieldDescriptor.isStatic,
                 isFinal = fieldDescriptor.isFinal,
             )
-            memoryTracker!!.beforeRead(threadId, codeLocation, location)
+            val memoryOrder = if (fieldDescriptor.isVolatile) MemoryOrdering.VOLATILE else MemoryOrdering.PLAIN
+            memoryTracker!!.beforeRead(threadId, codeLocation, location, memoryOrder)
             resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         }
         return
@@ -1347,12 +1348,11 @@ internal abstract class ManagedStrategy(
         }
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
-        // TODO: this is a mess
         if (memoryTracker != null) {
             val type = array.javaClass.kotlin.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             // TODO: Should we use threadID or thread Descriptor here?
-            memoryTracker!!.beforeRead(threadId, codeLocation, location)
+            memoryTracker!!.beforeRead(threadId, codeLocation, location, MemoryOrdering.PLAIN)
             resultInterceptor?.interceptResult(memoryTracker!!.interceptReadResult(threadId))
         }
         return
@@ -1475,7 +1475,8 @@ internal abstract class ManagedStrategy(
                 isStatic = fieldDescriptor.isStatic,
                 isFinal = fieldDescriptor.isFinal,
             )
-            memoryTracker!!.beforeWrite(threadId, codeLocation, location, value)
+            val memoryOrdering = if (fieldDescriptor.isVolatile) MemoryOrdering.VOLATILE else MemoryOrdering.PLAIN
+            memoryTracker!!.beforeWrite(threadId, codeLocation, location, memoryOrdering, value)
         }
     }
 
@@ -1520,7 +1521,7 @@ internal abstract class ManagedStrategy(
         if (memoryTracker != null) {
             val type = array.javaClass.kotlin.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
-            memoryTracker!!.beforeWrite(threadId, codeLocation, location, value)
+            memoryTracker!!.beforeWrite(threadId, codeLocation, location, MemoryOrdering.PLAIN, value)
         }
     }
 

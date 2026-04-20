@@ -40,11 +40,7 @@ internal class LincheckClassVisitor(
         signature: String?,
         value: Any?
     ): FieldVisitor {
-        if (access and ACC_FINAL != 0) {
-            FinalFields.addFinalField(className, fieldName)
-        } else {
-            FinalFields.addMutableField(className, fieldName)
-        }
+        FieldsInfo.addField(className, fieldName, access)
         return super.visitField(access, fieldName, descriptor, signature, value)
     }
 

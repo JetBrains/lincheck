@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.util.AtomicMethodDescriptor
 import org.jetbrains.lincheck.util.AtomicMethodKind
+import org.jetbrains.lincheck.util.MemoryOrdering
 import org.jetbrains.lincheck.util.isAtomic
 import org.jetbrains.lincheck.util.isAtomicArray
 import org.jetbrains.lincheck.util.isUnsafe
@@ -32,20 +33,20 @@ import org.jetbrains.lincheck.util.isUnsafe
  */
 interface MemoryTracker {
 
-    fun beforeWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, value: Any?)
+    fun beforeWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, value: Any?)
 
-    fun beforeRead(iThread: Int, codeLocation: Int, location: MemoryLocation)
+    fun beforeRead(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering)
 
-    fun beforeGetAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, newValue: Any?)
+    fun beforeGetAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, newValue: Any?)
 
-    fun beforeCompareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, expectedValue: Any?, newValue: Any?)
+    fun beforeCompareAndSet(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, expectedValue: Any?, newValue: Any?)
 
-    fun beforeCompareAndExchange(iThread: Int, codeLocation: Int, location: MemoryLocation, expectedValue: Any?, newValue: Any?)
+    fun beforeCompareAndExchange(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, expectedValue: Any?, newValue: Any?)
 
     // TODO: move increment kind enum here?
-    fun beforeGetAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number)
+    fun beforeGetAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, delta: Number)
 
-    fun beforeAddAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, delta: Number)
+    fun beforeAddAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, delta: Number)
 
     fun interceptReadResult(iThread: Int): Any?
 
@@ -74,51 +75,51 @@ internal fun MemoryTracker.trackAtomicMethodMemoryAccess(
     argOffset += if (location is ArrayElementMemoryLocation && !isUnsafe(owner)) 1 else 0
     when (methodDescriptor.kind) {
         AtomicMethodKind.SET -> {
-            beforeWrite(iThread, codeLocation, location,
+            beforeWrite(iThread, codeLocation, location, methodDescriptor.ordering,
                 value = params[argOffset]
             )
         }
         AtomicMethodKind.GET -> {
-            beforeRead(iThread, codeLocation, location)
+            beforeRead(iThread, codeLocation, location, methodDescriptor.ordering)
         }
         AtomicMethodKind.GET_AND_SET -> {
-            beforeGetAndSet(iThread, codeLocation, location,
+            beforeGetAndSet(iThread, codeLocation, location, methodDescriptor.ordering,
                 newValue = params[argOffset]
             )
         }
         AtomicMethodKind.COMPARE_AND_SET, AtomicMethodKind.WEAK_COMPARE_AND_SET -> {
-            beforeCompareAndSet(iThread, codeLocation, location,
+            beforeCompareAndSet(iThread, codeLocation, location, methodDescriptor.ordering,
                 expectedValue = params[argOffset],
                 newValue = params[argOffset + 1]
             )
         }
         AtomicMethodKind.COMPARE_AND_EXCHANGE -> {
-            beforeCompareAndExchange(iThread, codeLocation, location,
+            beforeCompareAndExchange(iThread, codeLocation, location, methodDescriptor.ordering,
                 expectedValue = params[argOffset],
                 newValue = params[argOffset + 1]
             )
         }
         AtomicMethodKind.GET_AND_ADD -> {
-            beforeGetAndAdd(iThread, codeLocation, location,
+            beforeGetAndAdd(iThread, codeLocation, location, methodDescriptor.ordering,
                 delta = (params[argOffset] as Number)
             )
         }
         AtomicMethodKind.ADD_AND_GET -> {
-            beforeAddAndGet(iThread, codeLocation, location,
+            beforeAddAndGet(iThread, codeLocation, location, methodDescriptor.ordering,
                 delta = (params[argOffset] as Number)
             )
         }
         AtomicMethodKind.GET_AND_INCREMENT -> {
-            beforeGetAndAdd(iThread, codeLocation, location, delta = 1.convert(location.type))
+            beforeGetAndAdd(iThread, codeLocation, location, methodDescriptor.ordering, delta = 1.convert(location.type))
         }
         AtomicMethodKind.INCREMENT_AND_GET -> {
-            beforeAddAndGet(iThread, codeLocation, location, delta = 1.convert(location.type))
+            beforeAddAndGet(iThread, codeLocation, location, methodDescriptor.ordering, delta = 1.convert(location.type))
         }
         AtomicMethodKind.GET_AND_DECREMENT -> {
-            beforeGetAndAdd(iThread, codeLocation, location, delta = (-1).convert(location.type))
+            beforeGetAndAdd(iThread, codeLocation, location, methodDescriptor.ordering, delta = (-1).convert(location.type))
         }
         AtomicMethodKind.DECREMENT_AND_GET -> {
-            beforeAddAndGet(iThread, codeLocation, location, delta = (-1).convert(location.type))
+            beforeAddAndGet(iThread, codeLocation, location, methodDescriptor.ordering, delta = (-1).convert(location.type))
         }
     }
     return (methodDescriptor.kind != AtomicMethodKind.SET)

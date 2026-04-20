@@ -230,7 +230,7 @@ class TracePointCloner(
 
     private fun FieldDescriptor.clone(): Int =
         context.createAndRegisterFieldDescriptor(
-            className, fieldName, type, fieldKind, isFinal
+            className, fieldName, type, fieldKind, isFinal, isVolatile
         ).id
 
     private fun MethodDescriptor.clone(): Int =

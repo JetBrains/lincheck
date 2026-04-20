@@ -436,7 +436,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
                     fieldName = fieldName!!,
                     type = descriptor!!.toType(),
                     fieldKind = FieldKind.STATIC,
-                    isFinal = FinalFields.isFinalField(className, fieldName)
+                    isFinal = FieldsInfo.isFinalField(className, fieldName),
+                    isVolatile = FieldsInfo.isVolatileField(className, fieldName)
                 )
                 val fieldAccess = StaticFieldAccessLocation(fieldDescriptor)
                 push(OwnerName(fieldAccess))
@@ -456,7 +457,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
                     fieldName = fieldName!!,
                     type = descriptor!!.toType(),
                     fieldKind = FieldKind.INSTANCE,
-                    isFinal = FinalFields.isFinalField(className, fieldName)
+                    isFinal = FieldsInfo.isFinalField(className, fieldName),
+                    isVolatile = FieldsInfo.isVolatileField(className, fieldName)
                 )
                 val fieldAccess = ObjectFieldAccessLocation(fieldDescriptor)
                 if (ownerName != null) {

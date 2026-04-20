@@ -10,67 +10,75 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.jvm.agent.FinalFields.addFinalField
-import org.jetbrains.lincheck.jvm.agent.FinalFields.addMutableField
-import org.jetbrains.lincheck.jvm.agent.FinalFields.collectFieldInformation
-import org.jetbrains.lincheck.jvm.agent.FinalFields.isFinalField
+import jdk.internal.org.objectweb.asm.Opcodes.ACC_FINAL
+import jdk.internal.org.objectweb.asm.Opcodes.ACC_VOLATILE
+import org.jetbrains.lincheck.jvm.agent.FieldsInfo.addField
+import org.jetbrains.lincheck.jvm.agent.FieldsInfo.collectFieldInformation
+import org.jetbrains.lincheck.jvm.agent.FieldsInfo.isFinalField
 import java.util.concurrent.ConcurrentHashMap
 import org.objectweb.asm.*
 
 /**
- * [FinalFields] object is used to track final fields across different classes.
+ * [FieldsInfo] object is used to track final/volatile fields across different classes.
  * It is used only during byte-code transformation to get information about fields
  * and decide should we track reads of a field or not.
  *
- * During transformation [addFinalField] and [addMutableField] methods are called when
- * we meet a field declaration. Then, when we are faced with field read instruction, [isFinalField] method
- * is called.
+ * During transformation [addField] methods is called when we meet a field declaration.
+ * Then, when we are faced with field read instruction, [isFinalField] and [isVolatileField] methods
+ * are called.
  *
  * However, sometimes due to the order of class processing, we may not have information about this field yet,
  * as its class it is not loaded for now.
- * Then, we fall back to the slow-path algorithm [collectFieldInformation]: we read bytecode and analyze it using [FinalFieldsVisitor].
+ * Then, we fall back to the slow-path algorithm [collectFieldInformation]: we read bytecode and analyze it using [FieldInfoVisitor].
  * If field is found, we record this information and return the result, otherwise we scan superclass and all implemented
  * interfaces in the same way.
  */
 // TODO or create a ticket to refactor this and use FieldDescriptor and ClassNode visitor instead.
-internal object FinalFields {
+internal object FieldsInfo {
 
     /**
      * Stores a map INTERNAL_CLASS_NAME -> { FIELD_NAME -> IS FINAL } for each processed class.
      */
     private val classToFieldsMap = ConcurrentHashMap<String, HashMap<String, FieldInfo>>()
 
-    /**
+     /**
      * Registers the field [fieldName] as a final field of the class [internalClassName].
      */
-    fun addFinalField(internalClassName: String, fieldName: String) {
+    fun addField(internalClassName: String, fieldName: String, access: Int) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = FinalFields.FieldInfo.FINAL
+        fields[fieldName] = FieldsInfo.FieldInfo(access and ACC_FINAL != 0, access and ACC_VOLATILE != 0)
     }
 
     /**
-     * Registers the field [fieldName] as a mutable field of the class [internalClassName].
+     * Determines the FieldInfo for the specified [fieldName]. First checks if we have already recorded the information.
+     * If not it falls back to the slow path of analyzing the bytecode and stores the results
      */
-    fun addMutableField(internalClassName: String, fieldName: String) {
+    private fun getFieldInfo(internalClassName: String, fieldName: String): FieldInfo? {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = FinalFields.FieldInfo.MUTABLE
+        // Fast-path, in case we already have information about this field.
+        fields[fieldName]?.let { return it }
+        // If we haven't processed this class yet, fall back to a slow-path, reading the class byte-code.
+        val fieldFound = collectFieldInformation(internalClassName, fieldName, fields)
+        // In case the reading of class byte-code failed, we can't say anything about this field.
+        // TODO JBRes-6558 Use `ClassNode` API to collect information about classes/methods/variables
+        if (!fieldFound) return null
+        // Here we must have information about this field, as we scanned all the hierarchy of this class.
+        val fieldInfo = fields[fieldName] ?: error("Internal error: can't find field with $fieldName in class $internalClassName")
+        return fieldInfo
     }
 
     /**
      * Determines if this field is final or not.
      */
     fun isFinalField(internalClassName: String, fieldName: String): Boolean {
-        val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        // Fast-path, in case we already have information about this field.
-        fields[fieldName]?.let { return it == FinalFields.FieldInfo.FINAL }
-        // If we haven't processed this class yet, fall back to a slow-path, reading the class byte-code.
-        val fieldFound = collectFieldInformation(internalClassName, fieldName, fields)
-        // In case the reading of class byte-code failed, we can't say anything about this field.
-        // TODO JBRes-6558 Use `ClassNode` API to collect information about classes/methods/variables
-        if (!fieldFound) return false
-        // Here we must have information about this field, as we scanned all the hierarchy of this class.
-        val fieldInfo = fields[fieldName] ?: error("Internal error: can't find field with $fieldName in class $internalClassName")
-        return fieldInfo == FinalFields.FieldInfo.FINAL
+        return getFieldInfo(internalClassName, fieldName)?.isFinal ?: false
+    }
+
+    /**
+     * Determines if this field is volatile or not.
+     */
+    fun isVolatileField(internalClassName: String, fieldName: String): Boolean {
+        return getFieldInfo(internalClassName, fieldName)?.isVolatile ?: false
     }
 
     /**
@@ -85,14 +93,13 @@ internal object FinalFields {
     ): Boolean {
         // Read the class from classLoader.
         val classReader = getClassReader(internalClassName) ?: return false
-        val visitor = FinalFieldsVisitor()
+        val visitor = FieldInfoVisitor()
         // Scan class.
         classReader.accept(visitor, 0)
         // Store information about all final and mutable fields.
-        visitor.finalFields.forEach { field -> fields[field] = FinalFields.FieldInfo.FINAL }
-        visitor.mutableFields.forEach { field -> fields[field] = FinalFields.FieldInfo.MUTABLE }
+        visitor.fieldInfoMap.entries.forEach { (field, info) -> fields[field] = info }
         // If the field is found - return it.
-        if (fieldName in visitor.finalFields || fieldName in visitor.mutableFields) return true
+        if (fieldName in visitor.fieldInfoMap.keys) return true
         // If field is not present in this class - search in the superclass recursively.
         visitor.superClassName?.let { internalSuperClassName ->
             val superClassFields = classToFieldsMap.computeIfAbsent(internalSuperClassName) { hashMapOf() }
@@ -143,10 +150,9 @@ internal object FinalFields {
      * This visitor collects information about fields, declared in this class,
      * about superclass and implemented interfaces.
      */
-    private class FinalFieldsVisitor : ClassVisitor(ASM_API) {
+    private class FieldInfoVisitor : ClassVisitor(ASM_API) {
         val implementedInterfaces = arrayListOf<String>()
-        val finalFields = arrayListOf<String>()
-        val mutableFields = arrayListOf<String>()
+        val fieldInfoMap = hashMapOf<String, FieldInfo>()
 
         var superClassName: String? = null
 
@@ -158,16 +164,13 @@ internal object FinalFields {
         }
 
         override fun visitField(access: Int, name: String, descriptor: String?, signature: String?, value: Any?): FieldVisitor? {
-            if ((access and Opcodes.ACC_FINAL) != 0) {
-                finalFields.add(name)
-            } else {
-                mutableFields.add(name)
-            }
+            fieldInfoMap[name] = FieldInfo(access and Opcodes.ACC_FINAL != 0, access and Opcodes.ACC_VOLATILE != 0)
             return super.visitField(access, name, descriptor, signature, value)
         }
     }
 
-    private enum class FieldInfo {
-        FINAL, MUTABLE
-    }
+    private data class FieldInfo(
+        val isFinal: Boolean,
+        val isVolatile: Boolean
+    )
 }

@@ -24,6 +24,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.util.MemoryOrdering
 import org.jetbrains.lincheck.util.SortedList
 import org.jetbrains.lincheck.util.ensure
 import org.jetbrains.lincheck.util.ensureNull
@@ -973,18 +974,19 @@ internal class EventStructure(
         }
     }
 
-    fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, value: ValueID,
+    fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, value: ValueID,
                       readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null): AtomicThreadEvent {
         val label = WriteAccessLabel(
             location = location,
             writeValue = value, // TODO: change API of other methods to also take ValueID
             readModifyWriteDescriptor = readModifyWriteDescriptor,
             codeLocation = codeLocation,
+            memoryOrdering = memoryOrder
         )
         return addSendEvent(iThread, label)
     }
 
-    fun addReadRequest(iThread: Int, codeLocation: Int, location: MemoryLocation,
+    fun addReadRequest(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering,
                        readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null): AtomicThreadEvent {
         // we create a read-request event with an unknown (null) value,
         // value will be filled later in the read-response event
@@ -994,6 +996,7 @@ internal class EventStructure(
             readValue = NULL_OBJECT_NUMBER.toLong(),
             readModifyWriteDescriptor = readModifyWriteDescriptor,
             codeLocation = codeLocation,
+            memoryOrdering = memoryOrder
         )
         return addRequestEvent(iThread, label)
     }

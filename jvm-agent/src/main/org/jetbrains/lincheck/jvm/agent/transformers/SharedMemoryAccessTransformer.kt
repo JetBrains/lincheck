@@ -77,7 +77,8 @@ internal class SharedMemoryAccessTransformer(
             fieldName = fieldName,
             type = desc.toType(),
             fieldKind = FieldKind.STATIC,
-            isFinal = FinalFields.isFinalField(owner, fieldName)
+            isFinal = FieldsInfo.isFinalField(owner, fieldName),
+            isVolatile = FieldsInfo.isVolatileField(owner, fieldName)
         ).id
 
         val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
@@ -120,7 +121,8 @@ internal class SharedMemoryAccessTransformer(
             fieldName = fieldName,
             type = desc.toType(),
             fieldKind = FieldKind.INSTANCE,
-            isFinal = FinalFields.isFinalField(owner, fieldName)
+            isFinal = FieldsInfo.isFinalField(owner, fieldName),
+            isVolatile = FieldsInfo.isVolatileField(owner, fieldName)
         ).id
 
         // STACK: obj
@@ -172,7 +174,8 @@ internal class SharedMemoryAccessTransformer(
             fieldName = fieldName,
             type = desc.toType(),
             fieldKind = FieldKind.STATIC,
-            isFinal = FinalFields.isFinalField(owner, fieldName)
+            isFinal = FieldsInfo.isFinalField(owner, fieldName),
+            isVolatile = FieldsInfo.isVolatileField(owner, fieldName)
         ).id
         val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
 
@@ -203,7 +206,8 @@ internal class SharedMemoryAccessTransformer(
             fieldName = fieldName,
             type = desc.toType(),
             fieldKind = FieldKind.INSTANCE,
-            isFinal = FinalFields.isFinalField(owner, fieldName)
+            isFinal = FieldsInfo.isFinalField(owner, fieldName),
+            isVolatile = FieldsInfo.isVolatileField(owner, fieldName)
         ).id
         val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
         val ownerLocal = newLocal(getType("L$owner;")).also { storeLocal(it) }
