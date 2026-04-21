@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 import org.jetbrains.lincheck.util.Enumerator
 import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.RelationMatrix
-import org.jetbrains.lincheck.util.updateInplace
+import org.jetbrains.lincheck.util.collections.*
 import java.util.*
 
 // adjacency list is a function that

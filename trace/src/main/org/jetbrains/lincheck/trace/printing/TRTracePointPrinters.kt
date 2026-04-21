@@ -8,9 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.printing
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.*
 import java.time.Instant
 
 

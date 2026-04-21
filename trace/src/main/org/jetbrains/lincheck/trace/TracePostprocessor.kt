@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.toType
 import org.jetbrains.lincheck.trace.CompressingPostprocessor.compressAccessPairs
+import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 
 /**
  * Interface for implementing trace points modification algorithms in order

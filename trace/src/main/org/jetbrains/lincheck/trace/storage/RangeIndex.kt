@@ -8,13 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.storage
 
 import java.nio.file.Files
-import kotlin.collections.component1
-import kotlin.collections.component2
-import kotlin.math.min
-import kotlin.math.roundToInt
 
 internal data class Range(val start: Long, val end: Long)
 
@@ -48,7 +44,7 @@ internal sealed class RangeIndex(
     }
 
     companion object {
-        fun create(): RangeIndex = StorageSwitchingRangeIndex()
+        fun create(): RangeIndex = RangeIndexImpl()
     }
 }
 
@@ -57,7 +53,12 @@ internal sealed class RangeIndex(
 // Spent no more than 80MByte for all points, so approximately 1,000,000 elements top.
 private const val MAX_HASHMAP_SIZE = 1_000_000
 
-private class StorageSwitchingRangeIndex : RangeIndex(mutableMapOf()) {
+/**
+ * An implementation of the abstract class [RangeIndex],
+ * providing functionality for managing ranges and switching between
+ * in-memory and memory-mapped storage implementations based on the index size.
+ */
+private class RangeIndexImpl : RangeIndex(mutableMapOf()) {
     private var storage: RangeIndex = HashMapRangeIndex(openRanges)
     private var size: Int = 0
 

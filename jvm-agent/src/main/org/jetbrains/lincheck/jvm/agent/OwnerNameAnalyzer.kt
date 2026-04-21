@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
-import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import org.objectweb.asm.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.math.max

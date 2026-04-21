@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
+import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.CallSite
@@ -180,7 +181,10 @@ class TraceCollectingEventTracker(
             }
             is TraceOutputMode.BinaryFileStream -> {
                 check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
-                strategy = FileStreamingTraceCollecting(traceStreamingFilePath, context)
+                strategy = FileStreamingTraceCollecting(
+                    traceStreamingFilePath,
+                    context
+                )
             }
             is TraceOutputMode.BinaryNetworkStream -> {
                 strategy = NetworkStreamingTraceCollecting(context, mode.tracingServer)

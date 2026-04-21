@@ -25,14 +25,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.MemoryOrdering
-import org.jetbrains.lincheck.util.SortedList
-import org.jetbrains.lincheck.util.ensure
-import org.jetbrains.lincheck.util.ensureNull
-import org.jetbrains.lincheck.util.orEqual
-import org.jetbrains.lincheck.util.runIf
-import org.jetbrains.lincheck.util.satisfies
-import org.jetbrains.lincheck.util.sortedMutableListOf
-import org.jetbrains.lincheck.util.unreachable
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 
 
 internal class EventStructure(

@@ -8,10 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.collections.Bitmap
+import org.jetbrains.lincheck.util.collections.SimpleBitmap
 import java.io.Closeable
 import java.io.DataOutput
 import java.io.DataOutputStream
@@ -156,7 +159,7 @@ internal inline fun <reified T> TraceContextSavedState.markDescriptorSaved(id: I
  *
  * `dataStream` can be relaxed to [Closeable], but it will hide its intention even more.
  */
-internal sealed class ContextAwareTraceWriter(
+internal abstract class ContextAwareTraceWriter(
     val context: TraceContext,
     protected val dataStream: OutputStream,
     protected val dataOutput: DataOutput

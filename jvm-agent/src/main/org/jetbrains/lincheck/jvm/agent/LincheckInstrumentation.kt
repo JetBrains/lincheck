@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.jvm.agent.transformers.coroutineCallingClasses
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import java.lang.instrument.Instrumentation
 import java.io.File
 import java.io.StringWriter

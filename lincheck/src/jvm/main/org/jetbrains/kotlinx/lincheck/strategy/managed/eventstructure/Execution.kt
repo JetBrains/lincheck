@@ -22,15 +22,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.util.Covering
-import org.jetbrains.lincheck.util.Enumerator
-import org.jetbrains.lincheck.util.Relation
-import org.jetbrains.lincheck.util.binarySearch
-import org.jetbrains.lincheck.util.SortedArrayList
-import org.jetbrains.lincheck.util.SortedList
-import org.jetbrains.lincheck.util.SortedMutableList
-import org.jetbrains.lincheck.util.ensure
-import org.jetbrains.lincheck.util.sortedMutableListOf
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 
 
 /**

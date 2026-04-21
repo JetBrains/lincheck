@@ -11,12 +11,8 @@
 package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.trace.INDEX_FILENAME_EXT
-import org.jetbrains.lincheck.trace.PACK_FILENAME_EXT
-import org.jetbrains.lincheck.trace.TraceMetaInfo
-import org.jetbrains.lincheck.trace.printPostProcessedTrace
-import org.jetbrains.lincheck.trace.packRecordedTrace
-import org.jetbrains.lincheck.trace.saveRecorderTrace
+import org.jetbrains.lincheck.trace.serialization.*
+import org.jetbrains.lincheck.trace.printing.printPostProcessedTrace
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
 

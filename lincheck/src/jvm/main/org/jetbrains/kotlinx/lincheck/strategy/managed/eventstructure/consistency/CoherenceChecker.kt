@@ -22,13 +22,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.lincheck.util.Computable
-import org.jetbrains.lincheck.util.ComputableNode
-import org.jetbrains.lincheck.util.Enumerator
-import org.jetbrains.lincheck.util.Relation
-import org.jetbrains.lincheck.util.RelationMatrix
-import org.jetbrains.lincheck.util.cartesianProduct
-import org.jetbrains.lincheck.util.union
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 
 typealias CoherenceList = List<AtomicThreadEvent>
 

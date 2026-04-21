@@ -10,11 +10,10 @@
 
 package org.jetbrains.lincheck.trace.util
 
-import org.jetbrains.lincheck.trace.LazyTraceReader
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
-import org.jetbrains.lincheck.trace.loadRecordedTrace
-import org.jetbrains.lincheck.trace.printRecorderTrace
-import java.io.FileInputStream
+import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
+import org.jetbrains.lincheck.trace.serialization.loadRecordedTrace
+import org.jetbrains.lincheck.trace.printing.printRecorderTrace
 
 fun main(args: Array<String>) {
     // Choose one!

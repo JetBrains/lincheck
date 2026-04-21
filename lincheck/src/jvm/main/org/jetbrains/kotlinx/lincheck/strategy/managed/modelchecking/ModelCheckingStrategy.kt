@@ -17,7 +17,7 @@ import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isJavaLambdaClass
 import org.jetbrains.lincheck.util.traverseObjectGraph
-import org.jetbrains.lincheck.util.truncateTo
+import org.jetbrains.lincheck.util.collections.*
 import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.random.Random

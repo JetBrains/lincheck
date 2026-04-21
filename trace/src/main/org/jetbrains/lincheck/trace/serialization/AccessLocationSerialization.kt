@@ -8,14 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.serialization
 
-import org.jetbrains.lincheck.descriptors.AccessLocation
-import org.jetbrains.lincheck.descriptors.ArrayElementByIndexAccessLocation
-import org.jetbrains.lincheck.descriptors.ArrayElementByNameAccessLocation
-import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
-import org.jetbrains.lincheck.descriptors.ObjectFieldAccessLocation
-import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
+import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.TraceContext
 
 internal fun AccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
     when (this) {

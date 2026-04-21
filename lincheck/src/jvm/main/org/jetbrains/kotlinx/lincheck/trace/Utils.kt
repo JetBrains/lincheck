@@ -11,10 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import org.jetbrains.lincheck.util.indexOf
-import org.jetbrains.lincheck.util.indexOfLast
-import org.jetbrains.lincheck.util.move
-import org.jetbrains.lincheck.util.subList
+import org.jetbrains.lincheck.util.collections.*
 
 /**
  * Adjusts the positions of `SwitchEventTracePoint` instances within the trace,

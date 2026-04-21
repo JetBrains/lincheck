@@ -9,7 +9,7 @@
  */
 
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
-import org.jetbrains.lincheck.trace.LazyTraceReader
+import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 import org.jetbrains.lincheck.trace.TRContainerTracePoint
 import org.jetbrains.lincheck.trace.TRTracePoint
 import org.junit.jupiter.api.AfterEach

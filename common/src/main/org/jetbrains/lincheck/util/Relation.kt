@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.util
 
+import org.jetbrains.lincheck.util.collections.*
+
 fun interface Relation<in T> {
     operator fun invoke(x: T, y: T): Boolean
 

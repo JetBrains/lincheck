@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import org.objectweb.asm.Label
 import org.objectweb.asm.tree.*
 import org.objectweb.asm.util.Textifier

@@ -8,15 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.serialization
 
-import org.jetbrains.lincheck.descriptors.AccessCodeLocation
-import org.jetbrains.lincheck.descriptors.AccessLocation
-import org.jetbrains.lincheck.descriptors.AccessPath
-import org.jetbrains.lincheck.descriptors.ActiveLocal
-import org.jetbrains.lincheck.descriptors.LineCodeLocation
-import org.jetbrains.lincheck.descriptors.LocalKind
-import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
+import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.Logger
 import java.io.DataInput
 import java.io.DataInputStream

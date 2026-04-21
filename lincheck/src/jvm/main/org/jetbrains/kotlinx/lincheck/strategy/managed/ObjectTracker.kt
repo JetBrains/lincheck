@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import sun.nio.ch.lincheck.WeakIdentityReference
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference

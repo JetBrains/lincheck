@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.TryCatchBlockNode

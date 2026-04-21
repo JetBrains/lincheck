@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.descriptors
 
-import org.jetbrains.lincheck.util.ensureNotNull
-import org.jetbrains.lincheck.util.expandTo
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 
 /**
  * Pool for interning descriptors and providing id-based and key-based lookups.

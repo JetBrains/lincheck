@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.trace
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 
 internal typealias SingleThreadedTable<T> = Column<T>
 internal typealias MultiThreadedTable<T> = List<Column<T>>

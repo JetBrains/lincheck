@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.findField
 import org.jetbrains.kotlinx.lincheck.strategy.managed.SnapshotTracker.MemoryNode.*
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import java.lang.Class
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier

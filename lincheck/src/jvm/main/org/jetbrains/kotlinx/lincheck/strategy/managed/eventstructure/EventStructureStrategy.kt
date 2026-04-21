@@ -31,13 +31,8 @@ import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.getType
 import org.jetbrains.lincheck.trace.TraceContext
-import org.jetbrains.lincheck.util.ensure
-import org.jetbrains.lincheck.util.ensureNull
-import org.jetbrains.lincheck.util.implies
-import org.jetbrains.lincheck.util.runInsideIgnoredSection
-import org.jetbrains.lincheck.util.satisfies
-import org.jetbrains.lincheck.util.toInt
-import org.jetbrains.lincheck.util.updateInplace
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.MemoryOrdering
 import sun.nio.ch.lincheck.ThreadDescriptor

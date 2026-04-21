@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.max
-import org.jetbrains.lincheck.util.mergeReduce
+import org.jetbrains.lincheck.util.collections.mergeReduce
 import org.jetbrains.lincheck.util.orEqual
 import org.jetbrains.lincheck.util.refine
 import kotlin.to

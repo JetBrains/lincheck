@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
-import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import kotlin.collections.withIndex
 
 

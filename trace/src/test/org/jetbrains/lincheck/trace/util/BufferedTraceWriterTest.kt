@@ -16,6 +16,8 @@ import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.printing.printRecorderTrace
+import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.util.Logger
 import org.junit.Test
 import java.io.DataInputStream
@@ -333,7 +335,7 @@ class BufferedTraceWriterTest {
 
     private fun collectSavedBlocks(loadedContext: TraceContext, traceFile: File): Map<Int, BlockAnalysis> {
         val dataFile = File(traceFile.absolutePath)
-        val indexFile = File("${traceFile.absolutePath}.$INDEX_FILENAME_EXT")
+        val indexFile = File("${traceFile.absolutePath}.${INDEX_FILENAME_EXT}")
 
         check(dataFile.exists() && indexFile.exists()) { "Trace files not found!" }
         val dataInput = DataInputStream(dataFile.inputStream().buffered())

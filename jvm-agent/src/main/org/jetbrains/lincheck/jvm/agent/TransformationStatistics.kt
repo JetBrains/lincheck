@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.MethodVisitor

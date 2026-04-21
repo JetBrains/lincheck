@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.storage
 
 import java.nio.file.Files
 import kotlin.math.min
@@ -23,14 +23,18 @@ sealed class AddressIndex {
     open fun finishWrite() {}
 
     internal companion object {
-        fun create(): AddressIndex = StorageSwitchingAddressIndex()
+        fun create(): AddressIndex = AddressIndexImpl()
     }
 }
 
 // 1 MiB of memory, max
 private const val MAX_MEM_INDEX_SIZE = 1024 * 1024 / Long.SIZE_BYTES
 
-private class StorageSwitchingAddressIndex: AddressIndex() {
+/**
+ * An implementation of the abstract `AddressIndex` class that handles dynamic storage allocation
+ * and switching between in-memory and memory-mapped storage strategies based on index size.
+ */
+private class AddressIndexImpl: AddressIndex() {
     private var storage: AddressIndex? = null
 
     override fun get(index: Int): Long = storage?.get(index) ?: -1

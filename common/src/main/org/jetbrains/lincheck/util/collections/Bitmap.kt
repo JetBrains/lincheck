@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.util.collections
 
 import java.util.concurrent.atomic.AtomicLongArray
 
@@ -27,7 +27,7 @@ private const val ATOMIC_CHUNK_BITS = ATOMIC_CHUNK_SIZE * ATOMIC_SIZE_BYTES  // 
 private const val ATOMIC_CHUNK_SHIFT = 15                                    // log2(ATOMIC_CHUNK_BITS)
 private const val ATOMIC_CHUNK_MASK = (1 shl ATOMIC_CHUNK_SHIFT) - 1         // Mask to have a reminder for division by ATOMIC_CHUNK_BITS
 
-internal class AtomicBitmap : Bitmap {
+class AtomicBitmap : Bitmap {
     private val bitmap = ArrayList<AtomicLongArray>()
     @Volatile
     private var chunkCount = 0
@@ -83,7 +83,7 @@ internal class AtomicBitmap : Bitmap {
     }
 }
 
-internal class SimpleBitmap(initSize: Int = 2) : AbstractSet<Int>(), Bitmap {
+class SimpleBitmap(initSize: Int = 2) : AbstractSet<Int>(), Bitmap {
     private var bitmap: BooleanArray = BooleanArray(initSize)
     private var elementsCount: Int = 0
     override val size: Int

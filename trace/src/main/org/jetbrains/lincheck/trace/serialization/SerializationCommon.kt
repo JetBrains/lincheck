@@ -8,9 +8,11 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.DiffStatus
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import java.io.BufferedReader
 import java.io.DataInput

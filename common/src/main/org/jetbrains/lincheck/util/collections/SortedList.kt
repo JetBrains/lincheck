@@ -18,7 +18,9 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.lincheck.util
+package org.jetbrains.lincheck.util.collections
+
+import org.jetbrains.lincheck.util.*
 
 interface SortedList<out T : Comparable<@UnsafeVariance T>> : List<T> {
 

@@ -15,7 +15,7 @@ import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.handshake.ServerHandshake
 import org.java_websocket.server.WebSocketServer
-import org.jetbrains.lincheck.trace.NetworkTraceReader
+import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingClient
 import org.jetbrains.lincheck.trace.network.TracingCallbacks

@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.trace.network
 
-import org.jetbrains.lincheck.trace.NetworkTraceReader
+import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import java.io.Closeable
 
 /**

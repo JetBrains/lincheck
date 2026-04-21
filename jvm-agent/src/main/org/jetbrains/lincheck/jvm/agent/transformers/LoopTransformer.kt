@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.collections.*
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.GeneratorAdapter
 import sun.nio.ch.lincheck.*

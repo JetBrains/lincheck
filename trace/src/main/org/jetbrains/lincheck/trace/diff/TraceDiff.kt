@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.trace.diff
 
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.serialization.*
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -61,7 +62,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
     val (outputData, outputIndex) = openNewStandardDataAndIndex(outputBaseName)
     val output = DirectTraceWriter(outputData, outputIndex, outputContext)
 
-    val idMapFile = File.createTempFile("trace-diff-", ".$ID_MAP_FILENAME_EXT")
+    val idMapFile = File.createTempFile("trace-diff-", ".${ID_MAP_FILENAME_EXT}")
         .also { it.deleteOnExit() }
     val idMapStream = DataOutputStream(FileOutputStream(idMapFile).buffered(OUTPUT_BUFFER_SIZE))
 
@@ -438,7 +439,7 @@ private fun mapUnmappedThreads(
 }
 
 private fun saveThreadMap(threadMap: List<ThreadMapElement>): File {
-    val threadMapFile = File.createTempFile("trace-diff-", ".$THREAD_MAP_FILENAME_EXT")
+    val threadMapFile = File.createTempFile("trace-diff-", ".${THREAD_MAP_FILENAME_EXT}")
         .also { it.deleteOnExit() }
     val threadMapStream = FileOutputStream(threadMapFile).buffered(OUTPUT_BUFFER_SIZE)
     threadMapStream.use {

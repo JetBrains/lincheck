@@ -8,16 +8,18 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.trace
+package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.collections.AtomicBitmap
 import java.io.OutputStream
 import java.nio.ByteBuffer
-import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.ArrayBlockingQueue
 import kotlin.math.max
 import kotlin.reflect.KClass
 
