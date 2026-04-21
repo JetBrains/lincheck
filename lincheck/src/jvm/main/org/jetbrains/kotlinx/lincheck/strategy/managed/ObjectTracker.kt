@@ -479,7 +479,7 @@ open class BaseObjectTracker(
         )
     }
 
-    protected fun createWeakReference(obj: Any): WeakReference<Any> = WeakReference(obj, referenceQueue)
+    protected fun createWeakReference(obj: Any): WeakReference<Any> = WeakIdentityReference(obj, referenceQueue)
 
     protected fun computeObjectDisplayNumber(obj: Any): Int {
         val classRepr = obj.getSpecialClassNameRepresentation()
