@@ -16,7 +16,7 @@
 #
 # Example:
 #   ./scripts/update_version.sh 3.4.1
-#   ./scripts/update_version.sh 3.5-SNAPSHOT --commit
+#   ./scripts/update_version.sh 3.6-SNAPSHOT --commit
 #
 # What it changes:
 #   - gradle.properties:           version=<version>
@@ -99,6 +99,8 @@ update_version "${repo_root}/gradle.properties" "version"
 update_version "${repo_root}/common/gradle.properties" "commonVersion"
 update_version "${repo_root}/jvm-agent/gradle.properties" "jvmAgentVersion"
 update_version "${repo_root}/trace/gradle.properties" "traceVersion"
+update_version "${repo_root}/trace-recorder/gradle.properties" "traceRecorderFatVersion"
+update_version "${repo_root}/live-debugger/gradle.properties" "liveDebuggerFatVersion"
 update_readme
 update_vlist
 

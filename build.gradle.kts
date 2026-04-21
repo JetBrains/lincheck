@@ -61,6 +61,25 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
 }
 
 tasks {
+    // A gradle-task that groups publishing artifacts from the subprojects to maven local.
+    // An explicit task is needed since tasks propagation does not work with gradle composite builds set-up:
+    // running a command "gradle publishToMavenLocal" via Intellij won't execute a corresponding
+    // task in the included build automatically without this explicit definition.
+    val publishToMavenLocal by registering {
+        group = "publishing"
+        println("Publishing all artifacts to Maven Local repository...")
+        dependsOn(
+            ":common:publishToMavenLocal",
+            ":jvm-agent:publishToMavenLocal",
+            ":trace:publishToMavenLocal",
+            ":lincheck:publishToMavenLocal",
+
+            // also publish java agents' fat jars
+            ":trace-recorder:publishToMavenLocal",
+            ":live-debugger:publishToMavenLocal",
+        )
+    }
+
     val publishToSpacePackages by registering {
         group = "publishing"
         println("Publishing all artifacts to Space Packages repository...")

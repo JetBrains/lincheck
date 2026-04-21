@@ -15,7 +15,7 @@ Follow these steps to release a new `<version>` of Lincheck.
    * in [README.md](README.md)
    * in [docs/v.list](docs/v.list)
    * in [gradle.properties](gradle.properties)
-   * in all the published subprojects (`common`, `jvm-agent`, `trace`) `gradle.properties` files 
+   * in all the published subprojects (`common`, `jvm-agent`, `trace`, `lincheck`) `gradle.properties` files 
      * upon the new Lincheck release, all subprojects should have the same version
 
 5. Commit the updated [`gradle.properties`](gradle.properties): <br>
