@@ -33,11 +33,11 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     override val shouldTrackImmutableValues: Boolean = true
 
     // We have two types of object entries.
-    // * Internal entries which correspond to objects that are allocated during a test invocation, as well as the test instance itself. and the test instance itself.
+    // * Internal entries which correspond to objects that are allocated during a test invocation,
+    //   as well as the test  instance itself.
     //   These are purged from the ObjectTracker after each invocation.
-    //   Also when replaying an invocation, the ObjectID of an internal object is set to be equal to the ObjectID of the previous
-    //   allocation event.
-    //
+    //   Also when replaying an invocation, the ObjectID of an internal object is set to be equal to the ObjectID
+    //   of the previous allocation event.
     // * External which belong to objects that were already allocated before we started the tests
     //   Most often these are the initial threads, and the initial values of the fields of the test instance class
     //   Since these values are persistent across invocations, we keep them in the object tracker after invocations

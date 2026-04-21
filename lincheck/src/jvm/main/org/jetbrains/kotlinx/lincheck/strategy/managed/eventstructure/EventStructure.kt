@@ -944,10 +944,10 @@ internal class EventStructure(
         tryReplayEvent(iThread)?.let { event ->
             check(event.label is ObjectAllocationLabel)
             //NOTE: Currently the objectID value represents the "suggested" objectID from the object tracker.
-            //      The objectID is incremented each time a new object is added to the object tracker and this value is not
-            //      reset between invocations.
-            //      When replaying events, we need to keep the old objectID, which needs to be at least smaller or equal
-            //      to the new objectID suggested by the object tracker.
+            //  The objectID is incremented each time a new object is added to the object tracker and this value is not
+            //  reset between invocations.
+            //  When replaying events, we need to keep the old objectID, which needs to be at least smaller or equal
+            //  to the new objectID suggested by the object tracker.
             check(event.label.objectID <= objectID)
             addEventToCurrentExecution(event)
             return event
