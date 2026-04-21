@@ -442,6 +442,21 @@ open class BaseObjectTracker(
      */
     protected enum class ObjectKind { NEW, EXTERNAL }
 
+    protected open class BaseObjectEntry(
+        objNumber: Int,
+        objHashCode: Int,
+        objDisplayNumber: Int,
+        objWeakReference: WeakReference<Any>,
+        objStrongReference: Any?,
+        val objKind: ObjectKind
+    ) : ObjectEntry(
+        objNumber,
+        objHashCode,
+        objDisplayNumber,
+        objWeakReference,
+        objStrongReference
+    ) {}
+
     /**
      * Method responsible for creating an instance of [ObjectEntry] for tracking an object in the system.
      * Derived classes may override this method to create their own customized instances of [ObjectEntry]
@@ -454,7 +469,14 @@ open class BaseObjectTracker(
         obj: Any,
         kind: ObjectKind = ObjectKind.NEW,
     ): ObjectEntry {
-        return ObjectEntry(objNumber, objHashCode, objDisplayNumber, createWeakReference(obj))
+        return BaseObjectEntry(
+            objNumber,
+            objHashCode,
+            objDisplayNumber,
+            objWeakReference = createWeakReference(obj),
+            objStrongReference = null,
+            objKind = kind,
+        )
     }
 
     protected fun createWeakReference(obj: Any): WeakReference<Any> = WeakReference(obj, referenceQueue)

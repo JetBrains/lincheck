@@ -48,14 +48,15 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         objDisplayNumber: Int,
         objWeakReference: WeakReference<Any>,
         objStrongReference: Any?,
+        objKind: ObjectKind,
         val allocation: AtomicThreadEvent,
-        val isExternal: Boolean,
-    ) : ObjectEntry(
+    ) : BaseObjectEntry(
         objNumber,
         objHashCode,
         objDisplayNumber,
         objWeakReference,
-        objStrongReference
+        objStrongReference,
+        objKind,
     ) {}
 
 
@@ -89,9 +90,9 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
                 objHashCode,
                 objDisplayNumber,
                 objWeakReference,
-                obj,
+                objStrongReference = obj,
+                objKind = kind,
                 initEvent!!,
-                true,
             )
         } else {
             val iThread = (Thread.currentThread() as? TestThread)?.threadId ?: eventStructure.mainThreadId
@@ -106,9 +107,9 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
                 objHashCode,
                 objDisplayNumber,
                 objWeakReference,
-                null,
+                objStrongReference = obj,
+                objKind = kind,
                 allocationEvent,
-                false,
             )
         }
     }
@@ -127,7 +128,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 
     override fun reset() {
-        retain { (it as? EventStructureObjectEntry)?.isExternal ?: false }
+        retain { (it as? EventStructureObjectEntry)?.objKind == ObjectKind.EXTERNAL }
     }
 }
 
