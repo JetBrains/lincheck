@@ -395,3 +395,12 @@ private inline fun throwZipError(fileName: String, details: String? = null, caus
     val d = if (details != null) " ($details)" else ""
     throw IllegalArgumentException("File \"$fileName\" is a ZIP archive but is not a packed trace$d", cause)
 }
+
+internal const val PACKED_DATA_ITEM_NAME = "trace.$DATA_FILENAME_EXT"
+internal const val PACKED_INDEX_ITEM_NAME = "trace.$INDEX_FILENAME_EXT"
+internal const val PACKED_META_ITEM_NAME = "info.txt"
+internal const val PACKED_DIFF_MARKER_ITEM_NAME = ".diff"
+internal const val PACKED_ID_MAP_ITEM_NAME = "diff.${ID_MAP_FILENAME_EXT}"
+internal const val PACKED_THREAD_MAP_ITEM_NAME = "diff.${THREAD_MAP_FILENAME_EXT}"
+internal const val PACKED_LEFT_META_ITEM_NAME = "info.left.txt"
+internal const val PACKED_RIGHT_META_ITEM_NAME = "info.right.txt"

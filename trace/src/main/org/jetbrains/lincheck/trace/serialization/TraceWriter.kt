@@ -12,54 +12,10 @@ package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.*
-import org.jetbrains.lincheck.util.Logger
-import org.jetbrains.lincheck.util.collections.Bitmap
-import org.jetbrains.lincheck.util.collections.SimpleBitmap
 import java.io.Closeable
 import java.io.DataOutput
 import java.io.DataOutputStream
 import java.io.OutputStream
-import kotlin.reflect.KClass
-
-// Buffer for saving trace in one piece
-internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
-
-/**
- * It is a strategy to collect trace: it can be full-track in memory or streaming to a file on-the-fly
- */
-interface TraceCollectingStrategy {
-    /**
-     * Register the current thread in strategy.
-     */
-    fun registerCurrentThread(threadId: Int)
-
-    /**
-     * Makes sure that thread has written all of its recorded data.
-     */
-    fun completeThread(thread: Thread)
-
-    /**
-     * Must be called when a new tracepoint is created.
-     *
-     * @param parent Current top of the call stack, if exists.
-     * @param created New tracepoint
-     */
-    fun tracePointCreated(parent: TRContainerTracePoint?, created: TRTracePoint)
-
-    /**
-     * Must be called when the container trace point is ended and popped from the trace tree.
-     *
-     * @param thread thread of the [container] trace point.
-     * @param container the completed container trace point.
-     */
-    fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint)
-
-    /**
-     * Must be called when the trace is finished
-     */
-    fun traceEnded()
-}
-
 
 /**
  * It is a strategy to save one tracepoint.
@@ -138,17 +94,6 @@ internal interface TraceWriter : DataOutput, Closeable {
      */
     fun writeCodeLocation(id: Int)
 }
-
-/**
- * Interface to check and mark if a given piece of reference data was already stored.
- */
-internal interface TraceContextSavedState {
-    fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean
-    fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int)
-}
-
-internal inline fun <reified T> TraceContextSavedState.isDescriptorSaved(id: Int) = isDescriptorSaved(T::class, id)
-internal inline fun <reified T> TraceContextSavedState.markDescriptorSaved(id: Int) = markDescriptorSaved(T::class, id)
 
 /**
  * [dataStream] responsible for operations like `close()` and [dataOutput] for real data output.
@@ -477,46 +422,74 @@ internal abstract class ContextAwareTraceWriter(
     protected abstract fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long)
 }
 
-
-internal open class SimpleTraceContextSavedState: TraceContextSavedState {
-    protected open val seenClassDescriptors = SimpleBitmap()
-    val classDescriptors: Set<Int> = seenClassDescriptors
-    protected open val seenMethodDescriptors = SimpleBitmap()
-    val methodDescriptors: Set<Int> = seenMethodDescriptors
-    protected open val seenFieldDescriptors = SimpleBitmap()
-    val fieldDescriptors: Set<Int> = seenFieldDescriptors
-    protected open val seenVariableDescriptors = SimpleBitmap()
-    val variableDescriptors: Set<Int> = seenVariableDescriptors
-    protected open val seenStringDescriptors = SimpleBitmap()
-    val strings: Set<Int> = seenStringDescriptors
-    protected open val seenCodeLocationDescriptors = SimpleBitmap()
-    val codeLocations: Set<Int> = seenCodeLocationDescriptors
-    protected open val seenAccessPathDescriptors = SimpleBitmap()
-    val accessPaths: Set<Int> = seenAccessPathDescriptors
-
-    override fun isDescriptorSaved(descriptorClass: KClass<*>, id: Int): Boolean {
-        val bitmap = getBitmapArray(descriptorClass) ?: return false
-        return bitmap.isSet(id)
+internal fun AccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
+    when (this) {
+        is LocalVariableAccessLocation       -> save(out, traceContext)
+        is StaticFieldAccessLocation         -> save(out, traceContext)
+        is ObjectFieldAccessLocation         -> save(out, traceContext)
+        is ArrayElementByIndexAccessLocation -> save(out)
+        is ArrayElementByNameAccessLocation  -> save(out, traceContext)
     }
+}
 
-    override fun markDescriptorSaved(descriptorClass: KClass<*>, id: Int) {
-        val bitmap = getBitmapArray(descriptorClass) ?: return
-        bitmap.set(id)
+internal fun AccessLocation.saveReferences(out: TraceWriter, traceContext: TraceContext) {
+    when (this) {
+        is LocalVariableAccessLocation       -> saveReferences(out, traceContext)
+        is StaticFieldAccessLocation         -> saveReferences(out, traceContext)
+        is ObjectFieldAccessLocation         -> saveReferences(out, traceContext)
+        is ArrayElementByIndexAccessLocation -> { /* no-op */ }
+        is ArrayElementByNameAccessLocation  -> { /* no-op */ }
     }
+}
 
-    private fun getBitmapArray(descriptorClass: KClass<*>): Bitmap? {
-        return when (descriptorClass) {
-            ClassDescriptor::class -> seenClassDescriptors
-            MethodDescriptor::class -> seenMethodDescriptors
-            FieldDescriptor::class -> seenFieldDescriptors
-            VariableDescriptor::class -> seenVariableDescriptors
-            String::class -> seenStringDescriptors
-            CodeLocation::class -> seenCodeLocationDescriptors
-            AccessPath::class -> seenAccessPathDescriptors
-            else -> {
-                Logger.error { "Unknown descriptor class: $descriptorClass" }
-                null
-            }
-        }
-    }
+// Note: since `saveReferences` methods are called first, then, when `save` method is called,
+//       all preceding checks are fulfilled, so no need to write them here
+private fun LocalVariableAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
+    check(traceContext.variablePool.contains(variableDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved variable $variableDescriptor" }
+    val variableDescriptorId = traceContext.variablePool.getId(variableDescriptor.key)
+    out.writeAccessLocationKind(AccessLocationKind.LOCAL_VARIABLE)
+    out.writeInt(variableDescriptorId)
+}
+
+private fun StaticFieldAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
+    check(traceContext.fieldPool.contains(fieldDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved field $fieldDescriptor" }
+    val fieldDescriptorId = traceContext.fieldPool.getId(fieldDescriptor.key)
+    out.writeAccessLocationKind(AccessLocationKind.STATIC_FIELD)
+    out.writeInt(fieldDescriptorId)
+}
+
+private fun ObjectFieldAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
+    check(traceContext.fieldPool.contains(fieldDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved field $fieldDescriptor" }
+    val fieldDescriptorId = traceContext.fieldPool.getId(fieldDescriptor.key)
+    out.writeAccessLocationKind(AccessLocationKind.OBJECT_FIELD)
+    out.writeInt(fieldDescriptorId)
+}
+
+private fun ArrayElementByIndexAccessLocation.save(out: TraceWriter) {
+    out.writeAccessLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_INDEX)
+    out.writeInt(index)
+}
+
+private fun ArrayElementByNameAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
+    // register or get existing access path and write its id to output stream
+    check(traceContext.accessPathPool.contains(indexAccessPath)) { "Access location references must be saved before-hand, but location $this has unsaved access path $indexAccessPath" }
+    val indexId = traceContext.accessPathPool.getId(indexAccessPath)
+    out.writeAccessLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_NAME)
+    out.writeInt(indexId)
+}
+
+
+private fun LocalVariableAccessLocation.saveReferences(out: TraceWriter, traceContext: TraceContext) {
+    val variableDescriptorId = traceContext.variablePool.register(variableDescriptor)
+    out.writeVariableDescriptor(variableDescriptorId)
+}
+
+private fun StaticFieldAccessLocation.saveReferences(out: TraceWriter, traceContext: TraceContext) {
+    val fieldDescriptorId = traceContext.fieldPool.register(fieldDescriptor)
+    out.writeFieldDescriptor(fieldDescriptorId)
+}
+
+private fun ObjectFieldAccessLocation.saveReferences(out: TraceWriter, traceContext: TraceContext) {
+    val fieldDescriptorId = traceContext.fieldPool.register(fieldDescriptor)
+    out.writeFieldDescriptor(fieldDescriptorId)
 }
