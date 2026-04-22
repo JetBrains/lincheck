@@ -264,7 +264,7 @@ class AdaptiveLoopDetector(
                     return LoopDetector.Decision.SWITCH_THREAD
             }
             LoopKind.CAS -> {
-                if (inst.repeatCount >= casSwitchThreshold)
+                if (inst.repeatCount >= casSwitchThreshold && inst.totalCasFailures > casSwitchThreshold)
                     return LoopDetector.Decision.SWITCH_THREAD
             }
             LoopKind.ZNE -> {
