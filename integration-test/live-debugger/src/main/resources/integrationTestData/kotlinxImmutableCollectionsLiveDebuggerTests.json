@@ -1,0 +1,394 @@
+[
+  {
+    "class": "tests.contract.list.ImmutableListTest",
+    "gradleCommand": ":kotlinx-collections-immutable:jvmTest",
+    "methods": [
+      "empty",
+      "ofElements",
+      "toImmutable",
+      "emptyListToPersistentList",
+      "addElements",
+      "replaceElements",
+      "smallPersistentListFromMutableBuffer",
+      "subList",
+      "subListOfBuilder",
+      "noOperation",
+      "covariantTyping"
+    ],
+    "checkRepresentation": false,
+    "breakpoints": [
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 29,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 53,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 99,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 121,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 131,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 149,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 156,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 83,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 135,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 37,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 83,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 148,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 158,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 182,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 264,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 294,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 301,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 268,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 44,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 118,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 174,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 278,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 530,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 552,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 690,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList",
+        "filePath": "AbstractPersistentList.kt",
+        "line": 18,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList",
+        "filePath": "AbstractPersistentList.kt",
+        "line": 30,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.ExtensionsKt",
+        "filePath": "extensions.kt",
+        "line": 447,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.ExtensionsKt",
+        "filePath": "extensions.kt",
+        "line": 604,
+        "condition": null
+      }
+    ]
+  },
+  {
+    "class": "tests.contract.list.ImmutableListTest",
+    "gradleCommand": ":kotlinx-collections-immutable:jvmTest",
+    "methods": [
+      "builder",
+      "persistentListFails",
+      "removeElements"
+    ],
+    "checkRepresentation": false,
+    "breakpoints": [
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 29,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 53,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 99,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 121,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 131,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 149,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 156,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 83,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 135,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 37,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 83,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 148,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 158,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 182,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 264,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 294,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 301,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVector",
+        "filePath": "PersistentVector.kt",
+        "line": 268,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 44,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 118,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 174,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 278,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 530,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 552,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.PersistentVectorBuilder",
+        "filePath": "PersistentVectorBuilder.kt",
+        "line": 690,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList",
+        "filePath": "AbstractPersistentList.kt",
+        "line": 18,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.implementations.immutableList.AbstractPersistentList",
+        "filePath": "AbstractPersistentList.kt",
+        "line": 30,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.ExtensionsKt",
+        "filePath": "extensions.kt",
+        "line": 447,
+        "condition": null
+      },
+      {
+        "className": "kotlinx.collections.immutable.ExtensionsKt",
+        "filePath": "extensions.kt",
+        "line": 604,
+        "condition": null
+      }
+    ]
+  }
+]

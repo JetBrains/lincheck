@@ -177,7 +177,7 @@ class TraceCollectingEventTracker(
     init {
         when (mode) {
             is TraceOutputMode.BinaryFileDump -> {
-                strategy = MemoryTraceCollecting(context)
+                strategy = MemoryTraceCollecting(context, layout.isFlat())
             }
             is TraceOutputMode.BinaryFileStream -> {
                 check(traceStreamingFilePath != null) { "Stream output type needs non-empty output file name" }
@@ -193,7 +193,7 @@ class TraceCollectingEventTracker(
                 strategy = NullTraceCollecting(context)
             }
             else -> {
-                strategy = MemoryTraceCollecting(context)
+                strategy = MemoryTraceCollecting(context, layout.isFlat())
             }
         }
     }
@@ -1066,6 +1066,14 @@ class TraceCollectingEventTracker(
      * Returns a list of all thread root trace points.
      */
     fun getThreadRoots(): List<TRTracePoint> {
+        if (layout.isFlat() && strategy is MemoryTraceCollecting) {
+            // Match the tree-branch cross-thread ordering (sortedBy threadId) so downstream
+            // consumers see the same deterministic thread order regardless of collection layout.
+            return strategy.flatListsPerThread.entries
+                .sortedBy { it.key }
+                .flatMap { it.value }
+        }
+
         val roots = mutableListOf<TRTracePoint>()
         threads.values.sortedBy { it.threadId }.forEach { threadData ->
             val rootCall = threadData.rootCall

@@ -1,3 +1,7 @@
+plugins {
+    kotlin("plugin.serialization")
+}
+
 repositories {
     mavenCentral()
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
@@ -18,12 +22,14 @@ sourceSets {
         val jctoolsVersion: String by project
         val mockkVersion: String by project
         val gradleToolingApiVersion: String by project
+        val kotlinxSerializationVersion: String by project
 
         api("junit:junit:$junitVersion")
         api("org.junit.vintage:junit-vintage-engine:$junitJupiterVersion")
         api("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
         api("org.jctools:jctools-core:$jctoolsVersion")
         api("io.mockk:mockk:${mockkVersion}")
+        api("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
         // ':common' subproject of integration-tests depends on `OVERWRITE_REPRESENTATION_TESTS_OUTPUT`
         // flag, which is defined in lincheck module's 'test' source set
         implementation(project.project(":lincheck").extensions.getByType(SourceSetContainer::class)["test"].output)

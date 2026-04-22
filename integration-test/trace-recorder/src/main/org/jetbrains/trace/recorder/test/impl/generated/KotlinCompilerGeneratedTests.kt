@@ -26,7 +26,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":compiler:fir:fir2ir:test"),
                 checkRepresentation = false,
-                traceShouldContain = listOf()
+                traceShouldContain = listOf(),
+                breakpointsIni = null
             )
         }
     
@@ -46,7 +47,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":compiler:fir:fir2ir:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
     
@@ -60,7 +62,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":compiler:fir:fir2ir:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
                 }
@@ -78,7 +81,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:fir2ir:test"),
                         checkRepresentation = false,
-                        traceShouldContain = listOf()
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
                     )
                 }
     
@@ -92,7 +96,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:fir2ir:test"),
                         checkRepresentation = false,
-                        traceShouldContain = listOf()
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
                     )
                 }
             }
@@ -112,7 +117,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:fir2ir:test"),
                         checkRepresentation = false,
-                        traceShouldContain = listOf()
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
                     )
                 }
     
@@ -126,7 +132,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:fir2ir:test"),
                         checkRepresentation = false,
-                        traceShouldContain = listOf()
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
                     )
                 }
             }
@@ -144,7 +151,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     extraJvmArgs = listOf(),
                     commands = listOf(":compiler:fir:fir2ir:test"),
                     checkRepresentation = false,
-                    traceShouldContain = listOf()
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
                 )
             }
     
@@ -158,7 +166,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     extraJvmArgs = listOf(),
                     commands = listOf(":compiler:fir:fir2ir:test"),
                     checkRepresentation = false,
-                    traceShouldContain = listOf()
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
                 )
             }
         }
@@ -175,7 +184,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     extraJvmArgs = listOf(),
                     commands = listOf(":compiler:fir:fir2ir:test"),
                     checkRepresentation = false,
-                    traceShouldContain = listOf()
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
                 )
             }
         }
@@ -193,7 +203,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 extraJvmArgs = listOf(),
                 commands = listOf(":js:js.tests:test"),
                 checkRepresentation = false,
-                traceShouldContain = listOf()
+                traceShouldContain = listOf(),
+                breakpointsIni = null
             )
         }
     
@@ -213,7 +224,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":js:js.tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
     
@@ -227,7 +239,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":js:js.tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
                 }
@@ -244,7 +257,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":js:js.tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
     
@@ -258,7 +272,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":js:js.tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
                 }
@@ -277,7 +292,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     extraJvmArgs = listOf(),
                     commands = listOf(":js:js.tests:test"),
                     checkRepresentation = false,
-                    traceShouldContain = listOf()
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
                 )
             }
     
@@ -291,7 +307,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     extraJvmArgs = listOf(),
                     commands = listOf(":js:js.tests:test"),
                     checkRepresentation = false,
-                    traceShouldContain = listOf()
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
                 )
             }
         }
@@ -308,7 +325,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     extraJvmArgs = listOf(),
                     commands = listOf(":js:js.tests:test"),
                     checkRepresentation = false,
-                    traceShouldContain = listOf()
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
                 )
             }
     
@@ -322,7 +340,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     extraJvmArgs = listOf(),
                     commands = listOf(":js:js.tests:test"),
                     checkRepresentation = false,
-                    traceShouldContain = listOf()
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
                 )
             }
         }
@@ -341,7 +360,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         extraJvmArgs = listOf(),
                         commands = listOf(":js:js.tests:test"),
                         checkRepresentation = false,
-                        traceShouldContain = listOf()
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
                     )
                 }
             }
@@ -364,7 +384,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:analysis-tests:test"),
                         checkRepresentation = false,
-                        traceShouldContain = listOf()
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
                     )
                 }
     
@@ -378,7 +399,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:analysis-tests:test"),
                         checkRepresentation = false,
-                        traceShouldContain = listOf()
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
                     )
                 }
     
@@ -394,7 +416,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":compiler:fir:analysis-tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
     
@@ -408,7 +431,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":compiler:fir:analysis-tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
                 }
@@ -425,7 +449,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":compiler:fir:analysis-tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
     
@@ -439,7 +464,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":compiler:fir:analysis-tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
                 }
@@ -456,7 +482,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":compiler:fir:analysis-tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
     
@@ -470,7 +497,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                             extraJvmArgs = listOf(),
                             commands = listOf(":compiler:fir:analysis-tests:test"),
                             checkRepresentation = false,
-                            traceShouldContain = listOf()
+                            traceShouldContain = listOf(),
+                            breakpointsIni = null
                         )
                     }
                 }
@@ -488,7 +516,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:analysis-tests:test"),
                         checkRepresentation = false,
-                        traceShouldContain = listOf()
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
                     )
                 }
             }
@@ -509,7 +538,8 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                     extraJvmArgs = listOf(),
                     commands = listOf(":wasm:wasm.tests:test"),
                     checkRepresentation = false,
-                    traceShouldContain = listOf()
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
                 )
             }
         }

@@ -1,7 +1,3 @@
-plugins {
-    kotlin("plugin.serialization")
-}
-
 repositories {
     mavenCentral()
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
@@ -18,12 +14,10 @@ sourceSets {
 
     dependencies {
         val slf4jVersion: String by project
-        val kotlinxSerializationVersion: String by project
 
         implementation(kotlin("reflect"))
         implementation(project(":integration-test:common"))
         implementation("org.slf4j:slf4j-simple:$slf4jVersion")
-        implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
     }
 }
 
@@ -40,17 +34,17 @@ tasks {
 
     val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
 
-    val integrationTestSuite: String? by project
-    val integrationTestSuiteType = when (integrationTestSuite?.lowercase()) {
+    val traceRecorderSuite: String? by project
+    val integrationTestSuiteType = when (traceRecorderSuite?.lowercase()) {
         "basic" -> TraceAgentIntegrationTestSuite.Basic
         "kotlincompiler" -> TraceAgentIntegrationTestSuite.KotlinCompiler
         "ktor" -> TraceAgentIntegrationTestSuite.Ktor
         "ij" -> TraceAgentIntegrationTestSuite.IJ
         "all", null -> TraceAgentIntegrationTestSuite.All
-        else -> error("Unknown integration test suite type: $integrationTestSuite")
+        else -> error("Unknown trace-recorder suite: $traceRecorderSuite")
     }
 
-    val traceRecorderIntegrationTest = register<Test>("traceRecorderIntegrationTest") {
+    register<Test>("traceRecorderIntegrationTest") {
         useJUnitPlatform()
         configureJvmTestCommon(project)
         group = "verification"
@@ -80,3 +74,4 @@ tasks {
         dependsOn(copyTraceRecorderFatJar)
     }
 }
+

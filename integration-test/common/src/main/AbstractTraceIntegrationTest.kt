@@ -74,13 +74,22 @@ abstract class AbstractTraceIntegrationTest {
         testNameSuffix: String? = null,
         onStdErrOutput: (String) -> Unit = failOnErrorInStdErr,
         traceShouldContain: List<String> = emptyList(),
+        breakpointsIni: String? = null,
     ) {
+        val breakpointsAgentArgs = if (breakpointsIni != null) {
+            val breakpointsFile = File.createTempFile("breakpoints", ".ini")
+            breakpointsFile.deleteOnExit()
+            breakpointsFile.writeText(breakpointsIni)
+            mapOf("breakpointsFile" to breakpointsFile.absolutePath)
+        } else {
+            emptyMap()
+        }
         val (_, output) = withStdErrTee {
             runTestAndCompare(
                 testClassName,
                 testMethodName,
                 extraJvmArgs + defaultJvmArgs,
-                extraAgentArgs + formatArgs,
+                extraAgentArgs + formatArgs + breakpointsAgentArgs,
                 commands,
                 checkRepresentation,
                 testNameSuffix,

@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.util.collections.SimpleBitmap
 import java.io.DataOutput
 import java.io.DataOutputStream
 import java.io.OutputStream
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 private class InMemoryTraceContextSavedState: SimpleTraceContextSavedState() {
@@ -94,11 +95,22 @@ internal class DirectTraceWriter(
     }
 }
 
-class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingStrategy {
+class MemoryTraceCollecting(
+    private val context: TraceContext, 
+    private val collectFlat: Boolean,
+): TraceCollectingStrategy {
     val points = AtomicLong(0)
+
+    // `registerCurrentThread` and `tracePointCreated` are called concurrently from worker threads,
+    // so structural modifications (new thread registrations) must not race with reads/writes.
+    private val _flatListsPerThread = ConcurrentHashMap<Int, MutableList<TRTracePoint>>()
+    val flatListsPerThread: Map<Int, List<TRTracePoint>> get() = _flatListsPerThread
 
     override fun registerCurrentThread(threadId: Int) {
         context.setThreadName(threadId, Thread.currentThread().name)
+        if (collectFlat) {
+            _flatListsPerThread[threadId] = mutableListOf()
+        }
     }
 
     override fun completeThread(thread: Thread) {}
@@ -109,6 +121,9 @@ class MemoryTraceCollecting(private val context: TraceContext): TraceCollectingS
     ) {
         points.incrementAndGet()
         parent?.addChild(created)
+        if (collectFlat) {
+            _flatListsPerThread[created.threadId]?.add(created)
+        }
     }
 
     override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {}

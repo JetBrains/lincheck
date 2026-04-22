@@ -1,0 +1,36 @@
+[
+  {
+    "class": "io.ktor.tests.http.cio.CharArrayBuilderTest",
+    "gradleCommand": ":ktor-http-cio:jvmTest",
+    "methods": [
+      "testAppendFewChars",
+      "testAppendSingleChar"
+    ],
+    "breakpoints": [
+      {
+        "className": "io.ktor.http.cio.internals.CharArrayBuilder",
+        "filePath": "CharArrayBuilder.kt",
+        "line": 62,
+        "condition": null
+      },
+      {
+        "className": "io.ktor.http.cio.internals.CharArrayBuilder",
+        "filePath": "CharArrayBuilder.kt",
+        "line": 60,
+        "condition": null
+      },
+      {
+        "className": "io.ktor.tests.http.cio.CharArrayBuilderTest",
+        "filePath": "CharArrayBuilderTest.kt",
+        "line": 72,
+        "condition": null
+      },
+      {
+        "className": "io.ktor.tests.http.cio.CharArrayBuilderTest",
+        "filePath": "CharArrayBuilderTest.kt",
+        "line": 39,
+        "condition": null
+      }
+    ]
+  }
+]
