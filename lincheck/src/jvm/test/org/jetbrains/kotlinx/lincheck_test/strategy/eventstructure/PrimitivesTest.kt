@@ -1299,4 +1299,51 @@ class PrimitivesTest {
             return@litmusTest b1
         }
     }
+
+    @Test
+    fun testLambdaAllocationIsTracked() {
+        // This test ensures that we properly keep track of the allocation of lambdas
+        // The eventStructureObjectTracker needs to track lambda's as "NEW" object and not
+        // as external ones, as that would cause the lambdas to have unstable object ids between invocations
+        // or cause them to hold on to "stale" closures from previous invocations.
+        // This particular test case detects improper tracking of lambdas by giving the lambda an unstable objectID
+        // The test is weird because it is challenging to have get a lambda to capture stale values in this kind of test
+        // and have the lambda be a non-thread local variable.
+        class TestClass {
+            val y = AtomicInteger(0)
+            var lambda: (() -> Unit)? = null
+
+            fun one(): Int? {
+                val x = Object()
+                // On subsequent replays this lambda will have different IdentityHashCode causing a new ObjectID.
+                // This then breaks the replayer
+                lambda = {
+                    // We need some kind of capture to get a different identity hash code
+                    val unused = x
+                }
+                lambda?.invoke()
+                y.get()
+                return 1
+            }
+
+            fun two() {
+                y.set(1) // Trigger a "backward revisit"
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::one)
+                }
+                thread {
+                    actor(TestClass::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+    }
+
 }
