@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import sun.nio.ch.lincheck.*
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.TraceContext
+import org.objectweb.asm.Handle
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -172,4 +173,29 @@ internal class ObjectCreationTransformer(
             }
         )
     }
+
+    override fun visitInvokeDynamicInsn(
+        name: String?,
+        descriptor: String?,
+        bootstrapMethodHandle: Handle?,
+        vararg bootstrapMethodArguments: Any?
+    ) = adapter.run {
+        super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
+        //NOTE: We need to handle allocation of lambda expressions. They are handled via invokeDynamic and LambdaMetafactory.
+        //  So we track them...
+        invokeIfInAnalyzedCode(
+            original = {},
+            instrumented = {
+                // TODO: we probably need a more robust check for the lambda stuff
+                if (bootstrapMethodHandle?.owner?.contains("LambdaMetafactory") ?: false) {
+                    dup()
+                    val lambdaLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                    loadLocal(lambdaLocal)
+                    invokeStatic(Injections::afterNewObjectCreation)
+                }
+            }
+        )
+    }
+
 }
