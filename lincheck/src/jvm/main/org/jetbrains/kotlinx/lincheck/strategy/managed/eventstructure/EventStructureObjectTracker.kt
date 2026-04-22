@@ -46,17 +46,16 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
+        objKind: ObjectTracker.ObjectKind,
         objWeakReference: WeakReference<Any>,
         objStrongReference: Any?,
-        objKind: ObjectKind,
         val allocation: AtomicThreadEvent,
-    ) : BaseObjectEntry(
-        objNumber,
+    ) : ObjectEntry(objNumber,
         objHashCode,
         objDisplayNumber,
+        objKind,
         objWeakReference,
         objStrongReference,
-        objKind,
     ) {}
 
 
@@ -79,20 +78,20 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         objHashCode: Int,
         objDisplayNumber: Int,
         obj: Any,
-        kind: ObjectKind
+        kind: ObjectTracker.ObjectKind
     ): ObjectEntry {
         // We create a base entry just for the weak reference inside it
         val objWeakReference = createWeakReference(obj)
-        if (kind == ObjectKind.EXTERNAL) {
+        if (kind == ObjectTracker.ObjectKind.EXTERNAL) {
             (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objNumber)
             return EventStructureObjectEntry(
                 objNumber,
                 objHashCode,
                 objDisplayNumber,
-                objWeakReference,
-                objStrongReference = obj,
                 objKind = kind,
-                initEvent!!,
+                objWeakReference = objWeakReference,
+                objStrongReference = obj,
+                allocation = initEvent!!
             )
         } else {
             val iThread = (Thread.currentThread() as? TestThread)?.threadId ?: eventStructure.mainThreadId
@@ -106,10 +105,10 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
                 actualObjectNumber,
                 objHashCode,
                 objDisplayNumber,
-                objWeakReference,
-                objStrongReference = obj,
                 objKind = kind,
-                allocationEvent,
+                objWeakReference = objWeakReference,
+                objStrongReference = null,
+                allocation = allocationEvent,
             )
         }
     }
@@ -128,7 +127,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 
     override fun reset() {
-        retain { (it as? EventStructureObjectEntry)?.objKind == ObjectKind.EXTERNAL }
+        retain { (it as? EventStructureObjectEntry)?.objectKind == ObjectTracker.ObjectKind.EXTERNAL }
     }
 }
 
