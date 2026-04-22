@@ -132,7 +132,7 @@ internal inline fun<reified Outcome> litmustTestv2 (
         outcomes.add(value)
         true
     }
-    withLincheckTestContext(testCfg.instrumentationMode) {
+    withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
         ensureObjectIsTransformed(block)
         createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, block).use { strategy ->
             val failure = strategy.runIteration(INVOCATIONS, verifier)

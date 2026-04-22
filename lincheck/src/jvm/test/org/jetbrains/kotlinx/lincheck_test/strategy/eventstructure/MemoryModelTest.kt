@@ -52,7 +52,6 @@ class MemoryModelTest {
             t3.join()
             (r1 to r2)
         }
-
     }
 
     /* ======== Store Buffering ======== */
@@ -60,7 +59,7 @@ class MemoryModelTest {
     @Test
     fun testSB() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
-//            (0 to 0), // TODO: fix exploration strat to unlock this outcome
+            (0 to 0),
             (0 to 1),
             (1 to 0),
             (1 to 1),
