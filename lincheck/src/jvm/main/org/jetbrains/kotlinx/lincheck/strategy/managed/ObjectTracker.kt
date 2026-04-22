@@ -44,6 +44,15 @@ import kotlin.reflect.KClass
 interface ObjectTracker {
 
     /**
+     * Represents the kind of object being tracked.
+     *
+     * Can be either:
+     *   - [NEW] - Newly created object registered in the tracker.
+     *   - [EXTERNAL] - External object registered in the tracker.
+     */
+    enum class ObjectKind { NEW, EXTERNAL }
+
+    /**
      * Registers a thread with the given id in the object tracker.
      *
      * @param threadId the id of the thread to register.
@@ -175,6 +184,7 @@ typealias ObjectNumber = Int
  * @property objectHashCode The identity hash code of the object.
  * @property objectDisplayNumber The number used in string representation of the object.
  * @property objectWeakReference A weak reference to the associated object.
+ * @property objectKind Whether the object is an external or a new object
  * @property objectStrongReference An optional strong reference to the associated object.
  *      It exists solely to prevent garbage collection of the tracked object
  */
@@ -182,6 +192,7 @@ open class ObjectEntry(
     val objectNumber: Int,
     val objectHashCode: Int,
     val objectDisplayNumber: Int,
+    val objectKind: ObjectTracker.ObjectKind,
     val objectWeakReference: WeakReference<Any>,
     val objectStrongReference: Any? = null,
 )
@@ -433,30 +444,6 @@ open class BaseObjectTracker(
     private val perClassObjectNumeration = WeakHashMap<Class<*>, Int>()
 
     /**
-     * Represents the kind of object being tracked.
-     *
-     * Can be either:
-     *   - [NEW] - Newly created object registered in the tracker.
-     *   - [EXTERNAL] - External object registered in the tracker.
-     */
-    protected enum class ObjectKind { NEW, EXTERNAL }
-
-    protected open class BaseObjectEntry(
-        objNumber: Int,
-        objHashCode: Int,
-        objDisplayNumber: Int,
-        objWeakReference: WeakReference<Any>,
-        objStrongReference: Any?,
-        val objKind: ObjectKind
-    ) : ObjectEntry(
-        objNumber,
-        objHashCode,
-        objDisplayNumber,
-        objWeakReference,
-        objStrongReference
-    ) {}
-
-    /**
      * Method responsible for creating an instance of [ObjectEntry] for tracking an object in the system.
      * Derived classes may override this method to create their own customized instances of [ObjectEntry]
      * with additional meta-data.
@@ -466,15 +453,15 @@ open class BaseObjectTracker(
         objHashCode: Int,
         objDisplayNumber: Int,
         obj: Any,
-        kind: ObjectKind = ObjectKind.NEW,
+        kind: ObjectTracker.ObjectKind = ObjectTracker.ObjectKind.NEW,
     ): ObjectEntry {
-        return BaseObjectEntry(
+        return ObjectEntry(
             objNumber,
             objHashCode,
             objDisplayNumber,
-            objWeakReference = createWeakReference(obj),
-            objStrongReference = null,
-            objKind = kind,
+            objectKind = kind,
+            objectWeakReference = createWeakReference(obj),
+            objectStrongReference = null,
         )
     }
 
@@ -495,13 +482,13 @@ open class BaseObjectTracker(
         if (shouldOverwriteNewObjectsIdentityHashCode) {
             overwriteIdentityHashCode(obj)
         }
-        return registerObject(ObjectKind.NEW, obj)
+        return registerObject(ObjectTracker.ObjectKind.NEW, obj)
     }
 
     override fun registerExternalObject(obj: Any): ObjectEntry =
-        registerObject(ObjectKind.EXTERNAL, obj)
+        registerObject(ObjectTracker.ObjectKind.EXTERNAL, obj)
 
-    private fun registerObject(kind: ObjectKind, obj: Any): ObjectEntry {
+    private fun registerObject(kind: ObjectTracker.ObjectKind, obj: Any): ObjectEntry {
         check(!obj.isPrimitive)
         check(obj.isImmutable implies shouldTrackImmutableValues)
         cleanup()
