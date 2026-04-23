@@ -43,6 +43,39 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
 
     private var initEvent: AtomicThreadEvent? = null
 
+    private var longObjectCounter = NULL_OBJECT_NUMBER - 1
+    private var longObjectToIDMap: MutableMap<Long, ObjectNumber> = mutableMapOf()
+    private var idTolongObjectMap: MutableMap<ObjectNumber, Long> = mutableMapOf()
+
+    fun getBoxedLongId(obj: Long): ObjectNumber? {
+        check(obj <= NULL_OBJECT_NUMBER)
+        return longObjectToIDMap.get(obj)
+    }
+
+    fun registerBoxedLong(obj: Long): ObjectNumber {
+        check(obj <= NULL_OBJECT_NUMBER)
+        check(longObjectCounter != Long.MIN_VALUE)
+        val id = --longObjectCounter
+        idTolongObjectMap[id] = obj
+        longObjectToIDMap[obj] = id
+        return id
+    }
+
+    fun getOrRegisterBoxedLongId(obj: Long?): ObjectNumber {
+        check(obj != null)
+        if(obj <= NULL_OBJECT_NUMBER) {
+            return getBoxedLongId(obj) ?: registerBoxedLong(obj)
+        } else {
+            return obj
+        }
+    }
+
+    fun getBoxedLong(obj: ObjectNumber): Long? {
+        if(obj == NULL_OBJECT_NUMBER) { return null }
+        else if(obj < NULL_OBJECT_NUMBER) { return idTolongObjectMap[obj] }
+        else { return obj }
+    }
+
     fun initialize(initEvent: AtomicThreadEvent) {
         require(initEvent.label is InitializationLabel)
         this.initEvent = initEvent
@@ -80,11 +113,20 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 }
 
+// TODO: can we remove this method and just use getOrRegisterValueID, and make Type optional
 internal fun EventStructureObjectTracker.registerValueIfAbsent(obj: OpaqueValue?): ObjectNumber =
     when {
         obj == null -> NULL_OBJECT_NUMBER
         else -> registerObjectIfAbsent(obj.unwrap()).objectNumber
     }
+
+internal fun<T: Any> boxedValueIdToOpaqueValue(id: ValueID, conv: (Long) -> T): OpaqueValue? {
+    if (id == NULL_OBJECT_NUMBER) {
+        return null
+    } else {
+        return conv(id).opaque()
+    }
+}
 
 internal fun EventStructureObjectTracker.getValue(type: Types.Type, id: ValueID): OpaqueValue? = when (type) {
     Types.LONG_TYPE       -> id.opaque()
@@ -93,13 +135,13 @@ internal fun EventStructureObjectTracker.getValue(type: Types.Type, id: ValueID)
     Types.SHORT_TYPE      -> id.toShort().opaque()
     Types.CHAR_TYPE       -> id.toInt().toChar().opaque()
     Types.BOOLEAN_TYPE    -> id.toInt().toBoolean().opaque()
-    Types.LONG_TYPE_BOXED     -> id.opaque()
-    Types.INT_TYPE_BOXED      -> id.toInt().opaque()
-    Types.BYTE_TYPE_BOXED     -> id.toByte().opaque()
-    Types.SHORT_TYPE_BOXED    -> id.toShort().opaque()
-    Types.CHAR_TYPE_BOXED     -> id.toInt().toChar().opaque()
-    Types.BOOLEAN_TYPE_BOXED  -> id.toInt().toBoolean().opaque()
-    else                -> getObject(id.toInt())
+    Types.LONG_TYPE_BOXED     -> getBoxedLong(id)?.opaque()
+    Types.INT_TYPE_BOXED      -> boxedValueIdToOpaqueValue(id) { it.toInt() }
+    Types.BYTE_TYPE_BOXED     -> boxedValueIdToOpaqueValue(id) { it.toByte() }
+    Types.SHORT_TYPE_BOXED    -> boxedValueIdToOpaqueValue(id) { it.toShort() }
+    Types.CHAR_TYPE_BOXED     -> boxedValueIdToOpaqueValue(id) { it.toInt() }
+    Types.BOOLEAN_TYPE_BOXED  -> boxedValueIdToOpaqueValue(id) { it.toInt() }
+    else                -> getObject(id)
 }
 
 internal fun EventStructureObjectTracker.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
@@ -118,7 +160,7 @@ internal fun EventStructureObjectTracker.getOrRegisterValueID(type: Types.Type, 
         Types.BOOLEAN_TYPE    ->
             (value.unwrap() as? Boolean)?.toInt()?.toLong() ?:
             (value.unwrap() as Byte).toBoolean().toInt().toLong()
-        Types.LONG_TYPE_BOXED     -> (value.unwrap() as Long)
+        Types.LONG_TYPE_BOXED     -> getOrRegisterBoxedLongId(value.unwrap() as Long)
         Types.INT_TYPE_BOXED      -> (value.unwrap() as Int).toLong()
         Types.BYTE_TYPE_BOXED     -> (value.unwrap() as Byte).toLong()
         Types.SHORT_TYPE_BOXED    -> (value.unwrap() as Short).toLong()
