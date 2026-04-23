@@ -116,14 +116,14 @@ object Types {
     val SHORT_TYPE: ShortType = ShortType()
     val CHAR_TYPE: CharType = CharType()
 
-    val INT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Integer")
-    val LONG_TYPE_BOXED: ObjectType = ObjectType("java.lang.Long")
-    val DOUBLE_TYPE_BOXED: ObjectType = ObjectType("java.lang.Double")
-    val FLOAT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Float")
-    val BOOLEAN_TYPE_BOXED: ObjectType = ObjectType("java.lang.Boolean")
-    val BYTE_TYPE_BOXED: ObjectType = ObjectType("java.lang.Byte")
-    val SHORT_TYPE_BOXED: ObjectType = ObjectType("java.lang.Short")
-    val CHAR_TYPE_BOXED: ObjectType = ObjectType("java.lang.Character")
+    val INT_TYPE_BOXED: ObjectType = ObjectType("java/lang/Integer")
+    val LONG_TYPE_BOXED: ObjectType = ObjectType("java/lang/Long")
+    val DOUBLE_TYPE_BOXED: ObjectType = ObjectType("java/lang/Double")
+    val FLOAT_TYPE_BOXED: ObjectType = ObjectType("java/lang/Float")
+    val BOOLEAN_TYPE_BOXED: ObjectType = ObjectType("java/lang/Boolean")
+    val BYTE_TYPE_BOXED: ObjectType = ObjectType("java/lang/Byte")
+    val SHORT_TYPE_BOXED: ObjectType = ObjectType("java/lang/Short")
+    val CHAR_TYPE_BOXED: ObjectType = ObjectType("java/lang/Character")
 
     val OBJECT_TYPE: ObjectType = ObjectType(Object::class.java.name)
 
