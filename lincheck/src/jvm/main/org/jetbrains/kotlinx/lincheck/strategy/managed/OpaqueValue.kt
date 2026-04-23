@@ -110,8 +110,8 @@ fun Any?.toOpaqueString(): String {
 typealias ValueID = Long
 
 // TODO: override `toString` ?
-internal const val STATIC_OBJECT_NUMBER = -1
-internal const val NULL_OBJECT_NUMBER = 0
+internal const val STATIC_OBJECT_NUMBER: Long = -1
+internal const val NULL_OBJECT_NUMBER: Long = Int.MIN_VALUE.toLong() - 1
 
 internal fun Int.convert(type: Types.Type): Number = when (type) {
     Types.LONG_TYPE -> toLong()

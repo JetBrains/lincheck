@@ -58,7 +58,7 @@ interface ObjectTracker {
      * @param objNumber the object number to retrieve the corresponding entry for.
      * @return the corresponding [ObjectEntry], or null if no entry is associated with the given object number.
      */
-    fun lookupByNumber(objNumber: Int): ObjectEntry?
+    fun lookupByNumber(objNumber: Long): ObjectEntry?
 
     /**
      * Retrieves the registry entry associated with the given object id.
@@ -167,18 +167,18 @@ typealias ObjectID = Long
 /**
  * A type alias for representing a unique serial number of registered objects.
  */
-typealias ObjectNumber = Int
+typealias ObjectNumber = Long
 
 /**
  * Represents an entry for the tracked object.
  *
- * @property objectNumber A unique serial number for the object.
- * @property objectHashCode The identity hash code of the object.
+ * @property objectNumber A unique serial number for the object. Needs to be at most 33 bits
+ * @property objectHashCode The identity hash code of the object. Needs to be at most 31 bits.
  * @property objectDisplayNumber The number used in string representation of the object.
  * @property objectReference A weak reference to the associated object.
  */
 open class ObjectEntry(
-    val objectNumber: Int,
+    val objectNumber: Long,
     val objectHashCode: Int,
     val objectDisplayNumber: Int,
     val objectReference: WeakReference<Any>,
@@ -188,17 +188,17 @@ open class ObjectEntry(
  * A unique identifier of an object.
  *
  * The identifier is a 64-bit integer number, formed by combining its serial number and hash code.
- * The serial number [ObjectEntry.objectNumber] is stored in the higher 32-bits of the id, while
- * the identity hash code [ObjectEntry.objectHashCode] is stored in the lower 32-bits.
+ * The serial number [ObjectEntry.objectNumber] is stored in the higher 33-bits of the id, while
+ * the identity hash code [ObjectEntry.objectHashCode] is stored in the lower 31-bits.
  */
 val ObjectEntry.objectID: ObjectID get() =
-    (objectNumber.toLong() shl 32) + objectHashCode.toLong()
+    (objectNumber shl 31) + (objectHashCode.toLong() shr 1)
 
 /**
  * Extracts and returns the object number from the given object id.
  */
-fun ObjectID.getObjectNumber(): Int =
-    (this ushr 32).toInt()
+fun ObjectID.getObjectNumber(): Long =
+    (this ushr 31)
 
 /**
  * Extracts and returns the identity hash code of the object from the given object id.
@@ -206,7 +206,7 @@ fun ObjectID.getObjectNumber(): Int =
  * @return The integer hash code derived from the ObjectID.
  */
 fun ObjectID.getObjectHashCode(): Int =
-    this.toInt()
+    this.toInt() and ((1 shl 31) - 1)
 
 /**
  * Retrieves the unique serial object number for the given object.
@@ -215,7 +215,7 @@ fun ObjectID.getObjectHashCode(): Int =
  * @return the unique object number if the object is registered in the tracker,
  *   or -1 if no entry is associated with the given object.
  */
-fun ObjectTracker.getObjectNumber(obj: Any): Int =
+fun ObjectTracker.getObjectNumber(obj: Any): Long =
     get(obj)?.objectNumber ?: -1
 
 /**
@@ -418,11 +418,11 @@ open class BaseObjectTracker(
     open val shouldTrackImmutableValues: Boolean = false
 
     // counter of all registered objects
-    private var objectCounter = 0
+    private var objectCounter: Long = 0
 
     // index of all registered objects
     protected val objectIndex = HashMap<IdentityHashCode, MutableList<ObjectEntry>>()
-    protected val objectNumberIndex = HashMap<Int, ObjectEntry>();
+    protected val objectNumberIndex = HashMap<Long, ObjectEntry>();
 
     // reference queue keeping track of garbage-collected objects
     private val referenceQueue = ReferenceQueue<Any>()
@@ -445,7 +445,7 @@ open class BaseObjectTracker(
      * with additional meta-data.
      */
     protected open fun createObjectEntry(
-        objNumber: Int,
+        objNumber: Long,
         objHashCode: Int,
         objDisplayNumber: Int,
         objReference: WeakReference<Any>,
@@ -512,7 +512,7 @@ open class BaseObjectTracker(
         return entries
     }
 
-    override fun lookupByNumber(objNumber: Int): ObjectEntry? {
+    override fun lookupByNumber(objNumber: Long): ObjectEntry? {
         return objectNumberIndex[objNumber]
     }
 

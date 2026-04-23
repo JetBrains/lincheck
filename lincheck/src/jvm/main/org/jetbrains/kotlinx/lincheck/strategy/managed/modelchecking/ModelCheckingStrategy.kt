@@ -496,7 +496,7 @@ internal class LocalObjectManager : BaseObjectTracker() {
      * tracks the thread-locality of objects via the designated flag.
      */
     private class LocalObjectManagerEntry(
-        objNumber: Int,
+        objNumber: Long,
         objHashCode: Int,
         objDisplayNumber: Int,
         objReference: WeakReference<Any>,
@@ -504,7 +504,7 @@ internal class LocalObjectManager : BaseObjectTracker() {
     ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
 
     override fun createObjectEntry(
-        objNumber: Int,
+        objNumber: Long,
         objHashCode: Int,
         objDisplayNumber: Int,
         objReference: WeakReference<Any>,

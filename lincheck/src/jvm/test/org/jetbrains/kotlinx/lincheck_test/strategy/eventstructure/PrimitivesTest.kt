@@ -25,6 +25,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.LockSupport.*
 import kotlinx.coroutines.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.NULL_OBJECT_NUMBER
 import org.jetbrains.kotlinx.lincheck.util.CancelledResult
 import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
 import org.jetbrains.lincheck.datastructures.Operation
@@ -1131,6 +1132,74 @@ class PrimitivesTest {
             val b1 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val b2 = getValue<Boolean>(results.parallelResults[2][0]!!)
             Triple(r, b1, b2)
+        }
+    }
+
+    @Test
+    fun testBoxedIntegersNullValues() {
+        class TestClass {
+            var x: Int? = null
+
+            fun one(): Int? {
+                return x
+            }
+
+            fun two(): Int? {
+                x = 1
+                return x
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::one)
+                }
+                thread {
+                    actor(TestClass::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Pair<Int?, Int?>> = setOf((null to 1), (1 to 1))
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            val b1 = getValue<Int?>(results.parallelResults[0][0]!!)
+            val b2 = getValue<Int?>(results.parallelResults[1][0]!!)
+            return@litmusTest b1 to b2
+        }
+    }
+
+    @Test
+    fun testBoxedLongNullValues() {
+        class TestClass {
+            var x: Long? = null
+
+            fun one(): Long? {
+                return x
+            }
+
+            fun two(): Long? {
+                x = NULL_OBJECT_NUMBER
+                return x
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::one)
+                }
+                thread {
+                    actor(TestClass::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Pair<Long?, Long?>> = setOf((null to NULL_OBJECT_NUMBER), (NULL_OBJECT_NUMBER to NULL_OBJECT_NUMBER))
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            val b1 = getValue<Long?>(results.parallelResults[0][0]!!)
+            val b2 = getValue<Long?>(results.parallelResults[1][0]!!)
+            return@litmusTest b1 to b2
         }
     }
 

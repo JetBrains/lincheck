@@ -33,7 +33,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     override val shouldTrackImmutableValues: Boolean = true
 
     private class EventStructureObjectEntry(
-        objNumber: Int,
+        objNumber: Long,
         objHashCode: Int,
         objDisplayNumber: Int,
         objReference: WeakReference<Any>,
@@ -49,7 +49,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 
     override fun createObjectEntry(
-        objNumber: Int,
+        objNumber: Long,
         objHashCode: Int,
         objDisplayNumber: Int,
         objReference: WeakReference<Any>,
@@ -103,7 +103,7 @@ internal fun EventStructureObjectTracker.getValue(type: Types.Type, id: ValueID)
 }
 
 internal fun EventStructureObjectTracker.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
-    if (value == null) return NULL_OBJECT_NUMBER.toLong()
+    if (value == null) return NULL_OBJECT_NUMBER
     return when (type) {
         Types.LONG_TYPE       -> (value.unwrap() as Long)
         Types.INT_TYPE        -> (value.unwrap() as Int).toLong()

@@ -334,7 +334,7 @@ internal class EventStructure(
             return null
         val allocation = eventStructureObjectTracker.getAllocation(label.objectID)
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
-            eventStructureObjectTracker.getAllocation(it.toInt())
+            eventStructureObjectTracker.getAllocation(it)
         }
         val event = AtomicThreadEventImpl(
             label = label,
