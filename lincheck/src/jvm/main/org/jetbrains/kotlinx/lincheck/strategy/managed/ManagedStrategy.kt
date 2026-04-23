@@ -1374,6 +1374,7 @@ internal abstract class ManagedStrategy(
         if (value !== null && objectTracker.shouldTrackObject(value)) {
             objectTracker.registerObjectIfAbsent(value)
         }
+
         if (collectTrace) {
             val valueRepresentation = objectTracker.getObjectRepresentation(value)
             val typeRepresentation = objectFqTypeName(value)
@@ -1402,7 +1403,7 @@ internal abstract class ManagedStrategy(
         index: Int,
         value: Any?
     ) = threadDescriptor.runInsideIgnoredSection {
-        if (value != null && objectTracker.shouldTrackObject(value)) {
+        if (value !== null && objectTracker.shouldTrackObject(value)) {
             objectTracker.registerObjectIfAbsent(value)
         }
         if (collectTrace) {

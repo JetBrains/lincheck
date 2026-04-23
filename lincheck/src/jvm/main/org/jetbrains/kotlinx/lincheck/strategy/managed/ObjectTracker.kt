@@ -45,6 +45,15 @@ import kotlin.reflect.KClass
 interface ObjectTracker {
 
     /**
+     * Represents the kind of object being tracked.
+     *
+     * Can be either:
+     *   - [NEW] - Newly created object registered in the tracker.
+     *   - [EXTERNAL] - External object registered in the tracker.
+     */
+    enum class ObjectKind { NEW, EXTERNAL }
+
+    /**
      * Registers a thread with the given id in the object tracker.
      *
      * @param threadId the id of the thread to register.
@@ -175,13 +184,18 @@ typealias ObjectNumber = Int
  * @property objectNumber A unique serial number for the object.
  * @property objectHashCode The identity hash code of the object.
  * @property objectDisplayNumber The number used in string representation of the object.
- * @property objectReference A weak reference to the associated object.
+ * @property objectWeakReference A weak reference to the associated object.
+ * @property objectKind Whether the object is an external or a new object
+ * @property objectStrongReference An optional strong reference to the associated object.
+ *      It exists solely to prevent garbage collection of the tracked object
  */
 open class ObjectEntry(
     val objectNumber: Int,
     val objectHashCode: Int,
     val objectDisplayNumber: Int,
-    val objectReference: WeakReference<Any>,
+    val objectKind: ObjectTracker.ObjectKind,
+    val objectWeakReference: WeakReference<Any>,
+    val objectStrongReference: Any? = null,
 )
 
 /**
@@ -240,7 +254,7 @@ fun ObjectTracker.getObjectDisplayNumber(obj: Any): Int =
 internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
     val objectNumberMap = hashMapOf<Any, Int>()
     for (objectEntry in enumerateObjectEntries()) {
-        val obj = objectEntry.objectReference.get() ?: continue
+        val obj = objectEntry.objectWeakReference.get() ?: continue
         objectNumberMap[obj] = objectEntry.objectDisplayNumber
     }
     return objectNumberMap
@@ -431,15 +445,6 @@ open class BaseObjectTracker(
     private val perClassObjectNumeration = WeakHashMap<Class<*>, Int>()
 
     /**
-     * Represents the kind of object being tracked.
-     *
-     * Can be either:
-     *   - [NEW] - Newly created object registered in the tracker.
-     *   - [EXTERNAL] - External object registered in the tracker.
-     */
-    protected enum class ObjectKind { NEW, EXTERNAL }
-
-    /**
      * Method responsible for creating an instance of [ObjectEntry] for tracking an object in the system.
      * Derived classes may override this method to create their own customized instances of [ObjectEntry]
      * with additional meta-data.
@@ -448,11 +453,20 @@ open class BaseObjectTracker(
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
-        kind: ObjectKind = ObjectKind.NEW,
+        obj: Any,
+        kind: ObjectTracker.ObjectKind = ObjectTracker.ObjectKind.NEW,
     ): ObjectEntry {
-        return ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
+        return ObjectEntry(
+            objNumber,
+            objHashCode,
+            objDisplayNumber,
+            objectKind = kind,
+            objectWeakReference = createWeakReference(obj),
+            objectStrongReference = null,
+        )
     }
+
+    protected fun createWeakReference(obj: Any): WeakReference<Any> = WeakIdentityReference(obj, referenceQueue)
 
     protected fun computeObjectDisplayNumber(obj: Any): Int {
         val classRepr = obj.getSpecialClassNameRepresentation()
@@ -469,13 +483,13 @@ open class BaseObjectTracker(
         if (shouldOverwriteNewObjectsIdentityHashCode) {
             overwriteIdentityHashCode(obj)
         }
-        return registerObject(ObjectKind.NEW, obj)
+        return registerObject(ObjectTracker.ObjectKind.NEW, obj)
     }
 
     override fun registerExternalObject(obj: Any): ObjectEntry =
-        registerObject(ObjectKind.EXTERNAL, obj)
+        registerObject(ObjectTracker.ObjectKind.EXTERNAL, obj)
 
-    private fun registerObject(kind: ObjectKind, obj: Any): ObjectEntry {
+    private fun registerObject(kind: ObjectTracker.ObjectKind, obj: Any): ObjectEntry {
         check(!obj.isPrimitive)
         check(obj.isImmutable implies shouldTrackImmutableValues)
         cleanup()
@@ -483,7 +497,7 @@ open class BaseObjectTracker(
             objNumber = ++objectCounter,
             objHashCode = System.identityHashCode(obj),
             objDisplayNumber = computeObjectDisplayNumber(obj),
-            objReference = WeakIdentityReference(obj, referenceQueue),
+            obj = obj,
             kind = kind,
         )
         objectIndex.updateInplace(entry.objectHashCode, default = mutableListOf()) {
@@ -526,7 +540,7 @@ open class BaseObjectTracker(
     override operator fun get(obj: Any?): ObjectEntry? {
         val objHashCode = System.identityHashCode(obj)
         val entries = getEntries(objHashCode) ?: return null
-        return entries.find { it.objectReference.get() === obj }
+        return entries.find { it.objectWeakReference.get() === obj }
     }
 
     override fun enumerateObjectEntries(): Sequence<ObjectEntry> =
@@ -569,12 +583,19 @@ open class BaseObjectTracker(
      */
     private fun MutableList<ObjectEntry>.cleanup() {
         retainAll {
-            val isAlive = (it.objectReference.get() != null)
+            val isAlive = (it.objectWeakReference.get() != null)
             if (!isAlive) {
                 objectNumberIndex.remove(it.objectNumber)
             }
             return@retainAll isAlive
         }
+    }
+
+    // For debugging
+    override fun toString(): String {
+        return "${objectIndex.entries.map { idToEntries -> 
+            "#${idToEntries.key} -> [${idToEntries.value.map { objectEntry -> objectEntry.objectWeakReference.get() }.joinToString()}]" 
+        }.joinToString("\n")}"
     }
 
     private fun overwriteIdentityHashCode(obj: Any) {

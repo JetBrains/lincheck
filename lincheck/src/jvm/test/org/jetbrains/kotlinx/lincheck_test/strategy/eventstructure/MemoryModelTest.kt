@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.*
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.lincheck.datastructures.scenario
-import org.junit.Ignore
 
 import org.junit.Test
 
@@ -102,7 +101,6 @@ class MemoryModelTest {
             (r1 to r2)
         }
     }
-
 }
 
 internal class SharedMemory(size: Int = 16) {

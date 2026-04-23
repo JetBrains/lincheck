@@ -32,13 +32,31 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
 
     override val shouldTrackImmutableValues: Boolean = true
 
+    // We have two types of object entries.
+    // * Internal entries which correspond to objects that are allocated during a test invocation,
+    //   as well as the test  instance itself.
+    //   These are purged from the ObjectTracker after each invocation.
+    //   Also when replaying an invocation, the ObjectID of an internal object is set to be equal to the ObjectID
+    //   of the previous allocation event.
+    // * External which belong to objects that were already allocated before we started the tests
+    //   Most often these are the initial threads, and the initial values of the fields of the test instance class
+    //   Since these values are persistent across invocations, we keep them in the object tracker after invocations
+    //   We also hold a reference to them to prevent the GC from removing them, while they are still in use
     private class EventStructureObjectEntry(
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
-        val allocation: AtomicThreadEvent
-    ) : ObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference)
+        objKind: ObjectTracker.ObjectKind,
+        objWeakReference: WeakReference<Any>,
+        objStrongReference: Any?,
+        val allocation: AtomicThreadEvent,
+    ) : ObjectEntry(objNumber,
+        objHashCode,
+        objDisplayNumber,
+        objKind,
+        objWeakReference,
+        objStrongReference,
+    ) {}
 
 
     private var initEvent: AtomicThreadEvent? = null
@@ -48,21 +66,50 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         this.initEvent = initEvent
     }
 
+    //NOTE: as in the oringinal ObjectRegistry, if an external object is already registered
+    // we do not register it again.
+    // This is because the external object may already exist, which messes up the objectIDs
+    override fun registerExternalObject(obj: Any): ObjectEntry =
+       get(obj) ?: super.registerExternalObject(obj)
+
+
     override fun createObjectEntry(
         objNumber: Int,
         objHashCode: Int,
         objDisplayNumber: Int,
-        objReference: WeakReference<Any>,
-        kind: ObjectKind
+        obj: Any,
+        kind: ObjectTracker.ObjectKind
     ): ObjectEntry {
-        val obj = objReference.get()!!
-        if (kind == ObjectKind.EXTERNAL) {
+        // We create a base entry just for the weak reference inside it
+        val objWeakReference = createWeakReference(obj)
+        if (kind == ObjectTracker.ObjectKind.EXTERNAL) {
             (initEvent!!.label as InitializationLabel).trackExternalObject(obj.javaClass.simpleName, objNumber)
-            return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, initEvent!!)
+            return EventStructureObjectEntry(
+                objNumber,
+                objHashCode,
+                objDisplayNumber,
+                objKind = kind,
+                objWeakReference = objWeakReference,
+                objStrongReference = obj,
+                allocation = initEvent!!
+            )
         } else {
-            val iThread = (Thread.currentThread() as? TestThread)?.threadId
+            val iThread = (Thread.currentThread() as? TestThread)?.threadId ?: eventStructure.mainThreadId
+            // We create a new object allocation event and we "suggest" an objNumber
+            // If we are in the replay phase however, the object allocation may have a different id
+            // In that case we just take the id from the object allocation
             val allocationEvent = eventStructure.addObjectAllocationEvent(iThread!!,obj.opaque(), objNumber)
-            return EventStructureObjectEntry(objNumber, objHashCode, objDisplayNumber, objReference, allocationEvent)
+            val actualObjectNumber = (allocationEvent.label as ObjectAllocationLabel).objectID
+            check(actualObjectNumber <= objNumber)
+            return EventStructureObjectEntry(
+                actualObjectNumber,
+                objHashCode,
+                objDisplayNumber,
+                objKind = kind,
+                objWeakReference = objWeakReference,
+                objStrongReference = null,
+                allocation = allocationEvent,
+            )
         }
     }
 
@@ -76,7 +123,11 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
     }
 
     fun getObject(id: ObjectNumber): OpaqueValue? {
-        return lookupByNumber(id)?.objectReference?.get()?.opaque()
+        return lookupByNumber(id)?.objectWeakReference?.get()?.opaque()
+    }
+
+    override fun reset() {
+        retain { (it as? EventStructureObjectEntry)?.objectKind == ObjectTracker.ObjectKind.EXTERNAL }
     }
 }
 

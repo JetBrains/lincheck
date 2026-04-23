@@ -351,8 +351,10 @@ internal class EventStructureStrategy(
     private fun registerTestInstance() {
         check(!isTestInstanceRegistered)
         val testInstance = (runner as ExecutionScenarioRunner).testInstance
-        //NOTE: The threadID may be messed up. See how this can be fixed.
-        (objectTracker as EventStructureObjectTracker).registerExternalObject(testInstance)
+        //NOTE: Since the IdentityHashCode of the test instance changes between invocations
+        // we cannot keep it as an external object. Instead, we register it as an "internal"
+        // object on each invocation
+        (objectTracker as EventStructureObjectTracker).registerNewObject(testInstance)
         isTestInstanceRegistered = true
     }
 
@@ -396,6 +398,38 @@ internal class EventStructureStrategy(
             eventStructure.addActorEndEvent(iThread, actor)
         }
         super.onActorFinish(iThread)
+    }
+
+    override fun afterReadField(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        obj: Any?,
+        fieldId: Int,
+        value: Any?
+    ) {
+        threadDescriptor.runInsideIgnoredSection {
+            // In the case of eventstrcutre this object should already be registered
+            if (value !== null && objectTracker.shouldTrackObject(value)) {
+                check(objectTracker.get(value) != null)
+            }
+        }
+        super.afterReadField(threadDescriptor, codeLocation, obj, fieldId, value)
+    }
+
+    override fun afterReadArrayElement(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        array: Any?,
+        index: Int,
+        value: Any?
+    ) {
+        threadDescriptor.runInsideIgnoredSection {
+            // In the case of eventstrcutre this object should already be registered
+            if (value !== null && objectTracker.shouldTrackObject(value)) {
+                check(objectTracker.get(value) != null)
+            }
+        }
+        super.afterReadArrayElement(threadDescriptor, codeLocation, array, index, value)
     }
 
     private fun onInconsistency(inconsistency: Inconsistency) {
