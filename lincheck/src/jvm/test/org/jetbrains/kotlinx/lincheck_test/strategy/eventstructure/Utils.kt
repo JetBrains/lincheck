@@ -36,20 +36,23 @@ internal const val UNKNOWN = -2
 
 
 //TODO: Maybe we can make a class out of this, instead of this function nonsense
-typealias OutcomeVerifier<Outcome> = (Set<Outcome>, Int) -> Unit
-internal fun <Outcome> assertNever(forbiddenOutcomes: Set<Outcome>): OutcomeVerifier<Outcome> = { actualOutcomes, invocations ->
-    val overlap = forbiddenOutcomes.intersect(actualOutcomes)
-    Assert.assertEquals("Forbidden outcomes detected: $overlap", overlap.size, 0)
+fun interface OutcomeVerifier<Outcome> {
+    fun verify(actualOutcomes: List<Outcome>)
 }
 
-internal fun <Outcome> assertSometimes(expectedOutcomes: Set<Outcome>): OutcomeVerifier<Outcome> = { actualOutcomes, invocations ->
-    val missing = expectedOutcomes - actualOutcomes
+internal fun <Outcome> assertNever(forbiddenOutcomes: Set<Outcome>): OutcomeVerifier<Outcome> = OutcomeVerifier { actualOutcomes ->
+    val overlap = forbiddenOutcomes.intersect(actualOutcomes.toSet())
+    Assert.assertTrue("Forbidden outcomes detected: $overlap", overlap.isEmpty())
+}
+
+internal fun <Outcome> assertSometimes(expectedOutcomes: Set<Outcome>): OutcomeVerifier<Outcome> = OutcomeVerifier { actualOutcomes ->
+    val missing = expectedOutcomes - actualOutcomes.toSet()
     Assert.assertEquals("Some outcomes not detected:\n$missing\nGot:$actualOutcomes", missing.size, 0)
 }
 
-internal fun <Outcome> assertAlways(expectedOutcomes: Set<Outcome>, executionCount: Int = UNIQUE): OutcomeVerifier<Outcome> {
+internal fun <Outcome> assertSame(expectedOutcomes: Set<Outcome>, executionCount: Int = UNIQUE): OutcomeVerifier<Outcome> {
     require(executionCount >= 0 || executionCount == UNIQUE || executionCount == UNKNOWN)
-    return { actualOutcomes, invocations ->
+    return OutcomeVerifier { actualOutcomes ->
         val missing = expectedOutcomes - actualOutcomes
         val unexpected = actualOutcomes - expectedOutcomes
         val msg = "Some outcomes not detected.\nMissing:$missing\nUnexpected:$unexpected:\n"
@@ -57,10 +60,10 @@ internal fun <Outcome> assertAlways(expectedOutcomes: Set<Outcome>, executionCou
 
         val expectedCount = when (executionCount) {
             UNIQUE -> expectedOutcomes.size
-            UNKNOWN -> invocations
+            UNKNOWN -> actualOutcomes.size
             else -> executionCount
         }
-        Assert.assertEquals(expectedCount, invocations)
+        Assert.assertEquals(expectedCount, actualOutcomes.size)
     }
 }
 
@@ -70,7 +73,7 @@ internal fun<Outcome> litmusTest(
     outcomes: Set<Outcome>,
     getOutcome: (ExecutionResult) -> Outcome,
 ) {
-    litmusTest(testClass, testScenario, assertAlways(outcomes), getOutcome)
+    litmusTest(testClass, testScenario, assertSame(outcomes), getOutcome)
 }
 
 
@@ -80,7 +83,7 @@ internal fun<Outcome> litmusTest(
     outcomeVerifier: OutcomeVerifier<Outcome>,
     getOutcome: (ExecutionResult) -> Outcome,
 ) {
-    val outcomes: MutableSet<Outcome> = mutableSetOf()
+    val outcomes: MutableList<Outcome> = mutableListOf()
     val verifier = createVerifier(testScenario) { results ->
         outcomes.add(getOutcome(results))
         true
@@ -89,7 +92,7 @@ internal fun<Outcome> litmusTest(
         val strategy = createStrategy(testClass, testScenario)
         val failure = strategy.runIteration(INVOCATIONS, verifier)
         assert(failure == null) { failure.toString() }
-        outcomeVerifier(outcomes, strategy.stats.consistentInvocations)
+        outcomeVerifier.verify(outcomes)
     }
 }
 
