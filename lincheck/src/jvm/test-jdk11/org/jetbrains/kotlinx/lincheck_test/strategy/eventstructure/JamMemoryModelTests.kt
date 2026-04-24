@@ -315,10 +315,10 @@ class JamMemoryModelTests {
         }
     }
 
+    // TODO: fix model checker
     @Ignore
     @Test
     fun testC() {
-        // TODO: again figure out how we can read from global variables for our results.
         class TestC {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -346,25 +346,27 @@ class JamMemoryModelTests {
                 }
                 return r1
             }
+            fun post(): Pair<Int, Int> {
+                return p.get() to q.get()
+            }
         }
         val testScenario = scenario {
             parallel {
                 thread { actor(TestC::thread0) }
                 thread { actor(TestC::thread1) }
             }
+            post { actor(TestC::post) }
         }
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
         litmusTest(TestC::class.java, testScenario, assertNever(forbiddenOutcomes)) { results ->
-            val r0 = getValue<Int>(results.parallelResults[0][0]!!)
-            val r1 = getValue<Int>(results.parallelResults[1][0]!!)
-            r0 to r1
+            getValue<Pair<Int, Int>>(results.postResults[0]!!)
         }
     }
 
+    // TODO: fix model checker
     @Ignore
     @Test
     fun testCReorder() {
-        // TODO: again figure out how we can read from global variables for our results.
         class TestCReorder {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -392,18 +394,20 @@ class JamMemoryModelTests {
                 }
                 return r1
             }
+            fun post(): Pair<Int, Int> {
+                return p.get() to q.get()
+            }
         }
         val testScenario = scenario {
             parallel {
                 thread { actor(TestCReorder::thread0) }
                 thread { actor(TestCReorder::thread1) }
             }
+            post { actor(TestCReorder::post) }
         }
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
         litmusTest(TestCReorder::class.java, testScenario, assertNever(forbiddenOutcomes)) { results ->
-            val r0 = getValue<Int>(results.parallelResults[0][0]!!)
-            val r1 = getValue<Int>(results.parallelResults[1][0]!!)
-            r0 to r1
+            getValue<Pair<Int, Int>>(results.postResults[0]!!)
         }
     }
 
@@ -500,10 +504,10 @@ class JamMemoryModelTests {
         }
     }
 
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testFig1() {
-        // TODO: again figure out how we can read from global variables for our results.
         class TestFig1 {
             val a = AtomicInteger(0)
             val x = AtomicInteger(0)
@@ -520,18 +524,20 @@ class JamMemoryModelTests {
                 x.setOpaque(1)
                 return r2
             }
+            fun post(): Triple<Int, Int, Int> {
+                return Triple(a.get(), x.get(), y.get())
+            }
         }
         val testScenario = scenario {
             parallel {
                 thread { actor(TestFig1::thread0) }
                 thread { actor(TestFig1::thread1) }
             }
+            post { actor(TestFig1::post) }
         }
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1,1,1))
         litmusTest(TestFig1::class.java, testScenario, assertSame(expectedOutcomes)) { results ->
-            val t0 = getValue<Pair<Int, Int>>(results.parallelResults[0][0]!!)
-            val r2 = getValue<Int>(results.parallelResults[1][0]!!)
-            Triple(t0.first, t0.second, r2)
+            getValue<Triple<Int, Int, Int>>(results.postResults[0]!!)
         }
     }
 
@@ -681,6 +687,8 @@ class JamMemoryModelTests {
         }
     }
 
+    // TODO: one day we will handle fences
+    @Ignore
     @Test
     fun testRWCSyncs() {
         class TestRWCSyncs {
@@ -774,7 +782,7 @@ class JamMemoryModelTests {
     }
 
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testX003() {
@@ -791,20 +799,26 @@ class JamMemoryModelTests {
                 val ebx = x.getOpaque()
                 return eax to ebx
             }
+            fun post() : Int {
+                return y.get()
+            }
         }
         val testScenario = scenario {
             parallel {
                 thread { actor(TestX003::thread0) }
                 thread { actor(TestX003::thread1) }
             }
+            post { actor(TestX003::post) }
         }
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(2,2,0))
         litmusTest(TestX003::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
-            getValue<Pair<Int, Int>>(results.parallelResults[1][0]!!)
+            val regs = getValue<Pair<Int, Int>>(results.parallelResults[1][0]!!)
+            val y = getValue<Int>(results.postResults[0]!!)
+            Triple(y, regs.first, regs.second)
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testX006() {
@@ -817,7 +831,11 @@ class JamMemoryModelTests {
             }
             fun thread1(): Int {
                 y.setOpaque(2)
-                return x.getOpaque()
+                val r0 = x.getOpaque()
+                return r0
+            }
+            fun post() : Int {
+                return y.get()
             }
         }
         val testScenario = scenario {
@@ -825,14 +843,17 @@ class JamMemoryModelTests {
                 thread { actor(TestX006::thread0) }
                 thread { actor(TestX006::thread1) }
             }
+            post { actor(TestX006::post) }
         }
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((2 to 0))
         litmusTest(TestX006::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
-            getValue<Int>(results.parallelResults[1][0]!!)
+            val r0 = getValue<Int>(results.parallelResults[1][0]!!)
+            val y = getValue<Int>(results.postResults[0]!!)
+            y to r0
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testX86_2plus2W() {
@@ -847,19 +868,25 @@ class JamMemoryModelTests {
                 y.setOpaque(2)
                 x.setOpaque(1)
             }
+            fun post() : Pair<Int, Int> {
+                return x.get() to y.get()
+            }
         }
         val testScenario = scenario {
             parallel {
                 thread { actor(TestX86_2plus2W::thread0) }
                 thread { actor(TestX86_2plus2W::thread1) }
             }
+            post { actor(TestX86_2plus2W::post) }
         }
         val expectedOutcomes: Set<Pair<Int,Int>> = setOf((2 to 2))
-        litmusTest(TestX86_2plus2W::class.java, testScenario, assertSometimes(expectedOutcomes)) { _ -> Unit }
+        litmusTest(TestX86_2plus2W::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
+            getValue<Pair<Int,Int>>(results.postResults[0]!!)
+        }
     }
 
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testA1() {
@@ -878,22 +905,24 @@ class JamMemoryModelTests {
                 }
                 return r1
             }
+            fun post() : Pair<Int, Int> {
+                return x.get() to y.get()
+            }
         }
         val testScenario = scenario {
             parallel {
                 thread { actor(TestA1::thread0) }
                 thread { actor(TestA1::thread1) }
             }
+            post { actor(TestA1::post) }
         }
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
         litmusTest(TestA1::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
-            val r0 = getValue<Int>(results.parallelResults[0][0]!!)
-            val r1 = getValue<Int>(results.parallelResults[1][0]!!)
-            r0 to r1
+            getValue<Pair<Int, Int>>(results.postResults[0]!!)
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testA1Reorder() {
@@ -912,18 +941,20 @@ class JamMemoryModelTests {
                 }
                 return r1
             }
+            fun post() : Pair<Int, Int> {
+                return x.get() to y.get()
+            }
         }
         val testScenario = scenario {
             parallel {
                 thread { actor(TestA1Reorder::thread0) }
                 thread { actor(TestA1Reorder::thread1) }
             }
+            post { actor(TestA1Reorder::post) }
         }
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
         litmusTest(TestA1Reorder::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
-            val r0 = getValue<Int>(results.parallelResults[0][0]!!)
-            val r1 = getValue<Int>(results.parallelResults[1][0]!!)
-            r0 to r1
+            getValue<Pair<Int, Int>>(results.postResults[0]!!)
         }
     }
 
@@ -1065,7 +1096,7 @@ class JamMemoryModelTests {
     }
 
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testLinearisation() {
@@ -1096,6 +1127,9 @@ class JamMemoryModelTests {
                 }
                 return r1
             }
+            fun post(): List<Int> {
+                return listOf(w.get() ,x.get(), y.get(), z.get())
+            }
         }
         val testScenario = scenario {
             parallel {
@@ -1103,18 +1137,15 @@ class JamMemoryModelTests {
                 thread { actor(TestLinearisation::thread1) }
                 thread { actor(TestLinearisation::thread2) }
             }
+            post { actor(TestLinearisation::post) }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2,1,1,1,1))
         litmusTest(TestLinearisation::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
-            Triple(
-                getValue<Int>(results.parallelResults[0][0]!!),
-                getValue<Int>(results.parallelResults[1][0]!!),
-                getValue<Int>(results.parallelResults[2][0]!!)
-            )
+            listOf(getValue<Int>(results.parallelResults[0][0]!!)) + getValue<List<Int>>(results.postResults[0]!!)
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testLinearisation2() {
@@ -1125,11 +1156,11 @@ class JamMemoryModelTests {
             val z = AtomicInteger(0)
             fun thread0(): Int {
                 var t = x.getAcquire()
-                t = t + y.getPlain()
-                if (t == 2) {
+                val r0 = t + y.getPlain()
+                if (r0 == 2) {
                     w.setRelease(1)
                 }
-                return t
+                return r0
             }
             fun thread1(): Int {
                 val r0 = w.getOpaque()
@@ -1146,6 +1177,9 @@ class JamMemoryModelTests {
                 }
                 return r1
             }
+            fun post(): List<Int> {
+                return listOf(w.get() ,x.get(), y.get(), z.get())
+            }
         }
         val testScenario = scenario {
             parallel {
@@ -1153,14 +1187,11 @@ class JamMemoryModelTests {
                 thread { actor(TestLinearisation2::thread1) }
                 thread { actor(TestLinearisation2::thread2) }
             }
+            post { actor(TestLinearisation2::post) }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2,1,1,1,1))
         litmusTest(TestLinearisation2::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
-            Triple(
-                getValue<Int>(results.parallelResults[0][0]!!),
-                getValue<Int>(results.parallelResults[1][0]!!),
-                getValue<Int>(results.parallelResults[2][0]!!)
-            )
+            listOf(getValue<Int>(results.parallelResults[0][0]!!)) + getValue<List<Int>>(results.postResults[0]!!)
         }
     }
 
@@ -1225,7 +1256,7 @@ class JamMemoryModelTests {
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testRoachmotel() {
@@ -1258,6 +1289,9 @@ class JamMemoryModelTests {
                 }
                 return r3
             }
+            fun post(): List<Int> {
+                return listOf(a.get(), z.get(), x.get(), y.get())
+            }
         }
         val testScenario = scenario {
             parallel {
@@ -1265,16 +1299,15 @@ class JamMemoryModelTests {
                 thread { actor(TestRoachmotel::thread1) }
                 thread { actor(TestRoachmotel::thread2) }
             }
+            post { actor(TestRoachmotel::post) }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,1,1,1))
         litmusTest(TestRoachmotel::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
-            val t1 = getValue<Triple<Int, Int, Int>>(results.parallelResults[1][0]!!)
-            val r3 = getValue<Int>(results.parallelResults[2][0]!!)
-            listOf(t1.first, t1.second, t1.third, r3)
+            getValue<List<Int>>(results.postResults[0]!!)
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testRoachmotel2() {
@@ -1307,6 +1340,9 @@ class JamMemoryModelTests {
                 }
                 return r3
             }
+            fun post(): List<Int> {
+                return listOf(a.get(), z.get(), x.get(), y.get())
+            }
         }
         val testScenario = scenario {
             parallel {
@@ -1314,16 +1350,15 @@ class JamMemoryModelTests {
                 thread { actor(TestRoachmotel2::thread1) }
                 thread { actor(TestRoachmotel2::thread2) }
             }
+            post { actor(TestRoachmotel2::post) }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,1,1,1))
         litmusTest(TestRoachmotel2::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
-            val t1 = getValue<Triple<Int, Int, Int>>(results.parallelResults[1][0]!!)
-            val r3 = getValue<Int>(results.parallelResults[2][0]!!)
-            listOf(t1.first, t1.second, t1.third, r3)
+            getValue<List<Int>>(results.postResults[0]!!)
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testRseqWeak() {
@@ -1346,6 +1381,9 @@ class JamMemoryModelTests {
                 }
                 return r0 to r1
             }
+            fun post(): Pair<Int, Int> {
+                return x.get() to y.get()
+            }
         }
         val testScenario = scenario {
             parallel {
@@ -1353,14 +1391,15 @@ class JamMemoryModelTests {
                 thread { actor(TestRseqWeak::thread1) }
                 thread { actor(TestRseqWeak::thread2) }
             }
+            post { actor(TestRseqWeak::post) }
         }
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((3 to 1))
         litmusTest(TestRseqWeak::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
-            getValue<Pair<Int, Int>>(results.parallelResults[2][0]!!)
+            getValue<Pair<Int, Int>>(results.postResults[0]!!)
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testRseqWeak2() {
@@ -1380,16 +1419,20 @@ class JamMemoryModelTests {
                 }
                 return r0 to r1
             }
+            fun post(): Pair<Int, Int> {
+                return x.get() to y.get()
+            }
         }
         val testScenario = scenario {
             parallel {
                 thread { actor(TestRseqWeak2::thread0) }
                 thread { actor(TestRseqWeak2::thread1) }
             }
+            post { actor(TestRseqWeak2::post) }
         }
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((3 to 1))
         litmusTest(TestRseqWeak2::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
-            getValue<Pair<Int, Int>>(results.parallelResults[1][0]!!)
+            getValue<Pair<Int, Int>>(results.postResults[1]!!)
         }
     }
 
@@ -1431,7 +1474,7 @@ class JamMemoryModelTests {
         }
     }
 
-    //TODO: again figure out the global variable thing
+    // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
     @Test
     fun testWWRRWWRRWsilpPoaaWsilpPoaa() {
@@ -1456,6 +1499,9 @@ class JamMemoryModelTests {
                 val x2 = x.getAcquire()
                 return x0 to x2
             }
+            fun post(): Pair<Int, Int> {
+                return x.get() to y.get()
+            }
         }
         val testScenario = scenario {
             parallel {
@@ -1464,6 +1510,7 @@ class JamMemoryModelTests {
                 thread { actor(TestWWRR::thread2) }
                 thread { actor(TestWWRR::thread3) }
             }
+            post { actor(TestWWRR::post) }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(
             listOf(2,2,2,0,2,0)
@@ -1471,7 +1518,8 @@ class JamMemoryModelTests {
         litmusTest(TestWWRR::class.java, testScenario, assertSame(expectedOutcomes)) { results ->
             val t1 = getValue<Pair<Int, Int>>(results.parallelResults[1][0]!!)
             val t3 = getValue<Pair<Int, Int>>(results.parallelResults[3][0]!!)
-            listOf(t1.first, t1.second, t3.first, t3.second)
+            val post = getValue<Pair<Int, Int>>(results.postResults[0]!!)
+            listOf(post.first, post.second, t1.first, t1.second, t3.first, t3.second)
         }
     }
 
