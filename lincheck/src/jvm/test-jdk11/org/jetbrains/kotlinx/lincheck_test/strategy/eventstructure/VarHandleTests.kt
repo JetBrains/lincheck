@@ -110,7 +110,7 @@ class VarHandleTests {
             }
         }
         val outcomes: Set<String?> = setOf(null, "a", "b")
-        litmusTest(VolatileReferenceVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
             getValue(results.parallelResults[1][0]!!)
         }
     }
@@ -136,7 +136,7 @@ class VarHandleTests {
             Triple(true, false, "a"),
             Triple(false, true, "a")
         )
-        litmusTest(VolatileReferenceVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
             val r1 = getValue<Boolean>(results.parallelResults[0][0]!!)
             val r2 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val r3 = getValue<String?>(results.postResults[0]!!)
@@ -192,7 +192,7 @@ class VarHandleTests {
             values.flatMap { a -> values.flatMap { b -> values.flatMap { c -> values.flatMap { d ->
                 listOf(Quad(a, b, c, d))
             }}}}.toSet()
-        litmusTest(VolatileReferenceVariable::class.java, testScenario, assertAlways(outcomes)) { results ->
+        litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
             val a = getValue<String?>(results.parallelResults[4][0]!!)
             val b = getValue<String?>(results.parallelResults[5][0]!!)
             val c = getValue<String?>(results.parallelResults[6][0]!!)

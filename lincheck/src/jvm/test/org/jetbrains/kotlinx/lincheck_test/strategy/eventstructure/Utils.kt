@@ -67,6 +67,16 @@ internal fun <Outcome> assertAlways(expectedOutcomes: Set<Outcome>, executionCou
 internal fun<Outcome> litmusTest(
     testClass: Class<*>,
     testScenario: ExecutionScenario,
+    outcomes: Set<Outcome>,
+    getOutcome: (ExecutionResult) -> Outcome,
+) {
+    litmusTest(testClass, testScenario, assertAlways(outcomes), getOutcome)
+}
+
+
+internal fun<Outcome> litmusTest(
+    testClass: Class<*>,
+    testScenario: ExecutionScenario,
     outcomeVerifier: OutcomeVerifier<Outcome>,
     getOutcome: (ExecutionResult) -> Outcome,
 ) {
