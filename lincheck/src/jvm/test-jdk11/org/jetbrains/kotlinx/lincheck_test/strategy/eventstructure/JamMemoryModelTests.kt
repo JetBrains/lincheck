@@ -1489,4 +1489,39 @@ class JamMemoryModelTests {
     }
 
 
+    // We probably need more tests for fences
+    @Test
+    fun testMpFences() {
+        class TestClass {
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+
+            fun thread0() {
+                x.setPlain(1)
+                VarHandle.releaseFence()
+                y.setOpaque(1)
+            }
+
+            fun thread1(): Pair<Int, Int> {
+                val r0 = y.getOpaque()
+                VarHandle.acquireFence()
+                var r1 = - 1
+                if (r0 == 1) {
+                   r1 = x.getPlain()
+                }
+                return r0 to r1
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread { actor(TestClass::thread0) }
+                thread { actor(TestClass::thread1) }
+            }
+        }
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 0))
+        litmusTest(TestClass::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
+            getValue<Pair<Int, Int>>(results.parallelResults[1][0]!!)
+        }
+    }
 }

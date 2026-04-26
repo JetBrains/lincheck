@@ -34,7 +34,8 @@ internal enum class AtomicMethodKind {
     COMPARE_AND_EXCHANGE,
     GET_AND_ADD, ADD_AND_GET,
     GET_AND_INCREMENT, INCREMENT_AND_GET,
-    GET_AND_DECREMENT, DECREMENT_AND_GET;
+    GET_AND_DECREMENT, DECREMENT_AND_GET,
+    FENCE;
 }
 
 internal val AtomicMethodKind.isSetter get() = when (this) {
@@ -90,13 +91,16 @@ data class AtomicMethodAccessInfo(
     val arguments: List<Any?>,
 )
 
-internal fun getAtomicMethodDescriptor(obj: Any?, methodName: String): AtomicMethodDescriptor? {
+// TODO: This is very out of place, mainly because we have to add a new parameter, and weird if check.
+// Maybe just make it seperate
+internal fun getAtomicMethodDescriptor(obj: Any?, methodClassName: String, methodName: String): AtomicMethodDescriptor? {
     return when {
         isAtomic(obj)               -> atomicMethods[methodName]
         isAtomicArray(obj)          -> atomicArrayMethods[methodName]
         isAtomicFieldUpdater(obj)   -> atomicFieldUpdaterMethods[methodName]
         isVarHandle(obj)            -> varHandleMethods[methodName]
         isUnsafe(obj)               -> unsafeMethods[methodName]
+        obj == null && methodClassName in varHandleBaseClassNames -> varHandleFenceMethods.get(methodName)
         else                        -> null
     }
 }
@@ -841,6 +845,12 @@ private val varHandleMethods = mapOf(
     "getAndAddAcquire"  to AtomicMethodDescriptor(GET_AND_ADD, VAR_HANDLE, ACQUIRE),
     "getAndAddRelease"  to AtomicMethodDescriptor(GET_AND_ADD, VAR_HANDLE, RELEASE),
 )
+
+private val varHandleFenceMethods = mapOf(
+    "releaseFence"  to AtomicMethodDescriptor(FENCE, VAR_HANDLE, RELEASE),
+    "acquireFence"  to AtomicMethodDescriptor(FENCE, VAR_HANDLE, ACQUIRE),
+)
+
 
 private val unsafeMethods: Map<String, AtomicMethodDescriptor> = run {
     val typeNames = listOf(

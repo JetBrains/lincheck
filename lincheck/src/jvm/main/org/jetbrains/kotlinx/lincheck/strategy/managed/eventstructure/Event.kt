@@ -193,6 +193,14 @@ val AtomicThreadEvent.isWrite: Boolean get() = run {
     if(label is WriteAccessLabel || label is InitializationLabel || label is ObjectAllocationLabel) true else false
 }
 
+val AtomicThreadEvent.isRead: Boolean get() = run {
+    return label is ReadAccessLabel
+}
+
+val AtomicThreadEvent.isFence: Boolean get() = run {
+    return label is FenceLabel
+}
+
 val AtomicThreadEvent.isRelease: Boolean get() = run {
     if (label is ThreadForkLabel || label is ThreadFinishLabel) return true
     val thisLabel = label as? WriteAccessLabel ?: return@run false

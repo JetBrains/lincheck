@@ -71,10 +71,11 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
     context: TraceContext,
     className: String,
     methodName: String,
-    receiver: Any,
+    receiver: Any?,
     params: Array<Any?>,
     atomicMethodDescriptor: AtomicMethodDescriptor,
 ): MemoryLocation? {
+    if (receiver == null) return null
     val info = atomicMethodDescriptor.getAtomicAccessInfo(context, receiver, params)
     val accessLocation = info.location
     return when (atomicMethodDescriptor.apiKind) {

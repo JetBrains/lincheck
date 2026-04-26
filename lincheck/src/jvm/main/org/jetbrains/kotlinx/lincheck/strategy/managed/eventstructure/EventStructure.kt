@@ -1234,4 +1234,13 @@ internal class EventStructure(
         readCodeLocationsCounter.keys.retainAll { (tid, _) -> tid != iThread }
     }
 
+    //TODO: do we need code location?
+    fun addFenceEvent(iThread: Int, codeLocation: Int, memoryOrder: MemoryOrdering) {
+        val label = FenceLabel(
+            memoryOrder
+        )
+        addSendEvent(iThread, label)
+
+    }
+
 }

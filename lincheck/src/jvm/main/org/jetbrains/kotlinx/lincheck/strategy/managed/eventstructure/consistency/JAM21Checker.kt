@@ -23,6 +23,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.AtomicMemoryAccessEventIndex
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.AtomicThreadEvent
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.Execution
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.FenceLabel
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.MutableExtendedExecution
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.ThreadEvent
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.ThreadFinishLabel
@@ -30,12 +31,15 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.ThreadFork
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.ThreadJoinLabel
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.ThreadStartLabel
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isAcquire
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isFence
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isRead
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isRelease
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isWrite
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.locations
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.readsFromOpt
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.util.Computable
+import org.jetbrains.lincheck.util.MemoryOrdering
 import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.RelationMatrix
 import org.jetbrains.lincheck.util.toEnumerator
@@ -130,6 +134,10 @@ class VisibilityOrder(
     }
 
 
+    private fun fenceEvents(): Iterable<AtomicThreadEvent> {
+        return execution.filter { event -> event.isFence }
+    }
+
 
     override fun compute() {
         // let rfso = rf  //and some other stuff
@@ -137,6 +145,24 @@ class VisibilityOrder(
         // let acq = R & (RA | V)
         // let ra = po;[rel] | [acq];po | rfso
         // let vo = ra+ | po-loc
+
+
+        val svo  = RelationMatrix(_events.toList(),_events.toEnumerator())
+        for(fenceEvent in fenceEvents()) {
+            val fenceLabel = fenceEvent.label as FenceLabel
+            for (event1 in svo.nodes) {
+                for (event2 in svo.nodes) {
+                    // Release fence case
+                    if(fenceLabel.memoryOrdering == MemoryOrdering.RELEASE && event2.event.isWrite && programOrder(event1.event, event2.event)) {
+                        svo[event1, event2] = true
+                    }
+                    if(fenceLabel.memoryOrdering == MemoryOrdering.ACQUIRE && event1.event.isRead && programOrder(event1.event, event2.event)) {
+                        svo[event1, event2] = true
+                    }
+                }
+            }
+        }
+
 
         val rf = RelationMatrix(_events.toList(),_events.toEnumerator())
         for(event1 in rf.nodes) {
@@ -158,6 +184,7 @@ class VisibilityOrder(
             for(event2 in ra.nodes) {
                 ra[event1, event2] = false
                 if(rf[event1, event2]) ra[event1, event2] = true
+                if(svo(event1, event2)) ra[event1, event2] = true
                 if(programOrder(event1.event, event2.event) && event2.event.isRelease) ra[event1, event2] = true
                 if(programOrder(event1.event, event2.event) && event1.event.isAcquire) ra[event1, event2] = true
             }
