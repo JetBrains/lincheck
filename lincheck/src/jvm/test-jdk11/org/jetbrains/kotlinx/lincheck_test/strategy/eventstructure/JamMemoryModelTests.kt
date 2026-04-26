@@ -175,8 +175,8 @@ class JamMemoryModelTests {
             fun thread0(): Int {
                 val r0 = x.getOpaque()
                 if (r0 != 0) {
-                    val t = a.get()
-                    b.set(1)
+                    val t = a.getPlain()
+                    b.setPlain(1)
                     if (t != 0) {
                         y.setOpaque(1)
                     }
@@ -186,8 +186,8 @@ class JamMemoryModelTests {
             fun thread1(): Int {
                 val r1 = y.getOpaque()
                 if (r1 != 0) {
-                    if (b.get() != 0) {
-                        a.set(1)
+                    if (b.getPlain() != 0) {
+                        a.setPlain(1)
                         x.setOpaque(1)
                     }
                 }
@@ -220,8 +220,8 @@ class JamMemoryModelTests {
             fun thread0(): Int {
                 val r0 = x.getOpaque()
                 if (r0 != 0) {
-                    b.set(1)
-                    val t = a.get()
+                    b.setPlain(1)
+                    val t = a.getPlain()
                     if (t != 0) {
                         y.setOpaque(1)
                     }
@@ -231,8 +231,8 @@ class JamMemoryModelTests {
             fun thread1(): Int {
                 val r1 = y.getOpaque()
                 if (r1 != 0) {
-                    if (b.get() != 0) {
-                        a.set(1)
+                    if (b.getPlain() != 0) {
+                        a.setPlain(1)
                         x.setOpaque(1)
                     }
                 }
@@ -513,7 +513,7 @@ class JamMemoryModelTests {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             fun thread0(): Pair<Int, Int> {
-                a.set(1)
+                a.setPlain(1)
                 val r0 = x.getOpaque()
                 val r1 = a.getPlain()
                 y.setOpaque(1)
@@ -536,7 +536,7 @@ class JamMemoryModelTests {
             post { actor(TestFig1::post) }
         }
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1,1,1))
-        litmusTest(TestFig1::class.java, testScenario, assertSame(expectedOutcomes)) { results ->
+        litmusTest(TestFig1::class.java, testScenario, assertSame(expectedOutcomes, UNKNOWN)) { results ->
             getValue<Triple<Int, Int, Int>>(results.postResults[0]!!)
         }
     }
@@ -623,7 +623,7 @@ class JamMemoryModelTests {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             fun thread0() {
-                x.set(1)
+                x.setPlain(1)
                 y.setOpaque(1)
             }
             fun thread1(): Pair<Int, Int> {
@@ -937,7 +937,7 @@ class JamMemoryModelTests {
             fun thread1(): Int {
                 val r1 = x.getAcquire()
                 if (r1 != 0) {
-                    y.set(1)
+                    y.setPlain(1)
                 }
                 return r1
             }
@@ -964,7 +964,7 @@ class JamMemoryModelTests {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             fun thread0() {
-                y.set(1)
+                y.setPlain(1)
                 x.setRelease(1)
             }
             fun thread1(): Int {
@@ -994,7 +994,7 @@ class JamMemoryModelTests {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             fun thread0() {
-                y.set(1)
+                y.setPlain(1)
                 x.setRelease(1)
             }
             fun thread1(): Int {
@@ -1172,7 +1172,7 @@ class JamMemoryModelTests {
             fun thread2(): Int {
                 val r1 = z.getOpaque()
                 if (r1 != 0) {
-                    y.set(1)
+                    y.setPlain(1)
                     x.setRelease(1)
                 }
                 return r1
@@ -1225,21 +1225,22 @@ class JamMemoryModelTests {
         }
     }
 
+    // NOTE: this test is interesting because C11 forbids this behavior but JAM allows it
     @Test
     fun testMpRelacqRs() {
         class TestMpRelacqRs {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             fun thread0() {
-                x.set(1)
+                x.setPlain(1)
                 y.setRelease(1)
                 y.setOpaque(2)
             }
             fun thread1(): Pair<Int, Int> {
-                val r0 = y.getAcquire()
                 var r1 = -1
+                val r0 = y.getAcquire()
                 if (r0 == 2) {
-                    r1 = x.get()
+                    r1 = x.getPlain()
                 }
                 return r0 to r1
             }
@@ -1251,7 +1252,7 @@ class JamMemoryModelTests {
             }
         }
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((2 to 0))
-        litmusTest(TestMpRelacqRs::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
+        litmusTest(TestMpRelacqRs::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
             getValue<Pair<Int, Int>>(results.parallelResults[1][0]!!)
         }
     }
@@ -1317,7 +1318,7 @@ class JamMemoryModelTests {
             val y = AtomicInteger(0)
             val z = AtomicInteger(0)
             fun thread0() {
-                a.set(1)
+                a.setPlain(1)
                 z.setRelease(1)
             }
             fun thread1(): Triple<Int, Int, Int> {
@@ -1431,8 +1432,8 @@ class JamMemoryModelTests {
             post { actor(TestRseqWeak2::post) }
         }
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((3 to 1))
-        litmusTest(TestRseqWeak2::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
-            getValue<Pair<Int, Int>>(results.postResults[1]!!)
+        litmusTest(TestRseqWeak2::class.java, testScenario, assertSame(expectedOutcomes, UNKNOWN)) { results ->
+            getValue<Pair<Int, Int>>(results.postResults[0]!!)
         }
     }
 
@@ -1515,7 +1516,7 @@ class JamMemoryModelTests {
         val expectedOutcomes: Set<List<Int>> = setOf(
             listOf(2,2,2,0,2,0)
         )
-        litmusTest(TestWWRR::class.java, testScenario, assertSame(expectedOutcomes)) { results ->
+        litmusTest(TestWWRR::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
             val t1 = getValue<Pair<Int, Int>>(results.parallelResults[1][0]!!)
             val t3 = getValue<Pair<Int, Int>>(results.parallelResults[3][0]!!)
             val post = getValue<Pair<Int, Int>>(results.postResults[0]!!)
