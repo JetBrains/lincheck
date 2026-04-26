@@ -69,6 +69,9 @@ fun<T : Comparable<T>> SortedList<T>.toEnumerator(): Enumerator<T> = object : En
     override fun get(x: T): Int = list.indexOf(x)
 }
 
+//TODO: Very bad definition
+inline fun<reified T : Comparable<T>> Iterable<T>.toEnumerator(): Enumerator<T> = sortedListOf(this@toEnumerator.toList().sorted()).toEnumerator()
+
 class RelationMatrix<T>(
     // TODO: take nodes from the enumerator (?)
     val nodes: Collection<T>,
@@ -151,6 +154,32 @@ class RelationMatrix<T>(
             }
         }
     }
+
+    fun copy(): RelationMatrix<T> {
+        val new = RelationMatrix<T>(nodes, enumerator)
+        iLoop@for (i in 0 until size) {
+            jLoop@for (j in 0 until size) {
+                new[i, j] = this[i, j]
+            }
+        }
+        return new
+    }
+
+    // TODO: really slow
+    fun compose(other: RelationMatrix<T>): RelationMatrix<T> {
+        val new = RelationMatrix<T>(nodes, enumerator)
+        check(size == other.size)
+        iLoop@for (i in 0 until size) {
+            jLoop@for (j in 0 until size) {
+                kLoop@for (k in 0 until size) {
+                    new[i, j] = this[i, k] && other[k, j]
+                    if(new[i, j]) break@kLoop
+                }
+            }
+        }
+        return  new
+    }
+
 
     fun transitiveClosure() {
         // TODO: optimize -- skip the computation for already transitive relation;

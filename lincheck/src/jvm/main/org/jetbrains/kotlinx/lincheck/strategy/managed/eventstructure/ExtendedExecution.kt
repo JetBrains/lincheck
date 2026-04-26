@@ -221,13 +221,14 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
         execution = this,
         listOf<AtomicEventConsistencyChecker>(
             ReadModifyWriteAtomicityChecker(execution = this),
-//            IncrementalSequentialConsistencyChecker(
-//                execution = this,
-//                checkReleaseAcquireConsistency = true,
-//                approximateSequentialConsistency = false
-//            )
         ),
-        listOf(),
+        listOf(
+            JAM21Checker(
+                execution = this,
+                memoryAccessEventIndex,
+                programOrder.union { event, event1 ->  event.isInit },
+            )
+        ),
     )
 
     private val trackers = listOf(
