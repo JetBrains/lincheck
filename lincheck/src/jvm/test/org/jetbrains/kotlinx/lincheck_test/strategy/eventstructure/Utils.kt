@@ -56,7 +56,7 @@ internal fun <Outcome> assertSame(expectedOutcomes: Set<Outcome>, executionCount
         val missing = expectedOutcomes - actualOutcomes
         val unexpected = actualOutcomes - expectedOutcomes
         val msg = "Some outcomes not detected.\nMissing:$missing\nUnexpected:$unexpected:\n"
-        Assert.assertEquals(msg, expectedOutcomes, actualOutcomes)
+        Assert.assertEquals(msg, expectedOutcomes, actualOutcomes.toSet())
 
         val expectedCount = when (executionCount) {
             UNIQUE -> expectedOutcomes.size
