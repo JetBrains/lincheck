@@ -207,6 +207,10 @@ val AtomicThreadEvent.isRelease: Boolean get() = run {
     (thisLabel.memoryOrdering == MemoryOrdering.RELEASE || thisLabel.memoryOrdering == MemoryOrdering.VOLATILE)
 }
 
+val AtomicThreadEvent.isVolatile: Boolean get() = run {
+    val thisLabel = label as? WriteAccessLabel ?: label as? ReadAccessLabel ?: return@run false
+    return thisLabel.memoryOrdering == MemoryOrdering.VOLATILE
+}
 
 val AtomicThreadEvent.locksFrom: AtomicThreadEvent get() = run {
     require(label is LockLabel)

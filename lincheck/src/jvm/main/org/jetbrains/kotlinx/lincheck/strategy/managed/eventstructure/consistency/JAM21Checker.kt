@@ -34,9 +34,14 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isAcquire
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isFence
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isRead
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isRelease
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isVolatile
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.isWrite
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.locations
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.observes
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.readsFromOpt
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.toGraph
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.topologicalSorting
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.topologicalSortings
 import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.util.Computable
 import org.jetbrains.lincheck.util.MemoryOrdering
@@ -153,17 +158,46 @@ class VisibilityOrder(
             for (event1 in svo.nodes) {
                 for (event2 in svo.nodes) {
                     // Release fence case
-                    if(fenceLabel.memoryOrdering == MemoryOrdering.RELEASE && event2.event.isWrite && programOrder(event1.event, event2.event)) {
+                    if(fenceLabel.memoryOrdering == MemoryOrdering.RELEASE && event2.event.isWrite && programOrder(event1.event, fenceEvent) && programOrder(fenceEvent, event2.event)) {
                         svo[event1, event2] = true
                     }
-                    if(fenceLabel.memoryOrdering == MemoryOrdering.ACQUIRE && event1.event.isRead && programOrder(event1.event, event2.event)) {
+                    if(fenceLabel.memoryOrdering == MemoryOrdering.ACQUIRE && event1.event.isRead && programOrder(event1.event, fenceEvent) && programOrder(fenceEvent, event2.event)) {
                         svo[event1, event2] = true
                     }
                 }
             }
         }
 
+        val push = RelationMatrix(_events.toList(),_events.toEnumerator())
+        val pushDomain = mutableSetOf<JamEvent>()
+        for (event1 in push.nodes) {
+            for (event2 in push.nodes) {
+                if(programOrder(event1.event, event2.event) && event1.event.isVolatile && event2.event.isVolatile) {
+                    push[event1, event2] = true
+                    pushDomain.add(event1)
+                }
+                for(fenceEvent in fenceEvents()) {
+                    val fenceLabel = fenceEvent.label as FenceLabel
+                    if(fenceLabel.memoryOrdering == MemoryOrdering.VOLATILE) {
+                        if(programOrder(event1.event, fenceEvent) && programOrder(fenceEvent, event2.event)) {
+                            push[event1, event2] = true
+                            pushDomain.add(event1)
+                        }
+                    }
+                }
+            }
+        }
 
+        val pushPorf = RelationMatrix(pushDomain.toList(),pushDomain.toEnumerator())
+        for(event1 in pushPorf.nodes) {
+            for(event2 in pushPorf.nodes) {
+                if(event2.event.causalityClock.observes(event1.event) ) pushPorf[event1, event2]
+            }
+        }
+        val pushTO = topologicalSortings(pushPorf.toGraph())
+
+
+        // TODO: enumerate total orders and fine one that is ok
         val rf = RelationMatrix(_events.toList(),_events.toEnumerator())
         for(event1 in rf.nodes) {
             for(event2 in rf.nodes) {
@@ -187,50 +221,66 @@ class VisibilityOrder(
                 if(svo(event1, event2)) ra[event1, event2] = true
                 if(programOrder(event1.event, event2.event) && event2.event.isRelease) ra[event1, event2] = true
                 if(programOrder(event1.event, event2.event) && event1.event.isAcquire) ra[event1, event2] = true
-            }
-        }
-        ra.transitiveClosure()
-        val vo = ra.copy()
-        for(event1 in vo.nodes) {
-            for(event2 in vo.nodes) {
-                if(poloc[event1, event2]) vo[event1, event2] = true
+                if(push[event1, event2]) ra[event1, event2] = true
             }
         }
 
-        // let coww = wwco(vo)
-        // let cowr = wwco(vo;invrf)
-        // let corw = wwco(vo;po-loc)
-        // let corr = wwco(rf;po-loc;invrf)
-        //TODO: VERY VERY SLOW AND BAD
-        val invrf = rf.copy().also { it.transpose() }
-        val voCinvrf = vo.compose(invrf)
-        val voCpoloc = vo.compose(poloc)
-        val rfCpolocCinvrf = rf.compose(poloc).compose(invrf)
-
-
-        val co = RelationMatrix(_events.toList(),_events.toEnumerator())
-        for(w1 in vo.nodes) {
-            for(w2 in vo.nodes) {
-                co[w1,w2] = false
-                if(w1.event.isWrite && w2.event.isWrite && w1 != w2 && w1.location == w2.location) {
-                    if(vo[w1, w2]) co[w1, w2] = true
-                    if(voCinvrf[w1, w2]) co[w1, w2] = true
-                    if(voCpoloc[w1, w2]) co[w1, w2] = true
-                    if(rfCpolocCinvrf[w1, w2]) co[w1, w2] = true
+        val res = pushTO.find { sorting ->
+            val ra = ra.copy()
+            for (pair1 in sorting.withIndex()) {
+                for (event2 in sorting.drop(pair1.index + 1)) {
+                    for (event3 in push.nodes) {
+                        if(push[event2, event3]) ra[pair1.value, event3] = true
+                    }
                 }
             }
-        }
 
-        co.transitiveClosure()
-        for(w1 in vo.nodes) {
-            for(w2 in vo.nodes) {
-                if(co[w1, w2]) {
-                    check(w1.event.isWrite)
-                    check(w2.event.isWrite)
+            ra.transitiveClosure()
+
+            val vo = ra.copy()
+            for(event1 in vo.nodes) {
+                for(event2 in vo.nodes) {
+                    if(poloc[event1, event2]) vo[event1, event2] = true
                 }
             }
-        }
-        isIrreflexive = co.isIrreflexive()
+
+            // let coww = wwco(vo)
+            // let cowr = wwco(vo;invrf)
+            // let corw = wwco(vo;po-loc)
+            // let corr = wwco(rf;po-loc;invrf)
+            //TODO: VERY VERY SLOW AND BAD
+            val invrf = rf.copy().also { it.transpose() }
+            val voCinvrf = vo.compose(invrf)
+            val voCpoloc = vo.compose(poloc)
+            val rfCpolocCinvrf = rf.compose(poloc).compose(invrf)
+
+
+            val co = RelationMatrix(_events.toList(),_events.toEnumerator())
+            for(w1 in vo.nodes) {
+                for(w2 in vo.nodes) {
+                    co[w1,w2] = false
+                    if(w1.event.isWrite && w2.event.isWrite && w1 != w2 && w1.location == w2.location) {
+                        if(vo[w1, w2]) co[w1, w2] = true
+                        if(voCinvrf[w1, w2]) co[w1, w2] = true
+                        if(voCpoloc[w1, w2]) co[w1, w2] = true
+                        if(rfCpolocCinvrf[w1, w2]) co[w1, w2] = true
+                    }
+                }
+            }
+
+            co.transitiveClosure()
+            for(w1 in vo.nodes) {
+                for(w2 in vo.nodes) {
+                    if(co[w1, w2]) {
+                        check(w1.event.isWrite)
+                        check(w2.event.isWrite)
+                    }
+                }
+            }
+            co.isIrreflexive()
+        } != null
+
+        isIrreflexive = res
     }
 
     override fun reset() {

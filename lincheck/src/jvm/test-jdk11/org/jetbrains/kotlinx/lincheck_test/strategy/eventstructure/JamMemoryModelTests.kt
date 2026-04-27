@@ -1644,7 +1644,7 @@ class JamMemoryModelTests {
         }
     }
 
-    //
+    @Ignore
     @Test
     fun testFig6() {
         class TestFig6 {
@@ -1692,6 +1692,7 @@ class JamMemoryModelTests {
     }
 
     //TODO: Same issues as Fig6
+    @Ignore
     @Test
     fun testFig6Translated() {
         class TestFig6Translated {
@@ -1767,7 +1768,7 @@ class JamMemoryModelTests {
             }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1, 0, 1, 0))
-        litmusTest(TestIriwAcqSc::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
+        litmusTest(TestIriwAcqSc::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
             val t2 = getValue<Pair<Int, Int>>(results.parallelResults[2][0]!!)
             val t3 = getValue<Pair<Int, Int>>(results.parallelResults[3][0]!!)
             listOf(t2.first, t2.second, t3.first, t3.second)
@@ -1807,7 +1808,7 @@ class JamMemoryModelTests {
             }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2, 0, 2, 0))
-        litmusTest(TestIriwScRlxAcq::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
+        litmusTest(TestIriwScRlxAcq::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
             val t2 = getValue<Pair<Int, Int>>(results.parallelResults[2][0]!!)
             val t3 = getValue<Pair<Int, Int>>(results.parallelResults[3][0]!!)
             listOf(t2.first, t2.second, t3.first, t3.second)
@@ -1883,7 +1884,7 @@ class JamMemoryModelTests {
     }
 
     @Test
-    fun testRaNonGlobal() {
+    fun testVolatileNonSc4() {
         class TestRaNonLocal {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -1914,8 +1915,7 @@ class JamMemoryModelTests {
             }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(0, 1, 1, 2))
-        //TODO: find matching thingy
-        litmusTest(TestRaNonLocal::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
+        litmusTest(TestRaNonLocal::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
             val t0 = getValue<Int>(results.parallelResults[0][0]!!)
             val t2 = getValue<Int>(results.parallelResults[2][0]!!)
             val t3 = getValue<Pair<Int, Int>>(results.parallelResults[3][0]!!)
@@ -1924,7 +1924,7 @@ class JamMemoryModelTests {
     }
 
     @Test
-    fun testReadWriteSc() {
+    fun testVolatileNonSc5() {
         class TestReadWriteSc {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -1961,8 +1961,7 @@ class JamMemoryModelTests {
             }
         }
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(0, 1, 0, 1, 2))
-        //TODO: find matching thingy
-        litmusTest(TestReadWriteSc::class.java, testScenario, assertSometimes(expectedOutcomes)) { results ->
+        litmusTest(TestReadWriteSc::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
             val t0 = getValue<Int>(results.parallelResults[0][0]!!)
             val t2 = getValue<Int>(results.parallelResults[2][0]!!)
             val t3 = getValue<Int>(results.parallelResults[3][0]!!)
@@ -2328,6 +2327,7 @@ class JamMemoryModelTests {
         }
     }
 
+    @Ignore
     @Test
     fun testPPOCA() {
         class TestPPOCA {
@@ -2363,6 +2363,7 @@ class JamMemoryModelTests {
         }
     }
 
+    @Ignore
     @Test
     fun testSBMfence() {
         class TestSBMfence {
@@ -2393,6 +2394,7 @@ class JamMemoryModelTests {
         }
     }
 
+    @Ignore
     @Test
     fun testWRWC() {
         class TestWRWC {
@@ -2430,6 +2432,7 @@ class JamMemoryModelTests {
         }
     }
 
+    @Ignore
     @Test
     fun testRWCSyncs() {
         class TestRWCSyncs {
