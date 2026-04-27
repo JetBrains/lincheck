@@ -475,6 +475,17 @@ open class BaseObjectTracker(
         return perClassObjectNumeration.update(objClassKey, default = offset) { it + 1 }
     }
 
+    fun compareObjects(left: Any?, right: Any?): Boolean {
+        if(left.isImmutable) return left == right
+        else return left === right
+    }
+
+    private fun getObjectHashCode(obj: Any?): Int {
+        if(obj.isImmutable) return obj.hashCode()
+        else return System.identityHashCode(obj)
+    }
+
+
     override fun registerThread(threadId: Int, thread: Thread) {
         registerObjectIfAbsent(thread)
     }
@@ -490,12 +501,11 @@ open class BaseObjectTracker(
         registerObject(ObjectTracker.ObjectKind.EXTERNAL, obj)
 
     private fun registerObject(kind: ObjectTracker.ObjectKind, obj: Any): ObjectEntry {
-        check(!obj.isPrimitive)
         check(obj.isImmutable implies shouldTrackImmutableValues)
         cleanup()
         val entry = createObjectEntry(
             objNumber = ++objectCounter,
-            objHashCode = System.identityHashCode(obj),
+            objHashCode = getObjectHashCode(obj),
             objDisplayNumber = computeObjectDisplayNumber(obj),
             obj = obj,
             kind = kind,
@@ -538,9 +548,9 @@ open class BaseObjectTracker(
     }
 
     override operator fun get(obj: Any?): ObjectEntry? {
-        val objHashCode = System.identityHashCode(obj)
+        val objHashCode = getObjectHashCode(obj)
         val entries = getEntries(objHashCode) ?: return null
-        return entries.find { it.objectWeakReference.get() === obj }
+        return entries.find { compareObjects(it.objectWeakReference.get(), obj) }
     }
 
     override fun enumerateObjectEntries(): Sequence<ObjectEntry> =
