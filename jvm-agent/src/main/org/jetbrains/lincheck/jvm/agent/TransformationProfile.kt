@@ -159,7 +159,7 @@ class TransformationConfiguration(
 
 internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<*>): Boolean {
     return when (visitorClass) {
-        ObjectCreationTransformerBase::class.java -> trackObjectCreations
+        ObjectCreationTransformer::class.java -> trackObjectCreations
 
         LocalVariablesAccessTransformer::class.java -> trackLocalVariableAccesses
         SharedMemoryAccessTransformer::class.java -> trackSharedMemoryAccesses

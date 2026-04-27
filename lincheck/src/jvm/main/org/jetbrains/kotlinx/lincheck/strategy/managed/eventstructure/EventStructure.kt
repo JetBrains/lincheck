@@ -943,6 +943,7 @@ internal class EventStructure(
     fun addObjectAllocationEvent(iThread: Int, value: OpaqueValue, objectID: ObjectNumber): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
             check(event.label is ObjectAllocationLabel)
+            check((event.label as ObjectAllocationLabel).className == value.unwrap().javaClass.simpleName)
             //NOTE: Currently the objectID value represents the "suggested" objectID from the object tracker.
             //  The objectID is incremented each time a new object is added to the object tracker and this value is not
             //  reset between invocations.
