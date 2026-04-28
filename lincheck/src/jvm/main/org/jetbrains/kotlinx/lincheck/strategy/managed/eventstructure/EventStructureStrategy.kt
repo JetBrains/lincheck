@@ -136,6 +136,12 @@ internal class EventStructureStrategy(
         return (result to inconsistency)
     }
 
+    // (OLD) TODO: temporarily disable trace collection for event structure strategy
+    override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
+        // return super.tryCollectTrace(result)
+        return null to result
+    }
+
     // a hack to reset happens-before clocks computed by scheduler,
     // because these clocks can be not in sync with with
     // happens-before relation constructed by the event structure
@@ -186,11 +192,6 @@ internal class EventStructureStrategy(
         )
     }
 
-    // (OLD) TODO: temporarily disable trace collection for event structure strategy
-    override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
-        // return super.tryCollectTrace(result)
-        return null to result
-    }
 
     class Stats {
 
