@@ -2527,4 +2527,39 @@ class JamMemoryModelTests {
             eax0 to eax1
         }
     }
+
+
+    @Test
+    fun testSbPlusRfis() {
+        class TestClass {
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            fun thread0(): Pair<Int, Int> {
+                x.setPlain(1)
+                val r0 = x.get()
+                val r1 = y.get()
+                return r0 to r1
+            }
+            fun thread1(): Pair<Int, Int> {
+                y.setPlain(1)
+                val r0 = y.get()
+                val r1 = x.get()
+                return r0 to r1
+            }
+        }
+        val testScenario = scenario {
+            parallel {
+                thread { actor(TestClass::thread0) }
+                thread { actor(TestClass::thread1) }
+            }
+        }
+        val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
+        //NOTE: this behaviour is forbidden by JAM21, but actually happens in practice as mentioned in the JMT paper
+        // https://arxiv.org/pdf/2604.15978, section 7, scenario 3
+        litmusTest(TestClass::class.java, testScenario, assertNever(expectedOutcomes)) { results ->
+            val t0 = getValue<Pair<Int,Int>>(results.parallelResults[0][0]!!)
+            val t1 = getValue<Pair<Int,Int>>(results.parallelResults[1][0]!!)
+            listOf(t0.first, t0.second, t1.first, t1.second)
+        }
+    }
 }
