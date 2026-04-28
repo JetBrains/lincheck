@@ -717,19 +717,24 @@ class TraceCollectingEventTracker(
         }
         
         val timeStamp = System.currentTimeMillis()
-        
-        val locals = locals.filterNotNull().map { local ->
-            if (local::class.java.isArray) {
-                val arraySize = findArrayLength(local)
-                val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
-                val elements = findElementsForArray(local, elementsToRead)
-                TRArrayWithElements(context, local, arraySize, elements)
-            } else {
-                val objectFields = findFieldsForObject(local)
-                if (objectFields.isNotEmpty()) {
-                    TRObjectWithFields(context, local, objectFields)
-                } else {
-                    TRValue(context, local)
+
+        val locals = locals.map { local ->
+            when {
+                local == null -> null
+
+                local::class.java.isArray -> {
+                    val arraySize = findArrayLength(local)
+                    val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
+                    val elements = findElementsForArray(local, elementsToRead)
+                    TRArrayWithElements(context, local, arraySize, elements)
+                }
+
+                else -> {
+                    val objectFields = findFieldsForObject(local)
+                    when {
+                        objectFields.isNotEmpty() -> TRObjectWithFields(context, local, objectFields)
+                        else -> TRValue(context, local)
+                    }
                 }
             }
         }
