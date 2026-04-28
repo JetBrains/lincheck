@@ -102,7 +102,7 @@ internal fun getResultsVerifier(verify: (ExecutionResult) -> Boolean): Verifier 
         override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
             require(results != null)
             results.parallelResults.flatten().forEach {
-                if(it is ExceptionResult) {
+                if (it is ExceptionResult) {
                     throw it.throwable
                 }
             }
