@@ -305,9 +305,9 @@ internal class EventStructure(
             .filter {
                 // TODO: (it.label !is CoroutineSuspendLabel)
                 check(it.label.isRequest) // Dangling requests should probably be requests
-                if (!it.label.isBlocking ) return@filter false
-                val nextEvent = execution.get(it.threadId, it.threadPosition + 1) ?: return@filter false
-                if (nextEvent.parent != it)  return@filter false
+                if (!it.label.isBlocking) return@filter false
+                val nextEvent = execution[it.threadId, it.threadPosition + 1] ?: return@filter false
+                if (nextEvent.parent != it) return@filter false
                 // Maybe it would be nice to somehow keep track of conflicts as they are added in the event structure?
                 // We already compute the conflicting events when they are added.
                 // This way we do not have to compute them here every time
@@ -317,7 +317,7 @@ internal class EventStructure(
                     it,
                     it.dependencies
                 ).filter { it != nextEvent }
-                return@filter conflicts.size > 0
+                return@filter conflicts.isNotEmpty()
             }
 
         frontier.apply {
@@ -496,7 +496,7 @@ internal class EventStructure(
         private var index: Int = 0
         private var size: Int = 0
 
-        constructor(): this(listOf())
+        constructor() : this(listOf())
 
         fun inProgress(): Boolean =
             (index < size)

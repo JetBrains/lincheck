@@ -22,7 +22,6 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
@@ -31,13 +30,26 @@ import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingCTestConfiguration
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.junit.Assert
+import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
 
 internal const val UNIQUE = -1
 internal const val UNKNOWN = -2
+
+/**
+ * Litmus testing function for [EventStructureStrategy] that uses [ExecutionScenarioRunner].
+ *
+ * @param testClass class that is going to be tested by the execution scenario
+ * @param testScenario the execution scenario that we are going to evaluate with the event structure strategy
+ * @param expectedOutcomes the set of expected outcomes from running the test scenario. It has to match exactly as
+ * the set of outcomes gathered from the execution.
+ * @param executionCount the number of consistent invocations that should be found after running the testScenario
+ *  If it is set to UNIQUE, then this number is equal to the size of [expectedOutcomes].
+ *  If it is set to UNKNOWN, then we do not check the consistent invocations count.
+ *  @param getOutcome the function that extracts the outcome from an [ExecutionResult].
+ */
 internal fun<Outcome> litmusTest(
     testClass: Class<*>,
     testScenario: ExecutionScenario,
@@ -111,14 +123,30 @@ internal fun getResultsVerifier(verify: (ExecutionResult) -> Boolean): Verifier 
     }
 
 
-internal fun <T> createStrategy(timeoutMs: Long, settings: ManagedStrategySettings, inIdeaPluginReplayMode: Boolean = false,  block: () -> T): EventStructureStrategy {
+internal fun <T> createStrategy(
+    timeoutMs: Long,
+    settings: ManagedStrategySettings,
+    inIdeaPluginReplayMode: Boolean = false,
+    block: () -> T
+): EventStructureStrategy {
     val runner = LambdaRunner(timeoutMs = timeoutMs, block)
     return EventStructureStrategy(runner, settings, inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
         runner.initializeStrategy(it)
     }
 }
 
-internal inline fun<reified Outcome> litmustTestv2 (
+//TODO: once using EventStructure model checker with LambdaRunner is more stable, we need to remove the other litmusTest overload
+/**
+ * Alternate litmus testing function for [EventStructureStrategy] that uses [LambdaRunner].
+ *
+ * @param expectedOutcomes the set of expected outcomes from running the test scenario. It has to match exactly as
+ * the set of outcomes gathered from the execution.
+ * @param executionCount the number of consistent invocations that should be found after running the testScenario
+ *  If it is set to UNIQUE, then this number is equal to the size of [expectedOutcomes].
+ *  If it is set to UNKNOWN, then we do not check the consistent invocations count.
+ * @param block the block of code that is going to be tested
+ */
+internal inline fun<reified Outcome> litmusTest(
     expectedOutcomes: Set<Outcome>,
     executionCount: Int = UNIQUE,
     noinline block: () -> Outcome,

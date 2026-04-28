@@ -39,7 +39,7 @@ class MemoryModelTest {
             (1 to 0),
             (1 to 1)
         )
-        litmustTestv2(outcomes) {
+        litmusTest(outcomes) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -71,7 +71,7 @@ class MemoryModelTest {
             (1 to 0),
             (1 to 1),
         )
-        litmustTestv2(expectedOutcomes) {
+        litmusTest(expectedOutcomes) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -99,7 +99,7 @@ class MemoryModelTest {
             (1 to 0),
 //            (1 to 1), TODO: fix exploration strat to unlock this outcome
         )
-        litmustTestv2(expectedOutcomes) {
+        litmusTest(expectedOutcomes) {
             val x = AtomicInteger(0)
             var r1 = 0;
             var r2 = 0;
