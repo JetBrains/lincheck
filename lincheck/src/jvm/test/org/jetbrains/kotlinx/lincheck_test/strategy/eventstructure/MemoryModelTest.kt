@@ -44,9 +44,16 @@ class MemoryModelTest {
             val y = AtomicInteger(0)
             var r1 = 0;
             var r2 = 0;
-            val t1 = thread { r1 = x.get(); r2 = y.get() }
-            val t2 = thread { y.set(1) }
-            val t3 = thread { x.set(1) }
+            val t1 = thread {
+                r1 = x.get();
+                r2 = y.get()
+            }
+            val t2 = thread {
+                y.set(1)
+            }
+            val t3 = thread {
+                x.set(1)
+            }
             t1.join()
             t2.join()
             t3.join()
@@ -69,8 +76,14 @@ class MemoryModelTest {
             val y = AtomicInteger(0)
             var r1 = 0;
             var r2 = 0;
-            val t1 = thread { x.set(1); r1 = y.get()  }
-            val t2 = thread { y.set(1); r2 = x.get()  }
+            val t1 = thread {
+                x.set(1)
+                r1 = y.get()
+            }
+            val t2 = thread {
+                y.set(1)
+                r2 = x.get()
+            }
             t1.join()
             t2.join()
             (r1 to r2)
@@ -90,9 +103,15 @@ class MemoryModelTest {
             val x = AtomicInteger(0)
             var r1 = 0;
             var r2 = 0;
-            val t1 = thread { r1 = x.getOpaque() }
-            val t2 = thread { r2 = x.getOpaque() }
-            val t3 = thread { x.setOpaque(1) }
+            val t1 = thread {
+                r1 = x.getOpaque()
+            }
+            val t2 = thread {
+                r2 = x.getOpaque()
+            }
+            val t3 = thread {
+                x.setOpaque(1)
+            }
             t1.join()
             t2.join()
             t3.join()
