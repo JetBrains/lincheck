@@ -172,6 +172,46 @@ val AtomicThreadEvent.readsFrom: AtomicThreadEvent get() = run {
     syncFrom
 }
 
+val AtomicThreadEvent.readsFromOpt: AtomicThreadEvent? get() = run {
+    if(label is ReadAccessLabel       && label.isResponse && senders.size == 1)  senders.first()
+    else if(label is ThreadStartLabel && label.isResponse && senders.size == 1)  senders.first()
+    else if(label is ThreadJoinLabel  && label.isResponse && senders.size == 1)  senders.first()
+    else null
+}
+
+val ThreadEvent.isInit: Boolean get() = run {
+    return label is InitializationLabel
+}
+
+val AtomicThreadEvent.isAcquire: Boolean get() = run {
+    if (label is ThreadJoinLabel || label is ThreadStartLabel) return true
+    val thisLabel = label as? ReadAccessLabel ?: return@run false
+    (thisLabel.memoryOrdering == MemoryOrdering.ACQUIRE || thisLabel.memoryOrdering == MemoryOrdering.VOLATILE) && thisLabel.isResponse
+}
+
+val AtomicThreadEvent.isWrite: Boolean get() = run {
+    if(label is WriteAccessLabel || label is InitializationLabel || label is ObjectAllocationLabel) true else false
+}
+
+val AtomicThreadEvent.isRead: Boolean get() = run {
+    return label is ReadAccessLabel
+}
+
+val AtomicThreadEvent.isFence: Boolean get() = run {
+    return label is FenceLabel
+}
+
+val AtomicThreadEvent.isRelease: Boolean get() = run {
+    if (label is ThreadForkLabel || label is ThreadFinishLabel) return true
+    val thisLabel = label as? WriteAccessLabel ?: return@run false
+    (thisLabel.memoryOrdering == MemoryOrdering.RELEASE || thisLabel.memoryOrdering == MemoryOrdering.VOLATILE)
+}
+
+val AtomicThreadEvent.isVolatile: Boolean get() = run {
+    val thisLabel = label as? WriteAccessLabel ?: label as? ReadAccessLabel ?: return@run false
+    return thisLabel.memoryOrdering == MemoryOrdering.VOLATILE
+}
+
 val AtomicThreadEvent.locksFrom: AtomicThreadEvent get() = run {
     require(label is LockLabel)
     syncFrom

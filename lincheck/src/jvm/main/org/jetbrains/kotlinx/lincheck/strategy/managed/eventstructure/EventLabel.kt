@@ -154,6 +154,7 @@ enum class LabelType {
     ThreadJoin,
     ReadAccess,
     WriteAccess,
+    Fence,
     ReadModifyWriteAccess,
     CoroutineSuspend,
     CoroutineResume,
@@ -192,6 +193,7 @@ val EventLabel.type: LabelType get() = when (this) {
     is UnparkLabel                  -> LabelType.Unpark
     is ActorLabel                   -> LabelType.Actor
     is RandomLabel                  -> LabelType.Random
+    is FenceLabel                   -> LabelType.Fence
 }
 
 
@@ -1204,6 +1206,28 @@ data class CoroutineResumeLabel(
 
 }
 
+
+/* ************************************************************************* */
+/*      Fences                                                               */
+/* ************************************************************************* */
+
+/**
+ * Label denoting a fence operation
+ * For now we only have Release and Acquire fences.
+ * Full fences should just use the VOLATILE memory ordering
+ * We need to check the precise semantics, though.
+ *
+ * @param memoryOrdering the memory order of the fence. see above
+ */
+data class FenceLabel(
+    val memoryOrdering: MemoryOrdering
+): EventLabel(
+    kind = LabelKind.Send
+) {
+    override fun toString(): String {
+        return "Fence($memoryOrdering)"
+    }
+}
 
 /* ************************************************************************* */
 /*      Miscellaneous                                                        */

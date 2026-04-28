@@ -865,7 +865,7 @@ class PrimitivesTest {
             }
         }
         val outcomes = setOf(null, 1)
-        litmusTest(ParkLatchedVariable::class.java, testScenario, outcomes, executionCount = 3) { results ->
+        litmusTest(ParkLatchedVariable::class.java, testScenario, assertSame(outcomes, executionCount = 3)) { results ->
             getValue<Int?>(results.parallelResults[1][0]!!)
         }
     }
@@ -931,7 +931,7 @@ class PrimitivesTest {
             (SuspendedResult to false),
             (1 to true)
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertSame(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b = getValue<Boolean>(results.parallelResults[1][0]!!)
             (r to b)
@@ -962,7 +962,7 @@ class PrimitivesTest {
             (SuspendedResult to false),
             (CancelledOperationException to true)
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertSame(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b = getValue<Boolean>(results.parallelResults[1][0]!!)
             (r to b)
@@ -993,7 +993,7 @@ class PrimitivesTest {
             (CancelledResult to false),
             (1 to true)
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertSame(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b = getValue<Boolean>(results.parallelResults[1][0]!!)
             (r to b)
@@ -1026,7 +1026,7 @@ class PrimitivesTest {
             (CancelledResult to true),
             // (1 to true),
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertSame(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b = getValue<Boolean>(results.parallelResults[1][0]!!)
             (r to b)
@@ -1062,7 +1062,7 @@ class PrimitivesTest {
             Triple(1, true, false),
             Triple(CancelledOperationException, false, true)
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertSame(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b1 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val b2 = getValue<Boolean>(results.parallelResults[2][0]!!)
@@ -1094,7 +1094,7 @@ class PrimitivesTest {
             Triple(SuspendedResult, 1, true),
             Triple(1, SuspendedResult, true),
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertSame(outcomes, executionCount = UNKNOWN)) { results ->
             val r1 = getValueSuspended(results.parallelResults[0][0]!!)
             val r2 = getValueSuspended(results.parallelResults[1][0]!!)
             val b = getValue<Boolean>(results.parallelResults[2][0]!!)
@@ -1126,7 +1126,7 @@ class PrimitivesTest {
             Triple(1, true, false),
             Triple(2, false, true),
         )
-        litmusTest(CoroutineWrapper::class.java, testScenario, outcomes, executionCount = UNKNOWN) { results ->
+        litmusTest(CoroutineWrapper::class.java, testScenario, assertSame(outcomes, executionCount = UNKNOWN)) { results ->
             val r = getValueSuspended(results.parallelResults[0][0]!!)
             val b1 = getValue<Boolean>(results.parallelResults[1][0]!!)
             val b2 = getValue<Boolean>(results.parallelResults[2][0]!!)
@@ -1172,7 +1172,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Unit> = setOf(Unit)
-        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+        litmusTest(Foo::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { results ->
             Unit
         }
     }
@@ -1206,7 +1206,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Unit> = setOf(Unit)
-        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+        litmusTest(Foo::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { results ->
             Unit
         }
     }
@@ -1246,7 +1246,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Int> = setOf(0)
-        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+        litmusTest(Foo::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { results ->
             val b1 = getValue<Int>(results.parallelResults[0][0]!!)
             System.gc() // Kindly suggest the GC to do its thing. Should make the test fail more consistently.
             return@litmusTest b1
@@ -1294,7 +1294,7 @@ class PrimitivesTest {
             }
         }
         val outcomes: Set<Int> = setOf(1,2,3,4)
-        litmusTest(Foo::class.java, testScenario, outcomes, UNKNOWN) { results ->
+        litmusTest(Foo::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { results ->
             val b1 = getValue<Int>(results.parallelResults[0][0]!!)
             return@litmusTest b1
         }

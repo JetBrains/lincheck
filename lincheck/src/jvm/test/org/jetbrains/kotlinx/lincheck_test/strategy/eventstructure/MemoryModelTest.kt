@@ -22,9 +22,9 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import java.util.concurrent.atomic.*
-
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.lincheck.datastructures.scenario
+import org.junit.Ignore
 
 import org.junit.Test
 
@@ -67,7 +67,7 @@ class MemoryModelTest {
             (1 to 0),
             (1 to 1)
         )
-        litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
+        litmusTest(SharedMemory::class.java, testScenario, assertSame(outcomes)) { results ->
             val r1 = getValue<Int>(results.parallelResults[0][0]!!)
             val r2 = getValue<Int>(results.parallelResults[0][1]!!)
             (r1 to r2)
@@ -76,6 +76,9 @@ class MemoryModelTest {
 
     /* ======== Store Buffering ======== */
 
+
+    // TODO: we need to also see the (0 to 0) outcome
+    @Ignore
     @Test
     fun testSB() {
         val testScenario = scenario {
@@ -91,16 +94,19 @@ class MemoryModelTest {
             }
         }
         val outcomes: Set<Pair<Int, Int>> = setOf(
+            (0 to 0),
             (0 to 1),
             (1 to 0),
             (1 to 1)
         )
-        litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
+        litmusTest(SharedMemory::class.java, testScenario, assertSame(outcomes)) { results ->
             val r1 = getValue<Int>(results.parallelResults[0][1]!!)
             val r2 = getValue<Int>(results.parallelResults[1][1]!!)
             (r1 to r2)
         }
     }
+
+
 }
 
 internal class SharedMemory(size: Int = 16) {

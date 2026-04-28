@@ -141,6 +141,9 @@ class SortedArrayList<T : Comparable<T>> : ArrayList<T>, SortedMutableList<T> {
 
 }
 
+fun<T : Comparable<T>> sortedListOf(list: List<T>): SortedList<T> =
+    SortedListImpl(list)
+
 fun<T : Comparable<T>> sortedListOf(vararg elements: T): SortedList<T> =
     SortedListImpl(elements.asList())
 
