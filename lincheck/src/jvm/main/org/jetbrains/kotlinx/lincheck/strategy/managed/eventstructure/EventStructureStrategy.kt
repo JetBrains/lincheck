@@ -117,7 +117,6 @@ internal class EventStructureStrategy(
             if (result.isAbortedInvocation()) {
                 eventStructure.abortExploration()
             }
-            // patch clocks
             if (result is CompletedInvocationResult) {
                 val patchedResult = patchResultsClock(eventStructure.execution, result.results)
                 result = CompletedInvocationResult(patchedResult)
@@ -229,7 +228,10 @@ internal class EventStructureStrategy(
         val patchedParallelResults = executionResult.parallelResultsWithClock
             .map { it.map { resultWithClock -> ResultWithClock(resultWithClock.result, resultWithClock.clockOnStart) }}
         val (actorsExecution, _) = execution.aggregate(ActorAggregator(execution))
-        check(actorsExecution.threadIDs.size == hbClockSize + 1)
+
+        // NOTE: This check is only valid if it is an ExecutionScenarioRunner. If we have a lambda runner then hbClockSize is just 1 (for the main) thread
+        // and extra threads that are forked are not considered
+        check((runner is ExecutionScenarioRunner) implies (actorsExecution.threadIDs.size == hbClockSize + 1))
         for (tid in patchedParallelResults.indices) {
             var actorEvents: List<HyperThreadEvent> = actorsExecution[tid]!!
             // cut init/post part
@@ -350,11 +352,13 @@ internal class EventStructureStrategy(
 
     private fun registerTestInstance() {
         check(!isTestInstanceRegistered)
-        val testInstance = (runner as ExecutionScenarioRunner).testInstance
+        val testInstance = (runner as? ExecutionScenarioRunner)?.testInstance
         //NOTE: Since the IdentityHashCode of the test instance changes between invocations
         // we cannot keep it as an external object. Instead, we register it as an "internal"
         // object on each invocation
-        (objectTracker as EventStructureObjectTracker).registerNewObject(testInstance)
+        if (testInstance != null) {
+            (objectTracker as EventStructureObjectTracker).registerNewObject(testInstance)
+        }
         isTestInstanceRegistered = true
     }
 
@@ -362,6 +366,29 @@ internal class EventStructureStrategy(
         super.onThreadStart(threadId)
         if (threadId != eventStructure.mainThreadId && threadId != eventStructure.initThreadId) {
             eventStructure.addThreadStartEvent(threadId)
+        }
+    }
+
+    override fun onThreadJoin(threadDescriptor: ThreadDescriptor, joinedThread: Thread?, withTimeout: Boolean): Unit = runInsideIgnoredSection {
+        super.onThreadJoin(threadDescriptor, joinedThread, withTimeout)
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val joinedThreadId = threadScheduler.getThreadId(joinedThread!!)
+        eventStructure.addThreadJoinEvent(currentThreadId, setOf(joinedThreadId))
+    }
+
+
+    override fun beforeThreadStart(
+        threadDescriptor: ThreadDescriptor,
+        startingThread: Thread,
+        startingThreadDescriptor: ThreadDescriptor
+    ) {
+        super.beforeThreadStart(threadDescriptor, startingThread, startingThreadDescriptor)
+        val newThreadId = threadScheduler.getThreadId(startingThread)
+        //NOTE: Main thread is special cased, since it is forked from the "initial" thread
+        //      which is not tracked in the eventstrcuture. Therefore, we want to skip tracking it
+        if (newThreadId != -1 || newThreadId != eventStructure.mainThreadId) {
+            val currentThreadId = threadScheduler.getCurrentThreadId()
+            eventStructure.addThreadForkEvent(currentThreadId, setOf(newThreadId))
         }
     }
 

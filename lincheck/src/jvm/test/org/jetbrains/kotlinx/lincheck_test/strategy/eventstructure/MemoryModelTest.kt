@@ -20,13 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import java.util.concurrent.atomic.*
-
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.lincheck.datastructures.scenario
-
 import org.junit.Test
+import kotlin.concurrent.thread
 
 /**
  * These tests check that [EventStructureStrategy] adheres to the weak memory model.
@@ -34,42 +31,32 @@ import org.junit.Test
  */
 class MemoryModelTest {
 
-    private val read = SharedMemory::read
-    private val write = SharedMemory::write
-    private val compareAndSet = SharedMemory::compareAndSet
-    private val fetchAndAdd = SharedMemory::fetchAndAdd
-
-    companion object {
-        const val x = 0
-        const val y = 1
-        const val z = 2
-    }
-
     @Test
     fun testRRWW() {
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(read, x)
-                    actor(read, y)
-                }
-                thread {
-                    actor(write, y, 1)
-                }
-                thread {
-                    actor(write, x, 1)
-                }
-            }
-        }
         val outcomes: Set<Pair<Int, Int>> = setOf(
             (0 to 0),
             (0 to 1),
             (1 to 0),
             (1 to 1)
         )
-        litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
-            val r1 = getValue<Int>(results.parallelResults[0][0]!!)
-            val r2 = getValue<Int>(results.parallelResults[0][1]!!)
+        litmustTestv2(outcomes) {
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            var r1 = 0;
+            var r2 = 0;
+            val t1 = thread {
+                r1 = x.get();
+                r2 = y.get()
+            }
+            val t2 = thread {
+                y.set(1)
+            }
+            val t3 = thread {
+                x.set(1)
+            }
+            t1.join()
+            t2.join()
+            t3.join()
             (r1 to r2)
         }
     }
@@ -78,54 +65,57 @@ class MemoryModelTest {
 
     @Test
     fun testSB() {
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(write, x, 1)
-                    actor(read, y)
-                }
-                thread {
-                    actor(write, y, 1)
-                    actor(read, x)
-                }
-            }
-        }
-        val outcomes: Set<Pair<Int, Int>> = setOf(
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
+//            (0 to 0),
             (0 to 1),
             (1 to 0),
-            (1 to 1)
+            (1 to 1),
         )
-        litmusTest(SharedMemory::class.java, testScenario, outcomes) { results ->
-            val r1 = getValue<Int>(results.parallelResults[0][1]!!)
-            val r2 = getValue<Int>(results.parallelResults[1][1]!!)
+        litmustTestv2(expectedOutcomes) {
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            var r1 = 0;
+            var r2 = 0;
+            val t1 = thread {
+                x.set(1)
+                r1 = y.get()
+            }
+            val t2 = thread {
+                y.set(1)
+                r2 = x.get()
+            }
+            t1.join()
+            t2.join()
             (r1 to r2)
         }
     }
-}
 
-internal class SharedMemory(size: Int = 16) {
-    // TODO: use AtomicIntegerArray once it is fixed
-    // TODO: In the future we would likely want to switch to atomicfu primitives.
-    //   However, atomicfu currently does not support various access modes that we intend to test here.
-    private val memory = Array(size) { AtomicInteger() }
-
-    val size: Int
-        get() = memory.size
-
-    fun write(location: Int, value: Int) {
-        memory[location].set(value)
-    }
-
-    fun read(location: Int): Int {
-        return memory[location].get()
-    }
-
-    // TODO: use `compareAndExchange` once Java 9 is available?
-    fun compareAndSet(location: Int, expected: Int, desired: Int): Boolean {
-        return memory[location].compareAndSet(expected, desired)
-    }
-
-    fun fetchAndAdd(location: Int, delta: Int): Int {
-        return memory[location].getAndAdd(delta)
+    // New version
+    @Test
+    fun testRRWOpaque() {
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
+            (0 to 0),
+            (0 to 1),
+            (1 to 0),
+//            (1 to 1), TODO: fix exploration strat to unlock this outcome
+        )
+        litmustTestv2(expectedOutcomes) {
+            val x = AtomicInteger(0)
+            var r1 = 0;
+            var r2 = 0;
+            val t1 = thread {
+                r1 = x.getOpaque()
+            }
+            val t2 = thread {
+                r2 = x.getOpaque()
+            }
+            val t3 = thread {
+                x.setOpaque(1)
+            }
+            t1.join()
+            t2.join()
+            t3.join()
+            (r1 to r2)
+        }
     }
 }

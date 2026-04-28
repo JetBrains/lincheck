@@ -230,6 +230,7 @@ internal class EventStructure(
         // add new event to current execution
         _execution.add(event)
         // do the same for blocked requests
+
         for (blockedRequest in backtrackingPoint.blockedRequests) {
             _execution.add(blockedRequest)
             // additionally, pin blocked requests if all their predecessors are also blocked ...
@@ -299,9 +300,26 @@ internal class EventStructure(
             addUnblockingResponses(conflicts)
         }
         val danglingRequests = frontier.getDanglingRequests()
+
         val blockedRequests = danglingRequests
-            // TODO: perhaps, we should change this to the list of requests to conflicting response events?
-            .filter { it.label.isBlocking && it != event.parent && (it.label !is CoroutineSuspendLabel) }
+            .filter {
+                // TODO: (it.label !is CoroutineSuspendLabel)
+                check(it.label.isRequest) // Dangling requests should probably be requests
+                if (!it.label.isBlocking ) return@filter false
+                val nextEvent = execution.get(it.threadId, it.threadPosition + 1) ?: return@filter false
+                if (nextEvent.parent != it)  return@filter false
+                // Maybe it would be nice to somehow keep track of conflicts as they are added in the event structure?
+                // We already compute the conflicting events when they are added.
+                // This way we do not have to compute them here every time
+                val conflicts = getConflictingEvents(
+                    it.threadId,
+                    nextEvent.label,
+                    it,
+                    it.dependencies
+                ).filter { it != nextEvent }
+                return@filter conflicts.size > 0
+            }
+
         frontier.apply {
             cut(danglingRequests)
             set(event.threadId, event.parent)
@@ -357,7 +375,7 @@ internal class EventStructure(
         iThread: Int,
         label: EventLabel,
         parent: AtomicThreadEvent?,
-        dependencies: List<AtomicThreadEvent>
+        dependencies: List<ThreadEvent>
     ): List<AtomicThreadEvent> {
         val position = parent?.let { it.threadPosition + 1 } ?: 0
         val conflicts = mutableListOf<AtomicThreadEvent>()

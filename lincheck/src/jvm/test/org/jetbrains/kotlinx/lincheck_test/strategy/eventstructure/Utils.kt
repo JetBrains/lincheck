@@ -20,22 +20,24 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.jetbrains.kotlinx.lincheck.util.*
-
+import org.jetbrains.lincheck.datastructures.ModelCheckingCTestConfiguration
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.junit.Assert
 
 internal const val UNIQUE = -1
 internal const val UNKNOWN = -2
-
 internal fun<Outcome> litmusTest(
     testClass: Class<*>,
     testScenario: ExecutionScenario,
@@ -44,9 +46,8 @@ internal fun<Outcome> litmusTest(
     getOutcome: (ExecutionResult) -> Outcome,
 ) {
     require(executionCount >= 0 || executionCount == UNIQUE || executionCount == UNKNOWN)
-
     val outcomes: MutableSet<Outcome> = mutableSetOf()
-    val verifier = createVerifier(testScenario) { results ->
+    val verifier = getResultsVerifier { results ->
         outcomes.add(getOutcome(results))
         true
     }
@@ -54,7 +55,10 @@ internal fun<Outcome> litmusTest(
         val strategy = createStrategy(testClass, testScenario)
         val failure = strategy.runIteration(INVOCATIONS, verifier)
         assert(failure == null) { failure.toString() }
-        Assert.assertEquals(expectedOutcomes, outcomes)
+        val missingOutcomes = expectedOutcomes - outcomes;
+        val extraOutomes = outcomes - expectedOutcomes;
+        val message = "Litmus test outcomes are different:\nMissing $missingOutcomes\nExtra: $extraOutomes\n"
+        Assert.assertEquals(message, expectedOutcomes, outcomes)
 
         val expectedCount = when (executionCount) {
             UNIQUE -> expectedOutcomes.size
@@ -82,22 +86,6 @@ internal fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): E
         ) as EventStructureStrategy
 }
 
-internal fun createVerifier(testScenario: ExecutionScenario?, verify: (ExecutionResult) -> Boolean): Verifier =
-    object : Verifier {
-
-        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
-            require(testScenario == scenario)
-            require(results != null)
-            results.parallelResults.flatten().forEach {
-                if(it is ExceptionResult) {
-                    throw it.throwable
-                }
-            }
-            return verify(results)
-        }
-
-    }
-
 internal inline fun<reified T> getValue(result: LincheckResult): T =
     (result as ValueResult).value as T
 
@@ -108,6 +96,63 @@ internal fun getValueSuspended(result: LincheckResult): Any? = when (result) {
     is CancelledResult -> result
     else -> throw IllegalArgumentException()
 }
+
+internal fun getResultsVerifier(verify: (ExecutionResult) -> Boolean): Verifier =
+    object : Verifier {
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            require(results != null)
+            results.parallelResults.flatten().forEach {
+                if (it is ExceptionResult) {
+                    throw it.throwable
+                }
+            }
+            return verify(results)
+        }
+    }
+
+
+internal fun <T> createStrategy(timeoutMs: Long, settings: ManagedStrategySettings, inIdeaPluginReplayMode: Boolean = false,  block: () -> T): EventStructureStrategy {
+    val runner = LambdaRunner(timeoutMs = timeoutMs, block)
+    return EventStructureStrategy(runner, settings, inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+        runner.initializeStrategy(it)
+    }
+}
+
+internal inline fun<reified Outcome> litmustTestv2 (
+    expectedOutcomes: Set<Outcome>,
+    executionCount: Int = UNIQUE,
+    noinline block: () -> Outcome,
+) {
+    val INVOCATIONS = 10000
+    val options = ModelCheckingOptions().analyzeStdLib(true)
+    val testCfg = options.createTestConfigurations(block::class.java)
+    val outcomes: MutableSet<Outcome> = mutableSetOf()
+    val verifier = getResultsVerifier { result ->
+        val value = getValue<Outcome>(result.parallelResults[0][0]!!)
+        outcomes.add(value)
+        true
+    }
+    withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
+        ensureObjectIsTransformed(block)
+        createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, block).use { strategy ->
+            val failure = strategy.runIteration(INVOCATIONS, verifier)
+            assert(failure == null) { failure.toString() }
+            val missingOutcomes = expectedOutcomes - outcomes;
+            val extraOutomes = outcomes - expectedOutcomes;
+            val message = "Litmus test outcomes are different:\nMissing $missingOutcomes\nExtra: $extraOutomes\n"
+            Assert.assertEquals(message, expectedOutcomes, outcomes)
+
+            val expectedCount = when (executionCount) {
+                UNIQUE -> expectedOutcomes.size
+                UNKNOWN -> strategy.stats.consistentInvocations
+                else -> executionCount
+            }
+            Assert.assertEquals(expectedCount, strategy.stats.consistentInvocations)
+
+        }
+    }
+}
+
 
 internal const val TIMEOUT = 30 * 1000L // 30 sec
 
