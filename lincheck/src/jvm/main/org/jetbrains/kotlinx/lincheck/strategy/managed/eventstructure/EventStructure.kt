@@ -303,18 +303,20 @@ internal class EventStructure(
 
         val blockedRequests = danglingRequests
             .filter {
+                // TODO: (it.label !is CoroutineSuspendLabel)
                 check(it.label.isRequest) // Dangling requests should probably be requests
-                val childEvent = execution.get(it.threadId, it.threadPosition + 1) ?: return@filter false
-                if(childEvent.parent != it)  return@filter false
+                if (!it.label.isBlocking ) return@filter false
+                val nextEvent = execution.get(it.threadId, it.threadPosition + 1) ?: return@filter false
+                if (nextEvent.parent != it)  return@filter false
                 // Maybe it would be nice to somehow keep track of conflicts as they are added in the event structure?
                 // We already compute the conflicting events when they are added.
                 // This way we do not have to compute them here every time
                 val conflicts = getConflictingEvents(
                     it.threadId,
-                    childEvent.label,
+                    nextEvent.label,
                     it,
-                    it.dependencies.mapNotNull { it as? AtomicThreadEvent }
-                ).filter { it != childEvent }
+                    it.dependencies
+                ).filter { it != nextEvent }
                 return@filter conflicts.size > 0
             }
 
@@ -373,7 +375,7 @@ internal class EventStructure(
         iThread: Int,
         label: EventLabel,
         parent: AtomicThreadEvent?,
-        dependencies: List<AtomicThreadEvent>
+        dependencies: List<ThreadEvent>
     ): List<AtomicThreadEvent> {
         val position = parent?.let { it.threadPosition + 1 } ?: 0
         val conflicts = mutableListOf<AtomicThreadEvent>()
