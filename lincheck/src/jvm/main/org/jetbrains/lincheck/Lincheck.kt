@@ -96,7 +96,7 @@ object Lincheck {
     }
 
     private fun ManagedCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
-        val runner = LambdaRunner(timeoutMs = timeoutMs) { block.run()  }
+        val runner = LambdaRunner(timeoutMs = timeoutMs, block)
         return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
             runner.initializeStrategy(it)
         }
