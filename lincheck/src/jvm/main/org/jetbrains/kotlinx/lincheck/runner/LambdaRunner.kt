@@ -27,6 +27,13 @@ internal class LambdaRunner<T>(
     val block: () -> T
 ) : AbstractActiveThreadPoolRunner() {
 
+    companion object {
+        // Ghetto secondary constructor
+        operator fun invoke(timeoutMs: Long, block: Runnable): LambdaRunner<Unit> {
+            return LambdaRunner(timeoutMs, { block.run() })
+        }
+    }
+
     private val testName =
         runCatching { block.javaClass.simpleName }.getOrElse { "lambda" }
 
