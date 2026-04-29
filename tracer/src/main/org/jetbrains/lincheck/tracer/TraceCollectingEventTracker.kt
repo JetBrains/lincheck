@@ -331,6 +331,7 @@ class TraceCollectingEventTracker(
 
     override fun beforeNewObjectCreation(threadDescriptor: ThreadDescriptor, className: String) {}
     override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
+    override fun afterInvokeDynamicObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
 
     override fun getCachedInvokeDynamicCallSite(
         name: String,

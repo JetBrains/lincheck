@@ -39,6 +39,7 @@ public interface EventTracker {
 
     void beforeNewObjectCreation(ThreadDescriptor descriptor, String className);
     void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj);
+    void afterInvokeDynamicObjectCreation(ThreadDescriptor descriptor, Object obj);
 
     void updateSnapshotBeforeConstructorCall(Object[] objs);
 

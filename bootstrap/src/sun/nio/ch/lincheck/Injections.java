@@ -926,6 +926,21 @@ public class Injections {
     }
 
     /**
+     * Called from the instrumented code after an object is produced by an
+     * {@code invokedynamic} instruction
+     * (currently, lambdas allocated via {@code LambdaMetafactory}
+     * and strings produced via {@code StringConcatFactory}).
+     * <p>
+     * The actual implementation of this injection in {@code EventTracker} should be idempotent,
+     * as this function might be called multiple times for the same object.
+     * See comment in {@code ObjectCreationTransformer} for more details.
+     */
+    public static void afterInvokeDynamicObjectCreation(ThreadDescriptor descriptor, Object obj) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterInvokeDynamicObjectCreation(descriptor, obj);
+    }
+
+    /**
      * Called from instrumented code before constructors' invocations,
      * where passed objects are subtypes of the constructor class type.
      * Required to update the static memory snapshot.

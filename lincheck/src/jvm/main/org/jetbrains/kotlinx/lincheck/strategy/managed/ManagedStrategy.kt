@@ -1547,11 +1547,22 @@ internal abstract class ManagedStrategy(
         LincheckInstrumentation.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit = threadDescriptor.runInsideIgnoredSection {
-        if (objectTracker.shouldTrackObject(obj)) {
-            objectTracker.registerNewObject(obj)
+    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
+        threadDescriptor.runInsideIgnoredSection {
+            if (objectTracker.shouldTrackObject(obj)) {
+                objectTracker.registerNewObject(obj)
+            }
         }
-    }
+
+    override fun afterInvokeDynamicObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
+        threadDescriptor.runInsideIgnoredSection {
+            // check if object is not already registered to guarantee idempotency,
+            // as this injection might be called multiple times for the same object;
+            // see comment in `ObjectCreationTransformer.kt`.
+            if (objectTracker.shouldTrackObject(obj) && objectTracker[obj] == null) {
+                objectTracker.registerNewObject(obj)
+            }
+        }
 
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 

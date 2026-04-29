@@ -201,9 +201,19 @@ internal class ObjectCreationTransformer(
      * As a result, `NEW`-only instrumentation cannot observe the lambda being allocated
      *
      * The cleanest place to hook this allocation is the `invokedynamic` call site itself:
-     * the freshly allocated lambda is left on the operand stack
+     * the freshly allocated object is left on the operand stack
      * as the instruction's result, so we can `dup` it and feed it to
      * `afterNewObjectCreation` exactly as we do for `NEW`/`<init>` pairs.
+     *
+     * One subtlety: a non-capturing lambda's call site target returns a JVM-cached singleton,
+     * so the same instance shows up on the stack each time the `invokedynamic` is executed.
+     * To avoid registering it more than once,
+     * we route this site through the dedicated `afterInvokeDynamicObjectCreation` hook
+     * rather than the regular `afterNewObjectCreation`.
+     * The other, "normal" allocation sites (`NEW`/`NEWARRAY`/`ANEWARRAY`/`MULTIANEWARRAY`)
+     * are guaranteed to produce a fresh instance per execution and use the plain `afterNewObjectCreation`.
+     * As such, at runtime, the implementation of `afterInvokeDynamicObjectCreation` injection should be idempotent,
+     * while implementation of `afterNewObjectCreation` is not obligatory idempotent.
      *
      * References:
      *  - JVMS §6.5 invokedynamic — describes how the bootstrap method's
@@ -228,7 +238,7 @@ internal class ObjectCreationTransformer(
                     val objectLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                     invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                     loadLocal(objectLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
+                    invokeStatic(Injections::afterInvokeDynamicObjectCreation)
                 }
             }
         )
