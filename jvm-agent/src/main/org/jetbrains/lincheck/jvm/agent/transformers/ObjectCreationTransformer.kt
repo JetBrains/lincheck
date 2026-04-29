@@ -219,9 +219,9 @@ internal class ObjectCreationTransformer(
             instrumented = {
                 if (isObjectCreatingBootstrapMethod(bootstrapMethodHandle?.owner)) {
                     dup()
-                    val lambdaLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                    val objectLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                     invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(lambdaLocal)
+                    loadLocal(objectLocal)
                     invokeStatic(Injections::afterNewObjectCreation)
                 }
             }
@@ -234,20 +234,31 @@ internal class ObjectCreationTransformer(
      * corresponds to a bootstrap factory whose call sites allocate
      * a fresh object instance that Lincheck must register as a tracked allocation.
      *
-     * Currently, this matches only [java.lang.invoke.LambdaMetafactory], which
-     * covers both `metafactory` and `altMetafactory`
-     * (the latter is used by the Java compiler for `Serializable` lambdas,
-     * multi-interface lambdas, and lambdas with extra bridge methods).
+     * Currently, this matches:
+     *
+     *  - `java.lang.invoke.LambdaMetafactory` — covers both `metafactory` and
+     *    `altMetafactory` (the latter is used by the Java compiler for `Serializable` lambdas,
+     *    multi-interface lambdas, and lambdas with extra bridge methods).
+     *
+     *  - `java.lang.invoke.StringConcatFactory` — covers `makeConcat` and `makeConcatWithConstants`,
+     *    both of which produce a fresh `String` on every invocation.
      *
      * Other JDK bootstrap factories are intentionally not matched here:
-     * - [java.lang.invoke.StringConcatFactory] returns immutable `String`s,
-     * - [java.lang.runtime.ObjectMethods] (records) and [java.lang.runtime.SwitchBootstraps] (pattern switch)
-     *    return cached `MethodHandle`s,
-     * - [java.lang.invoke.ConstantBootstraps] returns constants.
+     *  - `java.lang.runtime.ObjectMethods` (records) and `java.lang.runtime.SwitchBootstraps` (pattern switch)
+     *     return cached MethodHandle`s;
+     *  - `java.lang.invoke.ConstantBootstraps` returns constants.
      *
      * None of these need the same "register as NEW" treatment.
      */
     private fun isObjectCreatingBootstrapMethod(bootstrapMethodOwner: String?): Boolean =
-        bootstrapMethodOwner == "java/lang/invoke/LambdaMetafactory"
+        bootstrapMethodOwner == "java/lang/invoke/LambdaMetafactory" ||
+
+        // TODO: We always instrument allocation of concatenated strings,
+        //   even though tracking of immutable values may be filtered out at runtime
+        //   by `ObjectTracker.shouldTrackObject`.
+        //   Consider adding a `TransformationConfiguration` flag
+        //   to skip instrumenting allocations of immutable types,
+        //   to avoid the runtime overhead when immutable-value tracking is disabled.
+        bootstrapMethodOwner == "java/lang/invoke/StringConcatFactory"
 
 }
