@@ -698,6 +698,17 @@ fun EventLabel.isExclusiveWriteAccess(): Boolean =
 fun EventLabel.isInitializingWriteAccess(): Boolean =
     this is InitializationLabel || this is ObjectAllocationLabel
 
+fun EventLabel.isRelease(): Boolean =
+    (this is WriteAccessLabel && (this.memoryOrdering == MemoryOrdering.RELEASE || this.memoryOrdering == MemoryOrdering.VOLATILE)) ||
+    (this is ThreadForkLabel) ||
+    (this is ThreadFinishLabel)
+
+
+fun EventLabel.isAcquire(): Boolean =
+    (this is ReadAccessLabel && (this.memoryOrdering == MemoryOrdering.ACQUIRE || this.memoryOrdering == MemoryOrdering.VOLATILE)) ||
+    (this is ThreadJoinLabel) ||
+    (this is ThreadStartLabel)
+
 /**
  * Checks if the initialization label can be interpreted as a write access to the given memory location.
  *

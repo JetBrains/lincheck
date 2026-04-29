@@ -158,7 +158,6 @@ class JamMemoryModelTests {
         }
     }
 
-    @Ignore
     @Test
     fun testArfna() {
         class TestArfna {
@@ -203,7 +202,6 @@ class JamMemoryModelTests {
         }
     }
 
-    @Ignore
     @Test
     fun testArfnaTransformed() {
         class TestArfnaTransformed {
@@ -310,7 +308,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: fix model checker
-    @Ignore
     @Test
     fun testC() {
         class TestC {
@@ -358,7 +355,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: fix model checker
-    @Ignore
     @Test
     fun testCReorder() {
         class TestCReorder {
@@ -499,7 +495,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testFig1() {
         class TestFig1 {
@@ -568,7 +563,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testIRIW() {
         class TestIRIW {
@@ -769,7 +763,6 @@ class JamMemoryModelTests {
 
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testX003() {
         class TestX003 {
@@ -805,7 +798,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testX006() {
         class TestX006 {
@@ -840,7 +832,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testX86_2plus2W() {
         class TestX86_2plus2W {
@@ -873,7 +864,6 @@ class JamMemoryModelTests {
 
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testA1() {
         class TestA1 {
@@ -909,7 +899,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testA1Reorder() {
         class TestA1Reorder {
@@ -1079,7 +1068,6 @@ class JamMemoryModelTests {
 
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testLinearisation() {
         class TestLinearisation {
@@ -1128,7 +1116,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testLinearisation2() {
         class TestLinearisation2 {
@@ -1208,6 +1195,7 @@ class JamMemoryModelTests {
     }
 
     // NOTE: this test is interesting because C11 forbids this behavior but JAM allows it
+    // But the current version allows it :)
     @Test
     fun testMpRelacqRs() {
         class TestMpRelacqRs {
@@ -1240,7 +1228,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testRoachmotel() {
         class TestRoachmotel {
@@ -1291,7 +1278,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testRoachmotel2() {
         class TestRoachmotel2 {
@@ -1342,7 +1328,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testRseqWeak() {
         class TestRseqWeak {
@@ -1383,7 +1368,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testRseqWeak2() {
         class TestRseqWeak2 {
@@ -1458,7 +1442,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testWWRRWWRRWsilpPoaaWsilpPoaa() {
         class TestWWRR {

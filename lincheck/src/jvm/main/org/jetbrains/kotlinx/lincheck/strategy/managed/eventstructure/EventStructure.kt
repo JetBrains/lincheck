@@ -1223,7 +1223,7 @@ internal class EventStructure(
         val writes = calculateMemoryLocationView(location, observation).events
         return writes.filter { write ->
             !writes.any { other ->
-                causalityOrder(write, other)
+                happensBeforeOrder(write, other)
             }
         }
     }
