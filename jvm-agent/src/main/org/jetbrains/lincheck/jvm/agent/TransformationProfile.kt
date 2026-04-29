@@ -224,6 +224,15 @@ class FilteredTransformationProfile(
     private val excludeRegexes: List<Regex> = excludeClasses.map { it.toGlobRegex() }
 
     override fun shouldTransform(className: String): Boolean {
+        // Check the base profile first, because it sorts out
+        // some standard library classes, like `java/util/regex/Matcher` which is used
+        // in the excludeRegexes/includeRegexes lists.
+        // An attempt to transform it leads to the ClassCircularityError
+        // TODO: JBRes-9165 this problem might not be fully fixed for Lincheck though
+        if (!baseProfile.shouldTransform(className)) {
+            return false
+        }
+
         // exclude has a higher priority
         if (excludeRegexes.any { it.matches(className) }) {
             return false
@@ -234,8 +243,8 @@ class FilteredTransformationProfile(
             return false
         }
 
-        // otherwise, delegate decision to the base profile
-        return baseProfile.shouldTransform(className)
+        // otherwise, transform the class
+        return true
     }
 
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
