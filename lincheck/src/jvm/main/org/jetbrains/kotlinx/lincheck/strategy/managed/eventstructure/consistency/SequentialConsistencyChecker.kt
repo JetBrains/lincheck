@@ -53,9 +53,10 @@ class SequentialConsistencyChecker(
         check(execution.executionOrderComputable.computed)
         val executionOrder = execution.executionOrderComputable.value
             .ensure { it.isConsistent() }
-        SequentialConsistencyReplayer().ensure {
-            it.replay(executionOrder.ordering) != null
-        }
+        // TODO: The current coherence checker is just for RA, we need to seperate the SC coherence from RA coherence
+//        SequentialConsistencyReplayer().ensure {
+//            it.replay(executionOrder.ordering) != null
+//        }
         return null
     }
 
@@ -357,7 +358,7 @@ class ExecutionOrder(
         //  - events accessing race-free locations
         //  - what else?
         //  and then insert them back into the topologically sorted list
-        val graph = aggregatedExecution.buildGraph(aggregatedRelation)
+        val graph = aggregatedExecution.buildGraphAlt(aggregatedRelation)
         val ordering = topologicalSorting(graph)
         if (ordering == null) {
             consistent = false

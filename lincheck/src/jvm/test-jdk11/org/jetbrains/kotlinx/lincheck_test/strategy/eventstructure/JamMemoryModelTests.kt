@@ -143,7 +143,6 @@ class JamMemoryModelTests {
         }
     }
 
-    @Ignore
     @Test
     fun testArfna() {
         // x=1 /\ y=1, should never happen. TODO: support getting final values?
@@ -180,7 +179,6 @@ class JamMemoryModelTests {
         }
     }
 
-    @Ignore
     @Test
     fun testArfnaTransformed() {
         // x=1 /\ y=1, should never happen. TODO: support getting final values?
@@ -263,7 +261,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: fix model checker
-    @Ignore
     @Test
     fun testC() {
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
@@ -301,7 +298,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: fix model checker
-    @Ignore
     @Test
     fun testCReorder() {
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
@@ -398,7 +394,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testFig1() {
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1,1,1))
@@ -451,7 +446,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testIRIW() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
@@ -620,7 +614,6 @@ class JamMemoryModelTests {
 
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testX003() {
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(2,2,0))
@@ -645,7 +638,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testX006() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((2 to 0))
@@ -668,7 +660,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testX86_2plus2W() {
         val expectedOutcomes: Set<Pair<Int,Int>> = setOf((2 to 2))
@@ -691,7 +682,6 @@ class JamMemoryModelTests {
 
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testA1() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
@@ -716,7 +706,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testA1Reorder() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
@@ -854,7 +843,6 @@ class JamMemoryModelTests {
 
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testLinearisation() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2,1,1,1,1))
@@ -893,7 +881,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testLinearisation2() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2,1,1,1,1))
@@ -981,7 +968,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testRoachmotel() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,1,1,1))
@@ -1021,7 +1007,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testRoachmotel2() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,1,1,1))
@@ -1061,7 +1046,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testRseqWeak() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((3 to 1))
@@ -1091,7 +1075,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testRseqWeak2() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((3 to 1))
@@ -1145,7 +1128,6 @@ class JamMemoryModelTests {
     }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testWWRRWWRRWsilpPoaaWsilpPoaa() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2,2,2,0,2,0))

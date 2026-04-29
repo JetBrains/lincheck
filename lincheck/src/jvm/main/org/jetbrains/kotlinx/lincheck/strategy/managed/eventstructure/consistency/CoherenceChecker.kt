@@ -87,12 +87,19 @@ class CoherenceOrder(
     override fun compute() {
         check(map.isEmpty())
         generate(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder).forEach { coherence ->
+            // TODO: Also maybe lets keep coherence checker for SC and make a RA coherence checker somewhere else
+            // TODO: there is a probably a better place for these two relations
+            val initRelation = Relation<AtomicThreadEvent> { x, _ -> x.label is InitializationLabel }
+            val sameLocation = Relation<AtomicThreadEvent> { x, y -> getLocationForSameLocationAccesses(x,y) != null }
+            val hbLoc = (happensBeforeOrder intersection sameLocation) union initRelation
+
             val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex,
-                writesOrder = causalityOrder union coherence
+                writesOrder = coherence union hbLoc
             )
                 .apply { initialize(); compute() }
+
             val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
-                approximation = causalityOrder union extendedCoherence
+                approximation = extendedCoherence union hbLoc
             )
                 .apply { initialize(); compute() }
             if (!executionOrder.isConsistent())

@@ -75,6 +75,10 @@ interface ThreadEvent : Event {
      */
     val causalityClock: VectorClock
 
+    // TODO: maybe generalize the notion of vector clocks somehow, to avoid making a new vector clock for each
+    //   freaking relation we want to track
+    val happensBeforeClock: VectorClock
+
     /**
      * Returns n-th predecessor of the given event.
      */
@@ -303,6 +307,18 @@ abstract class AbstractThreadEvent(
         }
     }
 
+    final override val happensBeforeClock: VectorClock = run {
+        dependencies.fold(parent?.happensBeforeClock?.copy() ?: MutableVectorClock()) { clock, event ->
+            if(this.label.isAcquire() && event.label.isRelease() ) {
+                clock + event.happensBeforeClock
+            } else {
+                clock
+            }
+        }.apply {
+            set(threadId, threadPosition)
+        }
+    }
+
     override fun validate() {
         super.validate()
         require(threadPosition == parent.calculateNextEventPosition())
@@ -438,6 +454,10 @@ val programOrder = Relation<ThreadEvent> { x, y ->
 
 val causalityOrder = Relation<ThreadEvent> { x, y ->
     (x != y) && y.causalityClock.observes(x.threadId, x.threadPosition)
+}
+
+val happensBeforeOrder = Relation<ThreadEvent> { x, y ->
+    (x != y) && y.happensBeforeClock.observes(x.threadId, x.threadPosition)
 }
 
 val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }
