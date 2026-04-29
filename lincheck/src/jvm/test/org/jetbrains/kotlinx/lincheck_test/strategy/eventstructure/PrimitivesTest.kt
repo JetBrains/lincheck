@@ -1346,4 +1346,105 @@ class PrimitivesTest {
         litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
     }
 
+    @Test
+    fun testNonCapturingLambdaAllocationIsTracked() {
+        // Sister test of `testLambdaAllocationIsTracked`, but for *non-capturing* lambdas.
+        // Non-capturing lambdas are JVM-cached singletons: the same instance is returned
+        // by every execution of the bootstrapped `invokedynamic` call site (same VM-local
+        // identity hash code, no fresh allocation per call).
+        //
+        // The dedicated `afterInvokeDynamicObjectCreation` injection hook is idempotent
+        // precisely so that hitting the same `invokedynamic` site repeatedly within an
+        // invocation does not produce duplicate allocation events for the same singleton —
+        // which would otherwise break replay determinism in the event-structure strategy.
+        class TestClass {
+            val y = AtomicInteger(0)
+            var lambda: (() -> Unit)? = null
+
+            fun one(): Int? {
+                // Hit the same `invokedynamic` (linked to `LambdaMetafactory.metafactory`)
+                // multiple times. Each execution returns the SAME JVM-cached singleton,
+                // but the bytecode-injected `afterInvokeDynamicObjectCreation` fires every time.
+                for (i in 0..2) {
+                    lambda = { /* no captures - JVM caches the result */ }
+                    lambda?.invoke()
+                }
+                y.get()
+                return 1
+            }
+
+            fun two() {
+                y.set(1) // Trigger a "backward revisit"
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::one)
+                }
+                thread {
+                    actor(TestClass::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+    }
+
+    /*
+     * Currently fails with a pre-existing NPE in `getFieldAccessMemoryLocation` that is
+     * independent of `StringConcatFactory` instrumentation: the same NPE reproduces even
+     * when `StringConcatFactory` is removed from `isObjectCreatingBootstrapMethod`.
+     * The root cause appears to be an untracked field read inside the `MethodHandle/LambdaForm`
+     * machinery that `StringConcatFactory.makeConcatWithConstants` stitches together at runtime.
+     * Re-enable once event-structure tracking handles those internals.
+     */
+    @Test
+    @Ignore
+    fun testStringConcatenationAllocationIsTracked() {
+        // Sister test of `testLambdaAllocationIsTracked`, but for the other `invokedynamic`
+        // bootstrap factory we instrument: `StringConcatFactory`.
+        // On JVM 9+ targets, the Kotlin compiler lowers string templates and `+` between
+        // strings to an `invokedynamic` linked to `StringConcatFactory.makeConcatWithConstants`
+        //
+        // Each execution produces a fresh `String` whose identity hash code is unstable
+        // across replays — the same failure mode as for capturing lambdas. By treating
+        // these strings as `NEW` allocations (just like `new String(...)`), we keep their
+        // object IDs stable across invocations.
+        class TestClass {
+            val y = AtomicInteger(0)
+            var s: String? = null
+
+            fun one(): Int? {
+                val a = "foo"
+                val b = "bar"
+                // Lowered to invokedynamic with `StringConcatFactory.makeConcatWithConstants`
+                // on JVM 9+ targets.
+                s = "$a-$b"
+                y.get()
+                return 1
+            }
+
+            fun two() {
+                y.set(1) // Trigger a "backward revisit"
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::one)
+                }
+                thread {
+                    actor(TestClass::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+    }
+
 }
