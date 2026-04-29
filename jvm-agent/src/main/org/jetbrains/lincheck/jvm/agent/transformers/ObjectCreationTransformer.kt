@@ -135,6 +135,12 @@ internal class ObjectCreationTransformer(
 
     override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
         if (opcode == NEW) {
+            // TODO: We always instrument allocation here, including allocations of immutable values
+            //   (e.g. `String`s, boxed primitives) that may be filtered out at runtime
+            //   by `ObjectTracker.shouldTrackObject`.
+            //   Consider adding a `TransformationConfiguration` flag
+            //   to skip instrumenting allocations of immutable types,
+            //   to avoid the runtime overhead when immutable-value tracking is disabled.
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
