@@ -1446,4 +1446,47 @@ class PrimitivesTest {
         litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
     }
 
+    @Test
+    fun testNonCapturingLambdaAllocationDoesNotBreakBackwardRevisit() {
+        class TestClass {
+            val y = AtomicInteger(0)
+
+            private fun makeLambda(): () -> Int {
+                // Lambdas are cached per call site, so code location matters
+                val lambda = { 6 + 7 }
+                return lambda
+            }
+
+            fun threadOne(): Int {
+                val r0 = y.get()
+                // This gets hit first in the first execution, so we have an allocation event for the lambda
+                val lambda = makeLambda()
+                return r0
+            }
+
+            fun threadTwo() {
+                // The allocation is now cached in the first execution, so no allocation
+                // In the second execution, this is hit first, so we have an allocation in a place where we did not expect
+                val lambda = makeLambda()
+                y.set(1) // Backwards revisit, so `y.get()` is blocked
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::threadOne)
+                }
+                thread {
+                    actor(TestClass::threadTwo)
+                }
+            }
+        }
+
+        val outcomes: Set<Int> = setOf(0, 1)
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) {
+            getValue<Int>(it.parallelResults[0][0]!!)
+        }
+    }
+
 }
