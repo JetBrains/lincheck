@@ -391,7 +391,6 @@ fun isMethodHandleRelatedClass(className: String): Boolean =
  * These methods are not ignored because we need to analyze the invoked target method.
  */
 fun isIgnoredMethodHandleMethod(className: String, methodName: String): Boolean =
-    // NOTE: we use `methodName.startsWith` here because otherwise we track some methods that should not be tracked,
-    //   such as `DelegatingMethodHandle.reinvoke_L` which broke tracking of formatted strings
-    //   for the event structure model checker
+    // NOTE: we use `methodName.startsWith` here because otherwise
+    // we track some methods that should not be tracked, such as `DelegatingMethodHandle.reinvoke_L`
     isMethodHandleRelatedClass(className) && !methodName.startsWith("invoke")
