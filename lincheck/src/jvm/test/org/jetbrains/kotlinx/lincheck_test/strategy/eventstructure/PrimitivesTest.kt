@@ -1402,7 +1402,6 @@ class PrimitivesTest {
      * Re-enable once event-structure tracking handles those internals.
      */
     @Test
-    @Ignore
     fun testStringConcatenationAllocationIsTracked() {
         // Sister test of `testLambdaAllocationIsTracked`, but for the other `invokedynamic`
         // bootstrap factory we instrument: `StringConcatFactory`.
