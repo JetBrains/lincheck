@@ -1556,13 +1556,35 @@ internal abstract class ManagedStrategy(
 
     override fun afterInvokeDynamicObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
         threadDescriptor.runInsideIgnoredSection {
-            // check if object is not already registered to guarantee idempotency,
-            // as this injection might be called multiple times for the same object;
-            // see comment in `ObjectCreationTransformer.kt`.
-            if (objectTracker.shouldTrackObject(obj) && objectTracker[obj] == null) {
-                objectTracker.registerNewObject(obj)
+            if (objectTracker.shouldTrackObject(obj)) {
+                //NOTE: The JVM optimizes lambdas that have no captures into singleton classes
+                //  This means after invoke dynamic is called, we always get the same lambda instance
+                //  so we have to track 'singleton' lambdas as an external object. Their identityHashCode is stable
+                //  so it is safe to do so.
+                if(isSingletonLambda(obj)) {
+                    objectTracker.registerObjectIfAbsent(obj)
+                } else {
+                    objectTracker.registerNewObject(obj)
+                }
             }
         }
+
+    private fun isSingletonLambda(obj: Any): Boolean {
+        // 1. It must be a function type
+        if (obj !is Function<*>) return false
+        val clazz = obj::class.java
+        return try {
+            // 2. Non-capturing lambdas usually have a static field named "INSTANCE"
+            val field = clazz.getDeclaredField("INSTANCE")
+            field.isAccessible = true
+            val instance = field.get(null)
+            // 3. If the current object IS the singleton instance, it's non-capturing
+            instance === obj
+        } catch (e: NoSuchFieldException) {
+            // If there is no INSTANCE field, it's likely capturing or a custom implementation
+            false
+        }
+    }
 
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 
