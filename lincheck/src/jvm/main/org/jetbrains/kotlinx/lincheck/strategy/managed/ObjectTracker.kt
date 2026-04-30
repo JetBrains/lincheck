@@ -479,12 +479,12 @@ open class BaseObjectTracker(
     }
 
     fun compareObjects(left: Any?, right: Any?): Boolean {
-        if(left.isImmutable) return left == right
+        if (left.isImmutable && right.isImmutable) return left == right
         else return left === right
     }
 
     private fun getObjectHashCode(obj: Any?): Int {
-        if(obj.isImmutable) return obj.hashCode()
+        if (obj.isImmutable) return obj.hashCode()
         else return System.identityHashCode(obj)
     }
 
