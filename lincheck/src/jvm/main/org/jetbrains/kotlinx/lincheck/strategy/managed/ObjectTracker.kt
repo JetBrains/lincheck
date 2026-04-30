@@ -32,10 +32,12 @@ import kotlin.reflect.KClass
  *
  * The unique object id is a 64-bit integer number, constructed from
  * the object's serial number and its identity hash code.
+ * In the case of immutable objects it hashCode is used instead.
  *
  * The registered objects are associated with the registry entries [ObjectEntry],
- * keeping object's serial number, its identity hash code, a weak reference to the object,
- * and, potentially, other meta-data (defined by the concrete implementations of the interface).
+ * keeping object's serial number, its identity/regular hash code, a weak reference to the object,
+ * an optional strong reference to prevent garbage collection,
+ * and potentially, other meta-data (defined by the concrete implementations of the interface).
  *
  * The tracker allows retrieving the registry entry either by the object reference itself or by unique object id.
  * In this way, the tracker allows to:
@@ -183,6 +185,7 @@ typealias ObjectNumber = Int
  *
  * @property objectNumber A unique serial number for the object.
  * @property objectHashCode The identity hash code of the object.
+ *   If the object is immutable, then its regular hash code is used instead.
  * @property objectDisplayNumber The number used in string representation of the object.
  * @property objectWeakReference A weak reference to the associated object.
  * @property objectKind Whether the object is an external or a new object
@@ -475,6 +478,17 @@ open class BaseObjectTracker(
         return perClassObjectNumeration.update(objClassKey, default = offset) { it + 1 }
     }
 
+    fun compareObjects(left: Any?, right: Any?): Boolean {
+        if (left.isImmutable && right.isImmutable) return left == right
+        else return left === right
+    }
+
+    private fun getObjectHashCode(obj: Any?): Int {
+        if (obj.isImmutable) return obj.hashCode()
+        else return System.identityHashCode(obj)
+    }
+
+
     override fun registerThread(threadId: Int, thread: Thread) {
         registerObjectIfAbsent(thread)
     }
@@ -490,12 +504,11 @@ open class BaseObjectTracker(
         registerObject(ObjectTracker.ObjectKind.EXTERNAL, obj)
 
     private fun registerObject(kind: ObjectTracker.ObjectKind, obj: Any): ObjectEntry {
-        check(!obj.isPrimitive)
         check(obj.isImmutable implies shouldTrackImmutableValues)
         cleanup()
         val entry = createObjectEntry(
             objNumber = ++objectCounter,
-            objHashCode = System.identityHashCode(obj),
+            objHashCode = getObjectHashCode(obj),
             objDisplayNumber = computeObjectDisplayNumber(obj),
             obj = obj,
             kind = kind,
@@ -538,9 +551,9 @@ open class BaseObjectTracker(
     }
 
     override operator fun get(obj: Any?): ObjectEntry? {
-        val objHashCode = System.identityHashCode(obj)
+        val objHashCode = getObjectHashCode(obj)
         val entries = getEntries(objHashCode) ?: return null
-        return entries.find { it.objectWeakReference.get() === obj }
+        return entries.find { compareObjects(it.objectWeakReference.get(), obj) }
     }
 
     override fun enumerateObjectEntries(): Sequence<ObjectEntry> =

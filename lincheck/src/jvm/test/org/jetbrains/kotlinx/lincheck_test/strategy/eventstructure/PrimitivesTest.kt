@@ -1299,4 +1299,37 @@ class PrimitivesTest {
             return@litmusTest b1
         }
     }
+
+
+    @Test
+    fun testBoxedPrimitives() {
+        class TestClass {
+            var x: Any? = null;
+
+            fun thread0(): Any? {
+                x = 42_000_000
+                return x
+            }
+            fun thread1() {
+                x = "foo"
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::thread0)
+                }
+                thread {
+                    actor(TestClass::thread1)
+                }
+            }
+        }
+
+        val outcomes: Set<Any?> = setOf(42_000_000, "foo")
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            val b1 = getValue<Any?>(results.parallelResults[0][0]!!)
+            return@litmusTest b1
+        }
+    }
 }
