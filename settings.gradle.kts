@@ -19,7 +19,8 @@ pluginManagement {
 }
 
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version("0.7.0")
+    // 1.0.0 is required for Gradle 9 / JBR 25 compatibility; 0.x still references IBM_SEMERU.
+    id("org.gradle.toolchains.foojay-resolver-convention") version("1.0.0")
 }
 
 val name: String by settings
