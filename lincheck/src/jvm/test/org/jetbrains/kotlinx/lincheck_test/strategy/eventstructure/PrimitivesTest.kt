@@ -1299,4 +1299,194 @@ class PrimitivesTest {
             return@litmusTest b1
         }
     }
+
+    @Test
+    fun testLambdaAllocationIsTracked() {
+        // This test ensures that we properly keep track of the allocation of lambdas
+        // The eventStructureObjectTracker needs to track lambda's as "NEW" object and not
+        // as external ones, as that would cause the lambdas to have unstable object ids between invocations
+        // or cause them to hold on to "stale" closures from previous invocations.
+        // This particular test case detects improper tracking of lambdas by giving the lambda an unstable objectID
+        // The test is weird because it is challenging to have get a lambda to capture stale values in this kind of test
+        // and have the lambda be a non-thread local variable.
+        class TestClass {
+            val y = AtomicInteger(0)
+            var lambda: (() -> Unit)? = null
+
+            fun one(): Int? {
+                val x = Object()
+                // On subsequent replays this lambda will have different IdentityHashCode causing a new ObjectID.
+                // This then breaks the replayer
+                lambda = {
+                    // We need some kind of capture to get a different identity hash code
+                    val unused = x
+                }
+                lambda?.invoke()
+                y.get()
+                return 1
+            }
+
+            fun two() {
+                y.set(1) // Trigger a "backward revisit"
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::one)
+                }
+                thread {
+                    actor(TestClass::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+    }
+
+    @Test
+    fun testNonCapturingLambdaAllocationIsTracked() {
+        // Sister test of `testLambdaAllocationIsTracked`, but for *non-capturing* lambdas.
+        // Non-capturing lambdas are JVM-cached singletons: the same instance is returned
+        // by every execution of the bootstrapped `invokedynamic` call site (same VM-local
+        // identity hash code, no fresh allocation per call).
+        //
+        // The dedicated `afterInvokeDynamicObjectCreation` injection hook is idempotent
+        // precisely so that hitting the same `invokedynamic` site repeatedly within an
+        // invocation does not produce duplicate allocation events for the same singleton —
+        // which would otherwise break replay determinism in the event-structure strategy.
+        class TestClass {
+            val y = AtomicInteger(0)
+            var lambda: (() -> Unit)? = null
+
+            fun one(): Int? {
+                // Hit the same `invokedynamic` (linked to `LambdaMetafactory.metafactory`)
+                // multiple times. Each execution returns the SAME JVM-cached singleton,
+                // but the bytecode-injected `afterInvokeDynamicObjectCreation` fires every time.
+                for (i in 0..2) {
+                    lambda = { /* no captures - JVM caches the result */ }
+                    lambda?.invoke()
+                }
+                y.get()
+                return 1
+            }
+
+            fun two() {
+                y.set(1) // Trigger a "backward revisit"
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::one)
+                }
+                thread {
+                    actor(TestClass::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+    }
+
+    /*
+     * Currently fails with a pre-existing NPE in `getFieldAccessMemoryLocation` that is
+     * independent of `StringConcatFactory` instrumentation: the same NPE reproduces even
+     * when `StringConcatFactory` is removed from `isObjectCreatingBootstrapMethod`.
+     * The root cause appears to be an untracked field read inside the `MethodHandle/LambdaForm`
+     * machinery that `StringConcatFactory.makeConcatWithConstants` stitches together at runtime.
+     * Re-enable once event-structure tracking handles those internals.
+     */
+    @Test
+    fun testStringConcatenationAllocationIsTracked() {
+        // Sister test of `testLambdaAllocationIsTracked`, but for the other `invokedynamic`
+        // bootstrap factory we instrument: `StringConcatFactory`.
+        // On JVM 9+ targets, the Kotlin compiler lowers string templates and `+` between
+        // strings to an `invokedynamic` linked to `StringConcatFactory.makeConcatWithConstants`
+        //
+        // Each execution produces a fresh `String` whose identity hash code is unstable
+        // across replays — the same failure mode as for capturing lambdas. By treating
+        // these strings as `NEW` allocations (just like `new String(...)`), we keep their
+        // object IDs stable across invocations.
+        class TestClass {
+            val y = AtomicInteger(0)
+            var s: String? = null
+
+            fun one(): Int? {
+                val a = "foo"
+                val b = "bar"
+                // Lowered to invokedynamic with `StringConcatFactory.makeConcatWithConstants`
+                // on JVM 9+ targets.
+                s = "$a-$b"
+                y.get()
+                return 1
+            }
+
+            fun two() {
+                y.set(1) // Trigger a "backward revisit"
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::one)
+                }
+                thread {
+                    actor(TestClass::two)
+                }
+            }
+        }
+
+        val outcomes: Set<Unit> = setOf(Unit)
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+    }
+
+    @Test
+    fun testNonCapturingLambdaAllocationDoesNotBreakBackwardRevisit() {
+        class TestClass {
+            val y = AtomicInteger(0)
+
+            private fun makeLambda(): () -> Int {
+                // Lambdas are cached per call site, so code location matters
+                val lambda = { 6 + 7 }
+                return lambda
+            }
+
+            fun threadOne(): Int {
+                val r0 = y.get()
+                // This gets hit first in the first execution, so we have an allocation event for the lambda
+                val lambda = makeLambda()
+                return r0
+            }
+
+            fun threadTwo() {
+                // The allocation is now cached in the first execution, so no allocation
+                // In the second execution, this is hit first, so we have an allocation in a place where we did not expect
+                val lambda = makeLambda()
+                y.set(1) // Backwards revisit, so `y.get()` is blocked
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::threadOne)
+                }
+                thread {
+                    actor(TestClass::threadTwo)
+                }
+            }
+        }
+
+        val outcomes: Set<Int> = setOf(0, 1)
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) {
+            getValue<Int>(it.parallelResults[0][0]!!)
+        }
+    }
+
 }

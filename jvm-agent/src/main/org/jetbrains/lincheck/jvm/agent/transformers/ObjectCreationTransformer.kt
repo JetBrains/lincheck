@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import sun.nio.ch.lincheck.*
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.trace.TraceContext
+import org.objectweb.asm.Handle
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -134,6 +135,12 @@ internal class ObjectCreationTransformer(
 
     override fun visitTypeInsn(opcode: Int, type: String) = adapter.run {
         if (opcode == NEW) {
+            // TODO: We always instrument allocation here, including allocations of immutable values
+            //   (e.g. `String`s, boxed primitives) that may be filtered out at runtime
+            //   by `ObjectTracker.shouldTrackObject`.
+            //   Consider adding a `TransformationConfiguration` flag
+            //   to skip instrumenting allocations of immutable types,
+            //   to avoid the runtime overhead when immutable-value tracking is disabled.
             invokeIfInAnalyzedCode(
                 original = {},
                 instrumented = {
@@ -172,4 +179,102 @@ internal class ObjectCreationTransformer(
             }
         )
     }
+
+    /*
+     * In addition to `NEW`/`NEWARRAY`/`ANEWARRAY`/`MULTIANEWARRAY`, the JVM has
+     * a fifth, less obvious allocation site we have to recognize: `invokedynamic`.
+     *
+     * For a lambda expression, the user-visible bytecode contains only an
+     * `invokedynamic` instruction whose bootstrap is `LambdaMetafactory.metafactory` (or `altMetafactory`).
+     * The actual `NEW` for the lambda instance never
+     * appears in the instrumented program — it lives inside a JVM-spun synthetic
+     * proxy class (`Foo$$Lambda$NN/0x...`), produced at runtime by `InnerClassLambdaMetafactory`.
+     *
+     * That proxy is unreachable for our agent:
+     *  - its name contains `$$Lambda`, so it is filtered out by
+     *    `LincheckInstrumentation.canRetransformClass`;
+     *  - on JDK 15+ it is a hidden class, which is not modifiable
+     *    (`Instrumentation.isModifiableClass` returns `false`);
+     *  - the surrounding `java.lang.invoke.MethodHandle*` machinery is wrapped in ignored sections
+     *    (see `TransformationProfile.shouldWrapInIgnoredSection` and `isIgnoredMethodHandleMethod`).
+     *
+     * As a result, `NEW`-only instrumentation cannot observe the lambda being allocated
+     *
+     * The cleanest place to hook this allocation is the `invokedynamic` call site itself:
+     * the freshly allocated object is left on the operand stack
+     * as the instruction's result, so we can `dup` it and feed it to
+     * `afterNewObjectCreation` exactly as we do for `NEW`/`<init>` pairs.
+     *
+     * One subtlety: a non-capturing lambda's call site target returns a JVM-cached singleton,
+     * so the same instance shows up on the stack each time the `invokedynamic` is executed.
+     * To avoid registering it more than once,
+     * we route this site through the dedicated `afterInvokeDynamicObjectCreation` hook
+     * rather than the regular `afterNewObjectCreation`.
+     * The other, "normal" allocation sites (`NEW`/`NEWARRAY`/`ANEWARRAY`/`MULTIANEWARRAY`)
+     * are guaranteed to produce a fresh instance per execution and use the plain `afterNewObjectCreation`.
+     * As such, at runtime, the implementation of `afterInvokeDynamicObjectCreation` injection should be idempotent,
+     * while implementation of `afterNewObjectCreation` is not obligatory idempotent.
+     *
+     * References:
+     *  - JVMS §6.5 invokedynamic — describes how the bootstrap method's
+     *    result (a `CallSite`) is invoked and pushes the produced object onto the stack:
+     *    https://docs.oracle.com/javase/specs/jvms/se21/html/jvms-6.html#jvms-6.5.invokedynamic
+     *  - JEP 309: Dynamic class-file constants — https://openjdk.org/jeps/309
+     *  - LambdaMetafactory javadoc:
+     *    https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/invoke/LambdaMetafactory.html
+     */
+    override fun visitInvokeDynamicInsn(
+        name: String?,
+        descriptor: String?,
+        bootstrapMethodHandle: Handle?,
+        vararg bootstrapMethodArguments: Any?
+    ) = adapter.run {
+        super.visitInvokeDynamicInsn(name, descriptor, bootstrapMethodHandle, *bootstrapMethodArguments)
+        invokeIfInAnalyzedCode(
+            original = {},
+            instrumented = {
+                if (isObjectCreatingBootstrapMethod(bootstrapMethodHandle?.owner)) {
+                    dup()
+                    val objectLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                    loadLocal(objectLocal)
+                    invokeStatic(Injections::afterInvokeDynamicObjectCreation)
+                }
+            }
+        )
+    }
+
+    /**
+     * Tests if the bootstrap method handle owner [bootstrapMethodOwner]
+     * (in JVM internal form, e.g. `"java/lang/invoke/LambdaMetafactory"`)
+     * corresponds to a bootstrap factory whose call sites allocate
+     * a fresh object instance that Lincheck must register as a tracked allocation.
+     *
+     * Currently, this matches:
+     *
+     *  - `java.lang.invoke.LambdaMetafactory` — covers both `metafactory` and
+     *    `altMetafactory` (the latter is used by the Java compiler for `Serializable` lambdas,
+     *    multi-interface lambdas, and lambdas with extra bridge methods).
+     *
+     *  - `java.lang.invoke.StringConcatFactory` — covers `makeConcat` and `makeConcatWithConstants`,
+     *    both of which produce a fresh `String` on every invocation.
+     *
+     * Other JDK bootstrap factories are intentionally not matched here:
+     *  - `java.lang.runtime.ObjectMethods` (records) and `java.lang.runtime.SwitchBootstraps` (pattern switch)
+     *     return cached MethodHandle`s;
+     *  - `java.lang.invoke.ConstantBootstraps` returns constants.
+     *
+     * None of these need the same "register as NEW" treatment.
+     */
+    private fun isObjectCreatingBootstrapMethod(bootstrapMethodOwner: String?): Boolean =
+        bootstrapMethodOwner == "java/lang/invoke/LambdaMetafactory" ||
+
+        // TODO: We always instrument allocation of concatenated strings,
+        //   even though tracking of immutable values may be filtered out at runtime
+        //   by `ObjectTracker.shouldTrackObject`.
+        //   Consider adding a `TransformationConfiguration` flag
+        //   to skip instrumenting allocations of immutable types,
+        //   to avoid the runtime overhead when immutable-value tracking is disabled.
+        bootstrapMethodOwner == "java/lang/invoke/StringConcatFactory"
+
 }
