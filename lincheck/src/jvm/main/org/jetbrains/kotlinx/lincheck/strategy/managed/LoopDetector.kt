@@ -194,6 +194,9 @@ internal class LoopInstanceState(
     // true when the current iteration has passed the side effect free back edge of a loop
     // next loop header event clears this flag, bot does not process the same iteration again.
     var currentIterationHandledAtAwaitBackEdge: Boolean = false
+
+    // Number of consecutive iterations that went through the side effect free back-edges.
+    var consecutiveAwaitBackEdgeHits: Int = 0
 }
 
 abstract class AbstractLoopDetector : LoopDetector {

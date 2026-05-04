@@ -29,6 +29,8 @@ import org.jetbrains.kotlinx.lincheck.util.mutableThreadMapOf
 class AdaptiveLoopDetector(
     // Minimum number of iterations before any switching decision can be done
     val minIterationsBeforeSwitch: Int = 10,
+    // Threshold for repeated side effect free back-edges needed before classifying the loop as AWAIT.
+    val awaitClassificationThreshold: Int = 3,
     // Threshold for repeated signature iterations before switching threads for await loops.
     val awaitSwitchThreshold: Int = 3,
     // Threshold for consecutive CAS failures before switching threads for CAS loops.
@@ -107,6 +109,7 @@ class AdaptiveLoopDetector(
                 inst.currentIterationHandledAtAwaitBackEdge = false
                 LoopDetector.Decision.IDLE // we already made the decision at the back-edge, do not process again
             } else {
+                inst.consecutiveAwaitBackEdgeHits = 0
                 processIteration(inst)
             }
         return Pair(started, decision)
@@ -119,7 +122,9 @@ class AdaptiveLoopDetector(
     ): LoopDetector.Decision {
         // classify the loop as await and call onLoopIteration
         val inst = getOrCreateInstance(threadId, loopId, codeLocation)
-        if (inst.kind == LoopKind.UNKNOWN) {
+        inst.consecutiveAwaitBackEdgeHits ++
+
+        if (inst.kind == LoopKind.UNKNOWN && inst.iterNumber >= 3 && inst.consecutiveAwaitBackEdgeHits > awaitClassificationThreshold) {
             inst.kind = LoopKind.AWAIT
         }
 //        println("Classified loop ${inst.ownerThreadId}:${inst.signatureHistory.joinToString(",")} as ${inst.kind}")
