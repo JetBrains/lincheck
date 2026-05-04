@@ -2143,8 +2143,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
 
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
-            val (started, decision) = loopDetector.onAwaitLoopIteration(threadId, codeLocation, loopId)
-            collectLoopTrace(started, threadId, codeLocation, loopId)
+            val decision = loopDetector.onAwaitLoopIteration(threadId, codeLocation, loopId)
             getLoopDecision(decision, threadId, loopId, codeLocation)
         }
     }

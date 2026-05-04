@@ -92,8 +92,6 @@ internal class LoopTransformer(
     private val awaitLoopBackEdgeSources: Map<LoopId, Set<BasicBlockIndex>> =
         methodInfo.basicControlFlowGraph!!.computeAwaitLoops(loopInfo)
 
-    private val awaitLoopIds: Set<LoopId> = awaitLoopBackEdgeSources.keys
-
     private val loopIdsByHeaderNonPhonyIndex: Map<InstructionIndex, List<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeLoopIdsByHeaderNonPhonyIndex(insnIndexRemapping, loopInfo)
 
@@ -101,8 +99,8 @@ internal class LoopTransformer(
 
     // Map from a non-phony instruction index (the last opcode of a clean back-edge source block)
     // to the loopId. These are the sites where `onAwaitLoop` should be injected.
-    private val awaitInjectionLocation: Map<InstructionIndex, LoopId> =
-        methodInfo.basicControlFlowGraph!!.computeAwaitInjectionLocation(insnIndexRemapping, awaitLoopBackEdgeSources)
+    private val awaitInjectionLocations: Map<InstructionIndex, List<LoopId>> =
+        methodInfo.basicControlFlowGraph!!.computeAwaitInjectionLocations(insnIndexRemapping, awaitLoopBackEdgeSources)
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
@@ -147,15 +145,26 @@ internal class LoopTransformer(
             adapter.push(loopId)
             // STACK: descriptor, codeLocation, loopId
             if (isReducible) {
-                if (loopId !in awaitLoopIds) {
-                    adapter.invokeStatic(Injections::onLoopIteration)
-                } else {
-                    adapter.invokeStatic(Injections::onAwaitLoop)
-                }
+                adapter.invokeStatic(Injections::onLoopIteration)
             } else if (shouldTrackIrreducibleLoops) {
                 adapter.invokeStatic(Injections::onIrreducibleLoopIteration)
             }
             // STACK: <empty>
+        }
+
+        awaitInjectionLocations[nonPhonyIndex]?.let { loopIds ->
+            for (loopId in loopIds) {
+                val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
+                if (!isReducible) continue
+
+                // STACK: <empty>
+                invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
+                adapter.push(codeLocationIdByLoopId.getValue(loopId))
+                adapter.push(loopId)
+                // STACK: descriptor, codeLocation, loopId
+                adapter.invokeStatic(Injections::onAwaitLoop)
+                // STACK: <empty>
+            }
         }
 
         // Inject `onLoopExit` on exceptional transitions from within the loop body to outside exception handlers.
@@ -293,25 +302,23 @@ private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
  *
  * Returns a map from non-phony instruction index to the loop id.
  */
-private fun BasicBlockControlFlowGraph.computeAwaitInjectionLocation(
+private fun BasicBlockControlFlowGraph.computeAwaitInjectionLocations(
     insnIndexRemapping: IntArray,
     awaitBackEdges: Map<LoopId, Set<BasicBlockIndex>>,
-): Map<InstructionIndex, LoopId> {
+): Map<InstructionIndex, List<LoopId>> {
     if (awaitBackEdges.isEmpty()) return emptyMap()
-    val result = mutableMapOf<InstructionIndex, LoopId>()
+    val result = mutableMapOf<InstructionIndex, MutableSet<LoopId>>()
     for ((loopId, sourceBlocks) in awaitBackEdges) {
         for (block in sourceBlocks) {
             // Inject at the last opcode of the source block
             val idx = lastOpcodeIndexOf(block) ?: continue
             val nonPhonyIndex = insnIndexRemapping[idx]
             if (nonPhonyIndex >= 0) {
-                // In the case of nested loops when they share the injection location,
-                // prefer the inner loop
-                result.merge(nonPhonyIndex, loopId) { old, new -> maxOf(old, new) }
+                result.getOrPut(nonPhonyIndex) { mutableSetOf() }.add(loopId)
             }
         }
     }
-    return result
+    return result.mapValues { (_, loopIds) -> loopIds.sortedDescending() }
 }
 
 private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
