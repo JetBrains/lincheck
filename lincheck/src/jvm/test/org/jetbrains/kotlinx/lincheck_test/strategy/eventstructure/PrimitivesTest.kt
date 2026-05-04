@@ -1393,14 +1393,6 @@ class PrimitivesTest {
         litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
     }
 
-    /*
-     * Currently fails with a pre-existing NPE in `getFieldAccessMemoryLocation` that is
-     * independent of `StringConcatFactory` instrumentation: the same NPE reproduces even
-     * when `StringConcatFactory` is removed from `isObjectCreatingBootstrapMethod`.
-     * The root cause appears to be an untracked field read inside the `MethodHandle/LambdaForm`
-     * machinery that `StringConcatFactory.makeConcatWithConstants` stitches together at runtime.
-     * Re-enable once event-structure tracking handles those internals.
-     */
     @Test
     fun testStringConcatenationAllocationIsTracked() {
         // Sister test of `testLambdaAllocationIsTracked`, but for the other `invokedynamic`
@@ -1448,6 +1440,11 @@ class PrimitivesTest {
 
     @Test
     fun testNonCapturingLambdaAllocationDoesNotBreakBackwardRevisit() {
+        // This aims to test the proper handling of non-capturing lambdas with the EventStructure model checking strategy.
+        // The JVM stores non-capturing lambdas as singletons, so unlike other anonymous functions,
+        // they need to be registered as 'external' objects.
+        // Failure to do so could result in inconsistent assignments of objectIDs during different strategy invocation,
+        // which then leads to issues during the replay ordering
         class TestClass {
             val y = AtomicInteger(0)
 
