@@ -1547,11 +1547,27 @@ internal abstract class ManagedStrategy(
         LincheckInstrumentation.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit = threadDescriptor.runInsideIgnoredSection {
-        if (objectTracker.shouldTrackObject(obj)) {
-            objectTracker.registerNewObject(obj)
+    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
+        threadDescriptor.runInsideIgnoredSection {
+            if (objectTracker.shouldTrackObject(obj)) {
+                objectTracker.registerNewObject(obj)
+            }
         }
-    }
+
+    override fun afterInvokeDynamicObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
+        threadDescriptor.runInsideIgnoredSection {
+            if (objectTracker.shouldTrackObject(obj)) {
+                // NOTE: The JVM optimizes lambdas that have no captures into singleton classes
+                //  This means after invoke dynamic is called, we always get the same lambda instance,
+                //  so we have to track 'singleton' lambdas as an external object. Their identityHashCode is stable,
+                //  so it is safe to do so.
+                if (isSingletonLambda(obj)) {
+                    objectTracker.registerObjectIfAbsent(obj)
+                } else {
+                    objectTracker.registerNewObject(obj)
+                }
+            }
+        }
 
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
 

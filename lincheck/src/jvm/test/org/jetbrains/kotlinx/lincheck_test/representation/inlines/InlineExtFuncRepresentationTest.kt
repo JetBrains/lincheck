@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.util.isJdk8
 import org.junit.Assume.assumeFalse
 import org.junit.Before
 
-class InlineExtFuncRepresentationTest: BaseTraceRepresentationTest("inlines/ext_fun") {
+class InlineExtFuncRepresentationTest : BaseTraceRepresentationTest("inlines/ext_fun") {
     var escape: Any? = null
     val i = 1
 

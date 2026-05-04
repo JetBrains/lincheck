@@ -44,6 +44,29 @@ internal fun isSuspendFunction(className: String, methodName: String, params: Li
     }
 }
 
+
+/**
+ * Determines if the given object is a singleton instance of an anonymous function
+ * The JVM optimizes lambdas that are not captured by any variables as singletons.
+ *
+ * @param obj the object to check
+ */
+internal fun isSingletonLambda(obj: Any): Boolean {
+    // 1. It must be a function type
+    if (obj !is Function<*>) return false
+    val clazz = obj::class.java
+    try {
+        // 2. Non-capturing lambdas usually have a static field named "INSTANCE"
+        val field = clazz.getDeclaredField("INSTANCE")
+        val instance = readFieldSafely(obj, field).getOrNull()
+        // 3. If the current object IS the singleton instance, it's non-capturing
+        return instance === obj
+    } catch (_ : NoSuchFieldException) {
+        // If there is no INSTANCE field, it's likely capturing or a custom implementation
+        return false
+    }
+}
+
 // TODO: move Java reflection utils (not depending on kotlin-reflection)
 //   to `common/org/jetbrains/lincheck/util/Utils.kt`
 
