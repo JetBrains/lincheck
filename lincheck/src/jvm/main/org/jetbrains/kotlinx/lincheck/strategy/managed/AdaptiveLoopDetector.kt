@@ -102,7 +102,13 @@ class AdaptiveLoopDetector(
         loop.iterationCount += 1
 
         val inst = getOrCreateInstance(threadId, loopId, codeLocation)
-        val decision = processIteration(inst)
+        val decision =
+            if (inst.currentIterationHandledAtAwaitBackEdge) {
+                inst.currentIterationHandledAtAwaitBackEdge = false
+                LoopDetector.Decision.IDLE // we already made the decision at the back-edge, do not process again
+            } else {
+                processIteration(inst)
+            }
         return Pair(started, decision)
     }
 
@@ -110,14 +116,17 @@ class AdaptiveLoopDetector(
         threadId: Int,
         codeLocation: Int,
         loopId: Int
-    ): Pair<Boolean, LoopDetector.Decision> {
+    ): LoopDetector.Decision {
         // classify the loop as await and call onLoopIteration
         val inst = getOrCreateInstance(threadId, loopId, codeLocation)
         if (inst.kind == LoopKind.UNKNOWN) {
             inst.kind = LoopKind.AWAIT
         }
 //        println("Classified loop ${inst.ownerThreadId}:${inst.signatureHistory.joinToString(",")} as ${inst.kind}")
-        return onLoopIteration(threadId, codeLocation, loopId)
+        inst.waitSetCandidates.addAll(inst.obs.reads.keys)
+        val decision = processIteration(inst)
+        inst.currentIterationHandledAtAwaitBackEdge = true
+        return decision
     }
 
     override fun afterLoopExit(

@@ -190,6 +190,10 @@ internal class LoopInstanceState(
 
     // External write tracking
     var lastRelevantWriteVersion: Long = 0L
+
+    // true when the current iteration has passed the side effect free back edge of a loop
+    // next loop header event clears this flag, bot does not process the same iteration again.
+    var currentIterationHandledAtAwaitBackEdge: Boolean = false
 }
 
 abstract class AbstractLoopDetector : LoopDetector {
