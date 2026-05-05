@@ -1437,9 +1437,6 @@ class PrimitivesTest {
             }
         }
 
-        // TODO: investigate why this test fails on JDK 8
-        Assume.assumeFalse(jdkVersion == JdkVersion.JDK_8)
-
         val outcomes: Set<Unit> = setOf(Unit)
         litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
     }
