@@ -31,8 +31,8 @@ import kotlin.reflect.KClass
  * providing a persistent objects numeration between different re-runs of the same program execution.
  *
  * The unique object id is a 64-bit integer number, constructed from
- * the object's serial number and its identity hash code.
- * In the case of immutable objects it hashCode is used instead.
+* the object's serial number and its identity hash code 
+* (or regular `hashCode` in case of immutable objects).
  *
  * The registered objects are associated with the registry entries [ObjectEntry],
  * keeping object's serial number, its identity/regular hash code, a weak reference to the object,
