@@ -1437,9 +1437,6 @@ class PrimitivesTest {
             }
         }
 
-        // TODO: investigate why this test fails on JDK 8
-        Assume.assumeFalse(jdkVersion == JdkVersion.JDK_8)
-
         val outcomes: Set<Unit> = setOf(Unit)
         litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
     }
@@ -1492,4 +1489,37 @@ class PrimitivesTest {
         }
     }
 
+
+
+    @Test
+    fun testBoxedPrimitives() {
+        class TestClass {
+            var x: Any? = null;
+
+            fun thread0(): Any? {
+                x = 42_000_000
+                return x
+            }
+            fun thread1() {
+                x = "foo"
+            }
+        }
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(TestClass::thread0)
+                }
+                thread {
+                    actor(TestClass::thread1)
+                }
+            }
+        }
+
+        val outcomes: Set<Any?> = setOf(42_000_000, "foo")
+        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { results ->
+            val b1 = getValue<Any?>(results.parallelResults[0][0]!!)
+            return@litmusTest b1
+        }
+    }
 }
