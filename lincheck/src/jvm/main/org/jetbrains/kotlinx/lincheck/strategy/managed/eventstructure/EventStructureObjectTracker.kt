@@ -66,7 +66,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
         this.initEvent = initEvent
     }
 
-    //NOTE: as in the oringinal ObjectRegistry, if an external object is already registered
+    //NOTE: as in the original ObjectRegistry, if an external object is already registered,
     // we do not register it again.
     // This is because the external object may already exist, which messes up the objectIDs
     override fun registerExternalObject(obj: Any): ObjectEntry =
