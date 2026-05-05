@@ -22,17 +22,11 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 
+
 internal class LambdaRunner<T>(
     private val timeoutMs: Long, // for deadlock or livelock detection
     val block: () -> T
 ) : AbstractActiveThreadPoolRunner() {
-
-    companion object {
-        // Ghetto secondary constructor
-        operator fun invoke(timeoutMs: Long, block: Runnable): LambdaRunner<Unit> {
-            return LambdaRunner(timeoutMs, { block.run() })
-        }
-    }
 
     private val testName =
         runCatching { block.javaClass.simpleName }.getOrElse { "lambda" }
@@ -106,3 +100,6 @@ internal class LambdaRunner<T>(
         return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults(wrapper))
     }
 }
+
+internal fun LambdaRunner(timeoutMs: Long, block: Runnable): LambdaRunner<Unit> =
+    LambdaRunner(timeoutMs, { block.run() } )
