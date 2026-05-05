@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.objectweb.asm.Opcodes
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.analysis.ConditionSafetyChecker
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
@@ -364,6 +365,17 @@ private val ON_SPIN_WAIT_METHOD = runCatching {
 }.getOrNull()
 private val THREAD_OWNER: String = Type.getInternalName(Thread::class.java)
 
+private val NO_SIDE_EFFECT_GET_METHODS = setOf(
+    "java/util/concurrent/atomic/AtomicBoolean.get",
+    "java/util/concurrent/atomic/AtomicInteger.get",
+    "java/util/concurrent/atomic/AtomicLong.get",
+    "java/util/concurrent/atomic/AtomicReference.get",
+    "java/lang/invoke/VarHandle.get",
+    "java/lang/invoke/VarHandle.getVolatile",
+    "java/lang/invoke/VarHandle.getAcquire",
+    "java/lang/invoke/VarHandle.getOpaque",
+)
+
 /**
  * Classification object result used for await loop analysis
  */
@@ -398,12 +410,19 @@ internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
         else -> false
     }
 
-    // TODO: Need to check for other functions as well + if the owner is right.
     fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
         insn.opcode == Opcodes.INVOKESTATIC &&
                 insn.owner == THREAD_OWNER &&
                 insn.name == ON_SPIN_WAIT_METHOD?.name &&
                 insn.desc == ON_SPIN_WAIT_METHOD.let(Type::getMethodDescriptor)
+
+    fun isSideEffectGetMethod(insn: MethodInsnNode): Boolean =
+        "${insn.owner}.${insn.name}" in NO_SIDE_EFFECT_GET_METHODS
+
+    fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
+        isFunctionCallAwait(insn)
+            || isSideEffectGetMethod(insn)
+            || ConditionSafetyChecker.isWhitelistedMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
 
     // classify every basic block in the method
     val blockClassifications = Array(basicBlocks.size) { blockIndex ->
@@ -424,9 +443,12 @@ internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
                 }
                 when (insn) {
                     is MethodInsnNode -> {
-                        if (!isFunctionCallAwait(insn)) {
+                        if (!isSideEffectFreeCall(insn)) {
                             hasSideEffects = true
                             break
+                        }
+                        if (isSideEffectGetMethod(insn)) {
+                            hasSharedRead = true
                         }
                     }
                     is InvokeDynamicInsnNode -> {
