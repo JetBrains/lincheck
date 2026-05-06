@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.util.toLincheckResult
 import org.jetbrains.kotlinx.lincheck.util.threadMapOf
+import org.jetbrains.lincheck.util.readFieldSafely
 import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
@@ -25,8 +26,29 @@ import java.util.concurrent.TimeoutException
 
 internal class LambdaRunner<T>(
     private val timeoutMs: Long, // for deadlock or livelock detection
-    val block: () -> T
+    val block: LambdaBlock<T>
 ) : AbstractActiveThreadPoolRunner() {
+
+    // TODO: Not sure if this is the best place for these or if this is the best way to store this method
+    internal interface LambdaBlock<T>: () -> T {
+        // For the sake of [SnapshotTracker], we need to know the fields captured by the block of the lambda runner
+        fun capturedObjects(): Iterable<Any>
+    }
+
+    internal class RunnableLambdaBlock(val runnable: Runnable) : LambdaBlock<Unit> {
+        override fun capturedObjects(): Iterable<Any> =
+            runnable.javaClass.declaredFields.mapNotNull { readFieldSafely(runnable, it).getOrNull() }
+
+        override fun invoke() = runnable.run()
+    }
+
+    internal class FunctionLambdaBlock<T>(val lambda: () -> T) : LambdaBlock<T> {
+
+        override fun capturedObjects(): Iterable<Any> =
+            lambda.javaClass.declaredFields.mapNotNull { readFieldSafely(lambda, it).getOrNull() }
+
+        override fun invoke(): T = lambda()
+    }
 
     private val testName =
         runCatching { block.javaClass.simpleName }.getOrElse { "lambda" }
@@ -102,4 +124,7 @@ internal class LambdaRunner<T>(
 }
 
 internal fun LambdaRunner(timeoutMs: Long, block: Runnable): LambdaRunner<Unit> =
-    LambdaRunner(timeoutMs, { block.run() } )
+    LambdaRunner(timeoutMs, LambdaRunner.RunnableLambdaBlock(block))
+
+internal fun<T> LambdaRunner(timeoutMs: Long, block: () -> T): LambdaRunner<T> =
+    LambdaRunner(timeoutMs, LambdaRunner.FunctionLambdaBlock(block))

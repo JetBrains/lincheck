@@ -114,10 +114,8 @@ internal abstract class ManagedStrategy(
     protected val memorySnapshot = SnapshotTracker().apply {
         if (runner is LambdaRunner<*>) {
             // save fields referenced by lambda for restoring by the snapshot tracker
-            val lambdaBlock = runner.block
-            lambdaBlock.javaClass.declaredFields
-                ?.mapNotNull { readFieldSafely(lambdaBlock, it).getOrNull() }
-                ?.forEach(::trackObjectAsRoot)
+           runner.block.capturedObjects()
+                .forEach(::trackObjectAsRoot)
         }
     }
 
