@@ -89,33 +89,4 @@ class MemoryModelTest {
             (r1 to r2)
         }
     }
-
-    // New version
-    @Test
-    fun testRRWOpaque() {
-        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
-            (0 to 0),
-            (0 to 1),
-            (1 to 0),
-//            (1 to 1), TODO: fix exploration strat to unlock this outcome
-        )
-        litmusTest(expectedOutcomes) {
-            val x = AtomicInteger(0)
-            var r1 = 0;
-            var r2 = 0;
-            val t1 = thread {
-                r1 = x.getOpaque()
-            }
-            val t2 = thread {
-                r2 = x.getOpaque()
-            }
-            val t3 = thread {
-                x.setOpaque(1)
-            }
-            t1.join()
-            t2.join()
-            t3.join()
-            (r1 to r2)
-        }
-    }
 }
