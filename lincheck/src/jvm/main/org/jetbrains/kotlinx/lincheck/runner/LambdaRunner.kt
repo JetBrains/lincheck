@@ -29,9 +29,12 @@ internal class LambdaRunner<T>(
     val block: LambdaBlock<T>
 ) : AbstractActiveThreadPoolRunner() {
 
-    // TODO: Not sure if this is the best place for these or if this is the best way to store this method
+    /**
+     * Represents a block of code that can be executed by the runner.
+     * To properly restore state between execution of the block,
+     * the block should be able to declare all the objects it captures.
+     */
     internal interface LambdaBlock<T>: () -> T {
-        // For the sake of [SnapshotTracker], we need to know the fields captured by the block of the lambda runner
         fun capturedObjects(): Iterable<Any>
     }
 
