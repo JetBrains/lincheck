@@ -24,32 +24,23 @@ import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeoutException
 
 
-internal class LambdaRunner<T>(
+internal class LambdaRunner<T> private constructor(
     private val timeoutMs: Long, // for deadlock or livelock detection
-    val block: LambdaBlock<T>
+    private val block: LambdaBlock<T>,
 ) : AbstractActiveThreadPoolRunner() {
 
     /**
      * Represents a block of code that can be executed by the runner.
-     * To properly restore state between execution of the block,
-     * the block should be able to declare all the objects it captures.
+     *
+     * Used only as a synthetic common interface for Java's [Runnable] and Kotlin's lambdas `() -> T`.
      */
-    internal interface LambdaBlock<T>: () -> T {
-        fun capturedObjects(): Iterable<Any>
-    }
+    private sealed interface LambdaBlock<T>: () -> T
 
-    internal class RunnableLambdaBlock(val runnable: Runnable) : LambdaBlock<Unit> {
-        override fun capturedObjects(): Iterable<Any> =
-            runnable.javaClass.declaredFields.mapNotNull { readFieldSafely(runnable, it).getOrNull() }
-
+    private class RunnableLambdaBlock(val runnable: Runnable) : LambdaBlock<Unit> {
         override fun invoke() = runnable.run()
     }
 
-    internal class FunctionLambdaBlock<T>(val lambda: () -> T) : LambdaBlock<T> {
-
-        override fun capturedObjects(): Iterable<Any> =
-            lambda.javaClass.declaredFields.mapNotNull { readFieldSafely(lambda, it).getOrNull() }
-
+    private class FunctionLambdaBlock<T>(val lambda: () -> T) : LambdaBlock<T> {
         override fun invoke(): T = lambda()
     }
 
@@ -57,6 +48,14 @@ internal class LambdaRunner<T>(
         runCatching { block.javaClass.simpleName }.getOrElse { "lambda" }
 
     override val executor = ActiveThreadPoolExecutor(testName, 1)
+
+    companion object {
+        fun fromRunnable(timeoutMs: Long, runnable: Runnable): LambdaRunner<Unit> =
+            LambdaRunner(timeoutMs, RunnableLambdaBlock(runnable))
+
+        fun <T> fromFunction(timeoutMs: Long, lambda: () -> T): LambdaRunner<T> =
+            LambdaRunner(timeoutMs, FunctionLambdaBlock(lambda))
+    }
 
     override fun runInvocation(): InvocationResult {
         var timeout = timeoutMs * 1_000_000
@@ -76,6 +75,19 @@ internal class LambdaRunner<T>(
             return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults(wrapper))
         } finally {
             resetEventTracker()
+        }
+    }
+
+    /**
+     * Returns a list of objects captured by the lambda block of this [LambdaRunner].
+     */
+    fun capturedObjects(): List<Any> {
+        val root = when (block) {
+            is RunnableLambdaBlock -> block.runnable
+            is FunctionLambdaBlock<*> -> block.lambda
+        }
+        return root.javaClass.declaredFields.mapNotNull {
+            readFieldSafely(root, it).getOrNull()
         }
     }
 
@@ -127,7 +139,7 @@ internal class LambdaRunner<T>(
 }
 
 internal fun LambdaRunner(timeoutMs: Long, block: Runnable): LambdaRunner<Unit> =
-    LambdaRunner(timeoutMs, LambdaRunner.RunnableLambdaBlock(block))
+    LambdaRunner.fromRunnable(timeoutMs, block)
 
 internal fun<T> LambdaRunner(timeoutMs: Long, block: () -> T): LambdaRunner<T> =
-    LambdaRunner(timeoutMs, LambdaRunner.FunctionLambdaBlock(block))
+    LambdaRunner.fromFunction(timeoutMs, block)
