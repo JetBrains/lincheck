@@ -35,6 +35,11 @@ sourceSets {
         val junitVersion: String by project
 
         testImplementation("junit:junit:$junitVersion")
+
+        // Bootstrap classes (sun.nio.ch.lincheck.Injections, BreakpointStorage,
+        // ThreadDescriptor) are required when a unit test exercises the
+        // class-file transformer end-to-end; otherwise NoClassDefFoundError.
+        testImplementation(project(":bootstrap"))
     }
 }
 

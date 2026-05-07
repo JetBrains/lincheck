@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingNotificationListener
 import org.jetbrains.lincheck.tracer.Tracer
@@ -142,11 +143,17 @@ internal object LiveDebugger {
 
     /**
      * Retransforms the classes that contain the given breakpoints.
+     *
+     * `Class.getName` returns a canonical name, so we use the class-only
+     * [SnapshotBreakpoint.isApplicableTo] overload — at this point we don't have the
+     * source file for each loaded class, and the retransformation pipeline does the
+     * file-aware narrowing in `LincheckClassVisitor` anyway.
      */
     private fun retransformBreakpointClasses(breakpoints: List<SnapshotBreakpoint>) {
-        val classNamesToRetransform = breakpoints.map { it.className }.toSet()
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
-            .filter { it.name in classNamesToRetransform }
+            .filter { loadedClass ->
+                breakpoints.any { it.isApplicableTo(loadedClass.name) }
+            }
         LincheckInstrumentation.retransformClasses(classesToRetransform)
     }
 

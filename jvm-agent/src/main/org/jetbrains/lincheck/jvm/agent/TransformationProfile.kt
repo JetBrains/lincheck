@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.transformers.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.liveDebuggerSettings
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
+import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.util.*
 
 interface TransformationProfile {
@@ -609,11 +610,12 @@ class LiveDebuggerTransformationProfile(
         // to avoid potential `ClassCircularityError` issues
         if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
 
-        return isLiveDebuggerBreakpointClass(className)
+        // Check if there are any applicable line breakpoints for the given class
+        // (`className` is already in canonical form ,see `LincheckClassFileTransformer.shouldTransform`).
+        // The source file is not yet known here, so we use the class-only `applicableTo` pre-filter;
+        // the file-aware overload narrows the match in `LincheckClassVisitor`.
+        return settings.lineBreakPoints.any { it.isApplicableTo(className) }
     }
-
-    private fun isLiveDebuggerBreakpointClass(className: String): Boolean =
-        settings.lineBreakPoints.any { it.className == className }
 
     override fun getMethodConfiguration(
         className: String,

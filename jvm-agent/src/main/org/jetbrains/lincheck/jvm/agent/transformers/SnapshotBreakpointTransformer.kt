@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.*
@@ -60,9 +61,14 @@ internal class SnapshotBreakpointTransformer(
         // Skip if we've already instrumented this line in the current basic block
         if (line in instrumentedLinesInCurrentBlock) return@run
 
-        val canonicalClassName = className.toCanonicalClassName()
+        // Several JVM classes generated from one Kotlin source file can share a source line.
+        // LincheckClassVisitor has already filtered the breakpoints to the current owner class
+        // or its same-source generated descendant, so the line is the remaining bytecode key here.
         val breakpoint = breakpoints.firstOrNull {
-            it.lineNumber == line && it.className == canonicalClassName
+            // `LincheckClassVisitor` should have already filtered the breakpoints
+            // to the current className/fileName pair,
+            // but we still do the check as an additional safeguard.
+            it.lineNumber == line && it.isApplicableTo(className.toCanonicalClassName(), fileName)
         } ?: return@run
 
         // Check condition safety before emitting any breakpoint code.

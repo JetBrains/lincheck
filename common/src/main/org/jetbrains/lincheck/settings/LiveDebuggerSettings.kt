@@ -177,6 +177,48 @@ data class SnapshotBreakpoint(
 }
 
 /**
+ * Class-only pre-filter: returns true when [className] (in canonical form)
+ * is this breakpoint's declared owner or a `<owner>$...` generated descendant.
+ *
+ * Used when the source file name is not available.
+ * The file-aware overload below narrows the match.
+ */
+fun SnapshotBreakpoint.isApplicableTo(className: String): Boolean =
+    className.startsWith(this.className)
+
+/**
+ * Returns true if this breakpoint applies to
+ * a class whose canonical name is [className] residing in source file [sourceFileName].
+ * A breakpoint applies to its declared owner class or to a generated JVM descendant
+ * compiled from the same source file.
+ *
+ * Kotlin lambdas, SAM conversions, suspend continuations, and anonymous objects
+ * compile into separate JVM classes whose names start with `<owner>$`,
+ * so strict owner matching would drop live breakpoints set on such source lines.
+ */
+fun SnapshotBreakpoint.isApplicableTo(className: String, sourceFileName: String): Boolean =
+    this.className == className || (isApplicableTo(className) && fileName == sourceFileName)
+
+/**
+ * Class-only pre-filter: returns the breakpoints whose
+ * owner class is [className] or a `<owner>$...` generated descendant.
+ *
+ * Used when the source file name is not available.
+ * The file-aware overload below narrows the match.
+ */
+fun List<SnapshotBreakpoint>.applicableTo(className: String): List<SnapshotBreakpoint> =
+    filter { it.isApplicableTo(className) }
+
+/**
+ * Returns the breakpoints applicable to a class with the given canonical name and source file.
+ * See [SnapshotBreakpoint.isApplicableTo] for the matching rules.
+ *
+ * Class names should be passed in **canonical** form (e.g., `com.example.Foo$Bar`).
+ */
+fun List<SnapshotBreakpoint>.applicableTo(className: String, sourceFileName: String): List<SnapshotBreakpoint> =
+    filter { it.isApplicableTo(className, sourceFileName) }
+
+/**
  * Parses information about breakpoints from an INI configuration file.
  *
  * Expected file format:
