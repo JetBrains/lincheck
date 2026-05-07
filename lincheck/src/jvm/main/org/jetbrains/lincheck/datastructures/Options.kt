@@ -13,10 +13,6 @@ package org.jetbrains.lincheck.datastructures
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingCTestConfiguration
-import org.jetbrains.kotlinx.lincheck.strategy.stress.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressCTestConfiguration
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.util.DEFAULT_LOG_LEVEL
@@ -260,57 +256,3 @@ abstract class CTestConfiguration(
 
 internal fun CTestConfiguration.createVerifier() =
     verifierClass.getConstructor(Class::class.java).newInstance(sequentialSpecification)
-
-@Suppress("DEPRECATION")
-internal fun createFromTestClassAnnotations(testClass: Class<*>): List<CTestConfiguration> {
-
-    val stressConfigurations: List<CTestConfiguration> = testClass.getAnnotationsByType(StressCTest::class.java)
-        .map { ann: StressCTest ->
-            StressCTestConfiguration(
-                testClass = testClass,
-                iterations = ann.iterations,
-                threads = ann.threads,
-                actorsPerThread = ann.actorsPerThread,
-                actorsBefore = ann.actorsBefore,
-                actorsAfter = ann.actorsAfter,
-                generatorClass = ann.generator.java,
-                verifierClass = ann.verifier.java,
-                invocationsPerIteration = ann.invocationsPerIteration,
-                minimizeFailedScenario = ann.minimizeFailedScenario,
-                sequentialSpecification = chooseSequentialSpecification(ann.sequentialSpecification.java, testClass),
-                timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
-                customScenarios = emptyList()
-            )
-        }
-
-    val modelCheckingConfigurations: List<CTestConfiguration> =
-        testClass.getAnnotationsByType(ModelCheckingCTest::class.java)
-            .map { ann: ModelCheckingCTest ->
-                ModelCheckingCTestConfiguration(
-                    testClass = testClass,
-                    iterations = ann.iterations,
-                    threads = ann.threads,
-                    actorsPerThread = ann.actorsPerThread,
-                    actorsBefore = ann.actorsBefore,
-                    actorsAfter = ann.actorsAfter,
-                    generatorClass = ann.generator.java,
-                    verifierClass = ann.verifier.java,
-                    checkObstructionFreedom = ann.checkObstructionFreedom,
-                    loopIterationsBeforeThreadSwitch = ManagedCTestConfiguration.DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH,
-                    loopBound = ann.hangingDetectionThreshold,
-                    recursionBound = ann.hangingDetectionThreshold,
-                    invocationsPerIteration = ann.invocationsPerIteration,
-                    guarantees = ManagedCTestConfiguration.DEFAULT_GUARANTEES,
-                    minimizeFailedScenario = ann.minimizeFailedScenario,
-                    sequentialSpecification = chooseSequentialSpecification(
-                        ann.sequentialSpecification.java,
-                        testClass
-                    ),
-                    timeoutMs = CTestConfiguration.DEFAULT_TIMEOUT_MS,
-                    customScenarios = emptyList(),
-                    stdLibAnalysisEnabled = false,
-                )
-            }
-
-    return stressConfigurations + modelCheckingConfigurations
-}
