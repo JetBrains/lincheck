@@ -220,8 +220,9 @@ fun<E : ThreadEvent> Execution<E>.toMutableFrontier(): MutableExecutionFrontier<
         mutableExecutionFrontierOf(*it.toTypedArray())
     }
 
-fun<E : ThreadEvent> Execution<E>.calculateFrontier(clock: VectorClock): MutableExecutionFrontier<E> =
-    (0 until maxThreadId).mapNotNull { tid ->
+fun<E : ThreadEvent> Execution<E>.calculateFrontier(clock: VectorClock): MutableExecutionFrontier<E> {
+    check(clock.maxThreadId() <= maxThreadId)
+    return (0 until maxThreadId + 1).mapNotNull { tid ->
         val timestamp = clock[tid]
         if (timestamp >= 0)
             tid to this[tid, timestamp]
@@ -229,6 +230,7 @@ fun<E : ThreadEvent> Execution<E>.calculateFrontier(clock: VectorClock): Mutable
     }.let {
         mutableExecutionFrontierOf(*it.toTypedArray())
     }
+}
 
 fun<E : ThreadEvent> Execution<E>.buildEnumerator() = object : Enumerator<E> {
 
@@ -351,7 +353,7 @@ fun<E : ThreadEvent> Execution<E>.computeForwardVectorClock(event: E, relation: 
 ): VectorClock {
     val capacity = 1 + this.maxThreadId
     val clock = MutableVectorClock()
-    for (i in 0 until capacity) {
+    for (i in -1 until capacity) {
         val threadEvents = get(i) ?: continue
         val position = if (respectsProgramOrder) {
             // TODO: this uses binary search from utils. Replace it with standard binary search function (I did not want to use my brain right now)
@@ -406,7 +408,7 @@ fun<E : ThreadEvent> Execution<E>.buildGraph(
         val clock = execution.computeForwardVectorClock(event, relation,
             respectsProgramOrder = respectsProgramOrder
         )
-        (0 until nThreads).mapNotNull { tid ->
+        (-1 until nThreads).mapNotNull { tid ->
             if (clock[tid] != -1) execution[tid, clock[tid]] else null
         }
     }
@@ -417,6 +419,32 @@ fun<E : ThreadEvent> Execution<E>.buildGraph(
     }
 
 }
+
+// NOTE: I am not sure exactly about the assumptions needed in the orgininal buildGraph
+// But it seems that it is not correct for arbitary relations
+// TODO: figure them out and get rid of this alt version
+fun<E : ThreadEvent> Execution<E>.buildGraphAlt(
+    relation: Relation<E>,
+) = object : Graph<E> {
+    private val execution = this@buildGraphAlt
+
+    override val nodes: Collection<E>
+        get() = execution
+
+    private val enumerator = execution.buildEnumerator()
+
+    private val adjacencyList = Array(nodes.size) { i ->
+        val event = enumerator[i]
+        execution.filter { relation(event, it) }.toList()
+    }
+
+    override fun adjacent(node: E): List<E> {
+        val idx = enumerator[node]
+        return adjacencyList[idx]
+    }
+
+}
+
 
 // TODO: include parent event in covering (?) and remove `External`
 fun<E : ThreadEvent> Execution<E>.buildExternalCovering(

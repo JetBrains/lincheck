@@ -20,7 +20,6 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import java.util.concurrent.atomic.*
 import java.lang.invoke.MethodHandles

@@ -50,6 +50,7 @@ fun<T> topologicalSorting(graph: Graph<T>): List<T>? {
         }
     }
     if (result.size != graph.nodes.size) {
+        //TODO: would be nice to see the cycle when there is no topo sort
         return null
     }
     return result
