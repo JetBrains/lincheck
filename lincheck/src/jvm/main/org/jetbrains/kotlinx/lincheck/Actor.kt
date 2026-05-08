@@ -9,7 +9,6 @@
  */
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.annotations.*
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.trace.TraceContext

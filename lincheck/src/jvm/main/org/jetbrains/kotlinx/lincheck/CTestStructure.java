@@ -23,7 +23,6 @@ import java.util.*;
 /**
  * Contains information about the provided operations.
  */
-@SuppressWarnings("removal")
 public class CTestStructure {
     public final List<ActorGenerator> actorGenerators;
     public final List<ParameterGenerator<?>> parameterGenerators;
@@ -58,7 +57,6 @@ public class CTestStructure {
         Map<String, OperationGroup> groupConfigs = new HashMap<>();
         List<ActorGenerator> actorGenerators = new ArrayList<>();
         List<Actor> validationFunctions = new ArrayList<>();
-        List<Method> stateRepresentations = new ArrayList<>();
         Class<?> clazz = testClass;
         RandomProvider randomProvider = new RandomProvider();
         Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap = new HashMap<>();
@@ -70,21 +68,12 @@ public class CTestStructure {
                     actorGenerators,
                     parameterGeneratorsMap,
                     validationFunctions,
-                    stateRepresentations,
                     randomProvider
             );
             clazz = clazz.getSuperclass();
         }
 
         List<ParameterGenerator<?>> parameterGenerators = new ArrayList<>(parameterGeneratorsMap.values());
-
-        if (stateRepresentations.size() > 1) {
-            throw new IllegalStateException("At most one state representation function is allowed, but several were detected:" +
-                stateRepresentations.stream()
-                        .map(Method::getName)
-                        .collect(Collectors.joining(", ")));
-        }
-        Method stateRepresentation = stateRepresentations.isEmpty() ? null : stateRepresentations.get(0);
 
         if (validationFunctions.size() > 1) {
             throw new IllegalStateException("At most one validation function is allowed, but several were detected: " +
@@ -102,7 +91,7 @@ public class CTestStructure {
                 parameterGenerators,
                 new ArrayList<>(groupConfigs.values()),
                 validationFunction,
-                stateRepresentation,
+                null,
                 randomProvider
         );
     }
@@ -113,22 +102,12 @@ public class CTestStructure {
             List<ActorGenerator> actorGenerators,
             Map<Class<?>, ParameterGenerator<?>> parameterGeneratorsMap,
             List<Actor> validationFunctions,
-            List<Method> stateRepresentations,
             RandomProvider randomProvider
     ) {
         // Read named parameter generators (declared for class)
         Map<String, ParameterGenerator<?>> namedGens = createNamedGens(clazz, randomProvider);
         // Create map for default (not named) gens
         Map<Class<?>, ParameterGenerator<?>> defaultGens = createDefaultGenerators(randomProvider);
-        // Read group configurations
-        for (org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig opGroupConfigAnn :
-             clazz.getAnnotationsByType(org.jetbrains.kotlinx.lincheck.annotations.OpGroupConfig.class))
-        {
-            groupConfigs.put(
-                opGroupConfigAnn.name(),
-                new OperationGroup(opGroupConfigAnn.name(), opGroupConfigAnn.nonParallel())
-            );
-        }
 
         // Process class methods
         for (Method m : getDeclaredMethodSorted(clazz)) {
@@ -160,14 +139,6 @@ public class CTestStructure {
                     opConfig.isCancellableOnSuspension(), opConfig.isBlocking(), opConfig.isCausesBlocking(),
                     opConfig.isPromptCancellation());
                 actorGenerators.add(actorGenerator);
-                // Get list of groups and add this operation to specified ones
-                String opGroup = opConfig.getGroup();
-                if (!opGroup.isEmpty()) {
-                    OperationGroup operationGroup = groupConfigs.get(opGroup);
-                    if (operationGroup == null)
-                        throw new IllegalStateException("Operation group " + opGroup + " is not configured");
-                    operationGroup.actors.add(actorGenerator);
-                }
                 String opNonParallelGroupName = opConfig.getNonParallelGroup();
                 if (!opNonParallelGroupName.isEmpty()) { // is `nonParallelGroup` specified?
                     groupConfigs.computeIfAbsent(opNonParallelGroupName, name -> new OperationGroup(name, true));
@@ -180,15 +151,6 @@ public class CTestStructure {
                 if (m.getParameterCount() != 0)
                     throw new IllegalStateException("Validation function " + m.getName() + " should not have parameters");
                 validationFunctions.add(new Actor(m, Collections.emptyList()));
-            }
-
-            StateRepresentationConfig stateRepConfig = parseStateRepresentationAnnotation(m);
-            if (stateRepConfig != null) {
-                if (m.getParameterCount() != 0)
-                    throw new IllegalStateException("State representation function " + m.getName() + " should not have parameters");
-                if (m.getReturnType() != String.class)
-                    throw new IllegalStateException("State representation function " + m.getName() + " should have String return type");
-                stateRepresentations.add(m);
             }
         }
     }
@@ -395,11 +357,8 @@ public class CTestStructure {
     private static class OperationConfig {
         private final String[] params;
         private final boolean runOnce;
-        private final String group;
         private final String nonParallelGroup;
-        private final Class<? extends Throwable>[] handleExceptionsAsResult;
         private final boolean cancellableOnSuspension;
-        private final boolean allowExtraSuspension;
         private final boolean blocking;
         private final boolean causesBlocking;
         private final boolean promptCancellation;
@@ -407,22 +366,16 @@ public class CTestStructure {
         OperationConfig(
             String[] params,
             boolean runOnce,
-            String group,
             String nonParallelGroup,
-            Class<? extends Throwable>[] handleExceptionsAsResult,
             boolean cancellableOnSuspension,
-            boolean allowExtraSuspension,
             boolean blocking,
             boolean causesBlocking,
             boolean promptCancellation
         ) {
             this.params = params;
             this.runOnce = runOnce;
-            this.group = group;
             this.nonParallelGroup = nonParallelGroup;
-            this.handleExceptionsAsResult = handleExceptionsAsResult;
             this.cancellableOnSuspension = cancellableOnSuspension;
-            this.allowExtraSuspension = allowExtraSuspension;
             this.blocking = blocking;
             this.causesBlocking = causesBlocking;
             this.promptCancellation = promptCancellation;
@@ -436,24 +389,12 @@ public class CTestStructure {
             return runOnce;
         }
 
-        public String getGroup() {
-            return group;
-        }
-
         public String getNonParallelGroup() {
             return nonParallelGroup;
         }
 
-        public Class<? extends Throwable>[] getHandleExceptionsAsResult() {
-            return handleExceptionsAsResult;
-        }
-
         public boolean isCancellableOnSuspension() {
             return cancellableOnSuspension;
-        }
-
-        public boolean isAllowExtraSuspension() {
-            return allowExtraSuspension;
         }
 
         public boolean isBlocking() {
@@ -473,41 +414,12 @@ public class CTestStructure {
         if (!isOperationAnnotationPresent(m)) {
             return null;
         }
-        if (m.isAnnotationPresent(org.jetbrains.kotlinx.lincheck.annotations.Operation.class)) {
-            org.jetbrains.kotlinx.lincheck.annotations.Operation opAnn = m.getAnnotation(org.jetbrains.kotlinx.lincheck.annotations.Operation.class);
-            return parseOperationAnnotation(opAnn);
-        }
-        if (m.isAnnotationPresent(Operation.class)) {
-            Operation opAnn = m.getAnnotation(Operation.class);
-            return parseOperationAnnotation(opAnn);
-        }
-        return null;
-    }
-
-    private static OperationConfig parseOperationAnnotation(org.jetbrains.kotlinx.lincheck.annotations.Operation opAnn) {
+        Operation opAnn = m.getAnnotation(Operation.class);
         return new OperationConfig(
             opAnn.params(),
             opAnn.runOnce(),
-            opAnn.group(),
             opAnn.nonParallelGroup(),
-            opAnn.handleExceptionsAsResult(),
             opAnn.cancellableOnSuspension(),
-            opAnn.allowExtraSuspension(),
-            opAnn.blocking(),
-            opAnn.causesBlocking(),
-            opAnn.promptCancellation()
-        );
-    }
-
-    private static OperationConfig parseOperationAnnotation(Operation opAnn) {
-        return new OperationConfig(
-            opAnn.params(),
-            opAnn.runOnce(),
-            "",
-            opAnn.nonParallelGroup(),
-            new Class[0],
-            opAnn.cancellableOnSuspension(),
-            true,
             opAnn.blocking(),
             false,
             opAnn.promptCancellation()
@@ -515,8 +427,7 @@ public class CTestStructure {
     }
 
     private static boolean isOperationAnnotationPresent(Method m) {
-        return m.isAnnotationPresent(org.jetbrains.kotlinx.lincheck.annotations.Operation.class) ||
-               m.isAnnotationPresent(Operation.class);
+        return m.isAnnotationPresent(Operation.class);
     }
 
     /**
@@ -550,14 +461,6 @@ public class CTestStructure {
         }
     }
 
-    private static ParamConfig parseParamAnnotation(org.jetbrains.kotlinx.lincheck.annotations.Param paramAnn) {
-        return new ParamConfig(
-            paramAnn.name(),
-            paramAnn.gen(),
-            paramAnn.conf()
-        );
-    }
-
     private static ParamConfig parseParamAnnotation(Param paramAnn) {
         return new ParamConfig(
             paramAnn.name(),
@@ -570,24 +473,12 @@ public class CTestStructure {
         if (!isParamAnnotationPresent(p)) {
             return null;
         }
-        if (p.isAnnotationPresent(org.jetbrains.kotlinx.lincheck.annotations.Param.class)) {
-            org.jetbrains.kotlinx.lincheck.annotations.Param paramAnn = p.getAnnotation(org.jetbrains.kotlinx.lincheck.annotations.Param.class);
-            return parseParamAnnotation(paramAnn);
-        }
-        if (p.isAnnotationPresent(Param.class)) {
-            Param paramAnn = p.getAnnotation(Param.class);
-            return parseParamAnnotation(paramAnn);
-        }
-        return null;
+        Param paramAnn = p.getAnnotation(Param.class);
+        return parseParamAnnotation(paramAnn);
     }
 
     private static List<ParamConfig> getParamConfigsFromClass(Class<?> clazz) {
         List<ParamConfig> paramConfigs = new ArrayList<>();
-        for (org.jetbrains.kotlinx.lincheck.annotations.Param paramAnn :
-             clazz.getAnnotationsByType(org.jetbrains.kotlinx.lincheck.annotations.Param.class))
-        {
-            paramConfigs.add(parseParamAnnotation(paramAnn));
-        }
         for (Param paramAnn :
              clazz.getAnnotationsByType(Param.class))
         {
@@ -598,11 +489,6 @@ public class CTestStructure {
 
     private static List<ParamConfig> getParamConfigsByType(Parameter p) {
         ArrayList<ParamConfig> paramConfigs = new ArrayList<>();
-        for (org.jetbrains.kotlinx.lincheck.annotations.Param param :
-             p.getAnnotationsByType(org.jetbrains.kotlinx.lincheck.annotations.Param.class))
-        {
-            paramConfigs.add(parseParamAnnotation(param));
-        }
         for (Param param :
              p.getAnnotationsByType(Param.class))
         {
@@ -612,26 +498,7 @@ public class CTestStructure {
     }
 
     private static boolean isParamAnnotationPresent(Parameter p) {
-        return p.isAnnotationPresent(org.jetbrains.kotlinx.lincheck.annotations.Param.class) ||
-               p.isAnnotationPresent(Param.class);
-    }
-
-    /**
-     * POJO class representing the StateRepresentation annotation.
-     * Since StateRepresentation is a marker annotation with no properties,
-     * this class is empty.
-     */
-    private static class StateRepresentationConfig {}
-
-    private static StateRepresentationConfig parseStateRepresentationAnnotation(Method m) {
-        if (!isStateRepresentationAnnotationPresent(m)) {
-            return null;
-        }
-        return new StateRepresentationConfig();
-    }
-
-    private static boolean isStateRepresentationAnnotationPresent(Method m) {
-        return m.isAnnotationPresent(org.jetbrains.kotlinx.lincheck.annotations.StateRepresentation.class);
+        return p.isAnnotationPresent(Param.class);
     }
 
     /**
@@ -649,7 +516,6 @@ public class CTestStructure {
     }
 
     private static boolean isValidateAnnotationPresent(Method m) {
-        return m.isAnnotationPresent(org.jetbrains.kotlinx.lincheck.annotations.Validate.class) ||
-               m.isAnnotationPresent(Validate.class);
+        return m.isAnnotationPresent(Validate.class);
     }
 }
