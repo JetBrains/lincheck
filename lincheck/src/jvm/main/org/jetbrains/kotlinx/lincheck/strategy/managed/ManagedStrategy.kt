@@ -1526,13 +1526,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun afterWrite(threadDescriptor: ThreadDescriptor) {
-        if (collectTrace) {
-            threadDescriptor.runInsideIgnoredSection {
-                traceCollector?.addStateRepresentation()
-            }
-        }
-    }
+    override fun afterWrite(threadDescriptor: ThreadDescriptor) {}
 
     // TODO: Should we intercept on array copy?
 
@@ -1937,7 +1931,6 @@ internal abstract class ManagedStrategy(
                     )
                 }
                 afterMethodCall(threadId, tracePoint)
-                traceCollector?.addStateRepresentation()
             }
         }
         // if the method has certain guarantees, leave the corresponding section
@@ -1993,7 +1986,6 @@ internal abstract class ManagedStrategy(
             val tracePoint = callStackTrace[threadId]!!.last().tracePoint
             if (!tracePoint.isActor) tracePoint.initializeThrownException(throwable)
             afterMethodCall(threadId, tracePoint)
-            traceCollector?.addStateRepresentation()
         }
         // if the method has certain guarantees, leave the corresponding section
         leaveAnalysisSection(threadId, methodSection)
@@ -2057,7 +2049,6 @@ internal abstract class ManagedStrategy(
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 tracePoint.initializeVoidReturnedValue()
                 afterMethodCall(threadId, tracePoint)
-                traceCollector!!.addStateRepresentation()
             }
         }
 
@@ -2083,7 +2074,6 @@ internal abstract class ManagedStrategy(
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 tracePoint.initializeThrownException(throwable)
                 afterMethodCall(threadId, tracePoint)
-                traceCollector!!.addStateRepresentation()
             }
         }
 
@@ -2159,7 +2149,6 @@ internal abstract class ManagedStrategy(
                                 codeLocation = codeLocation
                             )
                         )
-                        traceCollector?.addStateRepresentation()
                     }
                     failDueToLivelock()
                 }
@@ -2218,7 +2207,6 @@ internal abstract class ManagedStrategy(
                         codeLocation = enterCodeLocation
                     )
                 )
-                traceCollector?.addStateRepresentation()
             }
         }
     }
@@ -2638,23 +2626,6 @@ internal abstract class ManagedStrategy(
 
     private fun TraceCollector.onThreadFinish() {
         spinCycleStartAdded = false
-    }
-
-    private fun TraceCollector.addStateRepresentation() {
-        val scenarioRunner = (runner as? ExecutionScenarioRunner) ?: return
-        val stateRepresentation = scenarioRunner.constructStateRepresentation() ?: return
-        val eventId = getNextEventId()
-        val threadId = threadScheduler.getCurrentThreadId()
-        // use call stack trace of the previous trace point
-        traceCollector?.addTracePoint(
-            StateRepresentationTracePoint(
-                context = context,
-                eventId = eventId,
-                iThread = threadId,
-                actorId = currentActorId[threadId]!!,
-                stateRepresentation = stateRepresentation,
-            )
-        )
     }
 
     private fun TraceCollector.passObstructionFreedomViolationTracePoint() {

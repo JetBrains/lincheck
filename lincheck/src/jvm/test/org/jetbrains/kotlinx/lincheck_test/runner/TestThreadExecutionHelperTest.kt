@@ -39,7 +39,6 @@ class TestThreadExecutionHelperTest {
             scenario = emptyScenario(),
             testClass = ArrayDeque::class.java,
             validationFunction = null,
-            stateRepresentationFunction = null,
             timeoutMs = 0L,
             useClocks = UseClocks.ALWAYS,
         ).apply {

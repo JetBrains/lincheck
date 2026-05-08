@@ -20,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.STRESS
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import java.lang.reflect.Method
 
 /**
  * Options for the stress strategy.
@@ -84,13 +83,11 @@ class StressCTestConfiguration(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunction: Actor?,
-        stateRepresentationMethod: Method?
     ): Strategy {
         val runner = ExecutionScenarioRunner(
             scenario = scenario,
             testClass = testClass,
             validationFunction = validationFunction,
-            stateRepresentationFunction = stateRepresentationMethod,
             timeoutMs = timeoutMs,
             useClocks = UseClocks.RANDOM
         )

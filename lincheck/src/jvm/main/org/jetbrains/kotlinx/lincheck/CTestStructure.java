@@ -30,7 +30,6 @@ public class CTestStructure {
 
     @Nullable
     public final Actor validationFunction;
-    public final Method stateRepresentation;
 
     public final RandomProvider randomProvider;
 
@@ -39,14 +38,12 @@ public class CTestStructure {
             List<ParameterGenerator<?>> parameterGenerators,
             List<OperationGroup> operationGroups,
             @Nullable Actor validationFunction,
-            Method stateRepresentation,
             RandomProvider randomProvider
     ) {
         this.actorGenerators = actorGenerators;
         this.parameterGenerators = parameterGenerators;
         this.operationGroups = operationGroups;
         this.validationFunction = validationFunction;
-        this.stateRepresentation = stateRepresentation;
         this.randomProvider = randomProvider;
     }
 
@@ -91,7 +88,6 @@ public class CTestStructure {
                 parameterGenerators,
                 new ArrayList<>(groupConfigs.values()),
                 validationFunction,
-                null,
                 randomProvider
         );
     }

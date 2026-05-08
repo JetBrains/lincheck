@@ -17,7 +17,6 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.lincheck.util.LoggingLevel
-import java.lang.reflect.*
 import kotlin.reflect.*
 
 /**
@@ -223,7 +222,6 @@ abstract class CTestConfiguration(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunction: Actor?,
-        stateRepresentationMethod: Method?,
     ): Strategy
 
     companion object {

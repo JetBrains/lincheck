@@ -22,31 +22,16 @@ data class ExecutionResult(
      */
     val initResults: List<LincheckResult?>,
     /**
-     * State representation at the end of the init part.
-     */
-    val afterInitStateRepresentation: String?,
-    /**
      * Results of the parallel part of the execution with the clock values at the beginning of each one.
      * @see ExecutionScenario.parallelExecution
      */
     val parallelResultsWithClock: List<List<ResultWithClock>>,
     /**
-     * State representation at the end of the parallel part.
-     */
-    val afterParallelStateRepresentation: String?,
-    /**
      * Results of the last sequential part of the execution.
      * @see ExecutionScenario.postExecution
      */
     val postResults: List<LincheckResult?>,
-    /**
-     * State representation at the end of the scenario.
-     */
-    val afterPostStateRepresentation: String?
 ) {
-    constructor(initResults: List<LincheckResult?>, parallelResultsWithClock: List<List<ResultWithClock>>, postResults: List<LincheckResult?>) :
-        this(initResults, null, parallelResultsWithClock, null, postResults, null)
-
     /**
      * Number of threads with results.
      */
@@ -111,23 +96,6 @@ data class ExecutionResult(
                 threadResultsWithUpdatedClock
         }
 
-    /**
-     * Override `equals` to ignore states.
-     * We do not require state generation to be deterministic, so
-     * states can differ for the same interleaving.
-     */
-    override fun equals(other: Any?): Boolean =
-        other is ExecutionResult &&
-        initResults == other.initResults &&
-        parallelResultsWithClock == other.parallelResultsWithClock &&
-        postResults == other.postResults
-
-    override fun hashCode(): Int {
-        var result = initResults.hashCode()
-        result = 31 * result + parallelResultsWithClock.hashCode()
-        result = 31 * result + postResults.hashCode()
-        return result
-    }
 }
 
 fun emptyExecutionResult() =
@@ -135,11 +103,8 @@ fun emptyExecutionResult() =
 
 val ExecutionResult.withEmptyClocks: ExecutionResult get() = ExecutionResult(
     this.initResults,
-    this.afterInitStateRepresentation,
     this.parallelResultsWithClock.map { it.withEmptyClock() },
-    this.afterParallelStateRepresentation,
     this.postResults,
-    this.afterPostStateRepresentation
 )
 
 val ExecutionResult.parallelResults: List<List<LincheckResult?>> get() =

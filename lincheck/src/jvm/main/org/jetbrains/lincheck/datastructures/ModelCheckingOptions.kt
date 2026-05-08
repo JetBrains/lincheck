@@ -22,7 +22,6 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import java.lang.reflect.Method
 
 /**
  * Options for the model checking strategy.
@@ -117,13 +116,11 @@ class ModelCheckingCTestConfiguration(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunction: Actor?,
-        stateRepresentationMethod: Method?,
     ): Strategy {
         val runner = ExecutionScenarioRunner(
             scenario = scenario,
             testClass = testClass,
             validationFunction = validationFunction,
-            stateRepresentationFunction = stateRepresentationMethod,
             timeoutMs = getTimeOutMs(inIdeaPluginReplayMode, timeoutMs),
             useClocks = UseClocks.ALWAYS
         )

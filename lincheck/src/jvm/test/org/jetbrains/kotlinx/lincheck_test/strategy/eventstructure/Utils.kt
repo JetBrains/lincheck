@@ -78,7 +78,6 @@ internal fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): E
             testClass = testClass,
             scenario = scenario,
             validationFunction = null,
-            stateRepresentationMethod = null,
         ) as EventStructureStrategy
 }
 

@@ -81,7 +81,6 @@ private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, std
             testClass = testClass,
             scenario = scenario,
             validationFunction = null,
-            stateRepresentationMethod = null,
         ) as ModelCheckingStrategy
 
 private class CollectResultsVerifier : Verifier {

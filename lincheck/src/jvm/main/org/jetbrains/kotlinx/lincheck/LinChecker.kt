@@ -155,7 +155,6 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
             testClass = testClass,
             scenario = scenario,
             validationFunction = testStructure.validationFunction,
-            stateRepresentationMethod = testStructure.stateRepresentation,
         )
 
     private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider): ExecutionGenerator {

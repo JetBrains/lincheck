@@ -105,7 +105,6 @@ class ExecutionScenarioRunnerExceptionTest {
             scenario = scenario,
             testClass = testClass,
             validationFunction = null,
-            stateRepresentationFunction = null,
             timeoutMs = DEFAULT_TIMEOUT_MS,
             useClocks = RANDOM,
         ).use { runner ->
@@ -134,7 +133,6 @@ class ExecutionScenarioRunnerExceptionTest {
             scenario = scenario,
             testClass = testClass,
             validationFunction = null,
-            stateRepresentationFunction = null,
             timeoutMs = DEFAULT_TIMEOUT_MS,
             useClocks = RANDOM,
         ).use { runner ->
@@ -157,7 +155,6 @@ class ExecutionScenarioRunnerExceptionTest {
             scenario = scenario,
             testClass = testClass,
             validationFunction = null,
-            stateRepresentationFunction = null,
             timeoutMs = DEFAULT_TIMEOUT_MS,
             useClocks = RANDOM,
         ).use { runner ->
@@ -180,7 +177,6 @@ class ExecutionScenarioRunnerExceptionsTest {
             scenario = scenario,
             testClass = this::class.java,
             validationFunction = null,
-            stateRepresentationFunction = null,
             timeoutMs = DEFAULT_TIMEOUT_MS,
             useClocks = RANDOM,
         ).use { runner ->

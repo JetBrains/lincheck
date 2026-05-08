@@ -257,9 +257,6 @@ internal class EventStructureStrategy(
             initResults = executionResult.initResults,
             parallelResultsWithClock = patchedParallelResults,
             postResults = executionResult.postResults,
-            afterInitStateRepresentation = executionResult.afterInitStateRepresentation,
-            afterParallelStateRepresentation = executionResult.afterParallelStateRepresentation,
-            afterPostStateRepresentation = executionResult.afterPostStateRepresentation,
         )
     }
 
