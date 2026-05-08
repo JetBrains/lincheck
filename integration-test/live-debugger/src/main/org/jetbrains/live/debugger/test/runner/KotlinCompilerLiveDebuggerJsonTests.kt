@@ -48,6 +48,7 @@ abstract class KotlinCompilerLiveDebuggerJsonTests : AbstractGradleLiveDebuggerI
         resourcePath = "/integrationTestData/kotlinCompilerLiveDebuggerTests.json",
         abstractTestClass = "KotlinCompilerLiveDebuggerJsonTests",
         packageName = "org.jetbrains.live.debugger.test.impl.generated",
+        classNameSuffix = "JsonIntegrationTests",
         customImports = listOf("\nimport org.jetbrains.live.debugger.test.runner.*"),
         generatorMainClass = "org.jetbrains.live.debugger.test.runner.GenerateTestsKt.main",
     )

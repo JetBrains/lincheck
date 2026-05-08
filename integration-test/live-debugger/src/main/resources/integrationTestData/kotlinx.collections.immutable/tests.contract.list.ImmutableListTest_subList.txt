@@ -1,0 +1,28 @@
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ExtensionsKt.toPersistentList, ExtensionsKt.toImmutableList ... (44 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ExtensionsKt.toPersistentList, ExtensionsKt.toImmutableList ... (44 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ExtensionsKt.toPersistentList, ExtensionsKt.toImmutableList ... (44 more)]
+# Thread 1 (Test worker)
+Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ExtensionsKt.toPersistentList, ExtensionsKt.toImmutableList ... (44 more)]

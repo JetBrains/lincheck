@@ -36,6 +36,7 @@ abstract class KotlinCompilerTraceRecorderJsonTests : AbstractGradleTraceIntegra
         resourcePath = "/integrationTestData/kotlinCompilerTests.json",
         abstractTestClass = "KotlinCompilerTraceRecorderJsonTests",
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
+        classNameSuffix = "TraceRecorderJsonIntegrationTests",
     )
 }
 

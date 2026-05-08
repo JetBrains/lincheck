@@ -22,6 +22,7 @@ abstract class KotlinImmutableCollectionsTraceRecorderJsonTests : AbstractGradle
         resourcePath = "/integrationTestData/kotlinxImmutableCollectionsTests.json",
         abstractTestClass = "KotlinImmutableCollectionsTraceRecorderJsonTests",
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
+        classNameSuffix = "TraceRecorderJsonIntegrationTests",
         timeoutMinutes = 10,
     )
 }

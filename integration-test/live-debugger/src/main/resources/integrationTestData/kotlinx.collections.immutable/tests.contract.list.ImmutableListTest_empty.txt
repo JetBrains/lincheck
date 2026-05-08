@@ -1,0 +1,6 @@
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (53 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (53 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (50 more)]

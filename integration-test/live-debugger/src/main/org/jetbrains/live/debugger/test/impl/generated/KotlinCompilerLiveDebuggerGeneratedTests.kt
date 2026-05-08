@@ -14,7 +14,7 @@ import org.jetbrains.live.debugger.test.runner.*
   Please run `org.jetbrains.live.debugger.test.runner.GenerateTestsKt.main` to regenerate.
 */
 
-class KotlinCompilerLiveDebuggerTraceRecorderJsonIntegrationTests {
+class KotlinCompilerLiveDebuggerJsonIntegrationTests {
     @Nested
     inner class FirLightTreeBlackBoxCodegenTestGenerated {
         @Nested

@@ -15,7 +15,6 @@
       "noOperation",
       "covariantTyping"
     ],
-    "checkRepresentation": false,
     "breakpoints": [
       {
         "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
@@ -197,7 +196,8 @@
         "line": 604,
         "condition": null
       }
-    ]
+    ],
+    "checkRepresentation": true
   },
   {
     "class": "tests.contract.list.ImmutableListTest",
@@ -207,7 +207,6 @@
       "persistentListFails",
       "removeElements"
     ],
-    "checkRepresentation": false,
     "breakpoints": [
       {
         "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
@@ -389,6 +388,7 @@
         "line": 604,
         "condition": null
       }
-    ]
+    ],
+    "checkRepresentation": true
   }
 ]

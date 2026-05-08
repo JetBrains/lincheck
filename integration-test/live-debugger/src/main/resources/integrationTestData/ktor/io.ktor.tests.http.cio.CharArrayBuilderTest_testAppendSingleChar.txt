@@ -1,0 +1,2 @@
+# Thread 1
+Live breakpoint at CharArrayBuilderTest.kt:39, stacktrace: [CharArrayBuilderTest.testAppendSingleChar, DirectMethodHandleAccessor.invoke, Method.invoke ... (85 more)]

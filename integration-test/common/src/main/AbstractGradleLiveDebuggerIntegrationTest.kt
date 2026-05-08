@@ -8,6 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+import org.jetbrains.lincheck.util.JdkVersion
+import org.jetbrains.lincheck.util.jdkVersion
+
 /**
  * Abstract base class for live debugger integration tests.
  *
@@ -29,6 +32,10 @@ abstract class AbstractGradleLiveDebuggerIntegrationTest : AbstractGradleTraceIn
         "format" to "text",
         "formatOption" to "verbose",
     )
+
+    // Gold trace files are recorded on JDK 17; running representation checks on other toolchains
+    // produces noisy diffs from JDK-version-specific bytecode and stdlib internals.
+    override val representationChecksEnabled: Boolean = (jdkVersion == JdkVersion.JDK_17)
 
     /**
      * In live debugger mode, the agent does not accept `class` and `method` arguments.

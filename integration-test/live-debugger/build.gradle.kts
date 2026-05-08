@@ -52,9 +52,9 @@ tasks {
         classpath = sourceSets["main"].runtimeClasspath
 
         when (integrationTestSuiteType) {
-            LiveDebuggerIntegrationTestSuite.Ktor -> include("**/*KtorLiveDebuggerTraceRecorderJsonIntegrationTests*")
-            LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections -> include("**/*KotlinxImmutableCollectionsLiveDebuggerTraceRecorderJsonIntegrationTests*")
-            LiveDebuggerIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerLiveDebuggerTraceRecorderJsonIntegrationTests*")
+            LiveDebuggerIntegrationTestSuite.Ktor -> include("**/*KtorLiveDebuggerJsonIntegrationTests*")
+            LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections -> include("**/*KotlinxImmutableCollectionsLiveDebuggerJsonIntegrationTests*")
+            LiveDebuggerIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.All -> {}
         }
 

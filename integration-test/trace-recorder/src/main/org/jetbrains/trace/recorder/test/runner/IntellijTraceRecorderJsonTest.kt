@@ -22,5 +22,6 @@ abstract class IntellijTraceRecorderJsonTest : AbstractIntellijTraceIntegrationT
         resourcePath = "/integrationTestData/intellijTests.json",
         abstractTestClass = "IntellijTraceRecorderJsonTest",
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
+        classNameSuffix = "TraceRecorderJsonIntegrationTests",
     )
 }

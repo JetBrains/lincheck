@@ -14,7 +14,7 @@ import org.jetbrains.live.debugger.test.runner.*
   Please run `org.jetbrains.live.debugger.test.runner.GenerateTestsKt.main` to regenerate.
 */
 
-class KtorLiveDebuggerTraceRecorderJsonIntegrationTests {
+class KtorLiveDebuggerJsonIntegrationTests {
     @Nested
     inner class CharArrayBuilderTest {
         @Nested
@@ -26,7 +26,7 @@ class KtorLiveDebuggerTraceRecorderJsonIntegrationTests {
                 testMethodName = "testAppendFewChars",
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
-                checkRepresentation = false,
+                checkRepresentation = true,
                 traceShouldContain = listOf(),
                 breakpointsIni = "[Breakpoint 1]\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 62\n\n[Breakpoint 2]\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 60\n\n[Breakpoint 3]\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 72\n\n[Breakpoint 4]\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 39"
             )
@@ -41,7 +41,7 @@ class KtorLiveDebuggerTraceRecorderJsonIntegrationTests {
                 testMethodName = "testAppendSingleChar",
                 extraJvmArgs = listOf(),
                 commands = listOf(":ktor-http-cio:jvmTest"),
-                checkRepresentation = false,
+                checkRepresentation = true,
                 traceShouldContain = listOf(),
                 breakpointsIni = "[Breakpoint 1]\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 62\n\n[Breakpoint 2]\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 60\n\n[Breakpoint 3]\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 72\n\n[Breakpoint 4]\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 39"
             )

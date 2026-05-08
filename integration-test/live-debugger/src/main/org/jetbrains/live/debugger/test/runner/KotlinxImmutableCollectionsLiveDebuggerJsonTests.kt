@@ -22,6 +22,7 @@ abstract class KotlinxImmutableCollectionsLiveDebuggerJsonTests : AbstractGradle
         resourcePath = "/integrationTestData/kotlinxImmutableCollectionsLiveDebuggerTests.json",
         abstractTestClass = "KotlinxImmutableCollectionsLiveDebuggerJsonTests",
         packageName = "org.jetbrains.live.debugger.test.impl.generated",
+        classNameSuffix = "JsonIntegrationTests",
         customImports = listOf("\nimport org.jetbrains.live.debugger.test.runner.*"),
         generatorMainClass = "org.jetbrains.live.debugger.test.runner.GenerateTestsKt.main",
     )

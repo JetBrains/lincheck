@@ -22,6 +22,7 @@ abstract class TestGenerator(
     private val resourcePath: String,
     private val abstractTestClass: String,
     private val packageName: String,
+    private val classNameSuffix: String,
     private val customImports: List<String> = listOf(),
     private val timeoutMinutes: Long = 20,
     private val generatorMainClass: String = "org.jetbrains.trace.recorder.test.runner.GenerateTestsKt.main",
@@ -179,7 +180,7 @@ abstract class TestGenerator(
         val renderedTestCases = renderTestGroup(testCases, abstractTestClass, timeoutMinutes, 0)
             .prependIndent(" ".repeat(4))
 
-        return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\nclass ${groupName}TraceRecorderJsonIntegrationTests {\n$renderedTestCases\n}\n"
+        return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\nclass ${groupName}${classNameSuffix} {\n$renderedTestCases\n}\n"
     }
 }
 

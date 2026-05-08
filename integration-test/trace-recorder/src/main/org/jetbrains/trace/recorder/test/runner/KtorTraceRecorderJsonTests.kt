@@ -22,5 +22,6 @@ abstract class KtorTraceRecorderJsonTests: AbstractGradleTraceIntegrationTest() 
         resourcePath = "/integrationTestData/ktorTests.json",
         abstractTestClass = "KtorTraceRecorderJsonTests",
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
+        classNameSuffix = "TraceRecorderJsonIntegrationTests",
     )
 }

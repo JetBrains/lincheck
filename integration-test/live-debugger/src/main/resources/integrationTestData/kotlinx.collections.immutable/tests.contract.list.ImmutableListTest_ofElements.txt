@@ -1,0 +1,22 @@
+# Thread 1 (Test worker)
+Live breakpoint at extensions.kt:447, stacktrace: [ExtensionsKt.persistentListOf, ImmutableListTest.ofElements, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.ofElements ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint at extensions.kt:447, stacktrace: [ExtensionsKt.persistentListOf, ImmutableListTest.ofElements, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.ofElements ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (53 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (53 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (53 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (53 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (53 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (53 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (50 more)]

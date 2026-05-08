@@ -6,7 +6,6 @@
       "testReflectionReference",
       "testReceiverInEquals"
     ],
-    "checkRepresentation": false,
     "breakpoints": [
       {
         "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
@@ -53,7 +52,6 @@
       "testCapturedDefaults",
       "testExtensionReceiverVsDefault"
     ],
-    "checkRepresentation": false,
     "breakpoints": [
       {
         "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
@@ -100,7 +98,6 @@
       "testSimple",
       "testSimpleMultiModule"
     ],
-    "checkRepresentation": false,
     "breakpoints": [
       {
         "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
@@ -147,7 +144,6 @@
       "testDefaultArgs",
       "testCrossModuleTypeOf"
     ],
-    "checkRepresentation": false,
     "breakpoints": [
       {
         "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
@@ -193,7 +189,6 @@
     "methods": [
       "testAsync"
     ],
-    "checkRepresentation": false,
     "breakpoints": [
       {
         "className": "org.jetbrains.kotlin.fir.backend.Fir2IrVisitor",
@@ -239,7 +234,6 @@
     "methods": [
       "testAssignedInFinally"
     ],
-    "checkRepresentation": false,
     "breakpoints": [
       {
         "className": "org.jetbrains.kotlin.fir.analysis.cfa.FirPropertyInitializationAnalyzer",

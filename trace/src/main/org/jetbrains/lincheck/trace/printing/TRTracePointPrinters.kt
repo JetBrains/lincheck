@@ -413,22 +413,27 @@ object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 
 object DefaultTRLineBreakpointSnapshotTracePointPrinter {
     fun TRAppendable.append(tracePoint: TRSnapshotLineBreakpointTracePoint): TRAppendable {
-        val timeStampRepresentation = Instant.ofEpochMilli(tracePoint.currentTimeMillis).toString()
-        append("Live line breakpoint [$timeStampRepresentation] (${tracePoint.threadName}) stacktrace: ")
+        append("Live breakpoint")
         append(tracePoint, verbose)
+        append(", ")
+
+        // timestamp is not printed to ensure printed text is deterministic
+        // (as it is used in integration tests to check against golden data);
+        // TODO: make timestamp printing configurable
+        // val timeStampRepresentation = Instant.ofEpochMilli(tracePoint.currentTimeMillis).toString()
+        // append("[$timeStampRepresentation] ")
 
         // Show condensed stack trace: depth and deepest 3 calls
         val stackTrace = tracePoint.stackTrace
-
         val deepestCalls = stackTrace.take(3)
-        append("[")
+        append("stacktrace: [")
         append(deepestCalls.joinToString(", ") { 
             "${it.className.substringAfterLast(".")}.${it.methodName}" 
         })
-        
         val remainingSize = stackTrace.size - deepestCalls.size
         if (remainingSize > 0) append(" ... ($remainingSize more)")
         append("]")
+
         return this
     }
 }

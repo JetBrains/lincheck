@@ -22,18 +22,25 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 abstract class AbstractTraceIntegrationTest {
     open val fatJarName: String = "trace-recorder-fat.jar"
-    
+
     open val formatArgs: Map<String, String> = mapOf(
         "format" to "text",
         "formatOption" to "verbose",
     )
-    
+
     open val defaultJvmArgs: List<String> = listOf(
         "-Dlincheck.traceRecorderMode=true",
         "-XX:+UnlockExperimentalVMOptions",
         "-XX:hashCode=2", // This line is required to make hashCode deterministic. Mode "2" means "use constant as hash code".
     )
-    
+
+    /**
+     * Whether per-test `checkRepresentation = true` flags should actually compare the trace against the gold file.
+     * Subclasses can override to gate the check by toolchain or environment;
+     * when disabled, tests still run and a non-empty output is verified.
+     */
+    protected open val representationChecksEnabled: Boolean = true
+
     abstract val projectPath: String
 
     protected val pathToFatJar: String
@@ -84,6 +91,7 @@ abstract class AbstractTraceIntegrationTest {
         } else {
             emptyMap()
         }
+        val effectiveCheckRepresentation = checkRepresentation && representationChecksEnabled
         val (_, output) = withStdErrTee {
             runTestAndCompare(
                 testClassName,
@@ -91,7 +99,7 @@ abstract class AbstractTraceIntegrationTest {
                 extraJvmArgs + defaultJvmArgs,
                 extraAgentArgs + formatArgs + breakpointsAgentArgs,
                 commands,
-                checkRepresentation,
+                effectiveCheckRepresentation,
                 testNameSuffix,
                 traceShouldContain,
             )

@@ -1,0 +1,6 @@
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:29, stacktrace: [SmallPersistentVector.add, ImmutableListTest.covariantTyping, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:29, stacktrace: [SmallPersistentVector.add, ImmutableListTest.covariantTyping, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+# Thread 1 (Test worker)
+Live breakpoint at SmallPersistentVector.kt:29, stacktrace: [SmallPersistentVector.add, ImmutableListTest.covariantTyping, NativeMethodAccessorImpl.invoke0 ... (42 more)]
