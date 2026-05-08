@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.datastructures
 
 import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
@@ -39,7 +38,7 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
             verifierClass = verifier,
             invocationsPerIteration = invocationsPerIteration,
             minimizeFailedScenario = minimizeFailedScenario,
-            sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
+            sequentialSpecification = sequentialSpecification ?: testClass,
             timeoutMs = timeoutMs,
             customScenarios = customScenarios
         )

@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.annotations.DummySequentialSpecification
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
 import java.io.PrintWriter
@@ -28,10 +27,6 @@ fun <T> List<T>.isSuffixOf(list: List<T>): Boolean {
     }
     return true
 }
-
-fun chooseSequentialSpecification(sequentialSpecificationByUser: Class<*>?, testClass: Class<*>): Class<*> =
-    if (sequentialSpecificationByUser === DummySequentialSpecification::class.java || sequentialSpecificationByUser == null) testClass
-    else sequentialSpecificationByUser
 
 /**
  * Executes the specified actor on the sequential specification instance and returns its result.

@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.datastructures
 
 import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
@@ -54,7 +53,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             invocationsPerIteration = invocationsPerIteration,
             guarantees = guarantees,
             minimizeFailedScenario = minimizeFailedScenario,
-            sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
+            sequentialSpecification = sequentialSpecification ?: testClass,
             timeoutMs = timeoutMs,
             customScenarios = customScenarios,
             stdLibAnalysisEnabled = stdLibAnalysisEnabled,
