@@ -111,7 +111,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
     private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri) {
         override fun onOpen(handshakedata: ServerHandshake?) = onConnectionReady()
 
-        override fun onMessage(message: String?) = this@TracingWebSocketClient.handleMessage(message)
+        override fun onMessage(message: String?) = handleMessage(message)
 
         override fun onMessage(bytes: ByteBuffer?) {
             if (bytes == null) return
@@ -132,7 +132,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
         }
     }
     
-    override val connection: TracingCommands = WebSocketTracingController(webSocketConnection)
+    override val connection: TracingCommands = WebSocketTracingCommandSender(webSocketConnection)
     override val networkTraceReader: NetworkTraceReader = NetworkTraceReader()
     
     init {
@@ -147,43 +147,47 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
 /**
  * Base WebSocket server that receives commands from clients and delegates them to [TracingCommands].
  */
-abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServer {
-    private val webSocketServer = object: WebSocketServer(address) {
-        override fun onOpen(conn: WebSocket?, handshake: ClientHandshake?) {
-            if (conn != null) {
+abstract class TracingWebSocketServer(address: InetSocketAddress?) : TracingServer {
+    private var _client: TracingCallbacks = ClientSink()
+    
+    private val webSocketServer = if (address != null) {
+        object: WebSocketServer(address) {
+            override fun onOpen(conn: WebSocket?, handshake: ClientHandshake?) {
+                if (conn != null) {
+                    synchronized(this@TracingWebSocketServer) {
+                        _client.close()
+                        _client = WebSocketTracingNotifier(conn)
+                    }
+                    onConnectionReady()
+                }
+            }
+
+            override fun onClose(conn: WebSocket?, code: Int, reason: String?, remote: Boolean) {
                 synchronized(this@TracingWebSocketServer) {
-                    _client.close()
-                    onDisconnected()
-                    _client = WebSocketTracingNotifier(conn)
+                    val client = _client
+                    if (client is WebSocketTracingNotifier && client.webSocket == conn) {
+                        onDisconnected()
+                        _client = ClientSink()
+                    }
                 }
             }
-        }
 
-        override fun onClose(conn: WebSocket?, code: Int, reason: String?, remote: Boolean) {
-            synchronized(this@TracingWebSocketServer) {
-                val client = _client
-                if (client is WebSocketTracingNotifier && client.webSocket == conn) {
-                    onDisconnected()
-                    _client = ClientSink()
-                }
+            override fun onMessage(conn: WebSocket?, message: String?) = handleMessage(message)
+
+            override fun onError(conn: WebSocket?, ex: Exception?) {
+                if (ex != null) Logger.error(ex) { "WebSocket server error" }
+                else Logger.error { "WebSocket server error" }
             }
+
+            override fun onStart() {}
         }
-
-        override fun onMessage(conn: WebSocket?, message: String?) = handleMessage(message)
-
-        override fun onError(conn: WebSocket?, ex: Exception?) {
-            if (ex != null) Logger.error(ex) { "WebSocket server error" }
-            else Logger.error { "WebSocket server error" }
-        }
-
-        override fun onStart() {}
-    }
+    } else null
     
     init {
         try {
-            webSocketServer.isDaemon = true
-            webSocketServer.isReuseAddr = true
-            webSocketServer.start()
+            webSocketServer?.isDaemon = true
+            webSocketServer?.isReuseAddr = true
+            webSocketServer?.start()
         } catch (e: Exception) {
             Logger.error(e) { "Failed to start WebSocket server" }
         }
@@ -191,13 +195,55 @@ abstract class TracingWebSocketServer(address: InetSocketAddress) : TracingServe
 
     override fun close() {
         try {
-            webSocketServer.stop()
+            webSocketServer?.stop()
+            _client.close()
         } catch (e: Exception) {
             Logger.error(e) { "Failed to stop WebSocket server" }
         }
     }
     
-    private var _client: TracingCallbacks = ClientSink()
+    fun makeReversedConnection(serverUri: URI) {
+        val newWsClient = synchronized(this) {
+            _client.close()
+            _client = ClientSink()
+            createReversedWebSocketClient(serverUri)
+        }
+        newWsClient.connect()
+    }
+
+    private fun createReversedWebSocketClient(serverUri: URI): WebSocketClient {
+        return object : WebSocketClient(serverUri) {
+            override fun onOpen(handshakedata: ServerHandshake?) {
+                Logger.info { "Reversed WS connection opened to $serverUri" }
+                synchronized(this@TracingWebSocketServer) {
+                    _client = WebSocketTracingNotifier(this)
+                }
+                onConnectionReady()
+            }
+
+            override fun onMessage(message: String?) = handleMessage(message)
+
+            // The agent does not expect binary messages from the control plane.
+            override fun onMessage(bytes: ByteBuffer?) {}
+
+            override fun onClose(code: Int, reason: String?, remote: Boolean) {
+                Logger.info { "Reversed WS connection closed (code=$code, reason=$reason, remote=$remote)" }
+                synchronized(this@TracingWebSocketServer) {
+                    val client = _client
+                    if (client is WebSocketTracingNotifier && client.webSocket === this) {
+                        _client = ClientSink()
+                        onDisconnected()
+                    }
+                }
+            }
+
+            override fun onError(ex: Exception?) {
+                if (ex != null) Logger.error(ex) { "Reversed WS connection error" }
+                else Logger.error { "Reversed WS connection error" }
+            }
+        }
+    }
+    
 
     override val connection: TracingCallbacks
         get() = synchronized(this) { _client }

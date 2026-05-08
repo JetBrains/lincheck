@@ -26,10 +26,10 @@ private const val HTTP_TIMEOUT_MS = 5_000
 /**
  * Sends periodic heartbeat messages to the live-debugger control plane,
  * registering this agent so that the control plane knows which agents are available.
- * 
- * Note: These heartbeats are not used to check if a connection is open, 
- * their only purpose is to show that this agent is live. 
- * Connection lost events are handled by the WebSocket server.
+ *
+ * When the control plane responds with `{"connect":true}`, the heartbeat invokes
+ * the provided [onConnectRequested] callback so the agent can open a reversed
+ * WebSocket connection back to the control plane.
  *
  * Requires the following environment variables to be set:
  * - `POD_NAME` — the Kubernetes pod name (typically via Downward API)
@@ -39,7 +39,20 @@ private const val HTTP_TIMEOUT_MS = 5_000
  */
 internal object PhoneHomeHeartbeat {
 
-    fun start() {
+    @Volatile
+    private var connectTriggered = false
+
+    fun resetConnectTriggered() {
+        connectTriggered = false
+        Logger.info { "Connect-triggered flag reset, ready for new connect request" }
+    }
+
+    fun setConnectTriggered() {
+        connectTriggered = true
+        Logger.info { "Connect-triggered flag set by direct connection" }
+    }
+
+    fun start(onConnectRequested: (controlPlaneUrl: String, agentId: String) -> Unit) {
         val podName = System.getenv(ENV_POD_NAME)
             ?: error("phoneHome=on requires the $ENV_POD_NAME environment variable to be set")
         val namespace = System.getenv(ENV_POD_NAMESPACE)
@@ -49,7 +62,7 @@ internal object PhoneHomeHeartbeat {
         val controlPlaneUrl = System.getenv(ENV_CONTROL_PLANE_URL)
             ?: error("phoneHome=on requires the $ENV_CONTROL_PLANE_URL environment variable to be set")
 
-        val heartbeatUrl = "${controlPlaneUrl.trimEnd('/')}/heartbeat"
+        val heartbeatUrl = "${controlPlaneUrl.trimEnd('/')}/api/heartbeat"
         val serverPort = TraceAgentParameters.serverPort
         val body = """{"podName":"$podName","namespace":"$namespace","podIp":"$podIp","serverPort":$serverPort}"""
 
@@ -57,22 +70,32 @@ internal object PhoneHomeHeartbeat {
             Logger.debug { "Phone-home heartbeat started: $heartbeatUrl" }
             while (true) {
                 try {
-                    sendHeartbeat(heartbeatUrl, body)
+                    val response = sendHeartbeat(heartbeatUrl, body)
+                    if (response.connect && !connectTriggered) {
+                        connectTriggered = true
+                        Logger.info { "Control plane requested connection (agentId=${response.agentId})" }
+                        onConnectRequested(controlPlaneUrl.trimEnd('/'), response.agentId)
+                    }
                 } catch (e: Exception) {
                     Logger.warn { "Phone-home heartbeat failed: ${e.message}" }
                 }
-                try {
-                    Thread.sleep(DEFAULT_HEARTBEAT_INTERVAL_MS)
-                } catch (_: InterruptedException) {
-                    break
-                }
+                Thread.sleep(DEFAULT_HEARTBEAT_INTERVAL_MS)
             }
         }, "live-debugger-phone-home")
         thread.isDaemon = true
         thread.start()
     }
 
-    private fun sendHeartbeat(url: String, body: String) {
+    /**
+     * Parsed heartbeat response from the control plane.
+     * We parse manually to avoid pulling in a JSON library on the agent classpath.
+     */
+    internal data class HeartbeatResult(val connect: Boolean, val agentId: String)
+
+    /**
+     * Sends a heartbeat and parses the JSON response.
+     */
+    private fun sendHeartbeat(url: String, body: String): HeartbeatResult {
         val connection = URI(url).toURL().openConnection() as HttpURLConnection
         try {
             connection.requestMethod = "POST"
@@ -84,9 +107,24 @@ internal object PhoneHomeHeartbeat {
             val responseCode = connection.responseCode
             if (responseCode !in 200..299) {
                 Logger.warn { "Phone-home heartbeat returned HTTP $responseCode" }
+                return HeartbeatResult(connect = false, agentId = "")
             }
+            val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
+            return parseHeartbeatResponse(responseBody)
         } finally {
             connection.disconnect()
         }
+    }
+
+    /**
+     * Minimal JSON parser for the heartbeat response.
+     * Avoids pulling in a JSON library on the agent classpath.
+     */
+    internal fun parseHeartbeatResponse(json: String): HeartbeatResult {
+        val connect = Regex(""""connect"\s*:\s*(true|false)""").find(json)
+            ?.groupValues?.get(1) == "true"
+        val agentId = Regex(""""agentId"\s*:\s*"([^"]*)"""").find(json)
+            ?.groupValues?.get(1) ?: ""
+        return HeartbeatResult(connect = connect, agentId = agentId)
     }
 }

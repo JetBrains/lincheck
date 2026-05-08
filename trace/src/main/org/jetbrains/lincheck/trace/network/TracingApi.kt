@@ -17,6 +17,7 @@ import java.io.Closeable
  * Interface for receiving notifications from the tracing server.
  * This is implemented by the client (controller).
  */
+// Agent -> Control plane
 interface TracingCallbacks : Closeable {
 
     fun hitLimitReached(
@@ -42,6 +43,7 @@ interface TracingCallbacks : Closeable {
  * Interface for sending commands to the tracing server.
  * This is implemented by the server (agent) or a client-side proxy.
  */
+// Control Plane -> Agent 
 interface TracingCommands {
     fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean)
     fun startNetworkTracing()
@@ -70,6 +72,7 @@ interface ConnectedAware {
 /**
  * A tracing client that can send commands to the server, receive notifications, and read binary trace data.
  */
+// Agent -> Control plane
 interface TracingClient: TracingCallbacks, ConnectedAware {
     val connection: TracingCommands
     val networkTraceReader: NetworkTraceReader
@@ -78,6 +81,7 @@ interface TracingClient: TracingCallbacks, ConnectedAware {
 /**
  * A tracing server that accepts commands and sends notifications to the connected client.
  */
+// Control Plane -> Agent 
 interface TracingServer: TracingCommands, ConnectedAware, Closeable {
     val connection: TracingCallbacks
 }

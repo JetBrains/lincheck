@@ -307,7 +307,7 @@ internal abstract class ContextAwareTraceWriter(
 
     protected open fun writeString(value: String?): Int {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (value == null) return -1
+        if (value == null || value == FALLBACK_STRING) return -1
 
         val id = context.stringPool.register(value)
         if (contextState.isDescriptorSaved<String>(id)) return id

@@ -27,8 +27,8 @@ import java.lang.instrument.Instrumentation
  */
 abstract class TracerAgent {
 
-    protected var server: TracingServer? = null
-        private set
+    var server: TracingServer? = null
+        protected set
 
     // entry point for a statically attached java agent
     fun premain(agentArgs: String?, inst: Instrumentation) {
@@ -100,7 +100,7 @@ abstract class TracerAgent {
         LincheckInstrumentation.install(instrumentationMode)
     }
     
-    private fun startTracingServerIfRequested() {
+    protected open fun startTracingServerIfRequested() {
         if (TraceAgentParameters.serverEnabled) {
             server = createTracingServer()
             server?.let { Runtime.getRuntime().addShutdownHook(Thread { it.close() }) }

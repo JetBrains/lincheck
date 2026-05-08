@@ -19,30 +19,30 @@ import org.jetbrains.lincheck.util.Logger
 import java.io.Closeable
 
 /**
- * Client-side implementation of [TracingCommands] that sends commands to the server via WebSocket.
+ * Implementation of [TracingCommands] that sends commands over a raw [WebSocket] connection.
  */
-class WebSocketTracingController(private val webSocketConnection: WebSocketClient) : Closeable, TracingCommands {
+class WebSocketTracingCommandSender(private val webSocket: WebSocket) : Closeable, TracingCommands {
     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
-        webSocketConnection.send("${TracingCommands.START_FILE_TRACING}:$traceDumpFilePath:$packTrace")
+        webSocket.send("${TracingCommands.START_FILE_TRACING}:$traceDumpFilePath:$packTrace")
     }
 
     override fun startNetworkTracing() {
-        webSocketConnection.send(TracingCommands.START_NETWORK_TRACING)
+        webSocket.send(TracingCommands.START_NETWORK_TRACING)
     }
 
     override fun stopTracing() {
-        webSocketConnection.send(TracingCommands.STOP_TRACING)
+        webSocket.send(TracingCommands.STOP_TRACING)
     }
 
     override fun addBreakpoints(breakpoints: List<String>) {
-        webSocketConnection.send("${TracingCommands.ADD_BREAKPOINTS}:${breakpoints.joinToString(",")}")
+        webSocket.send("${TracingCommands.ADD_BREAKPOINTS}:${breakpoints.joinToString(",")}")
     }
 
     override fun removeBreakpoints(breakpoints: List<String>) {
-        webSocketConnection.send("${TracingCommands.REMOVE_BREAKPOINTS}:${breakpoints.joinToString(",")}")
+        webSocket.send("${TracingCommands.REMOVE_BREAKPOINTS}:${breakpoints.joinToString(",")}")
     }
 
-    override fun close() = webSocketConnection.close()
+    override fun close() = webSocket.close()
 }
 
 /**

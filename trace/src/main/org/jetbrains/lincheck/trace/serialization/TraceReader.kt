@@ -406,15 +406,15 @@ internal fun loadCodeLocation(
     if (restore) {
         val stringPool = context.stringPool
         val stackTraceElement = StackTraceElement(
-            stringPool.getOrNull(classNameId) ?: "<unknown class>",
-            stringPool.getOrNull(methodNameId) ?: "<unknown method>",
-            stringPool.getOrNull(fileNameId) ?: "<unknown file>",
+            stringPool.getOrNull(classNameId) ?: FALLBACK_STRING,
+            stringPool.getOrNull(methodNameId) ?: FALLBACK_STRING,
+            stringPool.getOrNull(fileNameId) ?: FALLBACK_STRING,
             lineNumber
         )
         val accessPath = if (accessPathId != -1) context.getAccessPath(accessPathId) else null
         val argumentNames = argumentNameIds?.map { if (it != -1) context.getAccessPath(it) else null }
         val activeLocals = if (activeLocalsNamesIds == null || activeLocalsKinds == null) null
-                           else activeLocalsNamesIds.map { stringPool.getOrNull(it) ?: "<unknown local>" }
+                           else activeLocalsNamesIds.map { stringPool.getOrNull(it) ?: FALLBACK_STRING }
                                                     .zip(activeLocalsKinds)
                                                     .map { (name, kind) -> ActiveLocal(name, LocalKind.entries[kind]) }
         val codeLocation = when (kind) {
@@ -439,4 +439,5 @@ internal fun checkDataHeader(input: DataInput) {
     }
 }
 
+const val FALLBACK_STRING = "<unknown>"
 internal const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024

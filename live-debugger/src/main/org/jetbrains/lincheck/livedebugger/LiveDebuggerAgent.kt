@@ -34,6 +34,7 @@ import org.jetbrains.lincheck.util.Logger
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.lang.instrument.Instrumentation
 import java.net.InetSocketAddress
+import java.net.URI
 
 /**
  * Live debugging JVM agent.
@@ -73,59 +74,20 @@ internal object LiveDebuggerAgent {
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider? = null
 
         override fun createTracingServer(): TracingServer? {
-            try {
-                val port = TraceAgentParameters.serverPort
-                val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
-                    override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
-                        LiveDebugger.startRecording(
-                            TraceOutputMode.BinaryFileStream(traceDumpFilePath),
-                            traceDumpFilePath,
-                            packTrace,
-                        )
-                    }
+            return if (TraceAgentParameters.serverEnabled) {
+                startServer(InetSocketAddress(TraceAgentParameters.serverPort))
+            } else if (TraceAgentParameters.heartBeatEnabled) {
+                startServer(address = null)
+            } else {
+                null
+            }
+        }
 
-                    override fun startNetworkTracing() {
-                        LiveDebugger.startRecording(TraceOutputMode.BinaryNetworkStream(this))
-                    }
-
-                    override fun stopTracing() {
-                        LiveDebugger.stopRecording()
-                    }
-
-                    override fun addBreakpoints(breakpoints: List<String>) {
-                        LiveDebugger.addBreakpoints(breakpoints)
-                    }
-
-                    override fun removeBreakpoints(breakpoints: List<String>) {
-                        LiveDebugger.removeBreakpoints(breakpoints)
-                    }
-
-                    override fun onDisconnected() {
-                        LiveDebugger.removeAllBreakpoints()
-                        BreakpointStorage.clear()
-                    }
-                }
-                Logger.info { "Started trace server on port $port" }
-                LiveDebugger.installNotificationListener { notification ->
-                    when (notification) {
-                        is LiveDebuggerNotification.BreakpointHitLimitReached ->
-                            server.connection.hitLimitReached(
-                                notification.breakpointData,
-                                notification.timestamp
-                            )
-
-                        is LiveDebuggerNotification.BreakpointConditionUnsafetyDetected ->
-                            server.connection.conditionUnsafe(
-                                notification.breakpointData,
-                                notification.safetyViolationMessage,
-                                notification.timestamp
-                            )
-                    }
-                }
-                return server
-            } catch (t: Throwable) {
-                Logger.error(t) { "Cannot start trace server" }
-                return null
+        override fun startTracingServerIfRequested() {
+            val wsServer = createTracingServer() as TracingWebSocketServer?
+            if (wsServer != null) {
+                server = wsServer
+                Runtime.getRuntime().addShutdownHook(Thread { wsServer.close() })
             }
         }
 
@@ -149,7 +111,7 @@ internal object LiveDebuggerAgent {
         installCallbacks()
 
         if (TraceAgentParameters.heartBeatEnabled) {
-            PhoneHomeHeartbeat.start()
+            PhoneHomeHeartbeat.start(::connectToControlPlane)
         }
         
         if (traceDumpFilePath != null) {
@@ -164,6 +126,87 @@ internal object LiveDebuggerAgent {
             LiveDebugger.startRecording(mode, traceDumpFilePath, packTrace)
         }
 
+    }
+
+    private fun startServer(address: InetSocketAddress?): TracingWebSocketServer? {
+        return try {
+             val server = object : TracingWebSocketServer(address) {
+                override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
+                    LiveDebugger.startRecording(
+                        TraceOutputMode.BinaryFileStream(traceDumpFilePath),
+                        traceDumpFilePath,
+                        packTrace,
+                    )
+                }
+
+                override fun startNetworkTracing() {
+                    LiveDebugger.startRecording(TraceOutputMode.BinaryNetworkStream(this))
+                }
+
+                override fun stopTracing() = LiveDebugger.stopRecording()
+
+                override fun addBreakpoints(breakpoints: List<String>) = LiveDebugger.addBreakpoints(breakpoints)
+
+                override fun removeBreakpoints(breakpoints: List<String>) = LiveDebugger.removeBreakpoints(breakpoints)
+
+                override fun onConnectionReady() {
+                    PhoneHomeHeartbeat.setConnectTriggered()
+                }
+
+                override fun onDisconnected() {
+                    LiveDebugger.removeAllBreakpoints()
+                    BreakpointStorage.clear()
+                    PhoneHomeHeartbeat.resetConnectTriggered()
+                }
+            }
+            if (address != null) {
+                Logger.info { "Started trace server on port ${address.port}" }
+            } else {
+                Logger.info { "Initialized trace server (no listening socket, reversed connections only)" }
+            }
+            LiveDebugger.installNotificationListener { notification ->
+                when (notification) {
+                    is LiveDebuggerNotification.BreakpointHitLimitReached ->
+                        server.connection.hitLimitReached(
+                            notification.breakpointData,
+                            notification.timestamp
+                        )
+
+                    is LiveDebuggerNotification.BreakpointConditionUnsafetyDetected ->
+                        server.connection.conditionUnsafe(
+                            notification.breakpointData,
+                            notification.safetyViolationMessage,
+                            notification.timestamp
+                        )
+                }
+            }
+            server
+        } catch (t: Throwable) {
+            Logger.error(t) { "Cannot start trace server" }
+            null
+        }
+    }
+
+    /**
+     * Called by the heartbeat thread when the control plane responds with `connect=true`.
+     * Opens a reversed WebSocket connection to the control plane at
+     * `/api/agent/{agentId}`.
+     */
+    private fun connectToControlPlane(controlPlaneUrl: String, agentId: String) {
+        try {
+            val wsUrl = controlPlaneUrl
+                .replace(Regex("^http"), "ws") + "/api/agent/$agentId"
+            val server = this.agent.server as? TracingWebSocketServer
+            if (server == null) {
+                Logger.warn { "Cannot open reversed connection — no server started" }
+                return
+            }
+            server.makeReversedConnection(URI(wsUrl))
+            Logger.info { "Opened reversed WS connection to $wsUrl" }
+        } catch (e: Exception) {
+            Logger.error(e) { "Failed to open reversed WS connection to control plane" }
+            PhoneHomeHeartbeat.resetConnectTriggered()
+        }
     }
 
     @JvmStatic
