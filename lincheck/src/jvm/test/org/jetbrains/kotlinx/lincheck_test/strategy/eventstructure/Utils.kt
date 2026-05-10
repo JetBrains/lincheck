@@ -184,7 +184,7 @@ internal inline fun<reified Outcome> litmusTest(
     val INVOCATIONS = 10000
     val options = ModelCheckingOptions().analyzeStdLib(true)
     val testCfg = options.createTestConfigurations(block::class.java)
-    val outcomes: MutableSet<Outcome> = mutableSetOf()
+    val outcomes: MutableList<Outcome> = mutableListOf()
     val verifier = getResultsVerifier { result ->
         val value = getValue<Outcome>(result.parallelResults[0][0]!!)
         outcomes.add(value)
@@ -195,7 +195,7 @@ internal inline fun<reified Outcome> litmusTest(
         createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, block).use { strategy ->
             val failure = strategy.runIteration(INVOCATIONS, verifier)
             assert(failure == null) { failure.toString() }
-            outcomeVerifier(outcomes, strategy.stats.consistentInvocations)
+            outcomeVerifier.verify(outcomes)
         }
     }
 }

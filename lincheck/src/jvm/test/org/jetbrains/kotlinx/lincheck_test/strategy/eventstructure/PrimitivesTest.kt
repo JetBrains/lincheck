@@ -1346,7 +1346,7 @@ class PrimitivesTest {
         }
 
         val outcomes: Set<Unit> = setOf(Unit)
-        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+        litmusTest(TestClass::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { _ -> }
     }
 
     @Test
@@ -1393,7 +1393,7 @@ class PrimitivesTest {
         }
 
         val outcomes: Set<Unit> = setOf(Unit)
-        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+        litmusTest(TestClass::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { _ -> }
     }
 
     @Test
@@ -1438,7 +1438,7 @@ class PrimitivesTest {
         }
 
         val outcomes: Set<Unit> = setOf(Unit)
-        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { _ -> }
+        litmusTest(TestClass::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { _ -> }
     }
 
     @Test
@@ -1484,7 +1484,7 @@ class PrimitivesTest {
         }
 
         val outcomes: Set<Int> = setOf(0, 1)
-        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) {
+        litmusTest(TestClass::class.java, testScenario, assertSame(outcomes, UNKNOWN)) {
             getValue<Int>(it.parallelResults[0][0]!!)
         }
     }
@@ -1517,7 +1517,7 @@ class PrimitivesTest {
         }
 
         val outcomes: Set<Any?> = setOf(42_000_000, "foo")
-        litmusTest(TestClass::class.java, testScenario, outcomes, UNKNOWN) { results ->
+        litmusTest(TestClass::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { results ->
             val b1 = getValue<Any?>(results.parallelResults[0][0]!!)
             return@litmusTest b1
         }
