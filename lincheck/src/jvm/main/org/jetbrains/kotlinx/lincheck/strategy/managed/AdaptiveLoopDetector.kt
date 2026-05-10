@@ -105,8 +105,8 @@ class AdaptiveLoopDetector(
 
         val inst = getOrCreateInstance(threadId, loopId, codeLocation)
         val decision =
-            if (inst.currentIterationHandledAtAwaitBackEdge) {
-                inst.currentIterationHandledAtAwaitBackEdge = false
+            if (inst.nextIterationHandledAtAwaitBackEdge) {
+                inst.nextIterationHandledAtAwaitBackEdge = false
                 inst.currentIterationStarted = false
                 LoopDetector.Decision.IDLE // we already made the decision at the back-edge, do not process again
             } else {
@@ -137,7 +137,7 @@ class AdaptiveLoopDetector(
         } else {
             processIteration(inst)
         }
-        inst.currentIterationHandledAtAwaitBackEdge = true
+        inst.nextIterationHandledAtAwaitBackEdge = true
         return decision
     }
 
