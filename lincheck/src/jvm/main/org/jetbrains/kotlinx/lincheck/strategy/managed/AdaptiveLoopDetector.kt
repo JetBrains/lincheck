@@ -107,9 +107,11 @@ class AdaptiveLoopDetector(
         val decision =
             if (inst.currentIterationHandledAtAwaitBackEdge) {
                 inst.currentIterationHandledAtAwaitBackEdge = false
+                inst.currentIterationStarted = false
                 LoopDetector.Decision.IDLE // we already made the decision at the back-edge, do not process again
             } else {
                 inst.consecutiveAwaitBackEdgeHits = 0
+                inst.currentIterationStarted = true
                 processIteration(inst)
             }
         return Pair(started, decision)
@@ -120,7 +122,7 @@ class AdaptiveLoopDetector(
         codeLocation: Int,
         loopId: Int
     ): LoopDetector.Decision {
-        // classify the loop as await and call onLoopIteration
+        // classify the loop as await and process the completed iteration at the back-edge
         val inst = getOrCreateInstance(threadId, loopId, codeLocation)
         inst.consecutiveAwaitBackEdgeHits ++
 
@@ -129,7 +131,12 @@ class AdaptiveLoopDetector(
         }
 //        println("Classified loop ${inst.ownerThreadId}:${inst.signatureHistory.joinToString(",")} as ${inst.kind}")
         inst.waitSetCandidates.addAll(inst.obs.reads.keys)
-        val decision = processIteration(inst)
+        val decision = if (inst.currentIterationStarted) {
+            inst.currentIterationStarted = false
+            processIteration(inst, advanceIteration = false)
+        } else {
+            processIteration(inst)
+        }
         inst.currentIterationHandledAtAwaitBackEdge = true
         return decision
     }
@@ -150,7 +157,10 @@ class AdaptiveLoopDetector(
     // --- Decision logic ---
 
     // Compute loop signature, classify loop, and make decision
-    private fun processIteration(inst: LoopInstanceState): LoopDetector.Decision {
+    private fun processIteration(
+        inst: LoopInstanceState,
+        advanceIteration: Boolean = true
+    ): LoopDetector.Decision {
         if (inst.iterNumber > 0) {
             // upper threshold: we declare stuck after too many iterations
             if (inst.iterNumber >= iterationBoundThreshold) {
@@ -215,7 +225,7 @@ class AdaptiveLoopDetector(
 
                     val decision = makeDecision(inst, visits, hasRelevantWrite)
                     if (decision != LoopDetector.Decision.IDLE) {
-                        inst.iterNumber++
+                        if (advanceIteration) inst.iterNumber++
                         inst.obs.clear()
                         return decision
                     }
@@ -225,7 +235,7 @@ class AdaptiveLoopDetector(
                 // we just switch after each [minIterationsBeforeSwitch] number of iterations to prevent infinite spinning
                 if (inst.iterNumber >= minIterationsBeforeSwitch &&
                     inst.iterNumber % minIterationsBeforeSwitch == 0) {
-                    inst.iterNumber++
+                    if (advanceIteration) inst.iterNumber++
                     inst.obs.clear()
                     return LoopDetector.Decision.SWITCH_THREAD
                 }
@@ -233,7 +243,7 @@ class AdaptiveLoopDetector(
         }
 
         // Start new iteration
-        inst.iterNumber++
+        if (advanceIteration) inst.iterNumber++
         for ((loc, valHash) in inst.obs.reads) {
             inst.lastSeenWSValues[loc] = valHash
         }
