@@ -195,6 +195,9 @@ internal class LoopInstanceState(
     // next loop header event clears this flag, bot does not process the same iteration again.
     var currentIterationHandledAtAwaitBackEdge: Boolean = false
 
+    // true after a onLoopIteration has opened an iteration that has not been completed yet.
+    var currentIterationStarted: Boolean = false
+
     // Number of consecutive iterations that went through the side effect free back-edges.
     var consecutiveAwaitBackEdgeHits: Int = 0
 }
