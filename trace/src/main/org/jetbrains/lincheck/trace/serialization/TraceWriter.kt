@@ -278,12 +278,14 @@ internal abstract class ContextAwareTraceWriter(
         val activeLocals = codeLocation.activeLocals
         // All strings only once. It will have duplications with class and method descriptors,
         // but size loss is negligible and this way is simpler
-        val fileNameId = writeString(stackTrace.fileName)
-        val classNameId = writeString(stackTrace.className)
-        val methodNameId = writeString(stackTrace.methodName)
+        val fileNameId = if (stackTrace.fileName != FALLBACK_STRING) writeString(stackTrace.fileName) else -1
+        val classNameId = if (stackTrace.className != FALLBACK_STRING) writeString(stackTrace.className) else -1
+        val methodNameId = if (stackTrace.methodName != FALLBACK_STRING) writeString(stackTrace.methodName) else -1
         val accessPathId = writeAccessPath(accessPath)
         val argumentNamesIds = argumentNames?.map { writeAccessPath(it) }
-        val activeLocalNameIds = activeLocals?.map { writeString(it.localName) }
+        val activeLocalNameIds = activeLocals?.map {
+            if (it.localName != FALLBACK_STRING) writeString(it.localName) else -1
+        }
 
         // Code location into data and position into index
         val position = currentDataPosition
@@ -307,7 +309,7 @@ internal abstract class ContextAwareTraceWriter(
 
     protected open fun writeString(value: String?): Int {
         check(!inTracepointBody) { "Cannot save reference data inside tracepoint" }
-        if (value == null || value == FALLBACK_STRING) return -1
+        if (value == null) return -1
 
         val id = context.stringPool.register(value)
         if (contextState.isDescriptorSaved<String>(id)) return id
