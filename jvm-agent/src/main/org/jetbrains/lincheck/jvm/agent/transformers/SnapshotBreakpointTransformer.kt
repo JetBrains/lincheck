@@ -61,6 +61,15 @@ internal class SnapshotBreakpointTransformer(
         // Skip if we've already instrumented this line in the current basic block
         if (line in instrumentedLinesInCurrentBlock) return@run
 
+        // Lambda-shadow skip: when we are visiting a synthetic lambda body
+        // whose source [line] is already covered by a non-synthetic method on the same class,
+        // the user's breakpoint is already wired up at the parent's chained call site —
+        // emitting again inside the lambda would double-count.
+        // E.g. `Optional.orElseThrow(() -> new X())` produces a `LINENUMBER N`
+        // both in the parent method `foo` and in `lambda$foo`;
+        // we keep only the parent's hook.
+        if (isSyntheticLambdaMethod(access, methodName) && line in methodInfo.nonSyntheticMethodLines) return@run
+
         // Several JVM classes generated from one Kotlin source file can share a source line.
         // LincheckClassVisitor has already filtered the breakpoints to the current owner class
         // or its same-source generated descendant, so the line is the remaining bytecode key here.

@@ -22,6 +22,7 @@ package org.jetbrains.lincheck.jvm.agent
  *   - [methodsToLineRanges] - Pair of first and last non-zero LINENUMBER in method. Not min and max, as max can be mapped later
  *     to other place.
  *   - [linesToMethodNames] - Sorted list of all known line numbers ranges and method names (without `desc`) for these ranges.
+ *   - [nonSyntheticMethodLines] - All source lines found in non-synthetic methods of this class.
  */
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 
@@ -31,6 +32,7 @@ internal data class ClassInformation(
     private val labels: Map<String, MethodLabels>,
     private val methodsToLineRanges: Map<String, Pair<Int, Int>>,
     private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>,
+    private val nonSyntheticMethodLines: Set<Int>,
     private val basicCfgs: Map<String, BasicBlockControlFlowGraph>,
 ) {
     /**
@@ -43,6 +45,7 @@ internal data class ClassInformation(
             labels = labels[methodName + methodDesc] ?: MethodLabels.EMPTY,
             lineRange = methodsToLineRanges[methodName + methodDesc] ?: (0 to 0),
             linesToMethodNames = linesToMethodNames,
+            nonSyntheticMethodLines = nonSyntheticMethodLines,
             basicControlFlowGraph = basicCfgs[methodName + methodDesc]
         )
 }

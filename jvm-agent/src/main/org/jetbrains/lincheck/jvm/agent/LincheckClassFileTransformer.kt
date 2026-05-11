@@ -117,6 +117,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             labels = getMethodsLabels(classNode),
             methodsToLineRanges = lineRanges,
             linesToMethodNames = linesToMethodNames,
+            nonSyntheticMethodLines = getNonSyntheticMethodLines(classNode),
             basicCfgs = computeControlFlowGraphs(classNode, profile),
         )
 
@@ -268,6 +269,21 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             cfg.computeLoopInformation(computeIrreducibleLoops = config.trackIrreducibleLoops)
             key to cfg
         }.toMap()
+    }
+
+    /**
+     * Collects all source lines referenced by any non-synthetic-lambda method of [classNode].
+     */
+    private fun getNonSyntheticMethodLines(classNode: ClassNode): Set<Int> {
+        return buildSet {
+            classNode.methods.forEach { method ->
+                if (isSyntheticLambdaMethod(method.access, method.name)) return@forEach
+
+                val extractor = LinesCollectorMethodVisitor()
+                method.instructions.accept(extractor)
+                addAll(extractor.allLines)
+            }
+        }
     }
 
     private val NESTED_LAMBDA_RE = Regex($$"^([^$]+)\\$lambda\\$")

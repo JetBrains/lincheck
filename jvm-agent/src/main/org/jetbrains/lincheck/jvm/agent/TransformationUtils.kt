@@ -27,6 +27,24 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod
 
 /**
+ * Heuristic: is [methodName] (with [access] flags) a compiler-generated lambda body?
+ *
+ * Recognizes the conventions emitted by:
+ *  - `javac`            : `lambda$<owner>$<n>`
+ *  - Kotlin (top-level) : `<owner>$lambda$<n>`
+ *  - Kotlin (mangled)   : `_u24lambda_u24` (`$lambda$` after JVM-name mangling)
+ *  - other ACC_SYNTHETIC methods whose name still mentions "lambda"
+ *
+ * Used by snapshot-breakpoint instrumentation to suppress duplicate hooks on lines that
+ * appear both in a real method and in a lambda body lifted out of it (JBRes-9242).
+ */
+internal fun isSyntheticLambdaMethod(access: Int, methodName: String): Boolean =
+    methodName.startsWith("lambda$") ||
+    methodName.contains("\$lambda\$") ||
+    methodName.contains("_u24lambda_u24") ||
+    (access and ACC_SYNTHETIC != 0 && methodName.contains("lambda", ignoreCase = true))
+
+/**
  * Generates bytecode to push a null value onto the stack.
  *
  * Before execution:

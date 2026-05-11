@@ -151,6 +151,7 @@ internal fun transformWithSnapshotBreakpoints(
         labels = emptyMap(),
         methodsToLineRanges = emptyMap(),
         linesToMethodNames = emptyList(),
+        nonSyntheticMethodLines = emptySet(),
         basicCfgs = emptyMap(),
     )
 

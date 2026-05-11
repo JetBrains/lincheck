@@ -21,6 +21,7 @@ package org.jetbrains.lincheck.jvm.agent
  *   - [labels] - Comparator for all method's labels.
  *   - [lineRange] - Approximate Range of lines in source file covered by this method.
  *   - [linesToMethodNames] - Sorted list of all known line numbers ranges and method names (without `desc`) for these ranges.
+ *   - [nonSyntheticMethodLines] - All source lines found in non-synthetic methods of this class.
  */
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 
@@ -30,6 +31,7 @@ internal data class MethodInformation(
     val labels: MethodLabels,
     val lineRange: Pair<Int, Int>,
     private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>,
+    val nonSyntheticMethodLines: Set<Int>,
     val basicControlFlowGraph: BasicBlockControlFlowGraph?,
 ) {
     // TODO: This method should be used by [LincheckBaseMethodVisitor],
