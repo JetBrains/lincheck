@@ -71,12 +71,36 @@ fun readFieldSafely(obj: Any?, field: Field): Result<Any?> {
     }
 
     // Fall back to reflection if the field cannot be read via Unsafe.
-    try {
-        val obj = field.apply { isAccessible = true }.get(obj)
-        return Result.success(obj)
-    } catch (exception: Exception) {
-        Logger.debug(exception) { "Failed to read field ${field.name} via reflection." }
-        return Result.failure(exception)
+    return field.withAccessible {
+        try {
+            Result.success(it.get(obj))
+        } catch (exception: Exception) {
+            Logger.debug(exception) { "Failed to read field ${field.name} via reflection." }
+            Result.failure(exception)
+        }
+    }
+}
+
+/**
+ * Temporarily marks the receiver [Field] as accessible, runs [block], and restores the original
+ * `isAccessible` flag in a `finally` clause — so callers don't leave the field permanently
+ * accessible to other code sharing the same `Field` instance.
+ *
+ * NB: `Field.isAccessible` is a per-`Field`-instance flag, so the save/restore below races with
+ * any other thread that also calls `setAccessible(...)` on the same `Field` (e.g. application code
+ * or another framework — concurrent calls from Lincheck itself are unlikely). The race can leave
+ * the flag in either state but is otherwise benign: the worst observable outcome is a transient
+ * `IllegalAccessException`, or the flag ending up `true` instead of the original `false`, which is
+ * no worse than always leaving it `true`.
+ */
+@Suppress("DEPRECATION")
+private inline fun <T> Field.withAccessible(block: (Field) -> T): T {
+    val wasAccessible = isAccessible
+    return try {
+        if (!wasAccessible) isAccessible = true
+        block(this)
+    } finally {
+        if (!wasAccessible) isAccessible = false
     }
 }
 
