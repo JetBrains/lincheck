@@ -89,4 +89,95 @@ class MemoryModelTest {
             (r1 to r2)
         }
     }
+
+    // TODO: Not sure what naming convention we want here
+    @Test
+    fun testR_WR_W() {
+        // These are all the sequentially consistent outcomes
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
+            (0 to 1),
+            (0 to 2),
+            (1 to 1),
+            (1 to 2),
+            (2 to 1),
+            (2 to 2), // This outcome is not observed without the completeness fix
+        )
+        litmusTest(expectedOutcomes) {
+            val x = AtomicInteger(0)
+            var r1 = 0
+            var r2 = 0
+            val t1 = thread {
+                r1 = x.get()
+            }
+            val t2 = thread {
+                x.set(1)
+                r2 = x.get()
+            }
+            val t3 = thread {
+                x.set(2)
+            }
+            t1.join()
+            t2.join()
+            t3.join()
+            (r1 to r2)
+        }
+    }
+
+    // TODO: Not sure what naming convention we want here
+    @Test
+    fun testR_RW_W() {
+        // These are all the sequentially consistent outcomes
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
+            (0 to 0),
+            (0 to 2),
+            (1 to 0),
+            (1 to 2),
+            (2 to 0),
+            (2 to 2), // This outcome is also missing without the completeness fix
+        )
+        litmusTest(expectedOutcomes) {
+            val x = AtomicInteger(0)
+            var r1 = 0
+            var r2 = 0
+            val t1 = thread {
+                r1 = x.get()
+            }
+            val t2 = thread {
+                r2 = x.get()
+                x.set(1)
+            }
+            val t3 = thread {
+                x.set(2)
+            }
+            t1.join()
+            t2.join()
+            t3.join()
+            (r1 to r2)
+        }
+    }
+
+    // TODO: Not sure what naming convention we want here
+    @Test
+    fun testW_R_W() {
+        val expectedOutcomes: Set<Int> = setOf(0, 1, 2)
+        litmusTest(expectedOutcomes) {
+            val x = AtomicInteger(0)
+            var r1 = 0
+            val t1 = thread {
+                x.set(1)
+            }
+            val t2 = thread {
+                r1 = x.get()
+            }
+            val t3 = thread {
+                x.set(2)
+            }
+            t1.join()
+            t2.join()
+            t3.join()
+            r1
+        }
+
+
+    }
 }
