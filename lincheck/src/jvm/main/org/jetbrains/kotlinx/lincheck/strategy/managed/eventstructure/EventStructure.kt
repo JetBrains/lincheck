@@ -176,8 +176,6 @@ internal class EventStructure(
             }
             replayer.setNextEvent()
         }
-        // reset object indices --- retain only external events
-//        objectRegistry.retain { it.isExternal }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
         readCodeLocationsCounter.clear()
