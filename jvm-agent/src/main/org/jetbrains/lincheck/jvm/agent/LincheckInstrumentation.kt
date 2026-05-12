@@ -430,7 +430,10 @@ object LincheckInstrumentation {
         // the `canRetransform` method which uses `TransformationUtilsKt::isJavaLambdaClass` internally.
         // The other order causes a class linkage error on double definition of `TransformationUtilsKt`
         // when it itself is passed as an argument to `canRetransformClass`.
-        shouldTransform(clazz.name, instrumentationMode) && canRetransformClass(clazz)
+        (
+            shouldTransform(clazz.name, instrumentationMode)
+            || clazz.name.toCanonicalClassName() == TraceAgentParameters.classUnderTraceDebugging
+        ) && canRetransformClass(clazz)
 
     /**
      * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
