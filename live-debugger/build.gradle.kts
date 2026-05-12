@@ -87,6 +87,18 @@ publishing {
     configureRepositories(
         artifactsRepositoryUrl = rootProject.run { uri(layout.buildDirectory.dir("artifacts/maven")) }
     )
+
+    repositories {
+        maven {
+            name = "appGlass"
+            url = uri("https://packages.jetbrains.team/maven/p/ag/app-glass-maven")
+
+            credentials {
+                username = System.getenv("SPACE_USERNAME")
+                password = System.getenv("SPACE_PASSWORD")
+            }
+        }
+    }
 }
 
 configureSigning()
