@@ -1,776 +1,776 @@
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, StringsKt___StringsKt.toCollection, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.builder, NativeMethodAccessorImpl.invoke0 ... (42 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ExtensionsKt.toPersistentList, ExtensionsKt.toImmutableList ... (44 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ExtensionsKt.toPersistentList, ExtensionsKt.toImmutableList ... (44 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ExtensionsKt.toPersistentList, ExtensionsKt.toImmutableList ... (44 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ExtensionsKt.toPersistentList, ExtensionsKt.toImmutableList ... (44 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, ImmutableListTest.builder$lambda$26$lambda$12, ImmutableListTest.testMutation ... (44 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000015] at PersistentVectorBuilder.kt:118, stacktrace: [PersistentVectorBuilder.add, ImmutableListTest.builder$lambda$26$lambda$12, ImmutableListTest.testMutation ... (44 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:278, stacktrace: [PersistentVectorBuilder.add, ImmutableListTest.builder$lambda$26$lambda$13, ImmutableListTest.testMutation ... (44 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000017] at PersistentVectorBuilder.kt:278, stacktrace: [PersistentVectorBuilder.add, ImmutableListTest.builder$lambda$26$lambda$13, ImmutableListTest.testMutation ... (44 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:174, stacktrace: [PersistentVectorBuilder.addAll, ImmutableListTest.builder$lambda$26$lambda$14, ImmutableListTest.testMutation ... (44 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000016] at PersistentVectorBuilder.kt:174, stacktrace: [PersistentVectorBuilder.addAll, ImmutableListTest.builder$lambda$26$lambda$14, ImmutableListTest.testMutation ... (44 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, ImmutableListTest.builder$lambda$26$lambda$16, ImmutableListTest.testMutation ... (44 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, ImmutableListTest.builder$lambda$26$lambda$16, ImmutableListTest.testMutation ... (44 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, ImmutableListTest.builder$lambda$26$lambda$17 ... (45 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, ImmutableListTest.builder$lambda$26$lambda$17 ... (45 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:690, stacktrace: [PersistentVectorBuilder.removeAllWithPredicate, PersistentVectorBuilder.removeAll, ImmutableListTest.builder$lambda$26$lambda$19 ... (45 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000001a] at PersistentVectorBuilder.kt:690, stacktrace: [PersistentVectorBuilder.removeAllWithPredicate, PersistentVectorBuilder.removeAll, ImmutableListTest.builder$lambda$26$lambda$19 ... (45 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (48 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (47 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000006] at SmallPersistentVector.kt:131, stacktrace: [SmallPersistentVector.builder, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000019] at PersistentVectorBuilder.kt:552, stacktrace: [PersistentVectorBuilder.removeAt, AbstractMutableList.remove, PersistentVectorMutableIterator.remove ... (49 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.firstOrNull, CollectionBehaviorsKt.collectionBehavior$lambda$49 ... (53 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$8, CompareContext.propertyEquals ... (50 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionBehaviorsKt.listBehavior$lambda$9, CompareContext.propertyFailsWith$lambda$3 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000018] at PersistentVectorBuilder.kt:530, stacktrace: [PersistentVectorBuilder.get, CollectionsKt___CollectionsKt.getOrNull, CollectionBehaviorsKt.listBehavior$lambda$11 ... (51 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
+Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, ImmutableListTest.testMutation, ImmutableListTest.builder ... (43 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, CollectionsKt___CollectionsKt.contains ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, AbstractPersistentList.contains, AbstractPersistentList.containsAll ... (54 more)]
 # Thread 1 (Test worker)
-Live breakpoint at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]
+Live breakpoint [00000000-0000-0000-0001-00000000000a] at SmallPersistentVector.kt:135, stacktrace: [SmallPersistentVector.indexOf, CollectionsKt___CollectionsKt.indexOf, CollectionBehaviorsKt.listBehavior$lambda$10 ... (51 more)]

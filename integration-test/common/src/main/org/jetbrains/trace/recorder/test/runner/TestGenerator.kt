@@ -212,22 +212,25 @@ internal fun String.toKotlinStringLiteral(): String {
  * Converts a JSON array of breakpoint definitions into INI file content.
  *
  * Each JSON entry has the form:
- *   { "className": "...", "filePath": "...", "line": N, "condition": null }
+ *   { "uuid": "...", "className": "...", "filePath": "...", "line": N }
  *
- * The resulting INI format is:
- *   [Breakpoint 1]
- *   className = ...
- *   fileName = ...
- *   lineNumber = N
+ * `uuid` is optional; when omitted, the INI section is emitted without a `uuid` line and
+ * `BreakpointsFileParser` mints a random UUID at parse time
+ * (yielding non-deterministic trace output, so suites that compare against golden data
+ *  must pin a `uuid` per breakpoint).
  */
 internal fun convertBreakpointsToIni(breakpoints: JsonArray): String {
     return breakpoints.mapIndexed { index, element ->
         val obj = element.jsonObject
+        val uuid = obj["uuid"]?.jsonPrimitive?.content
         val className = obj["className"]?.jsonPrimitive?.content ?: error("Missing className in breakpoint")
         val filePath = obj["filePath"]?.jsonPrimitive?.content ?: error("Missing filePath in breakpoint")
         val line = obj["line"]?.jsonPrimitive?.content ?: error("Missing line in breakpoint")
         buildString {
             appendLine("[Breakpoint ${index + 1}]")
+            if (uuid != null) {
+                appendLine("uuid = $uuid")
+            }
             appendLine("className = $className")
             appendLine("fileName = $filePath")
             append("lineNumber = $line")

@@ -25,6 +25,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
@@ -35,6 +36,7 @@ import sun.nio.ch.lincheck.BreakpointStorage
 import java.lang.instrument.Instrumentation
 import java.net.InetSocketAddress
 import java.net.URI
+import java.util.UUID
 
 /**
  * Live debugging JVM agent.
@@ -145,9 +147,9 @@ internal object LiveDebuggerAgent {
 
                 override fun stopTracing() = LiveDebugger.stopRecording()
 
-                override fun addBreakpoints(breakpoints: List<String>) = LiveDebugger.addBreakpoints(breakpoints)
+                override fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>) = LiveDebugger.addBreakpoints(breakpoints)
 
-                override fun removeBreakpoints(breakpoints: List<String>) = LiveDebugger.removeBreakpoints(breakpoints)
+                override fun removeBreakpoints(uuids: List<UUID>) = LiveDebugger.removeBreakpoints(uuids)
 
                 override fun onConnectionReady() {
                     PhoneHomeHeartbeat.setConnectTriggered()

@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
@@ -93,11 +94,11 @@ internal object TraceRecorderAgent {
                         Tracer.stopTracing()
                     }
 
-                    override fun addBreakpoints(breakpoints: List<String>) {
+                    override fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>) {
                         Logger.error { "Add breakpoints is not supported in trace recorder mode" }
                     }
 
-                    override fun removeBreakpoints(breakpoints: List<String>) {
+                    override fun removeBreakpoints(uuids: List<java.util.UUID>) {
                         Logger.error { "Remove breakpoints is not supported in trace recorder mode" }
                     }
 

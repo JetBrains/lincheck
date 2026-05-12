@@ -24,6 +24,7 @@ import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
+import java.util.UUID
 
 /**
  * Tests for [SnapshotBreakpointTransformer]. 
@@ -107,6 +108,7 @@ internal fun snapshotBreakpoint(
     fileName: String,
     line: Int,
 ): SnapshotBreakpoint = SnapshotBreakpoint(
+    uuid = UUID.randomUUID(),
     className = className,
     fileName = fileName,
     lineNumber = line,

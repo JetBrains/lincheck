@@ -722,14 +722,15 @@ class TRSnapshotLineBreakpointTracePoint(
     context: TraceContext,
     codeLocationId: Int,
     threadId: Int,
+    val breakpointUuid: UUID,
     val stackTraceCodeLocationIds: List<Int>,
     val currentTimeMillis: Long,
     val locals: List<TRValue?>,
     val traceId: String?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ): TRTracePoint(context, threadId, codeLocationId, eventId) {
-    
-    val threadName: String 
+
+    val threadName: String
         get() = context.getThreadName(threadId)
 
     val stackTrace: List<StackTraceElement>
@@ -737,6 +738,8 @@ class TRSnapshotLineBreakpointTracePoint(
 
     override fun save(out: TraceWriter) {
         super.save(out)
+        out.writeLong(breakpointUuid.mostSignificantBits)
+        out.writeLong(breakpointUuid.leastSignificantBits)
         out.writeInt(stackTraceCodeLocationIds.size)
         stackTraceCodeLocationIds.forEach { id ->
             out.writeInt(id)
@@ -759,20 +762,22 @@ class TRSnapshotLineBreakpointTracePoint(
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
     }
-    
+
     internal companion object {
         fun load(context: TraceContext, inp: DataInput, codeLocationId: Int, threadId: Int, eventId: Int): TRSnapshotLineBreakpointTracePoint {
+            val breakpointUuid = UUID(inp.readLong(), inp.readLong())
             val size = inp.readInt()
             val stackTraceCodeLocationIds = List(size) { inp.readInt() }
             val currentTimeMillis = inp.readLong()
             val localsSize = inp.readInt()
             val locals = List(localsSize) { inp.readTRObject(context) }
             val traceId = inp.readNullableUTF()
-            
+
             return TRSnapshotLineBreakpointTracePoint(
                 context = context,
                 codeLocationId = codeLocationId,
                 threadId = threadId,
+                breakpointUuid = breakpointUuid,
                 stackTraceCodeLocationIds = stackTraceCodeLocationIds,
                 currentTimeMillis = currentTimeMillis,
                 locals = locals,

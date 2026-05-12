@@ -24,6 +24,7 @@ import kotlin.io.path.readText
 private val testClassGenerators: List<TestGenerator> = listOf(
     KtorLiveDebuggerJsonTests.Companion,
     KotlinxImmutableCollectionsLiveDebuggerJsonTests.Companion,
+    KotlinxImmutableCollectionsMultipleBreakpointsOnSameLineLiveDebuggerJsonTests.Companion,
     KotlinCompilerLiveDebuggerJsonTests.Companion,
 )
 

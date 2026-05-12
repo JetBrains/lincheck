@@ -1,0 +1,20 @@
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000003] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000004] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000005] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000006] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000007] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000008] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000009] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-00000000000a] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-00000000000b] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-00000000000c] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.persistentListOf, ImmutableListTest.persistentListFails ... (43 more)]

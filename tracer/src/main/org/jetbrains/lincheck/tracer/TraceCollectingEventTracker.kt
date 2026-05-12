@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.tracer
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.LineCodeLocation
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
@@ -703,9 +704,14 @@ class TraceCollectingEventTracker(
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        // Check the hit limit before doing any work. Returns false if the limit has already been
-        // reached; the thread that hits exactly the limit fires the removal callback.
+        // Check the hit limit before doing any work.
+        // Returns false if the limit has already been reached;
+        // the thread that hits the limit exactly fires the removal callback.
         if (!BreakpointStorage.incrementAndCheckHitLimit(breakpointId)) return
+
+        // Resolve the breakpoint's UUID.
+        // Skip the hit if the breakpoint was unregistered between increment and lookup.
+        val breakpointUuid = (BreakpointStorage.getUserData(breakpointId) as? SnapshotBreakpoint)?.uuid ?: return
 
         // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
         val stackTrace = Exception().stackTrace
@@ -744,6 +750,7 @@ class TraceCollectingEventTracker(
             context = context,
             codeLocationId = codeLocation,
             threadId = threadData.threadId,
+            breakpointUuid = breakpointUuid,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
             locals = locals,

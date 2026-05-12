@@ -413,7 +413,7 @@ object DefaultTRArrayTracePointPrinter: AbstractTRArrayTracePointPrinter() {
 
 object DefaultTRLineBreakpointSnapshotTracePointPrinter {
     fun TRAppendable.append(tracePoint: TRSnapshotLineBreakpointTracePoint): TRAppendable {
-        append("Live breakpoint")
+        append("Live breakpoint [${tracePoint.breakpointUuid}]")
         append(tracePoint, verbose)
         append(", ")
 

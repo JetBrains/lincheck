@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.*
@@ -24,7 +25,6 @@ import sun.nio.ch.lincheck.*
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.util.function.BooleanSupplier
 import java.util.function.Function
-import kotlin.collections.orEmpty
 
 internal class SnapshotBreakpointTransformer(
     fileName: String,
@@ -37,7 +37,7 @@ internal class SnapshotBreakpointTransformer(
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     config: TransformationConfiguration,
-    private val breakpoints: List<SnapshotBreakpoint>,
+    private val breakpoints: Map<BreakpointId, SnapshotBreakpoint>,
     private val classLoader: ClassLoader,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
@@ -70,24 +70,27 @@ internal class SnapshotBreakpointTransformer(
         // we keep only the parent's hook.
         if (isSyntheticLambdaMethod(access, methodName) && line in methodInfo.nonSyntheticMethodLines) return@run
 
-        // Several JVM classes generated from one Kotlin source file can share a source line.
-        // LincheckClassVisitor has already filtered the breakpoints to the current owner class
-        // or its same-source generated descendant, so the line is the remaining bytecode key here.
-        val breakpoint = breakpoints.firstOrNull {
+        val matchingBreakpoints = breakpoints.entries.filter { (_, breakpoint) ->
+            breakpoint.lineNumber == line &&
             // `LincheckClassVisitor` should have already filtered the breakpoints
             // to the current className/fileName pair,
             // but we still do the check as an additional safeguard.
-            it.lineNumber == line && it.isApplicableTo(className.toCanonicalClassName(), fileName)
-        } ?: return@run
+            breakpoint.isApplicableTo(className.toCanonicalClassName(), fileName)
+        }
+        for ((breakpointId, breakpoint) in matchingBreakpoints) {
+            processBreakpoint(breakpointId, breakpoint)
+        }
+    }
 
+    private fun GeneratorAdapter.processBreakpoint(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint) {
         // Check condition safety before emitting any breakpoint code.
         // Must happen before bytecode emission so we can cleanly skip the breakpoint if unsafe.
-        if (!isConditionSafe(breakpoint)) return@run
+        if (!isConditionSafe(breakpointId, breakpoint)) return
 
         // Mark this line as instrumented in the current block
-        instrumentedLinesInCurrentBlock.add(line)
+        instrumentedLinesInCurrentBlock.add(breakpoint.lineNumber)
 
-        Logger.debug { "Inserting snapshot breakpoint at ${className}:${line}" }
+        Logger.debug { "Inserting snapshot breakpoint at ${breakpoint.fileName}:${breakpoint.lineNumber}" }
 
         // STACK: <empty>
         val exitLabel = newLabel()
@@ -97,18 +100,18 @@ internal class SnapshotBreakpointTransformer(
 
         callIfNotInsideBreakpointCondition(threadDescriptorLocal) {
             if (breakpoint.conditionClassName == null) {
-                injectBreakpointHit(threadDescriptorLocal, breakpoint.id)
+                injectBreakpointHit(threadDescriptorLocal, breakpointId)
             } else {
                 ifStatement(
                     condition = {
                         // The condition may execute code with an installed breakpoint.
                         // To not make a breakpoint hit, we track when we compute the condition.
                         enterBreakpointCondition(threadDescriptorLocal)
-                        injectConditionCallWithTryCatch(breakpoint)
+                        injectConditionCallWithTryCatch(breakpointId, breakpoint)
                         leaveBreakpointCondition(threadDescriptorLocal)
                     },
                     thenClause = {
-                        injectBreakpointHit(threadDescriptorLocal, breakpoint.id)
+                        injectBreakpointHit(threadDescriptorLocal, breakpointId)
                     }
                 )
             }
@@ -137,14 +140,14 @@ internal class SnapshotBreakpointTransformer(
         invokeStatic(Injections::leaveBreakpointCondition)
     }
 
-    private fun GeneratorAdapter.injectConditionCall(breakpointSettings: SnapshotBreakpoint) {
+    private fun GeneratorAdapter.injectConditionCall(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint) {
         // === STEP 1: Load the condition class from bytecode (transformation time) ===
         // The condition code is provided as raw bytecode in conditionCodeFragment.
         // We dynamically load it into a Class object so we can access its factory method.
         val conditionClass = loadClassFromBytes(
             userCodeClassLoader = classLoader,
-            className = breakpointSettings.conditionClassName!!,
-            classBytes = breakpointSettings.conditionCodeFragment!!
+            className = breakpoint.conditionClassName!!,
+            classBytes = breakpoint.conditionCodeFragment!!
         )
 
         // Condition safety has already been validated in visitLineNumber before bytecode emission.
@@ -156,22 +159,22 @@ internal class SnapshotBreakpointTransformer(
         createFactoryMethod.isAccessible = true
         @Suppress("UNCHECKED_CAST")
         val factory = createFactoryMethod.invoke(null) as Function<Array<Any?>, BooleanSupplier>
-        BreakpointStorage.registerConditionFactory(breakpointSettings.id, factory)
+        BreakpointStorage.registerConditionFactory(breakpointId, factory)
 
         // === STEP 3: Inject bytecode to push the breakpointId (runtime) ===
         // The following bytecode will execute at runtime when the breakpoint is hit.
         // Push the breakpointId so Injections.createConditionInstance can look up the factory.
-        push(breakpointSettings.id)   // Stack: [breakpointId]
+        push(breakpointId)   // Stack: [breakpointId]
 
         // === STEP 4: Capture local variables and build Object[] array (runtime) ===
         // The condition may reference local variables from the breakpoint location.
         // We need to capture their current values and pass them to the factory.
-        val argNames = breakpointSettings.conditionCapturedVars.orEmpty()
+        val argNames = breakpoint.conditionCapturedVars.orEmpty()
         val capturedLocals = argNames.map { argName ->
             // Look up each captured variable name in the current method's active locals.
             // If a variable isn't found, throw an error (this indicates a bug in condition analysis).
             currentActiveLocalVariablesInfo.firstOrNull { it.name == argName }
-                ?: throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpointSettings.lineNumber}")
+                ?: throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpoint.lineNumber}")
         }
 
         // TODO: the fragment below is essentially a copy-paste of `pushArray` method,
@@ -230,7 +233,7 @@ internal class SnapshotBreakpointTransformer(
      * If the condition evaluation throws an exception, it returns `false`.
      * This ensures that breakpoint conditions don't crash the application.
      */
-    private fun GeneratorAdapter.injectConditionCallWithTryCatch(breakpointSettings: SnapshotBreakpoint) {
+    private fun GeneratorAdapter.injectConditionCallWithTryCatch(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint) {
         // We need to store the result in a local variable because try-catch blocks
         // require the stack to be empty at block boundaries.
         val resultLocal = newLocal(Type.BOOLEAN_TYPE)
@@ -240,7 +243,7 @@ internal class SnapshotBreakpointTransformer(
 
         tryCatchFinally(
             tryBlock = {
-                injectConditionCall(breakpointSettings)
+                injectConditionCall(breakpointId, breakpoint)
                 storeLocal(resultLocal)
             },
             exceptionType = Type.getType(Throwable::class.java),
@@ -258,7 +261,7 @@ internal class SnapshotBreakpointTransformer(
      * Checks whether the condition bytecode for the given breakpoint is safe (has no side effects).
      * If unsafe, fires the condition-unsafety notification via [BreakpointStorage] and returns `false`.
      */
-    private fun isConditionSafe(breakpoint: SnapshotBreakpoint): Boolean {
+    private fun isConditionSafe(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint): Boolean {
         val conditionClassName = breakpoint.conditionClassName
             ?: return true // no condition is always safe
 
@@ -289,7 +292,7 @@ internal class SnapshotBreakpointTransformer(
             Logger.warn {
                 "Breakpoint condition at ${breakpoint.fileName}:${breakpoint.lineNumber} is not safe: $safetyViolation"
             }
-            BreakpointStorage.notifyConditionUnsafetyDetected(breakpoint, safetyViolation)
+            BreakpointStorage.notifyConditionUnsafetyDetected(breakpointId, breakpoint, safetyViolation)
             return false
         }
         return true

@@ -43,6 +43,15 @@ abstract class AbstractTraceIntegrationTest {
 
     abstract val projectPath: String
 
+    /**
+     * Subdirectory under `src/main/resources/integrationTestData/` where this suite's golden `.txt` files live.
+     *
+     * Defaults to the project directory's basename.
+     * Test suites that share a `projectPath` should override this to keep their goldens separate.
+     */
+    protected open val goldenDataFolderName: String
+        get() = File(projectPath).name
+
     protected val pathToFatJar: String
         get() = File(Paths.get("build", "libs", fatJarName).toString()).absolutePath.escape()
 
@@ -51,9 +60,8 @@ abstract class AbstractTraceIntegrationTest {
         testMethodName: String,
         testNameSuffix: String? = null
     ): File {
-        val projectName = File(projectPath).name
         val fileName = "${testClassName}_$testMethodName${testNameSuffix?.let { "_$it" }.orEmpty()}.txt"
-        return File(Paths.get("src", "main", "resources", "integrationTestData", projectName, fileName).toString())
+        return File(Paths.get("src", "main", "resources", "integrationTestData", goldenDataFolderName, fileName).toString())
     }
 
     private val failOnErrorInStdErr: (String) -> Unit = {

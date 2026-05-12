@@ -12,11 +12,14 @@ package org.jetbrains.lincheck.trace.network.websocket
 
 import org.java_websocket.WebSocket
 import org.java_websocket.client.WebSocketClient
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.encodeToString
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingCallbacks
 import org.jetbrains.lincheck.trace.network.TracingCommands
 import org.jetbrains.lincheck.util.Logger
 import java.io.Closeable
+import java.util.UUID
 
 /**
  * Implementation of [TracingCommands] that sends commands over a raw [WebSocket] connection.
@@ -34,12 +37,12 @@ class WebSocketTracingCommandSender(private val webSocket: WebSocket) : Closeabl
         webSocket.send(TracingCommands.STOP_TRACING)
     }
 
-    override fun addBreakpoints(breakpoints: List<String>) {
-        webSocket.send("${TracingCommands.ADD_BREAKPOINTS}:${breakpoints.joinToString(",")}")
+    override fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>) {
+        webSocket.send("${TracingCommands.ADD_BREAKPOINTS}:${breakpoints.encodeToString()}")
     }
 
-    override fun removeBreakpoints(breakpoints: List<String>) {
-        webSocket.send("${TracingCommands.REMOVE_BREAKPOINTS}:${breakpoints.joinToString(",")}")
+    override fun removeBreakpoints(uuids: List<UUID>) {
+        webSocket.send("${TracingCommands.REMOVE_BREAKPOINTS}:${uuids.joinToString(",")}")
     }
 
     override fun close() = webSocket.close()

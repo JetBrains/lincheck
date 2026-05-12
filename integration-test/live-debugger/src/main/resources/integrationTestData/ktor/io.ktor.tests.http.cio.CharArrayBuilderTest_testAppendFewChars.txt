@@ -1,2 +1,2 @@
 # Thread 1
-Live breakpoint at CharArrayBuilderTest.kt:72, stacktrace: [CharArrayBuilderTest.testAppendFewChars, DirectMethodHandleAccessor.invoke, Method.invoke ... (85 more)]
+Live breakpoint [00000000-0000-0000-0000-000000000003] at CharArrayBuilderTest.kt:72, stacktrace: [CharArrayBuilderTest.testAppendFewChars, DirectMethodHandleAccessor.invoke, Method.invoke ... (85 more)]

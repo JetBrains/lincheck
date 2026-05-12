@@ -614,7 +614,7 @@ class LiveDebuggerTransformationProfile(
         // (`className` is already in canonical form ,see `LincheckClassFileTransformer.shouldTransform`).
         // The source file is not yet known here, so we use the class-only `applicableTo` pre-filter;
         // the file-aware overload narrows the match in `LincheckClassVisitor`.
-        return settings.lineBreakPoints.any { it.isApplicableTo(className) }
+        return settings.lineBreakpoints.values.any { it.isApplicableTo(className) }
     }
 
     override fun getMethodConfiguration(

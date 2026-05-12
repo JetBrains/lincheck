@@ -16,7 +16,7 @@ import org.objectweb.asm.commons.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.transformers.*
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
-import org.jetbrains.lincheck.settings.applicableTo
+import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 
@@ -202,7 +202,8 @@ internal class LincheckClassVisitor(
         }
         
         // ======== SnapshotBreakpoints ========
-        val breakpoints = liveDebuggerSettings.lineBreakPoints.applicableTo(className.toCanonicalClassName(), fileName)
+        val breakpoints = liveDebuggerSettings.lineBreakpoints
+            .filterValues { it.isApplicableTo(className.toCanonicalClassName(), fileName) }
         if (breakpoints.isNotEmpty()) {
             chain.addTransformer { adapter, mv ->
                 SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classVisitor.loader)

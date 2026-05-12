@@ -15,26 +15,32 @@ package org.jetbrains.lincheck.trace.network
  */
 open class LiveDebuggerNotification(timestamp: Long) : TracingNotification(timestamp) {
     /**
-     * Identifies a breakpoint by its source location.
+     * Identifies a breakpoint by its [breakpointUuid] and source location.
      */
     data class BreakpointData(
-        // TODO: reconsider what data to include: maybe just breakpointId?
+        // TODO: reconsider what data to include: maybe only `breakpointUuid` is enough ?
+        val breakpointUuid: java.util.UUID,
         val className: String,
         val fileName: String,
         val lineNumber: Int,
     ) {
-        override fun toString(): String = "$className:$fileName:$lineNumber"
+        override fun toString(): String = "$breakpointUuid:$className:$fileName:$lineNumber"
 
         companion object {
             fun parseFromString(string: String): BreakpointData? {
                 val parts = string.split(":")
-                if (parts.size < 3) return null
+                if (parts.size < 4) return null
 
-                val className = parts[0]
-                val fileName = parts[1]
-                val lineNumber = parts[2].toIntOrNull() ?: return null
+                val breakpointUuid = try {
+                    java.util.UUID.fromString(parts[0])
+                } catch (_: IllegalArgumentException) {
+                    return null
+                }
+                val className = parts[1]
+                val fileName = parts[2]
+                val lineNumber = parts[3].toIntOrNull() ?: return null
 
-                return BreakpointData(className, fileName, lineNumber)
+                return BreakpointData(breakpointUuid, className, fileName, lineNumber)
             }
         }
     }

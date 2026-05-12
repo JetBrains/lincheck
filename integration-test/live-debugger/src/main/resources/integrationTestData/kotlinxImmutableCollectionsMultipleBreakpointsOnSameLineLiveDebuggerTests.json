@@ -1,0 +1,92 @@
+[
+  {
+    "_comment": "Case 1: 2 unconditional breakpoints on the same line. toImmutable() hits SmallPersistentVector.kt:39 once -> 2 trace points expected.",
+    "class": "tests.contract.list.ImmutableListTest",
+    "gradleCommand": ":kotlinx-collections-immutable:jvmTest",
+    "methods": ["toImmutable"],
+    "breakpoints": [
+      {
+        "uuid": "00000000-0000-0000-0002-000000000001",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-000000000002",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      }
+    ],
+    "checkRepresentation": true
+  },
+  {
+    "_comment": "Case 2: 10 unconditional breakpoints on the same line. persistentListFails() hits SmallPersistentVector.kt:39 once -> 10 trace points expected.",
+    "class": "tests.contract.list.ImmutableListTest",
+    "gradleCommand": ":kotlinx-collections-immutable:jvmTest",
+    "methods": ["persistentListFails"],
+    "breakpoints": [
+      {
+        "uuid": "00000000-0000-0000-0002-000000000003",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-000000000004",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-000000000005",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-000000000006",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-000000000007",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-000000000008",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-000000000009",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-00000000000a",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-00000000000b",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      },
+      {
+        "uuid": "00000000-0000-0000-0002-00000000000c",
+        "className": "kotlinx.collections.immutable.implementations.immutableList.SmallPersistentVector",
+        "filePath": "SmallPersistentVector.kt",
+        "line": 39
+      }
+    ],
+    "checkRepresentation": true
+  }
+]

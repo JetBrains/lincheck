@@ -8,24 +8,28 @@
     ],
     "breakpoints": [
       {
+        "uuid": "00000000-0000-0000-0000-000000000001",
         "className": "io.ktor.http.cio.internals.CharArrayBuilder",
         "filePath": "CharArrayBuilder.kt",
         "line": 62,
         "condition": null
       },
       {
+        "uuid": "00000000-0000-0000-0000-000000000002",
         "className": "io.ktor.http.cio.internals.CharArrayBuilder",
         "filePath": "CharArrayBuilder.kt",
         "line": 60,
         "condition": null
       },
       {
+        "uuid": "00000000-0000-0000-0000-000000000003",
         "className": "io.ktor.tests.http.cio.CharArrayBuilderTest",
         "filePath": "CharArrayBuilderTest.kt",
         "line": 72,
         "condition": null
       },
       {
+        "uuid": "00000000-0000-0000-0000-000000000004",
         "className": "io.ktor.tests.http.cio.CharArrayBuilderTest",
         "filePath": "CharArrayBuilderTest.kt",
         "line": 39,

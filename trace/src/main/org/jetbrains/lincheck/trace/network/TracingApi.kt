@@ -10,8 +10,10 @@
 
 package org.jetbrains.lincheck.trace.network
 
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import java.io.Closeable
+import java.util.UUID
 
 /**
  * Interface for receiving notifications from the tracing server.
@@ -48,8 +50,9 @@ interface TracingCommands {
     fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean)
     fun startNetworkTracing()
     fun stopTracing()
-    fun addBreakpoints(breakpoints: List<String>)
-    fun removeBreakpoints(breakpoints: List<String>)
+
+    fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>)
+    fun removeBreakpoints(uuids: List<UUID>)
     
     companion object {
         internal const val START_FILE_TRACING = "startFileTracing"

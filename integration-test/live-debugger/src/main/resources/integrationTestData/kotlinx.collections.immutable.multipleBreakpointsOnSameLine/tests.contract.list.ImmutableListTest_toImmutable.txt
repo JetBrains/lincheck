@@ -1,0 +1,4 @@
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000001] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.plus, ExtensionsKt.toPersistentList ... (45 more)]
+# Thread 1 (Test worker)
+Live breakpoint [00000000-0000-0000-0002-000000000002] at SmallPersistentVector.kt:39, stacktrace: [SmallPersistentVector.addAll, ExtensionsKt.plus, ExtensionsKt.toPersistentList ... (45 more)]

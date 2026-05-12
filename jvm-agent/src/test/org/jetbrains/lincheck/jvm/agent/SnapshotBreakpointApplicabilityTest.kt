@@ -15,11 +15,13 @@ import org.jetbrains.lincheck.settings.applicableTo
 import org.jetbrains.lincheck.settings.isApplicableTo
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.util.UUID
 
 class SnapshotBreakpointApplicabilityTest {
 
     private fun bp(className: String, fileName: String, line: Int) =
         SnapshotBreakpoint(
+            uuid = UUID.randomUUID(),
             className = className,
             fileName = fileName,
             lineNumber = line,

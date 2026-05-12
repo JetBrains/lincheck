@@ -22,7 +22,11 @@ sourceSets {
 }
 
 enum class LiveDebuggerIntegrationTestSuite {
-    Ktor, KotlinxImmutableCollections, KotlinCompiler, All
+    KotlinxImmutableCollections,
+    KotlinxImmutableCollectionsMultipleBreakpointsOnSameLine,
+    Ktor,
+    KotlinCompiler,
+    All,
 }
 
 tasks {
@@ -38,6 +42,8 @@ tasks {
     val integrationTestSuiteType = when (liveDebuggerSuite?.lowercase()) {
         "ktor" -> LiveDebuggerIntegrationTestSuite.Ktor
         "kotlinximmutablecollections" -> LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections
+        "kotlinximmutablecollectionsmultiplebreakpointsonsameline" ->
+            LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollectionsMultipleBreakpointsOnSameLine
         "kotlincompiler" -> LiveDebuggerIntegrationTestSuite.KotlinCompiler
         "all", null -> LiveDebuggerIntegrationTestSuite.All
         else -> error("Unknown live-debugger suite: $liveDebuggerSuite")
@@ -54,6 +60,8 @@ tasks {
         when (integrationTestSuiteType) {
             LiveDebuggerIntegrationTestSuite.Ktor -> include("**/*KtorLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections -> include("**/*KotlinxImmutableCollectionsLiveDebuggerJsonIntegrationTests*")
+            LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollectionsMultipleBreakpointsOnSameLine ->
+                include("**/*KotlinxImmutableCollectionsMultipleBreakpointsOnSameLineLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.All -> {}
         }

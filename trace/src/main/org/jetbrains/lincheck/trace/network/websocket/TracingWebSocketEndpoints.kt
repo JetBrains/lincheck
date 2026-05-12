@@ -15,6 +15,7 @@ import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.handshake.ServerHandshake
 import org.java_websocket.server.WebSocketServer
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingClient
@@ -26,6 +27,7 @@ import java.lang.Exception
 import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.ByteBuffer
+import java.util.UUID
 
 /**
  * Parses and dispatches an incoming WebSocket command message to the appropriate [TracingCommands] method.
@@ -43,24 +45,29 @@ fun TracingCommands.handleMessage(message: String?) {
                     startFileTracing(args[0], args[1].toBoolean())
                 }
             }
-
             TracingCommands.START_NETWORK_TRACING -> startNetworkTracing()
-            TracingCommands.STOP_TRACING -> stopTracing()
-            TracingCommands.ADD_BREAKPOINTS -> {
-                val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
-                addBreakpoints(breakpoints)
-            }
 
-            TracingCommands.REMOVE_BREAKPOINTS -> {
-                val breakpoints = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].split(",") else emptyList()
-                removeBreakpoints(breakpoints)
-            }
+            TracingCommands.STOP_TRACING -> stopTracing()
+
+            TracingCommands.ADD_BREAKPOINTS -> addBreakpoints(parseBreakpointsPayload(parts))
+            TracingCommands.REMOVE_BREAKPOINTS -> removeBreakpoints(parseUuidsPayload(parts))
 
             else -> Logger.warn { "Unknown command received: $command" }
         }
     } catch (e: Exception) {
         Logger.error(e) { "Error handling WebSocket command: $message" }
     }
+}
+
+private fun parseBreakpointsPayload(commandParts: List<String>): List<SnapshotBreakpoint> {
+    val payload = commandParts.getOrNull(1) ?: return emptyList()
+    return SnapshotBreakpoint.decodeListFromString(payload)
+}
+
+private fun parseUuidsPayload(commandParts: List<String>): List<UUID> {
+    val payload = commandParts.getOrNull(1).orEmpty()
+    if (payload.isEmpty()) return emptyList()
+    return payload.split(",").map { UUID.fromString(it) }
 }
 
 /**

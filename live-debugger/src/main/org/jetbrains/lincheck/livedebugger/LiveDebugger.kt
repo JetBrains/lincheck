@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.livedebugger
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
+import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
@@ -24,6 +25,7 @@ import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.tracer.isFileMode
 import org.jetbrains.lincheck.util.Logger
 import sun.nio.ch.lincheck.BreakpointStorage
+import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
@@ -91,7 +93,6 @@ internal object LiveDebugger {
         try {
             Logger.info { "Loading breakpoints from file: $breakpointsFilePath" }
 
-
             val breakpoints = BreakpointsFileParser.parseBreakpointsFile(breakpointsFilePath)
             val settings = LincheckClassFileTransformer.liveDebuggerSettings
             val addedBreakpoints = settings.addBreakpoints(breakpoints)
@@ -102,40 +103,40 @@ internal object LiveDebugger {
         }
     }
 
-    fun addBreakpoints(breakpoints: List<String>) {
+    fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>) {
         Logger.info { "Adding breakpoints: $breakpoints" }
 
         val addedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
-            .addBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
+            .addBreakpoints(breakpoints)
         retransformBreakpointClasses(addedBreakpoints)
     }
 
-    fun removeBreakpoints(breakpoints: List<String>) {
-        Logger.info { "Removing breakpoints: $breakpoints" }
+    fun removeBreakpoints(uuids: List<UUID>) {
+        Logger.info { "Removing breakpoints: $uuids" }
 
         val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeBreakpoints(breakpoints.map { SnapshotBreakpoint.parseFromString(it) })
+            .removeBreakpoints(uuids)
         retransformBreakpointClasses(removedBreakpoints)
     }
 
     fun removeAllBreakpoints() {
         Logger.info { "Removing all breakpoints" }
 
-        val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings.removeAllBreakpoints()
+        val removedBreakpoints = LincheckClassFileTransformer.liveDebuggerSettings
+            .removeAllBreakpoints()
         retransformBreakpointClasses(removedBreakpoints)
     }
 
     /**
      * Disables the breakpoint by removing it and retransforming the affected class.
-     *
      */
-    private fun disableBreakpoint(breakpoint: SnapshotBreakpoint) {
+    private fun disableBreakpoint(id: BreakpointId) {
         // Remove specifically by id, not by location equality.
         // If the user re-added the breakpoint at the same location in the window between
         // the hit-limit callback firing and this executor task running,
         // the re-added breakpoint will have a different id and must not be touched.
         val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeBreakpointById(breakpoint.id)
+            .removeBreakpoint(id)
         if (removedBreakpoint != null) {
             retransformBreakpointClasses(listOf(removedBreakpoint))
         }
@@ -149,7 +150,7 @@ internal object LiveDebugger {
      * source file for each loaded class, and the retransformation pipeline does the
      * file-aware narrowing in `LincheckClassVisitor` anyway.
      */
-    private fun retransformBreakpointClasses(breakpoints: List<SnapshotBreakpoint>) {
+    private fun retransformBreakpointClasses(breakpoints: Collection<SnapshotBreakpoint>) {
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
             .filter { loadedClass ->
                 breakpoints.any { it.isApplicableTo(loadedClass.name) }
@@ -173,8 +174,8 @@ internal object LiveDebugger {
     fun ensureHitLimitCallbackInstalled() {
         if (!hitLimitCallbackInstalled.compareAndSet(false, true)) return
 
-        BreakpointStorage.setOnHitLimitReached { userData ->
-            onHitLimitReached(userData as SnapshotBreakpoint)
+        BreakpointStorage.setOnHitLimitReached { id, userData ->
+            onHitLimitReached(id, userData as SnapshotBreakpoint)
         }
         Logger.debug { "Hit limit callback installed" }
     }
@@ -183,7 +184,7 @@ internal object LiveDebugger {
      * Called when a breakpoint's hit count reaches its configured limit.
      * Sends a notification to the connected client, then removes the breakpoint, and retransforms the class.
      */
-    private fun onHitLimitReached(breakpoint: SnapshotBreakpoint) {
+    private fun onHitLimitReached(id: BreakpointId, breakpoint: SnapshotBreakpoint) {
         val timestamp = System.currentTimeMillis()
         Logger.info {
             with (breakpoint) {
@@ -192,11 +193,12 @@ internal object LiveDebugger {
         }
 
         notificationsExecutor.submit {
-            disableBreakpoint(breakpoint)
+            disableBreakpoint(id)
 
             val notification = LiveDebuggerNotification.BreakpointHitLimitReached(
                 timestamp = timestamp,
                 breakpointData = LiveDebuggerNotification.BreakpointData(
+                    breakpointUuid = breakpoint.uuid,
                     className = breakpoint.className,
                     fileName = breakpoint.fileName,
                     lineNumber = breakpoint.lineNumber,
@@ -221,8 +223,8 @@ internal object LiveDebugger {
     fun ensureConditionUnsafetyCallbackInstalled() {
         if (!conditionUnsafetyCallbackInstalled.compareAndSet(false, true)) return
 
-        BreakpointStorage.setOnConditionUnsafetyDetected { userData, safetyViolation ->
-            onConditionUnsafetyDetected(userData as SnapshotBreakpoint, safetyViolation as SafetyViolation)
+        BreakpointStorage.setOnConditionUnsafetyDetected { id, userData, safetyViolation ->
+            onConditionUnsafetyDetected(id, userData as SnapshotBreakpoint, safetyViolation as SafetyViolation)
         }
         Logger.debug { "Condition unsafety callback installed" }
     }
@@ -231,7 +233,7 @@ internal object LiveDebugger {
      * Called when a breakpoint's condition is detected to be unsafe (has side effects).
      * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
      */
-    private fun onConditionUnsafetyDetected(breakpoint: SnapshotBreakpoint, safetyViolation: SafetyViolation) {
+    private fun onConditionUnsafetyDetected(id: BreakpointId, breakpoint: SnapshotBreakpoint, safetyViolation: SafetyViolation) {
         val timestamp = System.currentTimeMillis()
         Logger.info {
             with (breakpoint) {
@@ -240,11 +242,12 @@ internal object LiveDebugger {
         }
 
         notificationsExecutor.submit {
-            disableBreakpoint(breakpoint)
+            disableBreakpoint(id)
 
             val notification = LiveDebuggerNotification.BreakpointConditionUnsafetyDetected(
                 timestamp = timestamp,
                 breakpointData = LiveDebuggerNotification.BreakpointData(
+                    breakpointUuid = breakpoint.uuid,
                     className = breakpoint.className,
                     fileName = breakpoint.fileName,
                     lineNumber = breakpoint.lineNumber,

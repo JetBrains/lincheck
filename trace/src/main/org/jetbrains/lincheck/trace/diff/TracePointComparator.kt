@@ -38,6 +38,7 @@ internal object TracePointComparator {
                 .add(tracePoint.result)
                 .add(tracePoint.exceptionClassName ?: "")
             is TRSnapshotLineBreakpointTracePoint -> h
+                .add(tracePoint.breakpointUuid.toString())
                 .add(tracePoint.stackTrace) // Should we add it as-is?
                 .addTRList(tracePoint.locals)
                 .add(tracePoint.traceId ?: "")
@@ -93,10 +94,11 @@ internal object TracePointComparator {
                     .add(tracePoint.isStatic())
                     .add(tracePoint.returnType)
                     .add(tracePoint.argumentTypes) // It is Ok, as we use hashcode for Types.Type anyway
-            // Only code location for now
+            // Only code location and breakpoint UUID for now
             is TRSnapshotLineBreakpointTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
+                    .add(tracePoint.breakpointUuid.toString())
             is TRThrowTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
