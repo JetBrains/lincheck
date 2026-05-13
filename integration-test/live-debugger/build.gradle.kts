@@ -36,7 +36,7 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
-    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "live-debugger-fat.jar")
+    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar")
 
     val liveDebuggerSuite: String? by project
     val integrationTestSuiteType = when (liveDebuggerSuite?.lowercase()) {

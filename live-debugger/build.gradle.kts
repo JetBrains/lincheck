@@ -59,7 +59,7 @@ tasks {
 }
 
 registerTraceAgentTasks(
-    fatJarName = "live-debugger-fat",
+    fatJarName = "app-glass-agent",
     fatJarTaskName = "liveDebuggerFatJar",
     premainClass = "org.jetbrains.lincheck.livedebugger.LiveDebuggerAgent"
 )
@@ -67,11 +67,10 @@ registerTraceAgentTasks(
 publishing {
     publications {
         register("maven", MavenPublication::class) {
-            val groupId: String by project
             val liveDebuggerFatArtifactId: String by project
             val liveDebuggerFatVersion: String by project
 
-            this.groupId = groupId
+            this.groupId = "org.jetbrains.appglass"
             this.artifactId = liveDebuggerFatArtifactId
             this.version = liveDebuggerFatVersion
 

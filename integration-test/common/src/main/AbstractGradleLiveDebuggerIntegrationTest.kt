@@ -20,7 +20,7 @@ import org.jetbrains.lincheck.util.jdkVersion
  */
 abstract class AbstractGradleLiveDebuggerIntegrationTest : AbstractGradleTraceIntegrationTest() {
 
-    override val fatJarName: String = "live-debugger-fat.jar"
+    override val fatJarName: String = "app-glass-agent.jar"
 
     override val defaultJvmArgs: List<String> = listOf(
         "-Dlincheck.liveDebuggerMode=true",
