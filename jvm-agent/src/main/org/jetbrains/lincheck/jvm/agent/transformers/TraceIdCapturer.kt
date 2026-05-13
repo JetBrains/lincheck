@@ -19,18 +19,26 @@ import kotlin.collections.listOf
 
 /**
  * Registry of all supported request id types.
-* Currently only open telemetry is supported.
+ * Currently only open telemetry is supported.
+ *
+ * @param userCodeClassLoader the class loader of the class being instrumented; used to probe
+ *   for distributed-tracing classes. The bytecode emitted by the capturers is resolved at
+ *   runtime against this same class loader, so the availability check must agree with what
+ *   the JVM will actually see when the instrumented method runs.
  */
-internal class TraceIdCapturerRegistry(configuration: TransformationConfiguration) {
+internal class TraceIdCapturerRegistry(
+    configuration: TransformationConfiguration,
+    userCodeClassLoader: ClassLoader,
+) {
     private val capturers: List<TraceIdCapturer> = if (configuration.trackTraceIds) listOf(
-            OpenTelemetryTraceIdCapturer()
+            OpenTelemetryTraceIdCapturer(userCodeClassLoader)
         ) else listOf()
 
     /**
-     * Attempts to load a trace ID using available capturers. 
+     * Attempts to load a trace ID using available capturers.
      * If a capturer successfully loads a trace ID, the process halts.
      * If no trace ID is available, pushes a null reference onto the stack.
-     * 
+     *
      * @param adapter the GeneratorAdapter used for emitting bytecode instructions
      */
     fun loadTraceIdIfAvailable(adapter: GeneratorAdapter) = adapter.run {
@@ -43,13 +51,21 @@ internal class TraceIdCapturerRegistry(configuration: TransformationConfiguratio
 
 /**
  * Abstract base class for capturing distributed tracing request/trace IDs.
- * 
+ *
  * This class provides a mechanism to conditionally load trace IDs from various
  * distributed tracing systems (like OpenTelemetry) by generating appropriate
  * bytecode instructions. The availability of the tracing system is checked lazily
- * by verifying that required classes are present on the classpath.
+ * by verifying that required classes are present on the classpath of the
+ * **instrumented class's class loader** — that is the same loader the JVM will use
+ * to resolve the symbolic references in the emitted bytecode at run time, so a
+ * loader-agnostic check (e.g. via the agent's own loader) can either miss a
+ * tracer that is visible only to the application or, worse, claim availability
+ * for a tracer the application itself cannot see and trip a `NoClassDefFoundError`
+ * inside the breakpoint hit.
+ *
+ * @param userCodeClassLoader class loader of the class being instrumented.
  */
-internal abstract class TraceIdCapturer {
+internal abstract class TraceIdCapturer(private val userCodeClassLoader: ClassLoader) {
 
     /**
      * List of class names that must be present on the classpath for this capturer to be available.
@@ -59,26 +75,26 @@ internal abstract class TraceIdCapturer {
 
     /**
      * Generates bytecode instructions to load the trace ID onto the stack.
-     * 
+     *
      * @param adapter the GeneratorAdapter used to emit bytecode instructions
      */
     protected abstract fun loadTraceId(adapter: GeneratorAdapter)
 
     /**
      * Conditionally loads the trace ID if the tracing system is available.
-     * 
+     *
      * @param adapter the GeneratorAdapter used to emit bytecode instructions
      * @return true if the tracing system is available and trace ID was loaded, false otherwise
      */
     fun loadTraceIdIfAvailable(adapter: GeneratorAdapter): Boolean {
-        if (isAvailable) loadTraceId(adapter) 
+        if (isAvailable) loadTraceId(adapter)
         return isAvailable
     }
-    
+
     private val isAvailable: Boolean by lazy {
         runCatching {
             shouldContainClasses.forEach { className ->
-                Class.forName(className, /* initialize */ false, this.javaClass.classLoader)
+                Class.forName(className, /* initialize */ false, userCodeClassLoader)
             }
         }.isSuccess
     }
@@ -86,13 +102,15 @@ internal abstract class TraceIdCapturer {
 
 /**
  * Request ID capturer implementation for OpenTelemetry distributed tracing.
- * 
+ *
  * Captures the trace ID from the current OpenTelemetry span context by calling:
  * - Span.current() to get the current span
  * - span.getSpanContext() to get the span context
  * - spanContext.getTraceId() to retrieve the trace ID as a String
  */
-internal class OpenTelemetryTraceIdCapturer : TraceIdCapturer() {
+internal class OpenTelemetryTraceIdCapturer(
+    userCodeClassLoader: ClassLoader,
+) : TraceIdCapturer(userCodeClassLoader) {
     override val shouldContainClasses: List<String> = listOf("io.opentelemetry.api.trace.Span")
     
     override fun loadTraceId(adapter: GeneratorAdapter) = adapter.run {

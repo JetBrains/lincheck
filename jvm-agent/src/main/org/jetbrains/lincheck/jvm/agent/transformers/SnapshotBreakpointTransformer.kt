@@ -41,7 +41,7 @@ internal class SnapshotBreakpointTransformer(
     private val classLoader: ClassLoader,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
-    private val traceIdCapturers = TraceIdCapturerRegistry(config)
+    private val traceIdCapturers = TraceIdCapturerRegistry(config, classLoader)
 
     // Track which lines have been instrumented in the current basic block.
     // Reset when we see a new label (which starts a new block).
