@@ -346,13 +346,34 @@ private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
  *
  * Examples:
  * ```
- * // Simple busy-wait — the whole loop body is read-only
- * while (!flag) { }
+ * // Simple busy-wait - the whole loop body has no side effects, there is a shared read and a call to `Thread.onSpinWait'
+ * while (!flag.get()) {
+ *     Thread.onSpinWait()
+ * }
  *
  * // Complex loop with CAS and writes on some paths, but a read-only spin-retry path
  * _state.loop { state ->
  *     val element = array[head].value
  *     if (element == null) return@loop   // <-- await path
+ *     if (_state.compareAndSet(old, new)) { ... return result }
+ * }
+ * ```
+ *
+ * The instrumentation with the await paths of the two examples would look like this (ignoring the exit injections for simplicity):
+ * ```
+ * while (!flag.get()) {
+ *     Injections.onLoopIteration(descriptor, loopHeaderCodeLocation, loopId)
+ *     Thread.onSpinWait()
+ *     Injections.onAwaitLoopPath(descriptor, loopHeaderCodeLocation, loopId) // before the back edge
+ * }
+ *
+ * _state.loop { state ->
+ *     Injections.onLoopIteration(descriptor, loopHeaderCodeLocation, loopId)
+ *     val element = array[head].value
+ *     if (element == null) {
+ *         Injections.onAwaitLoopPath(descriptor, loopHeaderCodeLocation, loopId)
+ *         return@loop // we consider that the back edge goes from the return to the loop header, so we inject before the return
+ *     }
  *     if (_state.compareAndSet(old, new)) { ... return result }
  * }
  * ```
