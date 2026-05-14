@@ -89,8 +89,8 @@ internal class LoopTransformer(
     private val opcodesReachableFromOutsideLoops: Map<InstructionIndex, Set<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeReachabilityFromOutsideLoops(insnIndexRemapping, loopInfo)
 
-    private val awaitLoopBackEdgeSources: Map<LoopId, Set<BasicBlockIndex>> =
-        methodInfo.basicControlFlowGraph!!.computeAwaitLoops(loopInfo)
+    private val awaitPathBackEdgeSources: Map<LoopId, Set<BasicBlockIndex>> =
+        methodInfo.basicControlFlowGraph!!.computeAwaitPathBackEdgeSources(loopInfo)
 
     private val loopIdsByHeaderNonPhonyIndex: Map<InstructionIndex, List<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeLoopIdsByHeaderNonPhonyIndex(insnIndexRemapping, loopInfo)
@@ -98,9 +98,9 @@ internal class LoopTransformer(
     private val codeLocationIdByLoopId = mutableMapOf<LoopId, Int>()
 
     // Map from a non-phony instruction index (the last opcode of a clean back-edge source block)
-    // to the loopId. These are the sites where `onAwaitLoop` should be injected.
-    private val awaitInjectionLocations: Map<InstructionIndex, List<LoopId>> =
-        methodInfo.basicControlFlowGraph!!.computeAwaitInjectionLocations(insnIndexRemapping, awaitLoopBackEdgeSources)
+    // to the loopId. These are the sites where `onAwaitLoopPath` should be injected.
+    private val awaitPathInjectionLocations: Map<InstructionIndex, List<LoopId>> =
+        methodInfo.basicControlFlowGraph!!.computeAwaitPathInjectionLocations(insnIndexRemapping, awaitPathBackEdgeSources)
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
@@ -151,7 +151,7 @@ internal class LoopTransformer(
             // STACK: <empty>
         }
 
-        awaitInjectionLocations[nonPhonyIndex]?.let { loopIds ->
+        awaitPathInjectionLocations[nonPhonyIndex]?.let { loopIds ->
             for (loopId in loopIds) {
                 val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
                 if (!isReducible) continue
@@ -161,7 +161,7 @@ internal class LoopTransformer(
                 adapter.push(codeLocationIdByLoopId.getValue(loopId))
                 adapter.push(loopId)
                 // STACK: descriptor, codeLocation, loopId
-                adapter.invokeStatic(Injections::onAwaitLoop)
+                adapter.invokeStatic(Injections::onAwaitLoopPath)
                 // STACK: <empty>
             }
         }
@@ -295,19 +295,19 @@ private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
 }
 
 /**
- * Compute injection location for await loops
- * This should happen at the back edge of the loop when the loop can be considered await.
+ * Compute injection locations for await paths
+ * This should happen at the back edges of the source blocks on a path that can be considered an await path.
  * by back edge we mean the jump instruction that goes back to the loop header.
  *
  * Returns a map from non-phony instruction index to the loop id.
  */
-private fun BasicBlockControlFlowGraph.computeAwaitInjectionLocations(
+private fun BasicBlockControlFlowGraph.computeAwaitPathInjectionLocations(
     insnIndexRemapping: IntArray,
-    awaitBackEdges: Map<LoopId, Set<BasicBlockIndex>>,
+    awaitPathBackEdges: Map<LoopId, Set<BasicBlockIndex>>,
 ): Map<InstructionIndex, List<LoopId>> {
-    if (awaitBackEdges.isEmpty()) return emptyMap()
+    if (awaitPathBackEdges.isEmpty()) return emptyMap()
     val result = mutableMapOf<InstructionIndex, MutableSet<LoopId>>()
-    for ((loopId, sourceBlocks) in awaitBackEdges) {
+    for ((loopId, sourceBlocks) in awaitPathBackEdges) {
         for (block in sourceBlocks) {
             // Inject at the last opcode of the source block
             val idx = lastOpcodeIndexOf(block) ?: continue
@@ -337,12 +337,12 @@ private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
 }
 
 /**
- * A loop is considered an await loop if there exists at least a back edge path such that:
+ * An await path is a path from a loop header to a back edge source such that:
  *   - no shared writes (field/array writes), monitor operations, or side-effecting calls (except `Thread.onSpinWait`) are present on that path
  *   - at least one shared read (field/array read) is present on that path
  *
- * By this definition, a loop that contains writes or calls on some paths can still be classified as an await loop,
- * as long as it has at least one clean back-edge path that satisfies above conditions
+ * Awaitness is a property of a path, not of the whole loop. A loop that contains side effects
+ * on some paths can still have an await path if at least one back-edge path satisfies the conditions above.
  *
  * Examples:
  * ```
@@ -352,7 +352,7 @@ private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
  * // Complex loop with CAS and writes on some paths, but a read-only spin-retry path
  * _state.loop { state ->
  *     val element = array[head].value
- *     if (element == null) return@loop   // <-- read-only spin path
+ *     if (element == null) return@loop   // <-- await path
  *     if (_state.compareAndSet(old, new)) { ... return result }
  * }
  * ```
@@ -407,7 +407,7 @@ private fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
         || ConditionSafetyChecker.isWhitelistedMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
 
 /**
- * Classification object result used for await loop analysis
+ * Classification object result used for await path analysis.
  */
 private data class BlockClassification(
     val hasSharedRead: Boolean,
@@ -415,11 +415,11 @@ private data class BlockClassification(
 )
 
 /**
- * Computes the set of "clean" back-edge source blocks for each await loop.
+ * Computes the set of "clean" back-edge source blocks for each loop containing await paths.
  *
- * Returns a map between [LoopId] and he set of clean back-edge source [BasicBlockIndex] values.
+ * Returns a map between [LoopId] and the set of clean back-edge source [BasicBlockIndex] values.
  */
-internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
+internal fun BasicBlockControlFlowGraph.computeAwaitPathBackEdgeSources(
     loopInfo: MethodLoopsInformation
 ): Map<LoopId, Set<BasicBlockIndex>> {
     if (!loopInfo.hasLoops()) return emptyMap()
@@ -465,9 +465,9 @@ internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
     val result = mutableMapOf<LoopId, Set<BasicBlockIndex>>()
 
     for (loop in loopInfo.loops) {
-        val awaitBackEdges = findCleanBackEdge(loop, blockClassifications)
-        if (awaitBackEdges.isNotEmpty()) {
-            result[loop.id] = awaitBackEdges
+        val awaitPathBackEdges = findCleanBackEdge(loop, blockClassifications)
+        if (awaitPathBackEdges.isNotEmpty()) {
+            result[loop.id] = awaitPathBackEdges
         }
     }
 
@@ -487,7 +487,7 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
 
     val headerClassification = blockClassifications[header]
 
-    // If the header block itself has side effects, no suitable await loop can be formed
+    // If the header block itself has side effects, no await path can start from this header.
     if (headerClassification.hasSideEffects) return emptySet()
 
     val localVariablesInHeader = mutableSetOf<Int>()
@@ -521,7 +521,7 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
     while (queue.isNotEmpty()) {
         val (currentBlock, pathHasRead) = queue.removeFirst()
 
-        // Add current block if is a back-edge source that has a read
+        // Add current block if it is a back-edge source reached through a path that has a shared read.
         if (currentBlock in backEdgeSources && pathHasRead) {
             cleanBackEdges.add(currentBlock)
         }
