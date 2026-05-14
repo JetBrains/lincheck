@@ -20,6 +20,12 @@ import org.objectweb.asm.commons.*
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import sun.nio.ch.lincheck.*
 
+internal fun isLoadOpcode(opcode: Int) =
+    opcode == ILOAD || opcode == LLOAD || opcode == FLOAD || opcode == DLOAD || opcode == ALOAD
+
+internal fun isStoreOpcode(opcode: Int) =
+    opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
+
 internal class LocalVariablesAccessTransformer(
     fileName: String,
     className: String,
@@ -145,12 +151,6 @@ internal class LocalVariablesAccessTransformer(
     private fun getVariableInfo(varIndex: Int): LocalVariableInfo? {
         return methodInfo.locals.activeVariables.find { it.index == varIndex }
     }
-
-    private fun isLoadOpcode(opcode: Int) =
-        opcode == ILOAD || opcode == LLOAD || opcode == FLOAD || opcode == DLOAD || opcode == ALOAD
-
-    private fun isStoreOpcode(opcode: Int) =
-        opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
 
     private fun Type.getVarInsnOpcode() =
         getOpcode(ILOAD)

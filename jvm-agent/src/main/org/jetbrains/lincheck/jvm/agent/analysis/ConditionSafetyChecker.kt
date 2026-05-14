@@ -848,4 +848,20 @@ object ConditionSafetyChecker {
         "java/lang/invoke/StringConcatFactory.makeConcatWithConstants",
         "java/lang/invoke/StringConcatFactory.makeConcat",
     )
+
+    /**
+     * Returns true if the call target is in the same whitelist used by the safety checker.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    internal fun isWhitelistedMethodCall(
+        internalClassName: String,
+        methodName: String,
+        methodDescriptor: String,
+        opcode: Int,
+    ): Boolean {
+        val methodKey = "$internalClassName.$methodName"
+        if (opcode == INVOKESTATIC && methodKey in WHITELISTED_STATIC_METHODS) return true
+        if (methodKey in WHITELISTED_FINAL_CLASS_METHODS) return true
+        return false
+    }
 }
