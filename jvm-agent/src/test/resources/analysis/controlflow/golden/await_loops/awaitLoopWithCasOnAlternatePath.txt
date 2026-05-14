@@ -13,5 +13,5 @@ LOOP 1
     B3
 
 
-=== Await Loop Detection ===
-Await loop 0: header=0, body=[0, 1, 4, 2], cleanBackEdgeSources=[1]
+=== Await Path Detection ===
+Await loop 1: header=B0, body=[B0, B1, B2, B4], cleanBackEdgeSources=[B1]
