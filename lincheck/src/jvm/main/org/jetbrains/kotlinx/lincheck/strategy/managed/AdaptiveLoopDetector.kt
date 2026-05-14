@@ -194,6 +194,8 @@ class AdaptiveLoopDetector(
                     val writeSignature = inst.obs.writeSignature()
                     inst.staleWriteCount = if (writeSignature == inst.lastWriteSignature) inst.staleWriteCount + 1 else 0
                     inst.lastWriteSignature = writeSignature
+                }  else {
+                    inst.staleWriteCount = 0
                 }
 
                 if (inst.repeatCount > 0 || hasCycle(inst.signatureHistory)) {
