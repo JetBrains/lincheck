@@ -62,6 +62,7 @@ internal enum class CodeLocationKind {
 
 internal val CodeLocation.kind: CodeLocationKind get() = when (this) {
     is LineCodeLocation -> CodeLocationKind.LINE
+    is LoopHeaderCodeLocation -> CodeLocationKind.ACCESS
     is AccessCodeLocation -> CodeLocationKind.ACCESS
     is MethodCallCodeLocation -> CodeLocationKind.METHOD_CALL
 }
