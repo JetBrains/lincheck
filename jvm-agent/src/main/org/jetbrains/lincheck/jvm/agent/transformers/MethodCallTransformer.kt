@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.trace.isThisAccess
 import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.jetbrains.lincheck.util.isIntellijInstrumentationCoverageAgentClass
+import org.jetbrains.lincheck.util.isRecognizedLoggingLibraryClass
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Type
@@ -340,6 +341,7 @@ internal class MethodCallTransformer(
     private fun isIgnoredClass(className: String) =
         isInLincheckPackage(className.toCanonicalClassName()) ||
         isIntellijInstrumentationCoverageAgentClass(className.toCanonicalClassName()) ||
+        isRecognizedLoggingLibraryClass(className.toCanonicalClassName()) ||
         className == "kotlin/jvm/internal/Intrinsics" ||
         className == "java/util/Objects" ||
         className == "java/lang/String" ||
@@ -353,7 +355,6 @@ internal class MethodCallTransformer(
         className == "java/lang/Double" ||
         className == "java/lang/Float" ||
         className == "java/util/Locale" ||
-        className == "org/slf4j/helpers/Util" ||
         className == "java/util/Properties" ||
         className == "java/lang/invoke/MethodHandles"
 

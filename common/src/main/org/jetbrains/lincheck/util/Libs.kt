@@ -114,7 +114,8 @@ fun isRecognizedTestingLibraryClass(className: String) =
  * Checks if the given class name corresponds to a recognized logging library class.
  */
 fun isRecognizedLoggingLibraryClass(className: String) =
-    className.startsWith("org.slf4j.")
+    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
+    className.startsWith(listOf("org", "slf4j").joinToString(".") + ".")
 
 /**
  * Determines whether a given class name belongs to a recognized Apache library.
