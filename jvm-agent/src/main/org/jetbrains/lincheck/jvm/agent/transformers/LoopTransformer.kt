@@ -89,12 +89,15 @@ internal class LoopTransformer(
     private val opcodesReachableFromOutsideLoops: Map<InstructionIndex, Set<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeReachabilityFromOutsideLoops(insnIndexRemapping, loopInfo)
 
+    // Map from loopId to the set of back-edge source blocks that have an await path from the header.
     private val awaitPathBackEdgeSources: Map<LoopId, Set<BasicBlockIndex>> =
         methodInfo.basicControlFlowGraph!!.computeAwaitPathBackEdgeSources(loopInfo)
 
+    // Map from the first loop header non-phony instruction index to the list of loopIds having this header.
     private val loopIdsByHeaderNonPhonyIndex: Map<InstructionIndex, List<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeLoopIdsByHeaderNonPhonyIndex(insnIndexRemapping, loopInfo)
 
+    // Map from loopId to the code location of its header.
     private val codeLocationIdByLoopId = mutableMapOf<LoopId, Int>()
 
     // Map from a non-phony instruction index (the last opcode of a clean back-edge source block)
@@ -105,6 +108,7 @@ internal class LoopTransformer(
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
+        // Compute header code locations, so we can reuse them for both `onLoopIteration` and `onAwaitLoopPath` injections.
         loopIdsByHeaderNonPhonyIndex[nonPhonyIndex]?.let { loopIds ->
             val canonicalId = context.codeLocationsPool.register(createCurrentLoopHeaderCodeLocation(loopIds))
             for (loopId in loopIds) {
@@ -151,6 +155,7 @@ internal class LoopTransformer(
             // STACK: <empty>
         }
 
+        // Inject 'onAwaitLoopPath' before the back edge if this loop has await paths.
         awaitPathInjectionLocations[nonPhonyIndex]?.let { loopIds ->
             for (loopId in loopIds) {
                 val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
