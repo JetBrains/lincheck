@@ -18,7 +18,6 @@ import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.collections.*
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.tree.InvokeDynamicInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
@@ -359,10 +358,8 @@ private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
  * ```
  */
 
-private val ON_SPIN_WAIT_METHOD = runCatching {
-    Thread::class.java.getDeclaredMethod("onSpinWait")
-}.getOrNull()
-private val THREAD_OWNER: String = Type.getInternalName(Thread::class.java)
+private const val ON_SPIN_WAIT_METHOD_NAME = "onSpinWait"
+private const val ON_SPIN_WAIT_METHOD_DESCRIPTOR = "()V"
 
 //TODO: Consider moving this whitelist to `ConditionSafetyChecker`
 private val ATOMIC_SIDE_EFFECT_FREE_GET_METHODS = setOf(
@@ -397,9 +394,9 @@ private fun isReadOpcode(opcode: Int): Boolean = when (opcode) {
 
 private fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
     insn.opcode == Opcodes.INVOKESTATIC &&
-        insn.owner == THREAD_OWNER &&
-        insn.name == ON_SPIN_WAIT_METHOD?.name &&
-        insn.desc == ON_SPIN_WAIT_METHOD.let(Type::getMethodDescriptor)
+        insn.owner == THREAD_TYPE.internalClassName &&
+        insn.name == ON_SPIN_WAIT_METHOD_NAME &&
+        insn.desc == ON_SPIN_WAIT_METHOD_DESCRIPTOR
 
 private fun isSideEffectGetMethod(insn: MethodInsnNode): Boolean =
     "${insn.owner}.${insn.name}" in ATOMIC_SIDE_EFFECT_FREE_GET_METHODS
