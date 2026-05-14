@@ -107,7 +107,7 @@ internal class LoopTransformer(
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
         loopIdsByHeaderNonPhonyIndex[nonPhonyIndex]?.let { loopIds ->
-            val canonicalId = createAndDiscardCodeLocationId()
+            val canonicalId = createAndDiscardCodeLocationId(createCurrentLineCodeLocation())
             for (loopId in loopIds) {
                 codeLocationIdByLoopId.putIfAbsent(loopId, canonicalId)
             }
@@ -136,7 +136,6 @@ internal class LoopTransformer(
             }
 
         }
-//TODO: check when we should use createCurrentLineCodeLocation() instead of codeLocationIdByLoopId.getValue(loopId)
         // Inject `onLoopIteration` at the loop header on every iteration (including the first).
         iterationEntrySites[nonPhonyIndex]?.let { loopId ->
             val isReducible = loopInfo.getLoopInfo(loopId)?.isReducible ?: false
