@@ -106,7 +106,7 @@ internal class LoopTransformer(
         val nonPhonyIndex = currentNonPhonyInsnIndex
 
         loopIdsByHeaderNonPhonyIndex[nonPhonyIndex]?.let { loopIds ->
-            val canonicalId = createAndDiscardCodeLocationId(createCurrentLineCodeLocation())
+            val canonicalId = context.codeLocationsPool.register(createCurrentLoopHeaderCodeLocation(loopIds))
             for (loopId in loopIds) {
                 codeLocationIdByLoopId.putIfAbsent(loopId, canonicalId)
             }

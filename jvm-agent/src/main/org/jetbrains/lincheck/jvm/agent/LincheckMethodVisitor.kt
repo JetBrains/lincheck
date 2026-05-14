@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.descriptors.AccessCodeLocation
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.CodeLocation
 import org.jetbrains.lincheck.descriptors.LineCodeLocation
+import org.jetbrains.lincheck.descriptors.LoopHeaderCodeLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.ideaPluginEnabled
@@ -104,6 +105,9 @@ internal open class LincheckMethodVisitor(
     protected fun createCurrentLineCodeLocation(): CodeLocation =
         LineCodeLocation(getCurrentLineStackTraceElement(), currentActiveLocals)
 
+    protected fun createCurrentLoopHeaderCodeLocation(loopIds: List<Int>): CodeLocation =
+        LoopHeaderCodeLocation(getCurrentLineStackTraceElement(), loopIds, currentActiveLocals)
+
     protected fun createCurrentAccessCodeLocation(accessPath: AccessPath? = null): CodeLocation =
         AccessCodeLocation(getCurrentLineStackTraceElement(), accessPath, currentActiveLocals)
 
@@ -119,10 +123,6 @@ internal open class LincheckMethodVisitor(
     override fun visitLineNumber(line: Int, start: Label) {
         lineNumber = line
         super.visitLineNumber(line, start)
-    }
-
-    protected fun createAndDiscardCodeLocationId(codeLocation: CodeLocation): Int = loadNewCodeLocationId(codeLocation).also {
-        adapter.pop()
     }
 
     protected val currentActiveLocalVariablesInfo get() = methodInfo.locals.activeVariables
