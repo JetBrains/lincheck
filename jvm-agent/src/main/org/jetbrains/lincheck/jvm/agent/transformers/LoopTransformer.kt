@@ -499,9 +499,7 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
     if (headerBlock?.executableRange != null) {
         for (i in headerBlock.executableRange) {
             val insn = instructions.get(i)
-            if (insn is VarInsnNode &&
-                insn.opcode in listOf(Opcodes.ILOAD, Opcodes.LLOAD, Opcodes.FLOAD, Opcodes.DLOAD, Opcodes.ALOAD)
-            ) {
+            if (insn is VarInsnNode && isLoadOpcode(insn.opcode)) {
                 localVariablesInHeader.add(insn.`var`)
             }
         }
@@ -515,10 +513,7 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
             val insn = instructions.get(i)
             when (insn) {
                 is VarInsnNode -> {
-                    if (insn.opcode in listOf(
-                            Opcodes.ISTORE, Opcodes.LSTORE, Opcodes.FSTORE, Opcodes.DSTORE, Opcodes.ASTORE
-                        ) && insn.`var` in localVariablesInHeader
-                    ) return true
+                    if (isStoreOpcode(insn.opcode) && insn.`var` in localVariablesInHeader) return true
                 }
                 is IincInsnNode -> {
                     if (insn.`var` in localVariablesInHeader) return true
