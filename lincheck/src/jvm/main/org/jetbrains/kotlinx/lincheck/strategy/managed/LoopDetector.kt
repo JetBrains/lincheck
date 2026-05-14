@@ -299,7 +299,7 @@ abstract class AbstractLoopDetector : LoopDetector {
         }
     }
 
-    override fun onAwaitLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
+    override fun onAwaitLoopPathIteration(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
         return LoopDetector.Decision.IDLE
     }
 

@@ -52,10 +52,6 @@ class BoundedLoopDetector(
         return computeLoopDecision(loop)
     }
 
-    override fun onAwaitLoopPathIteration(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
-        return LoopDetector.Decision.IDLE
-    }
-
     private fun computeLoopDecision(loop: ActiveLoopInfo): LoopDetector.Decision {
         loop.iterationCount += 1
 
