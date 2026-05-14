@@ -26,6 +26,7 @@ import org.jetbrains.lincheck.util.collections.*
 import java.lang.instrument.Instrumentation
 import java.io.File
 import java.io.StringWriter
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.jar.JarFile
 import java.util.*
 
@@ -196,9 +197,10 @@ object LincheckInstrumentation {
     /**
      * Indicates whether the "bootstrap.jar" (see the "bootstrap" project module)
      * is added to the bootstrap class loader classpath.
-     * See [install] for details.
+     * Flipped atomically by [appendBootstrapJarToClassLoaderSearch];
+     * see [install] and [appendBootstrapJarToClassLoaderSearch] for details.
      */
-    private var isBootstrapJarAddedToClasspath = false
+    private val isBootstrapJarAddedToClasspath = AtomicBoolean(false)
 
     /**
      * Names (canonical) of the classes that were instrumented since the last agent installation.
@@ -262,12 +264,14 @@ object LincheckInstrumentation {
 
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
-        // classes related to the bytecode injections in a separate JAR (see the
-        // "bootstrap" project module), and add it to the bootstrap classpath.
-        if (!isBootstrapJarAddedToClasspath) { // don't do this twice.
-            appendBootstrapJarToClassLoaderSearch()
-            isBootstrapJarAddedToClasspath = true
-        }
+        // classes related to the bytecode injections in a separate JAR
+        // (see the "bootstrap" project module)
+        // and add it to the bootstrap classpath.
+        //
+        // [appendBootstrapJarToClassLoaderSearch] is idempotent, so callers that have
+        // already appended the jar earlier themselves won't trigger a duplicate appending here.
+        appendBootstrapJarToClassLoaderSearch()
+
         // Add the Lincheck bytecode transformer to this JVM instance,
         // allowing already loaded classes re-transformation.
         instrumentation.addTransformer(LincheckClassFileTransformer, true)
@@ -386,14 +390,32 @@ object LincheckInstrumentation {
         }
     }
 
-    private fun appendBootstrapJarToClassLoaderSearch() {
-        // The "bootstrap" module is packed to "bootstrap.jar",
-        // which is in this JAR resources. We need to append this
-        // "bootstrap.jar" to the bootstrap class loader classpath.
-        // However, it is impossible to instantiate a `File` instance
-        // that leads to a file inside a JAR archive. Therefore,
-        // we copy "bootstrap.jar" to a temporary file, adding this
-        // temporary file to the bootstrap class loader classpath later on.
+    /**
+     * Appends the embedded `bootstrap.jar` (see the `bootstrap` project module)
+     * to the bootstrap classloader's search path, making `sun.nio.ch.lincheck.*` classes resolvable
+     * from every classloader in the JVM.
+     *
+     * **Idempotent**: subsequent calls after the first successful append are no-ops.
+     * The flag is flipped atomically, so concurrent callers also do the appending exactly once.
+     *
+     * **Precondition**: the agent must be attached first since this
+     * method calls `instrumentation.appendToBootstrapClassLoaderSearch`
+     * (i.e., one of [attachJavaAgentStatically] / [attachJavaAgentDynamically] must be called first).
+     *
+     * **Why callable from outside [install]**:
+     * some code paths may reference bootstrap classes *before* [install] runs.
+     * Those callers need to invoke this method explicitly right after attach.
+     * [install] still calls it as a safety net to guarantee correct behavior for clients that
+     * don not call [appendBootstrapJarToClassLoaderSearch] themself in advance.
+     */
+    fun appendBootstrapJarToClassLoaderSearch() {
+        // Atomic guard: the first thread to flip false -> true does the append; others bail.
+        if (!isBootstrapJarAddedToClasspath.compareAndSet(false, true)) return
+
+        // The "bootstrap" module is packed to "bootstrap.jar", which is in this JAR's
+        // resources. We can't instantiate a `File` for a path inside a JAR, so we copy
+        // "bootstrap.jar" to a temporary file and append that temp file to the bootstrap
+        // class loader classpath.
         val bootstrapJarAsStream = this.javaClass.getResourceAsStream("/bootstrap.jar")
         val tempBootstrapJarFile = File.createTempFile("lincheck-bootstrap", ".jar")
         bootstrapJarAsStream.use { input ->
