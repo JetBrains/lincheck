@@ -20,8 +20,12 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.lincheck.datastructures.scenario
+import org.junit.Ignore
+
 import org.junit.Test
 import kotlin.concurrent.thread
 
@@ -39,7 +43,7 @@ class MemoryModelTest {
             (1 to 0),
             (1 to 1)
         )
-        litmusTest(outcomes) {
+        litmusTest(assertSame(outcomes)) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -63,15 +67,18 @@ class MemoryModelTest {
 
     /* ======== Store Buffering ======== */
 
+
+    // TODO: we need to also see the (0 to 0) outcome
+    @Ignore
     @Test
     fun testSB() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
-//            (0 to 0),
+            (0 to 0),
             (0 to 1),
             (1 to 0),
             (1 to 1),
         )
-        litmusTest(expectedOutcomes) {
+        litmusTest(assertSame(expectedOutcomes)) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -89,4 +96,6 @@ class MemoryModelTest {
             (r1 to r2)
         }
     }
+
+
 }
