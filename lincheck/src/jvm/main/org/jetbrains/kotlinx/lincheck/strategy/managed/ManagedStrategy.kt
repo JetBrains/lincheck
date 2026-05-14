@@ -2108,7 +2108,7 @@ internal abstract class ManagedStrategy(
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
             val (started, decision) = loopDetector.onLoopIteration(threadId, codeLocation, loopId)
             collectLoopTrace(started, threadId, codeLocation, loopId)
-            getLoopDecision(decision, threadId, loopId, codeLocation)
+            processLoopDetectorDecision(decision, threadId, loopId, codeLocation)
         }
     }
 
@@ -2144,7 +2144,7 @@ internal abstract class ManagedStrategy(
 
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
             val decision = loopDetector.onAwaitLoopPathIteration(threadId, codeLocation, loopId)
-            getLoopDecision(decision, threadId, loopId, codeLocation)
+            processLoopDetectorDecision(decision, threadId, loopId, codeLocation)
         }
     }
 
@@ -2215,7 +2215,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    private fun getLoopDecision(
+    private fun processLoopDetectorDecision(
         decision: LoopDetector.Decision,
         threadId: ThreadId,
         loopId: Int,
