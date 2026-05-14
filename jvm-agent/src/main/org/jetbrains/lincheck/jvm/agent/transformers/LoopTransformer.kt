@@ -505,24 +505,6 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
         }
     }
 
-    fun headerGuard(blockIndex: BasicBlockIndex): Boolean {
-        if (localVariablesInHeader.isEmpty()) return false
-        val block = basicBlocks.getOrNull(blockIndex) ?: return false
-        val range = block.executableRange ?: return false
-        for (i in range) {
-            val insn = instructions.get(i)
-            when (insn) {
-                is VarInsnNode -> {
-                    if (isStoreOpcode(insn.opcode) && insn.`var` in localVariablesInHeader) return true
-                }
-                is IincInsnNode -> {
-                    if (insn.`var` in localVariablesInHeader) return true
-                }
-            }
-        }
-        return false
-    }
-
     // BFS visited state bitmask
     // VISITED_NO_READ = visited without a read on the path,
     // VISITED_WITH_READ = visited with at least one read on the path.
@@ -557,7 +539,7 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
             val targetClassification = blockClassifications[target]
             // Skip side effects
             if (targetClassification.hasSideEffects) continue
-            if (headerGuard(target)) continue
+            if (headerGuard(target, localVariablesInHeader)) continue
 
             val newHasRead = pathHasRead || targetClassification.hasSharedRead
             val bfsBit = if (newHasRead) VISITED_WITH_READ else VISITED_NO_READ
@@ -571,4 +553,25 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
     }
 
     return cleanBackEdges
+}
+
+private fun BasicBlockControlFlowGraph.headerGuard(
+    blockIndex: BasicBlockIndex,
+    localVariables: Set<Int>,
+): Boolean {
+    if (localVariables.isEmpty()) return false
+    val block = basicBlocks.getOrNull(blockIndex) ?: return false
+    val range = block.executableRange ?: return false
+    for (i in range) {
+        val insn = instructions.get(i)
+        when (insn) {
+            is VarInsnNode -> {
+                if (isStoreOpcode(insn.opcode) && insn.`var` in localVariables) return true
+            }
+            is IincInsnNode -> {
+                if (insn.`var` in localVariables) return true
+            }
+        }
+    }
+    return false
 }
