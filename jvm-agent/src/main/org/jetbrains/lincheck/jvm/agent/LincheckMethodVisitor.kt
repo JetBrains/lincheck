@@ -121,10 +121,7 @@ internal open class LincheckMethodVisitor(
         super.visitLineNumber(line, start)
     }
 
-    protected fun createAndDiscardCodeLocationId(
-        accessPath: AccessPath? = null,
-        argumentNames: List<AccessPath?>? = null,
-    ): Int = loadNewCodeLocationId(accessPath, argumentNames).also {
+    protected fun createAndDiscardCodeLocationId(codeLocation: CodeLocation): Int = loadNewCodeLocationId(codeLocation).also {
         adapter.pop()
     }
 
