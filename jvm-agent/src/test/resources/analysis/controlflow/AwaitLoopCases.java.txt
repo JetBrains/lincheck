@@ -8,8 +8,8 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-// Test cases for await-loop detection in control-flow graph analysis.
-// An await loop is a loop that:
+// Test cases for await-path detection in control-flow graph analysis.
+// An await path is a path from a loop header to a back-edge source that:
 //   - contains at least one shared read (field/array read)
 //   - contains NO shared writes, monitor operations, or side-effecting calls
 //     (except Thread.onSpinWait)
@@ -21,24 +21,24 @@ public class AwaitLoopCases {
     volatile int counter;
     int[] array = new int[10];
 
-    // --- Case 1: Pure await loop (only field reads) ---
-    // Should be detected as an await loop.
+    // --- Case 1: Pure await path (only field reads) ---
+    // Should be detected as an await path.
     public void awaitFieldRead() {
         while (!flag) {
             // busy-wait: only reads a volatile field
         }
     }
 
-    // --- Case 2: Non-await loop with a field write ---
-    // Should NOT be detected as an await loop.
+    // --- Case 2: No await path because of a field write ---
+    // Should NOT be detected as an await path.
     public void nonAwaitFieldWrite() {
         while (!flag) {
             counter = 42;
         }
     }
 
-    // --- Case 3: Non-await loop with a method call ---
-    // Should NOT be detected as an await loop (method call is a side-effect).
+    // --- Case 3: No await path because of a method call ---
+    // Should NOT be detected as an await path (method call is a side-effect).
     public void nonAwaitWithMethodCall() {
         while (!flag) {
             doSomething();
@@ -46,21 +46,21 @@ public class AwaitLoopCases {
     }
 
     private void doSomething() {
-        // some side-effecting call
+        counter++;
     }
 
-    // --- Case 4: Non-await loop with monitor enter ---
-    // Should NOT be detected as an await loop.
+    // --- Case 4: No await path because of monitor enter ---
+    // Should NOT be detected as an await path.
     public void nonAwaitWithMonitor() {
         while (!flag) {
             synchronized (this) {
-                // monitor enter/exit
+                counter++;
             }
         }
     }
 
-    // --- Case 5: Await loop with array read only ---
-    // Should be detected as an await loop.
+    // --- Case 5: Array read with loop-header local update ---
+    // Should NOT be detected as an await path: the path writes to `sum`, which is used in the loop header.
     public int awaitArrayRead() {
         int sum = 0;
         while (sum < 100) {
@@ -69,8 +69,19 @@ public class AwaitLoopCases {
         return sum;
     }
 
-    // --- Case 6: Non-await loop with array write ---
-    // Should NOT be detected as an await loop.
+    // --- Case 5b: Array read from a different element on each iteration ---
+    // Should NOT be detected as an await path: the path writes to `sum`, which is used in the loop header.
+    public int awaitArrayReadChangingIndex() {
+        int sum = 0;
+        int i = 0;
+        while (sum < 100) {
+            sum = array[i++];
+        }
+        return sum;
+    }
+
+    // --- Case 6: No await path because of array write ---
+    // Should NOT be detected as an await path.
     public void nonAwaitArrayWrite() {
         while (!flag) {
             array[0] = 1;
@@ -78,24 +89,25 @@ public class AwaitLoopCases {
     }
 
     // --- Case 7: No loops at all (straight-line code) ---
-    // No loops, so no await loops either.
+    // No loops, so no await paths either.
     public int noLoop() {
         return counter + 1;
     }
 
     // --- Case 8: Multiple loops, one await and one not ---
-    // First loop is await (only reads), second is not (has a write).
+    // First loop has an await path (only reads), second does not (has a write).
     public void mixedLoops() {
         while (!flag) {
             // await: only reads
+            int x = counter;
         }
         while (!flag) {
             counter = 0; // write => not await
         }
     }
 
-    // --- Case 9: Await loop with both field and array reads ---
-    // Should be detected as an await loop.
+    // --- Case 9: Await path with both field and array reads ---
+    // Should be detected as an await path.
     public void awaitMixedReads() {
         while (!flag) {
             int x = counter;
@@ -103,7 +115,7 @@ public class AwaitLoopCases {
         }
     }
 
-    // --- Case 10: Non-await loop — reads AND writes (counter++) ---
+    // --- Case 10: No await path because of reads and writes (counter++) ---
     // This loop reads and writes, so it's not await.
     public void nonAwaitReadAndWrite() {
         while (counter < 10) {
@@ -117,8 +129,8 @@ public class AwaitLoopCases {
     // The new algorithm should detect the read-only back-edge path.
 
     // --- Case 11: Loop with CAS on one path, read-only spin on another ---
-    // Simulates: check element, if null → spin (return@loop), else CAS + return
-    // Should be detected as an await loop (the null-check spin path is read-only).
+    // Simulates: check element, if null -> spin (return@loop), else CAS + return
+    // Should be detected as an await path (the null-check spin path is read-only).
     volatile int head;
     volatile int tail;
     volatile int state;
@@ -140,8 +152,8 @@ public class AwaitLoopCases {
     }
 
     // --- Case 12: Loop with write on one branch, read-only spin on another ---
-    // Simulates: read flag, if condition A → spin, if condition B → write + exit
-    // Should be detected as an await loop.
+    // Simulates: read flag, if condition A -> spin, if condition B -> write + exit
+    // Should be detected as an await path.
     public void awaitLoopWithWriteOnAlternatePath() {
         while (true) {
             int s = state;
@@ -157,7 +169,7 @@ public class AwaitLoopCases {
 
     // --- Case 13: Loop where ALL paths have side effects ---
     // No read-only spin path exists.
-    // Should NOT be detected as an await loop.
+    // Should NOT be detected as an await path.
     public void nonAwaitAllPathsDirty() {
         while (true) {
             int s = state;
@@ -172,7 +184,7 @@ public class AwaitLoopCases {
 
     // --- Case 14: Loop with method call on spin path ---
     // The spin path has a method call (side effect).
-    // Should NOT be detected as an await loop.
+    // Should NOT be detected as an await path.
     public void nonAwaitCallOnSpinPath() {
         while (true) {
             int s = state;
@@ -186,7 +198,7 @@ public class AwaitLoopCases {
 
     // --- Case 15: Loop with only reads and Thread.onSpinWait on spin path ---
     // Thread.onSpinWait is explicitly allowed.
-    // Should be detected as an await loop.
+    // Should be detected as an await path.
     public void awaitLoopWithOnSpinWait() {
         while (true) {
             int s = state;
@@ -199,7 +211,7 @@ public class AwaitLoopCases {
 
     // --- Case 16: Multi-path loop where one spin path has reads, another spin path has writes ---
     // Two back-edge paths: one is clean (read-only), one is dirty (has writes).
-    // Should be detected as await loop because at least one clean path exists.
+    // Should be detected as an await path because at least one clean path exists.
     public void awaitLoopOneCleanOneNot() {
         while (true) {
             int s = state;
@@ -212,6 +224,67 @@ public class AwaitLoopCases {
                 continue;
             }
             return;
+        }
+    }
+
+    // === Nested loop test cases ===
+
+    // --- Case 17: Nested loops with await paths in both loops ---
+    public void nestedAwaitPaths() {
+        while (!flag) {
+            while (state == 0) {
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Case 18: Nested loop with an inner-loop break ---
+    public void nestedLoopWithInnerBreak() {
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 1) {
+                    break;
+                }
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Case 19: Nested loop with an inner-loop continue ---
+    public void nestedLoopWithInnerContinue() {
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 0) {
+                    continue;
+                }
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Case 20: Nested loop with a continue from the inner loop to the outer loop ---
+    public void nestedLoopWithContinueOuter() {
+        outer:
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 0) {
+                    continue outer;
+                }
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Case 21: Nested loop with a break from the inner loop out of the outer loop ---
+    public void nestedLoopWithBreakOuter() {
+        outer:
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 0) {
+                    break outer;
+                }
+                Thread.onSpinWait();
+            }
         }
     }
 }

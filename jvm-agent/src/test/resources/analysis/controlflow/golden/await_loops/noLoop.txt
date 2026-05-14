@@ -2,5 +2,5 @@
 NO LOOPS
 
 
-=== Await Loop Detection ===
-No await loops detected.
+=== Await Path Detection ===
+No await paths detected.

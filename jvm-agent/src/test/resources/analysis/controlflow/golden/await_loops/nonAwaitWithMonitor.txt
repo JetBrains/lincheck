@@ -12,5 +12,5 @@ LOOP 1
     B2, B4
 
 
-=== Await Loop Detection ===
-No await loops detected.
+=== Await Path Detection ===
+No await paths detected.
