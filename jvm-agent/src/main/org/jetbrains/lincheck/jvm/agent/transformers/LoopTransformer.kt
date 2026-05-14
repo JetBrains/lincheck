@@ -364,7 +364,8 @@ private val ON_SPIN_WAIT_METHOD = runCatching {
 }.getOrNull()
 private val THREAD_OWNER: String = Type.getInternalName(Thread::class.java)
 
-private val NO_SIDE_EFFECT_GET_METHODS = setOf(
+//TODO: Consider moving this whitelist to `ConditionSafetyChecker`
+private val ATOMIC_SIDE_EFFECT_FREE_GET_METHODS = setOf(
     "java/util/concurrent/atomic/AtomicBoolean.get",
     "java/util/concurrent/atomic/AtomicInteger.get",
     "java/util/concurrent/atomic/AtomicLong.get",
@@ -374,6 +375,39 @@ private val NO_SIDE_EFFECT_GET_METHODS = setOf(
     "java/lang/invoke/VarHandle.getAcquire",
     "java/lang/invoke/VarHandle.getOpaque",
 )
+
+private fun isWriteOpcode(opcode: Int): Boolean = when (opcode) {
+    Opcodes.PUTFIELD, Opcodes.PUTSTATIC,
+    Opcodes.IASTORE, Opcodes.LASTORE, Opcodes.FASTORE, Opcodes.DASTORE,
+    Opcodes.AASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE -> true
+    else -> false
+}
+
+private fun isMonitorOpcode(opcode: Int): Boolean = when (opcode) {
+    Opcodes.MONITORENTER, Opcodes.MONITOREXIT -> true
+    else -> false
+}
+
+private fun isReadOpcode(opcode: Int): Boolean = when (opcode) {
+    Opcodes.GETFIELD, Opcodes.GETSTATIC,
+    Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.FALOAD, Opcodes.DALOAD,
+    Opcodes.AALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD -> true
+    else -> false
+}
+
+private fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
+    insn.opcode == Opcodes.INVOKESTATIC &&
+        insn.owner == THREAD_OWNER &&
+        insn.name == ON_SPIN_WAIT_METHOD?.name &&
+        insn.desc == ON_SPIN_WAIT_METHOD.let(Type::getMethodDescriptor)
+
+private fun isSideEffectGetMethod(insn: MethodInsnNode): Boolean =
+    "${insn.owner}.${insn.name}" in ATOMIC_SIDE_EFFECT_FREE_GET_METHODS
+
+private fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
+    isFunctionCallAwait(insn)
+        || isSideEffectGetMethod(insn)
+        || ConditionSafetyChecker.isWhitelistedMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
 
 /**
  * Classification object result used for await loop analysis
@@ -393,36 +427,6 @@ internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
 ): Map<LoopId, Set<BasicBlockIndex>> {
     if (!loopInfo.hasLoops()) return emptyMap()
 
-    // helpers for classification
-    fun isSharedWriteOpcode(opcode: Int): Boolean = when (opcode) {
-        Opcodes.PUTFIELD, Opcodes.PUTSTATIC,
-        Opcodes.IASTORE, Opcodes.LASTORE, Opcodes.FASTORE, Opcodes.DASTORE,
-        Opcodes.AASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE,
-        Opcodes.MONITORENTER, Opcodes.MONITOREXIT -> true
-        else -> false
-    }
-
-    fun isSharedReadOpcode(opcode: Int): Boolean = when (opcode) {
-        Opcodes.GETFIELD, Opcodes.GETSTATIC,
-        Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.FALOAD, Opcodes.DALOAD,
-        Opcodes.AALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD -> true
-        else -> false
-    }
-
-    fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
-        insn.opcode == Opcodes.INVOKESTATIC &&
-                insn.owner == THREAD_OWNER &&
-                insn.name == ON_SPIN_WAIT_METHOD?.name &&
-                insn.desc == ON_SPIN_WAIT_METHOD.let(Type::getMethodDescriptor)
-
-    fun isSideEffectGetMethod(insn: MethodInsnNode): Boolean =
-        "${insn.owner}.${insn.name}" in NO_SIDE_EFFECT_GET_METHODS
-
-    fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
-        isFunctionCallAwait(insn)
-            || isSideEffectGetMethod(insn)
-            || ConditionSafetyChecker.isWhitelistedMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
-
     // classify every basic block in the method
     val blockClassifications = Array(basicBlocks.size) { blockIndex ->
         val execRange = basicBlocks.getOrNull(blockIndex)?.executableRange
@@ -435,8 +439,8 @@ internal fun BasicBlockControlFlowGraph.computeAwaitLoops(
                 val insn = instructions.get(i)
                 val opcode = insn.opcode
                 if (opcode < 0) continue
-                if (isSharedReadOpcode(opcode)) hasSharedRead = true
-                if (isSharedWriteOpcode(opcode)) {
+                if (isReadOpcode(opcode)) hasSharedRead = true
+                if (isWriteOpcode(opcode) || isMonitorOpcode(opcode)) {
                     hasSideEffects = true
                     break
                 }
