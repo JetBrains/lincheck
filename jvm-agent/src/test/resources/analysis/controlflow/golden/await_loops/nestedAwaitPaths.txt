@@ -1,0 +1,28 @@
+=== Loop Information ===
+LOOP 1
+  HEADER: B0
+  BODY: B0, B1, B2
+  BACK EDGES:
+    B1 -> B0 : JUMP(opcode=IFNE)
+  NORMAL EXITS:
+    B0 -> B3 : JUMP(opcode=IFNE)
+  EXCEPTION EXIT HANDLERS:
+    NONE
+  EXCLUSIVE EXITS:
+    B3
+LOOP 2
+  HEADER: B1
+  BODY: B1, B2
+  BACK EDGES:
+    B2 -> B1 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B1 -> B0 : JUMP(opcode=IFNE)
+  EXCEPTION EXIT HANDLERS:
+    NONE
+  EXCLUSIVE EXITS:
+    B0
+
+
+=== Await Path Detection ===
+Await loop 1: header=B0, body=[B0, B1, B2], cleanBackEdgeSources=[B1]
+Await loop 2: header=B1, body=[B1, B2], cleanBackEdgeSources=[B2]

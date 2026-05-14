@@ -268,6 +268,7 @@ class TracePointCloner(
         if (srcId < codeLocationMap.size && codeLocationMap[srcId] != UNKNOWN_CODE_LOCATION_ID) return codeLocationMap[srcId]
         val dstLoc = when (val srcLoc = tracePoint.context.codeLocationsPool[srcId]) {
             is LineCodeLocation -> LineCodeLocation(srcLoc.stackTraceElement, srcLoc.activeLocals)
+            is LoopHeaderCodeLocation -> LoopHeaderCodeLocation(srcLoc.stackTraceElement, srcLoc.loopIds, srcLoc.activeLocals)
             is AccessCodeLocation -> AccessCodeLocation(srcLoc.stackTraceElement, cloneAccessPath(srcLoc.accessPath), srcLoc.activeLocals)
             is MethodCallCodeLocation -> MethodCallCodeLocation(srcLoc.stackTraceElement, cloneAccessPath(srcLoc.accessPath), srcLoc.argumentNames?.map { cloneAccessPath(it) }, srcLoc.activeLocals)
         }
