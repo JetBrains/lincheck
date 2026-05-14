@@ -291,24 +291,12 @@ internal fun Appendable.appendExecutionScenarioWithResults(
             appendColumn(0, initPart)
             appendSeparatorLine()
         }
-        if (executionResult.afterInitStateRepresentation != null) {
-            appendWrappedLine("STATE: ${executionResult.afterInitStateRepresentation}")
-            appendSeparatorLine()
-        }
         if (parallelPart.isNotEmpty()) {
             appendColumns(parallelPart)
             appendSeparatorLine()
         }
-        if (executionResult.afterParallelStateRepresentation != null) {
-            appendWrappedLine("STATE: ${executionResult.afterParallelStateRepresentation}")
-            appendSeparatorLine()
-        }
         if (postPart.isNotEmpty()) {
             appendColumn(0, postPart)
-            appendSeparatorLine()
-        }
-        if (executionResult.afterPostStateRepresentation != null && postPart.isNotEmpty()) {
-            appendWrappedLine("STATE: ${executionResult.afterPostStateRepresentation}")
             appendSeparatorLine()
         }
         if (validationFunctionName != null) {

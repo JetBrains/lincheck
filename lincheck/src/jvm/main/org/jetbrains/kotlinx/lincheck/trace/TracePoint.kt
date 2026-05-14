@@ -130,19 +130,6 @@ internal abstract class CodeLocationTracePoint(
     }
 }
 
-internal class StateRepresentationTracePoint(
-    context: TraceContext,
-    eventId: Int,
-    iThread: Int,
-    actorId: Int,
-    val stateRepresentation: String
-) : TracePoint(context, eventId, iThread, actorId) {
-    override fun toString(withLocation: Boolean, withValues: Boolean): String = "STATE: $stateRepresentation"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        StateRepresentationTracePoint(context, eventId, iThread, actorId, stateRepresentation)
-    }
-}
-
 /**
  * This TracePoint is added only at the end of an execution when obstruction freedom is violated
  */

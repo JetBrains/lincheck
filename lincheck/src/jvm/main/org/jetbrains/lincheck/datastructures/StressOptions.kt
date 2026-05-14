@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.datastructures
 
 import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
@@ -21,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.STRESS
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import java.lang.reflect.Method
 
 /**
  * Options for the stress strategy.
@@ -39,7 +37,7 @@ open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
             verifierClass = verifier,
             invocationsPerIteration = invocationsPerIteration,
             minimizeFailedScenario = minimizeFailedScenario,
-            sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
+            sequentialSpecification = sequentialSpecification ?: testClass,
             timeoutMs = timeoutMs,
             customScenarios = customScenarios
         )
@@ -85,13 +83,11 @@ class StressCTestConfiguration(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunction: Actor?,
-        stateRepresentationMethod: Method?
     ): Strategy {
         val runner = ExecutionScenarioRunner(
             scenario = scenario,
             testClass = testClass,
             validationFunction = validationFunction,
-            stateRepresentationFunction = stateRepresentationMethod,
             timeoutMs = timeoutMs,
             useClocks = UseClocks.RANDOM
         )

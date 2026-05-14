@@ -39,7 +39,6 @@ internal class ExecutionScenarioRunner(
     val scenario: ExecutionScenario,
     val testClass: Class<*>,
     val validationFunction: Actor?,
-    val stateRepresentationFunction: Method?,
     private val timeoutMs: Long, // for deadlock or livelock detection
     private val useClocks: UseClocks // specifies whether `HBClock`-s should always be used or with some probability
 ) : AbstractActiveThreadPoolRunner() {
@@ -312,7 +311,6 @@ internal class ExecutionScenarioRunner(
                 timeout -= executor.submitAndAwait(initPartTask, timeout)
             }
             onThreadSwitchesOrActorFinishes()
-            val afterInitStateRepresentation = constructStateRepresentation()
             // Execute the parallel part.
             beforePart(PARALLEL)
             val parallelPartTasks = threadMapOf(*parallelPartExecutions
@@ -322,7 +320,6 @@ internal class ExecutionScenarioRunner(
             timeout -= executor.submitAndAwait(parallelPartTasks, timeout)
             // Wait for all user threads to finish at the end of the parallel part
             timeout -= strategy.awaitUserThreads(timeout)
-            val afterParallelStateRepresentation: String? = constructStateRepresentation()
             onThreadSwitchesOrActorFinishes()
             // Execute the post part.
             postPartExecution?.let {
@@ -330,7 +327,6 @@ internal class ExecutionScenarioRunner(
                 val postPartTask = threadMapOf<Runnable>(POST_THREAD_ID to it)
                 timeout -= executor.submitAndAwait(postPartTask, timeout)
             }
-            val afterPostStateRepresentation = constructStateRepresentation()
             // Execute validation functions
             validationPartExecution?.let { validationPart ->
                 beforePart(VALIDATION)
@@ -343,7 +339,7 @@ internal class ExecutionScenarioRunner(
             }
             // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
-            return CompletedInvocationResult(collectExecutionResults(afterInitStateRepresentation, afterParallelStateRepresentation, afterPostStateRepresentation))
+            return CompletedInvocationResult(collectExecutionResults())
         } catch (_: TimeoutException) {
             return RunnerTimeoutInvocationResult()
         } catch (e: ExecutionException) {
@@ -361,18 +357,7 @@ internal class ExecutionScenarioRunner(
         }
     }
 
-    /**
-     * This method is called when we have some execution result other than [CompletedInvocationResult].
-     */
-    fun collectExecutionResults(): ExecutionResult {
-        return collectExecutionResults(null, null, null)
-    }
-
-    private fun collectExecutionResults(
-        afterInitStateRepresentation: String?,
-        afterParallelStateRepresentation: String?,
-        afterPostStateRepresentation: String?
-    ) = ExecutionResult(
+    fun collectExecutionResults() = ExecutionResult(
         initResults = initialPartExecution?.results?.toList().orEmpty(),
         parallelResultsWithClock = parallelPartExecutions.map { execution ->
             execution.results.zip(execution.clocks).map {
@@ -380,9 +365,6 @@ internal class ExecutionScenarioRunner(
             }
         },
         postResults = postPartExecution?.results?.toList().orEmpty(),
-        afterInitStateRepresentation = afterInitStateRepresentation,
-        afterParallelStateRepresentation = afterParallelStateRepresentation,
-        afterPostStateRepresentation = afterPostStateRepresentation
     )
 
     private fun RunnerTimeoutInvocationResult(): RunnerTimeoutInvocationResult {
@@ -592,14 +574,6 @@ internal class ExecutionScenarioRunner(
             throw throwable // throw further
         }
 
-    }
-
-    fun constructStateRepresentation(): String? {
-        if (stateRepresentationFunction == null) return null
-        // enter an ignored section, because `Runner will call transformed state representation method
-        return runInsideIgnoredSection {
-            stateRepresentationFunction.invoke(testInstance) as String?
-        }
     }
 
     fun getActorResult(iThread: Int, actorId: Int): LincheckResult? {

@@ -32,10 +32,10 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
 
     private val testConfigurations: List<CTestConfiguration> =
-        options?.let { listOf(it.createTestConfigurations(testClass)) } ?: createFromTestClassAnnotations(testClass)
+        options?.let { listOf(it.createTestConfigurations(testClass)) } ?: emptyList()
 
     private val reporter: Reporter = run {
-        val logLevel = options?.logLevel ?: getLoggingLevel(testClass) ?: DEFAULT_LOG_LEVEL
+        val logLevel = options?.logLevel ?: DEFAULT_LOG_LEVEL
         Reporter(logLevel)
     }
 
@@ -155,7 +155,6 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
             testClass = testClass,
             scenario = scenario,
             validationFunction = testStructure.validationFunction,
-            stateRepresentationMethod = testStructure.stateRepresentation,
         )
 
     private fun CTestConfiguration.createExecutionGenerator(randomProvider: RandomProvider): ExecutionGenerator {
@@ -191,11 +190,6 @@ constructor(private val testClass: Class<*>, options: Options<*, *>?) {
         fun check(testClass: Class<*>, options: Options<*, *>? = null) {
             @Suppress("DEPRECATION")
             LinChecker(testClass, options).check()
-        }
-
-        private fun getLoggingLevel(testClass: Class<*>): LoggingLevel? {
-            @Suppress("DEPRECATION")
-            return testClass.getAnnotation(org.jetbrains.kotlinx.lincheck.annotations.LogLevel::class.java)?.value
         }
 
         private const val VERIFIER_REFRESH_CYCLE = 100

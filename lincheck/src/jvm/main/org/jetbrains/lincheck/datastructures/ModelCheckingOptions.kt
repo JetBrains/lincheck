@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.datastructures
 
 import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.chooseSequentialSpecification
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
@@ -23,7 +22,6 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import java.lang.reflect.Method
 
 /**
  * Options for the model checking strategy.
@@ -54,7 +52,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             invocationsPerIteration = invocationsPerIteration,
             guarantees = guarantees,
             minimizeFailedScenario = minimizeFailedScenario,
-            sequentialSpecification = chooseSequentialSpecification(sequentialSpecification, testClass),
+            sequentialSpecification = sequentialSpecification ?: testClass,
             timeoutMs = timeoutMs,
             customScenarios = customScenarios,
             stdLibAnalysisEnabled = stdLibAnalysisEnabled,
@@ -118,13 +116,11 @@ class ModelCheckingCTestConfiguration(
         testClass: Class<*>,
         scenario: ExecutionScenario,
         validationFunction: Actor?,
-        stateRepresentationMethod: Method?,
     ): Strategy {
         val runner = ExecutionScenarioRunner(
             scenario = scenario,
             testClass = testClass,
             validationFunction = validationFunction,
-            stateRepresentationFunction = stateRepresentationMethod,
             timeoutMs = getTimeOutMs(inIdeaPluginReplayMode, timeoutMs),
             useClocks = UseClocks.ALWAYS
         )
