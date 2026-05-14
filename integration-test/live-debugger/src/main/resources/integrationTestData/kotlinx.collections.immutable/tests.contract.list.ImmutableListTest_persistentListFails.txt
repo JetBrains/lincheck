@@ -17,13 +17,7 @@ Live breakpoint [00000000-0000-0000-0001-000000000010] at PersistentVector.kt:26
 # Thread 1 (Test worker)
 Live breakpoint [00000000-0000-0000-0001-000000000013] at PersistentVector.kt:268, stacktrace: [PersistentVector.builder, PersistentVector.removeAll, AbstractPersistentList.removeAll ... (44 more)]
 # Thread 1 (Test worker)
-Live breakpoint [00000000-0000-0000-0001-000000000010] at PersistentVector.kt:264, stacktrace: [PersistentVector.removeAll, AbstractPersistentList.removeAll, ImmutableListTest.persistentListFails ... (43 more)]
-# Thread 1 (Test worker)
 Live breakpoint [00000000-0000-0000-0001-00000000001a] at PersistentVectorBuilder.kt:690, stacktrace: [PersistentVectorBuilder.removeAllWithPredicate, PersistentVector.removeAll, AbstractPersistentList.removeAll ... (44 more)]
-# Thread 1 (Test worker)
-Live breakpoint [00000000-0000-0000-0001-000000000010] at PersistentVector.kt:264, stacktrace: [PersistentVector.removeAll, AbstractPersistentList.removeAll, ImmutableListTest.persistentListFails ... (43 more)]
-# Thread 1 (Test worker)
-Live breakpoint [00000000-0000-0000-0001-000000000010] at PersistentVector.kt:264, stacktrace: [PersistentVector.removeAll, AbstractPersistentList.removeAll, ImmutableListTest.persistentListFails ... (43 more)]
 # Thread 1 (Test worker)
 Live breakpoint [00000000-0000-0000-0001-000000000014] at PersistentVectorBuilder.kt:44, stacktrace: [PersistentVectorBuilder.build, PersistentVector.removeAll, AbstractPersistentList.removeAll ... (44 more)]
 # Thread 1 (Test worker)

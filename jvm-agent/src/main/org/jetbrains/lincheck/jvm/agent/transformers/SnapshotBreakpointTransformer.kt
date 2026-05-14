@@ -43,23 +43,49 @@ internal class SnapshotBreakpointTransformer(
 
     private val traceIdCapturers = TraceIdCapturerRegistry(config, classLoader)
 
-    // Track which lines have been instrumented in the current basic block.
-    // Reset when we see a new label (which starts a new block).
-    // This avoids duplicate breakpoint hits for multi-line expressions like `foo(y, \n bar())`
-    // where the same line number appears multiple times within a single block,
-    // while still allowing hits in loops (where each iteration is a separate block entry).
-    private val instrumentedLinesInCurrentBlock = mutableSetOf<Int>()
+    /**
+     * Source lines that have already emitted an injection hook in the current basic block.
+     *
+     * Powers the basic-block same-line dedup logic:
+     * when `javac`/`kotlinc` emit the same `LINENUMBER N` directive
+     * at multiple bytecode offsets for one logical statement
+     * (chained calls broken across lines, ternaries, multi-operand expressions on one source line),
+     * only the first of those directives within a basic block emits a hook.
+     *
+     * The set is cleared whenever a label that is a basic-block entry
+     * (jump / switch / exception-handler target) is visited,
+     * so each basic block starts fresh —
+     * loop back-edges, `try/finally` exception handlers,
+     * and mutually-exclusive branches with the same trailing source line each
+     * fire their own hook, matching JDI's "a line may have more than one executable location" semantics:
+     * https://bugs.eclipse.org/bugs/show_bug.cgi?id=88626
+     *
+     * No control-flow graph is needed: we only rely on which labels are referenced as
+     * jump / catch targets, collected lazily by `LabelCollectorMethodVisitor` during class reading.
+     */
+    private val linesEmittedInBlock: MutableSet<Int> = HashSet()
 
     override fun visitLabel(label: Label) {
         super.visitLabel(label)
-        // New label = new basic block, reset the tracking
-        instrumentedLinesInCurrentBlock.clear()
+        // Reset the same-line dedup state whenever we cross a jump / switch / catch
+        // target — those start a new basic block on a non-fall-through edge.
+        // Labels referenced only as `LINENUMBER` / `LOCALVARIABLE` anchors must NOT reset,
+        // otherwise the chained-call dedup breaks
+        // (the second `LINENUMBER N` directive separated from the first only
+        // by a `LINENUMBER M` anchor would no longer collapse).
+        // Fall-through after a conditional branch is intentionally treated as the same block.
+        if (methodInfo.labels.isJumpOrCatchTarget(label)) {
+            linesEmittedInBlock.clear()
+        }
     }
 
     override fun visitLineNumber(line: Int, start: Label) = adapter.run {
         super.visitLineNumber(line, start)
-        // Skip if we've already instrumented this line in the current basic block
-        if (line in instrumentedLinesInCurrentBlock) return@run
+
+        // Basic-block same-line dedup.
+        // The set is reset on every basic-block entry in `visitLabel`, so this is exactly
+        // "this LINENUMBER N directive is the first hook for line N in the current basic block".
+        if (!linesEmittedInBlock.add(line)) return@run
 
         // Lambda-shadow skip: when we are visiting a synthetic lambda body
         // whose source [line] is already covered by a non-synthetic method on the same class,
@@ -86,9 +112,6 @@ internal class SnapshotBreakpointTransformer(
         // Check condition safety before emitting any breakpoint code.
         // Must happen before bytecode emission so we can cleanly skip the breakpoint if unsafe.
         if (!isConditionSafe(breakpointId, breakpoint)) return
-
-        // Mark this line as instrumented in the current block
-        instrumentedLinesInCurrentBlock.add(breakpoint.lineNumber)
 
         Logger.debug { "Inserting snapshot breakpoint at ${breakpoint.fileName}:${breakpoint.lineNumber}" }
 

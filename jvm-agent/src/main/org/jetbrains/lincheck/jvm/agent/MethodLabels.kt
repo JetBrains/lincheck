@@ -20,12 +20,25 @@ import org.objectweb.asm.MethodVisitor
  */
 class MethodLabels internal constructor(
     labels: Map<Label, Int>,
-    catchTargets: Set<Label>
+    catchTargets: Set<Label>,
+    jumpTargets: Set<Label>,
 ): Comparator<Label> {
     // Index is a serial number of the labels (starting from 0) in order method instructions visited.
-    private class LabelInfo(val index: Int, val isCatchTarget: Boolean, var seen: Boolean)
+    private class LabelInfo(
+        val index: Int,
+        val isCatchTarget: Boolean,
+        val isJumpTarget: Boolean,
+        var seen: Boolean,
+    )
 
-    private val labels = labels.mapValues { (k, v) -> LabelInfo(v, catchTargets.contains(k), false) }
+    private val labels = labels.mapValues { (k, v) ->
+        LabelInfo(
+            index = v,
+            isCatchTarget = catchTargets.contains(k),
+            isJumpTarget = jumpTargets.contains(k),
+            seen = false,
+        )
+    }
 
     override fun compare(
         o1: Label,
@@ -48,16 +61,51 @@ class MethodLabels internal constructor(
 
     fun isCatchTarget(label: Label): Boolean = labels[label]?.isCatchTarget ?: false
 
+    /**
+     * Whether [label] is referenced as the target of a jump / switch instruction.
+     *
+     * Labels referenced only as `LINENUMBER` / `LOCALVARIABLE` anchors are *not* jump
+     * targets — they are pure metadata and do not partition the instruction stream.
+     */
+    fun isJumpTarget(label: Label): Boolean = labels[label]?.isJumpTarget ?: false
+
+    /**
+     * Whether [label] is the target of an explicit non-fall-through control-flow edge
+     * — a jump, switch case, or exception handler.
+     *
+     * **Not a full basic-block-entry predicate.**
+     * Labels reached only by fall-through after a conditional branch / `tableswitch` / `lookupswitch`
+     * also start new basic blocks in strict CFG terms but are *not* included here,
+     * since `MethodLabels` collects only labels that are *referenced* as targets.
+     */
+    fun isJumpOrCatchTarget(label: Label): Boolean =
+        labels[label]?.let { it.isJumpTarget || it.isCatchTarget } ?: false
+
     companion object {
-        val EMPTY = MethodLabels(emptyMap(), emptySet())
+        val EMPTY = MethodLabels(emptyMap(), emptySet(), emptySet())
     }
 }
 
 internal class LabelCollectorMethodVisitor(
-    private val labels: MutableMap<Label, Int>
+    private val labels: MutableMap<Label, Int>,
+    private val jumpTargets: MutableSet<Label>,
 ): MethodVisitor(ASM_API, null) {
     override fun visitLabel(label: Label) {
         // Don't call super.visitLabel(): we know that it is no-op
         labels[label] = labels.size
+    }
+
+    override fun visitJumpInsn(opcode: Int, label: Label) {
+        jumpTargets += label
+    }
+
+    override fun visitTableSwitchInsn(min: Int, max: Int, dflt: Label, vararg labels: Label) {
+        jumpTargets += dflt
+        for (l in labels) jumpTargets += l
+    }
+
+    override fun visitLookupSwitchInsn(dflt: Label, keys: IntArray?, labels: Array<out Label>?) {
+        jumpTargets += dflt
+        labels?.forEach { jumpTargets += it }
     }
 }
