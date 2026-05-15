@@ -108,7 +108,7 @@ inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: Lis
     }
 }
 
-fun <E: ThreadEvent> MutableExecutionFrontier<E>.filter(pred: (ThreadEvent?) -> Boolean) {
+fun <E: ThreadEvent> MutableExecutionFrontier<E>.filter(pred: (ThreadEvent) -> Boolean) {
     threadMap.forEach { (tid, lastEvent) ->
         val pred = lastEvent?.pred(inclusive = true, pred)
         @Suppress("UNCHECKED_CAST")
