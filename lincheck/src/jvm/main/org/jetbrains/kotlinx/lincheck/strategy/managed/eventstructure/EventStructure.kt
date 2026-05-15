@@ -299,21 +299,16 @@ internal class EventStructure(
         val frontier = execution.toMutableFrontier().apply {
             // We need to keep events in the frontier that are either have (tid,idx) <= (event.tid, event.idx)
             // or are observed by the event
+            cut(conflicts)
             filter { cutEvent ->
-               cutEvent == null ||
-               newPinnedEvents.contains(cutEvent)  ||
-               cutEvent.threadId < event.threadId  ||
-               (cutEvent.threadId == event.threadId &&  cutEvent.threadPosition <= event.threadPosition)
-            }
-            //NOTE: We also need to cut every event that observes our backtracking event, and still remains
-            // These are all events with (tid,idx) <= (event.tid, event.idx)
-            filter { cutEvent ->
-                !(cutEvent?.causalityClock?.observes(event) ?: false)
+                (
+                    compareBy<ThreadEvent>({it.threadId}, {it.threadPosition}).compare(cutEvent,event) <= 0 ||
+                    newPinnedEvents.contains(cutEvent)
+                )
             }
             // TODO: commented out for now since this is for locks/monitors only, and we do not care about them right now
             // addUnblockingResponses(conflicts)
         }
-
             // This condition should hold. Or atleast some weaker version of it
             // Currently it fails for ThreadStartEvent. Todo is to find out why
 //        frontier.toExecution().forEach { ev ->
