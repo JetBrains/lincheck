@@ -61,6 +61,11 @@ val bootstrapJar = tasks.register<Copy>("bootstrapJar") {
 }
 
 tasks {
+    // Aggregate `clean` across subprojects.
+    named("clean") {
+        dependsOn(subprojects.map { "${it.path}:clean" })
+    }
+
     // A gradle-task that groups publishing artifacts from the subprojects to maven local.
     // An explicit task is needed since tasks propagation does not work with gradle composite builds set-up:
     // running a command "gradle publishToMavenLocal" via Intellij won't execute a corresponding
