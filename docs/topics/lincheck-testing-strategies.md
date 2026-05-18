@@ -29,7 +29,7 @@ Controlling the thread switching enables Lincheck to:
 * Provide detailed execution traces.
 
 Currently, model checking requires Lincheck to assume a 
-[sequentially consistent memory model](https://en.wikipedia.org/wiki/Sequential_consistency) of the processor. 
+[sequentially consistent memory model](https://en.wikipedia.org/wiki/Sequential_consistency) of the execution. 
 This means that Lincheck does not simulate and cannot catch bugs related to instruction reordering, memory 
 cache behavior, and other similar effects under the relaxed 
 [Java memory model](https://en.wikipedia.org/wiki/Java_memory_model).
