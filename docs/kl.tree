@@ -6,13 +6,14 @@
 		<toc-element topic="lincheck-getting-started.md" accepts-web-file-names="introduction.html"/>
         <toc-element topic="lincheck-testing-arbitrary-code.md"/>
         <toc-element toc-title="Testing data structures">
-            <toc-element topic="lincheck-data-structures-overview.md"/>
+            <toc-element topic="lincheck-how-to-test-data-structures.md"/>
             <toc-element topic="lincheck-testing-strategies.md" accepts-web-file-names="testing-strategies.html"/>
             <toc-element topic="lincheck-testing-strategies-options.md"/>
-            <toc-element topic="operation-arguments.md"/>
-            <toc-element topic="constraints.md"/>
-            <toc-element topic="progress-guarantees.md"/>
-            <toc-element topic="sequential-specification.md"/>
+            <toc-element topic="lincheck-operation-execution-options.md"/>
+            <toc-element topic="lincheck-argument-generation-constraints.md"/>
+            <toc-element topic="lincheck-progress-guarantees.md"/>
+            <toc-element topic="lincheck-results-validation.md"/>
         </toc-element>
 	</snippet>
+    <toc-element topic="lincheck-model-checking.md"/>
 </instance-profile>

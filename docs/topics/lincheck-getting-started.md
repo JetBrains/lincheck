@@ -159,7 +159,7 @@ incorrect behavior.
 
 ## Write a test for a data structure
 
-In addition to basic concurrent tests, Lincheck supports a [declarative approach](lincheck-data-structures-overview.md) 
+In addition to basic concurrent tests, Lincheck supports a [declarative approach](lincheck-how-to-test-data-structures.md) 
 to testing concurrent data structures.
 
 To test a data structure in Lincheck, you only need to declare the concurrent methods of the structure and a test 
@@ -245,5 +245,5 @@ In this section, you will test a simple counter:
 
 ## What's next
 
-Learn about the [declarative approach to testing concurrent data structures](lincheck-data-structures-overview.md)
+Learn about the [declarative approach to testing concurrent data structures](lincheck-how-to-test-data-structures.md)
 in Lincheck.

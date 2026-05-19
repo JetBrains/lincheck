@@ -86,7 +86,7 @@ Lincheck implements two testing strategies to find execution schedules that lead
 ## Explore Lincheck
 
 * Learn Lincheck features step-by-step in [Getting started with Lincheck](lincheck-getting-started.md).
-* Learn about the [declarative approach to testing concurrent data structures](lincheck-data-structures-overview.md) 
+* Learn about the [declarative approach to testing concurrent data structures](lincheck-how-to-test-data-structures.md) 
   in Lincheck.
 
 ## Learn more

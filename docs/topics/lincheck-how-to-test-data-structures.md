@@ -1,4 +1,4 @@
-[//]: # (title: Overview)
+[//]: # (title: How to test data structures)
 [//]: # (description: Learn how to test concurrent data structures with Lincheck:)
 [//]: # (set up a test and understand the internals of the testing process.)
 
@@ -6,8 +6,6 @@ Lincheck provides a declarative interface for testing concurrent data structures
 Instead of describing how to perform the test, you declare all the operations that
 need to be tested, and Lincheck generates concurrent execution scenarios, runs them,
 and analyzes the results.
-
-## Test a data structure
 
 To test a data structure in Lincheck:
 
@@ -54,7 +52,7 @@ To test a data structure in Lincheck:
 5. Run the test. If it fails, Lincheck generates an error report with the scenario
    and execution trace that led to incorrect behavior.
 
-## How Lincheck tests data structures
+## The testing process
 
 When testing a data structure, Lincheck generates a list of execution scenarios,
 runs them, and analyzes the results.

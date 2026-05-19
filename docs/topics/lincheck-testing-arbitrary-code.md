@@ -109,7 +109,7 @@ Both threads are locked, so the execution has encountered a deadlock.
 
 ## What’s next
 
-Learn how to [test data structures using Lincheck](lincheck-data-structures-overview.md).
+Learn how to [test data structures using Lincheck](lincheck-how-to-test-data-structures.md).
 
 <!-- TODO: uncomment after the articles are published
 ## See also
