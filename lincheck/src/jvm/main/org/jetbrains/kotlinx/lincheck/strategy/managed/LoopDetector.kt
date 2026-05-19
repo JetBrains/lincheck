@@ -183,7 +183,7 @@ class BoundedLoopDetector(
     }
 
     override fun onAwaitLoopPathIteration(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
-        return LoopDetector.Decision.IDLE
+        return LoopDetector.Decision.SWITCH_THREAD
     }
 
     override fun afterLoopExit(
