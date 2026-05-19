@@ -109,25 +109,28 @@ executed sequentially.
 <tr>
     <td><code>loopBound</code></td>
     <td><code>50</code></td>
-    <td>The number of loop iterations after which Lincheck reports a stalled execution. 
-        This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.<br/><br/>
-        Increase the value of <code>loopBound</code> if Lincheck falsely reports stalled execution for long loops.</td></tr>
+    <td>The number of loop iterations after which Lincheck reports a stalled execution.<br/>
+        Increase the value of <code>loopBound</code> if Lincheck falsely reports stalled execution for long loops.<br/><br/>
+        This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
 <tr>
     <td><code>recursionBound</code></td>
     <td><code>20</code></td>
-    <td>The number of recursive calls after which Lincheck reports a stalled execution. 
-        This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.<br/><br/>
-        The value of <code>loopIterationsBeforeThreadSwitch</code> should be less than <code>loopBound</code>.</td></tr>
+    <td>The number of recursive calls after which Lincheck reports a stalled execution.<br/>
+        The value of <code>loopIterationsBeforeThreadSwitch</code> should be less than <code>loopBound</code>.<br/><br/>
+        This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
 </table>
 
 ## Thread switching in loops
-<primary-label ref="model-checking"/>
 
-Use `loopIterationsBeforeThreadSwitch` to set the number of loop iterations a thread can perform before 
-trying to switch to another thread. 
-
-The value of `loopIterationsBeforeThreadSwitch` should be less than [`loopBound`](#stalled-execution-detection). 
-Default: `10`
+<table><tr><td>Option</td><td>Default value</td><td>Description</td></tr>
+<tr>
+    <td><code>loopIterationsBeforeThreadSwitch</code></td>
+    <td><code>10</code></td>
+    <td>The number of loop iterations a thread can perform before trying to switch to another thread.<br/>
+        The value of <code>loopIterationsBeforeThreadSwitch</code> should be less than 
+        <a href="#stalled-execution-detection"><code>loopBound</code></a>.<br/><br/>
+        This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
+</table>
 
 ## Verification
 
@@ -153,13 +156,17 @@ Default: `10`
 </table>
 
 ## Progress guarantees
-<primary-label ref="model-checking"/>
 
-Set the `checkObstructionFreedom` option to `true` to verify the 
-[obstruction-freedom guarantee](progress-guarantees.md) of the data structure operations.
+<table><tr><td>Option</td><td>Default value</td><td>Description</td></tr>
+<tr>
+    <td><code>checkObstructionFreedom</code></td>
+    <td><code>false</code></td>
+    <td>Set this option to <code>true</code> to verify the <a href="progress-guarantees.md">obstruction-freedom guarantee</a> of the 
+        data structure operations.<br/><br/>
+        This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
+</table>
 
 ## Library analysis
-<primary-label ref="model-checking"/>
 
 <table>
 <tr><td>Option</td><td>Default value</td><td>Description</td></tr>
@@ -168,14 +175,14 @@ Set the `checkObstructionFreedom` option to `true` to verify the
     <td><code>false</code></td>
     <td>By default, Lincheck does not verify the behavior of the operations from the standard library, 
         treating them as thread-safe. Set this option to <code>true</code> to enable analysis of standard
-        library functions/classes.</td>
-</tr>
+        library functions/classes.<br/><br/>
+        This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
 <tr>
     <td><code>addGuarantee</code></td>
     <td>–</td>
     <td><a href="#defining-a-guarantee">Define guarantees</a> for thread-safe or irrelevant to analysis 
-        methods using the <code>addGuarantee</code> option to exclude them from model checking.</td>
-</tr>
+        methods using the <code>addGuarantee</code> option to exclude them from model checking.<br/><br/>
+        This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
 </table>
 
 ### Defining a guarantee
