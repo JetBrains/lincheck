@@ -294,6 +294,9 @@ internal class EventStructure(
         val newPinnedEvents = pinnedEvents.copy().apply {
             val causalityFrontier = execution.calculateFrontier(event.causalityClock)
             merge(causalityFrontier)
+            cut(conflicts)
+            cut(getDanglingRequests())
+            cut(event)
         }
 
         val frontier = execution.toMutableFrontier().apply {
@@ -306,8 +309,8 @@ internal class EventStructure(
                     newPinnedEvents.contains(cutEvent)
                 )
             }
-            // TODO: commented out for now since this is for locks/monitors only, and we do not care about them right now
-            // addUnblockingResponses(conflicts)
+            // NOTE: this can break some tests when locks and monitors are introduced again.
+            addUnblockingResponses(conflicts)
         }
             // This condition should hold. Or atleast some weaker version of it
             // Currently it fails for ThreadStartEvent. Todo is to find out why
