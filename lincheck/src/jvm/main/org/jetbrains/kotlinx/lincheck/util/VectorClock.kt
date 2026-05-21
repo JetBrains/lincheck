@@ -17,8 +17,9 @@ import kotlin.math.*
 interface VectorClock {
     fun isEmpty(): Boolean
 
-    operator fun get(tid: ThreadId): Int
     fun maxThreadId(): Int
+
+    operator fun get(tid: ThreadId): Int
 }
 
 interface MutableVectorClock : VectorClock {
