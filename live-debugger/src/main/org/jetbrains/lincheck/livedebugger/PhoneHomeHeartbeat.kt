@@ -15,9 +15,8 @@ import org.jetbrains.lincheck.util.Logger
 import java.net.HttpURLConnection
 import java.net.URI
 
-private const val ENV_POD_NAME = "POD_NAME"
-private const val ENV_POD_NAMESPACE = "POD_NAMESPACE"
-private const val ENV_POD_IP = "POD_IP"
+private const val ENV_NAME = "NAME"
+private const val ENV_NAMESPACE = "NAMESPACE"
 private const val ENV_CONTROL_PLANE_URL = "LIVE_DEBUGGER_CONTROL_PLANE_URL"
 
 private const val DEFAULT_HEARTBEAT_INTERVAL_MS = 10_000L
@@ -31,11 +30,12 @@ private const val HTTP_TIMEOUT_MS = 5_000
  * the provided [onConnectRequested] callback so the agent can open a reversed
  * WebSocket connection back to the control plane.
  *
- * Requires the following environment variables to be set:
- * - `POD_NAME` — the Kubernetes pod name (typically via Downward API)
- * - `POD_NAMESPACE` — the Kubernetes namespace (typically via Downward API)
- * - `POD_IP` — the pod's IP address (typically via Downward API)
+ * Requires the following environment variables:
+ * - `NAME` — a stable identifier for this agent (e.g. the Kubernetes pod name via Downward API)
  * - `LIVE_DEBUGGER_CONTROL_PLANE_URL` — the base URL of the control plane service
+ *
+ * Optional:
+ * - `NAMESPACE` — a grouping label for the agent (e.g. the Kubernetes namespace). Defaults to empty.
  */
 internal object PhoneHomeHeartbeat {
 
@@ -53,18 +53,15 @@ internal object PhoneHomeHeartbeat {
     }
 
     fun start(onConnectRequested: (controlPlaneUrl: String, agentId: String) -> Unit) {
-        val podName = System.getenv(ENV_POD_NAME)
-            ?: error("phoneHome=on requires the $ENV_POD_NAME environment variable to be set")
-        val namespace = System.getenv(ENV_POD_NAMESPACE)
-            ?: error("phoneHome=on requires the $ENV_POD_NAMESPACE environment variable to be set")
-        val podIp = System.getenv(ENV_POD_IP)
-            ?: error("phoneHome=on requires the $ENV_POD_IP environment variable to be set")
+        val name = System.getenv(ENV_NAME)
+            ?: error("phoneHome=on requires the $ENV_NAME environment variable to be set")
+        val namespace = System.getenv(ENV_NAMESPACE).orEmpty()
         val controlPlaneUrl = System.getenv(ENV_CONTROL_PLANE_URL)
             ?: error("phoneHome=on requires the $ENV_CONTROL_PLANE_URL environment variable to be set")
 
         val heartbeatUrl = "${controlPlaneUrl.trimEnd('/')}/api/heartbeat"
         val serverPort = TraceAgentParameters.serverPort
-        val body = """{"podName":"$podName","namespace":"$namespace","podIp":"$podIp","serverPort":$serverPort}"""
+        val body = """{"name":"$name","namespace":"$namespace","serverPort":$serverPort}"""
 
         val thread = Thread({
             Logger.debug { "Phone-home heartbeat started: $heartbeatUrl" }
