@@ -41,7 +41,8 @@ internal class EventStructureStrategy(
     runner: Runner,
     settings: ManagedStrategySettings,
     inIdeaPluginReplayMode: Boolean = false,
-    context: TraceContext
+    context: TraceContext,
+    val memoryModel : MemoryModel = MemoryModel.SequentialConsistency,
 ) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode, context) {
 
     private val memoryInitializer: MemoryInitializer = { location ->
@@ -51,7 +52,7 @@ internal class EventStructureStrategy(
     }
 
     private val eventStructure: EventStructure =
-        EventStructure( memoryInitializer, ::onInconsistency) { iThread, reason ->
+        EventStructure( memoryInitializer, memoryModel,  ::onInconsistency) { iThread, reason ->
             switchCurrentThread(iThread, reason)
         }
 
