@@ -291,6 +291,11 @@ internal class EventStructure(
     }
 
     private fun createBacktrackingPoint(event: AtomicThreadEvent, conflicts: List<AtomicThreadEvent>) {
+        // This check is guaranteed to hold for now, since this is called only by the
+        // [addBinarySynchronizedEvents] and [addBarrierSynchronizedEvents] methods
+        // which always pass in a parent
+        check((event.label !is InitializationLabel) implies (event.parent != null)) { "Backtracked event must have a parent: $event" }
+
         val newPinnedEvents = pinnedEvents.copy().apply {
             val causalityFrontier = execution.calculateFrontier(event.causalityClock)
             merge(causalityFrontier)
@@ -300,12 +305,13 @@ internal class EventStructure(
         }
 
         val frontier = execution.toMutableFrontier().apply {
-            // We need to keep events in the frontier that are either have (tid,idx) <= (event.tid, event.idx)
-            // or are observed by the event
+            // We need to keep events in the frontier that are either have: id <= (parent.id)
+            // or are observed by the event, a la GenMC
             cut(conflicts)
-            filter { cutEvent ->
+            cut { cutEvent ->
                 (
-                    compareBy<ThreadEvent>({it.threadId}, {it.threadPosition}).compare(cutEvent,event) <= 0 ||
+                    // This is safe because of the check at the beginning of the function
+                    cutEvent.id <= event.parent!!.id  ||
                     newPinnedEvents.contains(cutEvent)
                 )
             }
