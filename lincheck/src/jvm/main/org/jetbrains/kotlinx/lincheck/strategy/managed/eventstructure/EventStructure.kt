@@ -319,12 +319,6 @@ internal class EventStructure(
             // NOTE: this can break some tests when locks and monitors are introduced again.
             addUnblockingResponses(conflicts)
         }
-            // This condition should hold. Or atleast some weaker version of it
-            // Currently it fails for ThreadStartEvent. Todo is to find out why
-//        frontier.toExecution().forEach { ev ->
-//            val cond = !(ev.label is ReadAccessLabel && ev.label.isResponse) || (newPinnedEvents.contains(ev.readsFrom))
-//            check(cond)
-//        }
 
         val danglingRequests = frontier.getDanglingRequests()
 
@@ -656,7 +650,7 @@ internal class EventStructure(
             // cannot synchronize with anything, because there are no events yet
             // that access the allocated object
             label is ObjectAllocationLabel -> {
-                return sequenceOf()
+                sequenceOf()
             }
 
             label is CoroutineSuspendLabel && label.isRequest -> {
