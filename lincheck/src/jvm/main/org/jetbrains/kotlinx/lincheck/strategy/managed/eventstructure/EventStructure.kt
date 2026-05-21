@@ -31,6 +31,7 @@ import org.jetbrains.lincheck.util.collections.*
 
 internal class EventStructure(
     val memoryInitializer: MemoryInitializer,
+    private val memoryModel: MemoryModel,
     // TODO: refactor --- avoid using callbacks!
     private val reportInconsistencyCallback: ReportInconsistencyCallback,
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
@@ -637,34 +638,17 @@ internal class EventStructure(
              * reading from them will result in coherence cycle and will violate consistency
              */
             label is ReadAccessLabel && label.isRequest -> {
-                //TODO: This is disabled for now since the rules here were too strong, and forbid valid behaviour
-                // Also shouldn't the consistency checker be responsible for this only?
-//                if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
-//                    val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
-//                    return sequenceOf(lastWrite)
-//                }
-//                val threadReads = execution[event.threadId]!!.filter {
-//                    it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
-//                }
-//                val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
-//                val staleWrites = threadReads
-//                    .map { it.readsFrom }
-//                    .filter { it != lastSeenWrite }
-//                    .distinct()
-//                val eventFrontier = execution.calculateFrontier(event.causalityClock)
-//                val racyWrites = calculateRacyWrites(label.location, eventFrontier)
-//                candidates.filter {
-//                    // !causalityOrder.lessThan(it, threadLastWrite) &&
-//                    !racyWrites.any { write -> causalityOrder(it, write) } &&
-//                    !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
-//                }
-                candidates
+                filterSynchronizationReadCandidates(event, candidates)
             }
 
             label is WriteAccessLabel -> {
-//                if (execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
-//                    return sequenceOf()
-//                }
+                if (
+                    memoryModel == MemoryModel.SequentialConsistency &&
+                    execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)
+                ) {
+                    return sequenceOf()
+                }
+
                 candidates
             }
 
@@ -682,6 +666,38 @@ internal class EventStructure(
             }
 
             else -> candidates
+        }
+    }
+
+    private fun filterSynchronizationReadCandidates(event: ThreadEvent, candidates: Sequence<AtomicThreadEvent>) : Sequence<AtomicThreadEvent> {
+        val label: ReadAccessLabel = event.label as ReadAccessLabel
+        return when (memoryModel) {
+            MemoryModel.SequentialConsistency -> {
+                // We can optimize and remove some synchronized events if we are checking for sequential consistency
+                if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
+                    val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
+                    return sequenceOf(lastWrite)
+                }
+                val threadReads = execution[event.threadId]!!.filter {
+                    it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
+                }
+                val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
+                val staleWrites = threadReads
+                    .map { it.readsFrom }
+                    .filter { it != lastSeenWrite }
+                    .distinct()
+                val eventFrontier = execution.calculateFrontier(event.causalityClock)
+                val racyWrites = calculateRacyWrites(label.location, eventFrontier)
+                candidates.filter {
+                    // !causalityOrder.lessThan(it, threadLastWrite) &&
+                    !racyWrites.any { write -> causalityOrder(it, write) } &&
+                            !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
+                }
+            }
+            MemoryModel.ReleaseAcquire ->
+                candidates
+            MemoryModel.JAM21 ->
+                candidates
         }
     }
 
