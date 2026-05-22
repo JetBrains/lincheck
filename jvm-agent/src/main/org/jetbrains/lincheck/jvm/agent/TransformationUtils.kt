@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import org.jetbrains.lincheck.jvm.agent.analysis.ClassBytecodeProvider
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Opcodes
@@ -503,6 +504,13 @@ internal fun isPrimitive(type: Type): Boolean {
     }
 }
 
+/**
+ * Checks if an opcode is an array store instruction.
+ */
+internal fun isArrayStoreOpcode(opcode: Int) =
+    opcode == IASTORE || opcode == LASTORE || opcode == FASTORE || opcode == DASTORE ||
+    opcode == AASTORE || opcode == BASTORE || opcode == CASTORE || opcode == SASTORE
+
 internal fun getLocalVarAccessOpcodeType(opcode: Int): Type = when (opcode) {
     ILOAD, ISTORE -> INT_TYPE
     LLOAD, LSTORE -> LONG_TYPE
@@ -630,6 +638,20 @@ fun String.toCanonicalClassName() =
  */
 fun String.toInternalClassName() =
     this.replace('.', '/')
+
+/**
+ * Loads class bytes via [ClassLoader.getResourceAsStream] using the internal name (e.g. `"java/lang/String"`).
+ * Returns `null` when the resource is missing.
+ */
+fun ClassLoader.findClassBytecode(internalClassName: String): ByteArray? =
+    getResourceAsStream("$internalClassName.class")?.use { it.readBytes() }
+
+/**
+ * Checks if a class has already been loaded by the JVM.
+ * Accepts class name in internal format (e.g. `"java/lang/String"`).
+ */
+fun isClassAlreadyLoaded(internalClassName: String, classLoader: ClassLoader): Boolean =
+    LincheckInstrumentation.isClassLoaded(internalClassName.toCanonicalClassName(), classLoader)
 
 internal fun loadClassFromBytes(userCodeClassLoader: ClassLoader, className: String, classBytes: ByteArray): Class<*> {
     // defineClass expects canonical class name (with dots, not slashes)

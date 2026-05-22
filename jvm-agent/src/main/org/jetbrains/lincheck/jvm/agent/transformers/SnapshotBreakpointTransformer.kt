@@ -301,15 +301,17 @@ internal class SnapshotBreakpointTransformer(
             className = conditionClassName,
             classBytes = conditionClassBytes
         )
+        val conditionClassLoader = conditionClass.classLoader
         val allowedFunctionCalls = { className: String, methodName: String, _: String ->
             className == conditionClassName.toInternalClassName() && methodName.startsWith("accessToField")
         }
-        val safetyViolation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val safetyViolation = SideEffectChecker.checkMethodForSideEffects(
             className = conditionClassName,
             methodName = "invoke",
             methodDescriptor = "()Z",
-            classLoader = conditionClass.classLoader,
-            allowedFunctionCalls = allowedFunctionCalls
+            bytecodeProvider = conditionClassLoader::findClassBytecode,
+            isClassLoaded = { isClassAlreadyLoaded(it, conditionClassLoader) },
+            allowedFunctionCalls = allowedFunctionCalls,
         )
         if (safetyViolation != null) {
             Logger.warn {

@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.conditions
 
-import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.junit.*
 import org.junit.Assert.*
@@ -18,7 +18,7 @@ import org.junit.Assert.*
 /**
  * Tests for the tree structure representation of [SafetyViolation.DisallowedMethodCall].
  * Verifies that the toString() method properly formats nested violations as a tree
- * by analyzing actual code with the ConditionSafetyChecker.
+ * by analyzing actual code with the SideEffectChecker.
  */
 class DisallowedMethodCallTreeTest {
 
@@ -31,11 +31,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test simple field write`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "simpleFieldWrite",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -52,11 +51,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test nested method calls with field write`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "callsMethodThatWritesField",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -74,11 +72,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test multiple violations in same method`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "multipleViolations",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -96,11 +93,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test deeply nested calls`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "level1",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -119,11 +115,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test method with mixed violations and nested calls`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "complexCase",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -143,11 +138,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test synchronized block violation`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "useSynchronized",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -164,11 +158,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test simple loop violation`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "simpleLoop",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -186,11 +179,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test while loop violation`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "whileLoopExample",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -208,11 +200,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test loop with field write violation`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "loopWithFieldWrite",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -230,11 +221,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test forEach loop violation`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "forEachLoop",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -245,11 +235,11 @@ class DisallowedMethodCallTreeTest {
             """
                 Disallowed method call: forEachLoop
                 ├── Array write: at DisallowedMethodCallTreeTestCases.kt:94
-                ├── Loop detected at DisallowedMethodCallTreeTestCases.kt:117
                 ├── Disallowed method call: iterator at DisallowedMethodCallTreeTestCases.kt:117
                 ├── Disallowed method call: hasNext at DisallowedMethodCallTreeTestCases.kt:117
                 ├── Disallowed method call: next at DisallowedMethodCallTreeTestCases.kt:117
-                └── Disallowed method call: intValue at DisallowedMethodCallTreeTestCases.kt:117
+                ├── Disallowed method call: intValue at DisallowedMethodCallTreeTestCases.kt:117
+                └── Loop detected at DisallowedMethodCallTreeTestCases.kt:117
             """.trimIndent(),
             output
         )
@@ -257,11 +247,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test repeat loop violation`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "repeatLoop",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -279,11 +268,10 @@ class DisallowedMethodCallTreeTest {
 
     @Test
     fun `test multiple loops violation`() {
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
+        val violation = checkMethodForSideEffects(
             DisallowedMethodCallTreeTestCases::class.java.name,
             "multipleLoops",
             "()V",
-            this::class.java.classLoader
         )
 
         assertNotNull(violation)
@@ -300,4 +288,18 @@ class DisallowedMethodCallTreeTest {
         )
     }
 
+    private fun checkMethodForSideEffects(
+        className: String,
+        methodName: String,
+        methodDescriptor: String,
+    ): SafetyViolation.DisallowedMethodCall? {
+        val classLoader = this::class.java.classLoader
+        return SideEffectChecker.checkMethodForSideEffects(
+            className = className,
+            methodName = methodName,
+            methodDescriptor = methodDescriptor,
+            bytecodeProvider = classLoader::findClassBytecode,
+            isClassLoaded = { true },
+        )
+    }
 }
