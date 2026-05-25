@@ -217,22 +217,20 @@ object Types {
         }
     }
 
-    class MethodType(val argumentTypes: MutableList<Type>, val returnType: Type) {
+    class MethodType(val argumentTypes: List<Type>, val returnType: Type) {
         constructor(returnType: Type, vararg argumentTypes: Type) : this(
-            mutableListOf<Type>(*argumentTypes),
+            listOf(*argumentTypes),
             returnType
         )
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is MethodType) return false
-
-            return (returnType == other.returnType &&
-                    argumentTypes == other.argumentTypes)
+            return returnType == other.returnType && argumentTypes == other.argumentTypes
         }
 
         override fun hashCode(): Int {
-            return Objects.hash(returnType, argumentTypes)
+            return 31 * returnType.hashCode() + argumentTypes.hashCode()
         }
 
         override fun toString(): String {
