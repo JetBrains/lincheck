@@ -81,7 +81,10 @@ internal abstract class ManagedStrategy(
 //        recursiveCallsBound = settings.recursionBound,
 //    )
 
-    internal val loopDetector: LoopDetector = AdaptiveLoopDetector(recursiveCallsBound = settings.recursionBound)
+    internal val loopDetector: LoopDetector = AdaptiveLoopDetector(
+        iterationBoundThreshold = settings.loopBound,
+        recursiveCallsBound = settings.recursionBound,
+    )
     // Current execution part, if defined by the runner, `PARALLEL` otherwise
     protected val currentExecutionPart: ExecutionPart
         get() = (runner as? ExecutionScenarioRunner)?.currentExecutionPart ?: PARALLEL

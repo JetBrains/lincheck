@@ -152,6 +152,7 @@ internal class LoopInstanceState(
 ) {
     var iterNumber: Int = 0
     var kind: LoopKind = LoopKind.UNKNOWN
+    var requiresExternalProgress: Boolean = false
     val obs = IterationObservations()
 
     // Signature tracking for cycle detection
@@ -173,11 +174,6 @@ internal class LoopInstanceState(
     // wait set values hash -> abstract state visit count
     val abstractStateVisits = mutableMapOf<Int, Int>()
 
-    // Tracks which threads have been tried from each abstract state,
-    // so we only declare STUCK after all alternatives have been explored.
-
-    // Number of SWITCH_THREAD decisions made from each abstract state.
-    val switchCountPerAbstractState = mutableMapOf<Int /* abstractStateHash */, Int>()
     // Max number of enabled threads (excluding the thread with the loop) seen from each abstract state.
     val maxEnabledPerAbstractState = mutableMapOf<Int /* abstractStateHash */, Int>()
 
@@ -190,6 +186,9 @@ internal class LoopInstanceState(
 
     // External write tracking
     var lastRelevantWriteVersion: Long = 0L
+
+    // Check if the detector already gave other threads a chance before declaring stuck due to threshold
+    var thresholdSwitchAttempted: Boolean = false
 
     // true when the current iteration has passed the side effect free back edge of a loop
     // next loop header event clears this flag, bot does not process the same iteration again.
