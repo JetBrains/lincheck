@@ -192,8 +192,8 @@ the behavior of the program:
    | ------------------------------ |
    ```
 
-   This diagram shows the distribution of the operations across different threads and
-   the return values of these operations. Lincheck also provides the specific thread
+   This diagram shows how the operations are placed across different threads and
+   the return values of the operations. Lincheck also provides the specific thread
    interleaving that leads to incorrect results:
 
    ```text
