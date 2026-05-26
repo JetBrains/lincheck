@@ -7,33 +7,43 @@ Instead of describing how to perform the test, you declare all the operations th
 need to be tested, and Lincheck generates concurrent execution scenarios, runs them,
 and analyzes the results.
 
-To test a data structure in Lincheck:
+Let's test this `Counter` data structure with Lincheck:
+
+```kotlin
+class Counter {
+    var value = 0
+
+    fun inc(): Int = ++value
+    fun dec(): Int = --value
+}
+```
 
 1. Create a test class:
 
-   ```kotlin
-   class NewStructureTest {
-       // Tests
-   }
-   ```
+    ```kotlin
+    class CounterTest {
+    }
+    ```
 
 2. Create a class property that holds an instance of your structure:
 
    ```kotlin
-   private val structure = NewStructure<Int>()
+   private val c = Counter()
    ```
 
 3. Declare the operations you want to test as member functions and annotate them with
-   `@Operation`. This annotation tells Lincheck which methods to include when generating
-   execution scenarios:
+   `@Operation`:
 
-   ```kotlin
-   @Operation
-   fun foo(value: Int) = structure.foo(value)
+    ```kotlin
+    @Operation
+    fun inc() = c.inc()
+    
+    @Operation
+    fun dec() = c.dec()
+    ```
 
-   @Operation
-   fun buzz(): Int? = structure.buzz()
-   ```
+    This annotation tells Lincheck which methods to include when generating
+    execution scenarios.    
 
 4. Declare a test function as a member function using `ModelCheckingOptions()` or
    `StressOptions()`. Annotate it with `@Test`:
@@ -50,7 +60,16 @@ To test a data structure in Lincheck:
    {style=”tip”}
 
 5. Run the test. If it fails, Lincheck generates an error report with the scenario
-   and execution trace that led to incorrect behavior.
+   and execution trace that led to incorrect behavior:
+
+    ```text
+    = Invalid execution results =
+    | -------------------- |
+    | Thread 1  | Thread 2 |
+    | -------------------- |
+    | dec(): -1 | inc(): 1 |
+    | -------------------- |
+    ```
 
 ## The testing process
 
