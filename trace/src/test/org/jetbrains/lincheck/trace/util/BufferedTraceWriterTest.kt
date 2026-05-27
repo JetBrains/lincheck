@@ -421,7 +421,7 @@ class BufferedTraceWriterTest {
                     }
 
                     ObjectKind.TRACEPOINT -> {
-                        val tr = loadTRTracePoint(loadedContext, dataInput)
+                        val tr = dataInput.readTRTracePoint(loadedContext)
                         Logger.info { "  Tracepoint: ${tr.toText(verbose = true)}" }
 
                         if (tr is TRContainerTracePoint) {

@@ -52,11 +52,8 @@ internal class DirectTraceWriter(
     override val writerId: Int get() = currentWriterId
 
     init {
-        dataOutput.writeLong(TRACE_MAGIC)
-        dataOutput.writeLong(TRACE_VERSION)
-
-        index.writeLong(INDEX_MAGIC)
-        index.writeLong(TRACE_VERSION)
+        dataOutput.writeTraceHeader()
+        index.writeTraceIndexHeader()
         indexBytes += Long.SIZE_BYTES * 2
     }
 

@@ -200,8 +200,7 @@ internal abstract class ContextAwareTraceWriter(
 
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.THREAD_NAME)
-        dataOutput.writeInt(id)
-        dataOutput.writeUTF(name)
+        dataOutput.writeThreadName(id, name)
         writeIndexCell(ObjectKind.THREAD_NAME, id, position, -1)
     }
 
@@ -317,7 +316,7 @@ internal abstract class ContextAwareTraceWriter(
         val position = currentDataPosition
         dataOutput.writeKind(ObjectKind.STRING)
         dataOutput.writeInt(id)
-        dataOutput.writeUTF(value)
+        dataOutput.writeString(value)
         contextState.markDescriptorSaved<String>(id)
 
         // It cannot fail
@@ -385,7 +384,7 @@ internal abstract class ContextAwareTraceWriter(
                 dataOutput.writeInt(value.locations.size)
 
                 value.locations.forEach { location ->
-                    location.save(this, context)
+                    dataOutput.writeAccessLocation(context, location)
                 }
 
                 contextState.markDescriptorSaved<AccessPath>(id)
@@ -424,16 +423,6 @@ internal abstract class ContextAwareTraceWriter(
     protected abstract fun writeIndexCell(kind: ObjectKind, id: Int, startPos: Long, endPos: Long)
 }
 
-internal fun AccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
-    when (this) {
-        is LocalVariableAccessLocation       -> save(out, traceContext)
-        is StaticFieldAccessLocation         -> save(out, traceContext)
-        is ObjectFieldAccessLocation         -> save(out, traceContext)
-        is ArrayElementByIndexAccessLocation -> save(out)
-        is ArrayElementByNameAccessLocation  -> save(out, traceContext)
-    }
-}
-
 internal fun AccessLocation.saveReferences(out: TraceWriter, traceContext: TraceContext) {
     when (this) {
         is LocalVariableAccessLocation       -> saveReferences(out, traceContext)
@@ -443,43 +432,6 @@ internal fun AccessLocation.saveReferences(out: TraceWriter, traceContext: Trace
         is ArrayElementByNameAccessLocation  -> { /* no-op */ }
     }
 }
-
-// Note: since `saveReferences` methods are called first, then, when `save` method is called,
-//       all preceding checks are fulfilled, so no need to write them here
-private fun LocalVariableAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
-    check(traceContext.variablePool.contains(variableDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved variable $variableDescriptor" }
-    val variableDescriptorId = traceContext.variablePool.getId(variableDescriptor.key)
-    out.writeAccessLocationKind(AccessLocationKind.LOCAL_VARIABLE)
-    out.writeInt(variableDescriptorId)
-}
-
-private fun StaticFieldAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
-    check(traceContext.fieldPool.contains(fieldDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved field $fieldDescriptor" }
-    val fieldDescriptorId = traceContext.fieldPool.getId(fieldDescriptor.key)
-    out.writeAccessLocationKind(AccessLocationKind.STATIC_FIELD)
-    out.writeInt(fieldDescriptorId)
-}
-
-private fun ObjectFieldAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
-    check(traceContext.fieldPool.contains(fieldDescriptor.key)) { "Access location references must be saved before-hand, but location $this has unsaved field $fieldDescriptor" }
-    val fieldDescriptorId = traceContext.fieldPool.getId(fieldDescriptor.key)
-    out.writeAccessLocationKind(AccessLocationKind.OBJECT_FIELD)
-    out.writeInt(fieldDescriptorId)
-}
-
-private fun ArrayElementByIndexAccessLocation.save(out: TraceWriter) {
-    out.writeAccessLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_INDEX)
-    out.writeInt(index)
-}
-
-private fun ArrayElementByNameAccessLocation.save(out: TraceWriter, traceContext: TraceContext) {
-    // register or get existing access path and write its id to output stream
-    check(traceContext.accessPathPool.contains(indexAccessPath)) { "Access location references must be saved before-hand, but location $this has unsaved access path $indexAccessPath" }
-    val indexId = traceContext.accessPathPool.getId(indexAccessPath)
-    out.writeAccessLocationKind(AccessLocationKind.ARRAY_ELEMENT_BY_NAME)
-    out.writeInt(indexId)
-}
-
 
 private fun LocalVariableAccessLocation.saveReferences(out: TraceWriter, traceContext: TraceContext) {
     val variableDescriptorId = traceContext.variablePool.register(variableDescriptor)

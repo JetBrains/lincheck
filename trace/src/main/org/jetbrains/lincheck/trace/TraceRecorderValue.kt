@@ -1,8 +1,6 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
-import java.io.DataInput
-import java.io.DataOutput
 import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.reflect.KClass
@@ -201,109 +199,6 @@ fun TRValue(context: TraceContext, obj: Any): TRValue {
         // Generic case
         // TODO Make parametrized
         else -> defaultTRObject()
-    }
-}
-
-internal fun DataOutput.writeTRValue(value: TRValue?) {
-    when (value) {
-        null -> {
-            writeInt(TR_OBJECT_NULL_CLASSNAME)
-        }
-
-        is TRObject -> {
-            // Negatives are special markers
-            writeInt(value.classNameId)
-            if (value.classNameId >= 0) {
-                writeInt(value.identityHashCode)
-
-                // Positive for objects
-                writeInt(value.fields.size)
-                value.fields.forEach { (fieldName, fieldValue) ->
-                    writeUTF(fieldName)
-                    this@writeTRValue.writeTRValue(fieldValue)
-                }
-            }
-        }
-
-        is TRPrimitive -> {
-            writeInt(value.classNameId)
-            when (value.primitiveValue) {
-                is Byte -> writeByte(value.primitiveValue.toInt())
-                is Short -> writeShort(value.primitiveValue.toInt())
-                is Int -> writeInt(value.primitiveValue)
-                is Long -> writeLong(value.primitiveValue)
-                is Float -> writeFloat(value.primitiveValue)
-                is Double -> writeDouble(value.primitiveValue)
-                is Char -> writeChar(value.primitiveValue.code)
-                is String if value.classNameId == TR_OBJECT_P_STRING_BUILDER -> {
-                    writeInt(value.identityHashCode)
-                    writeUTF(value.primitiveValue)
-                }
-
-                is String -> writeUTF(value.primitiveValue) // Both STRING and RAW_STRING
-                is Boolean -> writeBoolean(value.primitiveValue)
-                is Unit -> {}
-                else -> error("Unknow primitive value ${value.primitiveValue}")
-            }
-        }
-
-        is TRArray -> {
-            writeInt(value.classNameId)
-            if (value.classNameId >= 0) {
-                writeInt(value.identityHashCode)
-
-                // Negative for arrays where -1 is empty array
-                val encodedElementsSize = (value.capturedElements.size + 1) * -1
-                writeInt(encodedElementsSize)
-                value.capturedElements.forEach { element -> this@writeTRValue.writeTRValue(element) }
-                writeInt(value.totalSize)
-            }
-        }
-    }
-}
-
-internal fun DataInput.readTRObject(context: TraceContext): TRValue? {
-    return when (val classNameId = readInt()) {
-        TR_OBJECT_NULL_CLASSNAME -> null
-        TR_OBJECT_VOID_CLASSNAME -> TR_OBJECT_VOID
-        TR_OBJECT_P_BYTE -> TRPrimitive(classNameId, 0, readByte())
-        TR_OBJECT_P_SHORT -> TRPrimitive(classNameId, 0, readShort())
-        TR_OBJECT_P_INT -> TRPrimitive(classNameId, 0, readInt())
-        TR_OBJECT_P_LONG -> TRPrimitive(classNameId, 0, readLong())
-        TR_OBJECT_P_FLOAT -> TRPrimitive(classNameId, 0, readFloat())
-        TR_OBJECT_P_DOUBLE -> TRPrimitive(classNameId, 0, readDouble())
-        TR_OBJECT_P_CHAR -> TRPrimitive(classNameId, 0, readChar())
-        TR_OBJECT_P_STRING -> TRPrimitive(classNameId, 0, readUTF())
-        TR_OBJECT_P_UNIT -> TRPrimitive(classNameId, 0, Unit)
-        TR_OBJECT_P_RAW_STRING -> TRPrimitive(classNameId, 0, readUTF())
-        TR_OBJECT_P_BOOLEAN -> TRPrimitive(classNameId, 0, readBoolean())
-        TR_OBJECT_P_JAVA_CLASS -> TRPrimitive(classNameId, 0, readUTF())
-        TR_OBJECT_P_KOTLIN_CLASS -> TRPrimitive(classNameId, 0, readUTF())
-        TR_OBJECT_P_STRING_BUILDER -> TRPrimitive(classNameId, readInt(), readUTF())
-        else if (classNameId >= 0) -> {
-            val identityHashCode = readInt()
-            val childrenSize = readInt()
-            if (childrenSize < 0) {
-                val decodedElementsSize = childrenSize * -1 - 1
-                val capturedElements = buildList {
-                    repeat(decodedElementsSize) {
-                        add(readTRObject(context))
-                    }
-                }
-                val totalSize = readInt()
-                TRArray(classNameId, identityHashCode, context.classPool[classNameId], totalSize, capturedElements)
-            } else {
-                val fields = buildMap {
-                    repeat(childrenSize) {
-                        val fieldName = readUTF()
-                        val fieldValue = readTRObject(context)
-                        put(fieldName, fieldValue)
-                    }
-                }
-                TRObject(classNameId, identityHashCode, context.classPool[classNameId], fields)
-            }
-        }
-        else -> error("TRObject: Unknown Class Id $classNameId")
     }
 }
 

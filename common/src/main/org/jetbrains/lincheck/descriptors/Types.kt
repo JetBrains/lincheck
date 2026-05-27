@@ -127,6 +127,16 @@ object Types {
 
     val OBJECT_TYPE: ObjectType = ObjectType(Object::class.java.name)
 
+    val INT_ARRAY_TYPE: ArrayType = ArrayType(INT_TYPE)
+    val LONG_ARRAY_TYPE: ArrayType = ArrayType(LONG_TYPE)
+    val DOUBLE_ARRAY_TYPE: ArrayType = ArrayType(DOUBLE_TYPE)
+    val FLOAT_ARRAY_TYPE: ArrayType = ArrayType(FLOAT_TYPE)
+    val BOOLEAN_ARRAY_TYPE: ArrayType = ArrayType(BOOLEAN_TYPE)
+    val BYTE_ARRAY_TYPE: ArrayType = ArrayType(BYTE_TYPE)
+    val SHORT_ARRAY_TYPE: ArrayType = ArrayType(SHORT_TYPE)
+    val CHAR_ARRAY_TYPE: ArrayType = ArrayType(CHAR_TYPE)
+    val OBJECT_ARRAY_TYPE: ArrayType = ArrayType(OBJECT_TYPE)
+
     sealed class Type
 
     class ObjectType(val className: String) : Type() {

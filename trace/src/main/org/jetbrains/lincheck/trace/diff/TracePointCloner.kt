@@ -104,7 +104,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRReadTracePoint -> TRReadTracePoint(
+            is TRReadFieldTracePoint -> TRReadFieldTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -114,7 +114,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRWriteTracePoint -> TRWriteTracePoint(
+            is TRWriteFieldTracePoint -> TRWriteFieldTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
