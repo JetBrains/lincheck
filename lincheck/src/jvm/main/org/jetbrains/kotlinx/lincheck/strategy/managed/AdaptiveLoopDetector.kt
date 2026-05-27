@@ -236,13 +236,7 @@ class AdaptiveLoopDetector(
             }
         }
 
-        // Start new iteration
-        if (advanceIteration) inst.iterNumber++
-        for ((loc, valHash) in inst.obs.reads) {
-            inst.lastSeenWSValues[loc] = valHash
-        }
-        inst.obs.clear()
-        return LoopDetector.Decision.IDLE
+        return finishAndClearIteration(inst, advanceIteration, LoopDetector.Decision.IDLE)
     }
 
     private fun finishAndClearIteration(
@@ -251,6 +245,9 @@ class AdaptiveLoopDetector(
         decision: LoopDetector.Decision
     ): LoopDetector.Decision {
         if (advanceIteration) inst.iterNumber++
+        for ((loc, valHash) in inst.obs.reads) {
+            inst.lastSeenWSValues[loc] = valHash
+        }
         inst.obs.clear()
         return decision
     }
