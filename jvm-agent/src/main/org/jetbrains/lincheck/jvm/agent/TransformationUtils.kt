@@ -397,6 +397,13 @@ internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String) = invokeIn
 internal val functionToDeclaringClassMap = ConcurrentHashMap<KFunction<*>, Pair<Type, Method>>()
 
 /**
+ * Generates a `GETSTATIC` bytecode instruction for the uninitialized this substitute constant.
+ */
+fun GeneratorAdapter.pushUninitializedThisSubstitute() {
+    getStatic(Type.getType(Injections::class.java), "UNINITIALIZED_THIS", OBJECT_TYPE)
+}
+
+/**
  * Invokes a static method represented by a KFunction.
  */
 fun GeneratorAdapter.invokeStatic(function: KFunction<*>) {

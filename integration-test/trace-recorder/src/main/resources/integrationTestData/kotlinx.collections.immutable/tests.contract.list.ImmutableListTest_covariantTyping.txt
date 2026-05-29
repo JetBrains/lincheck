@@ -15,6 +15,10 @@ ImmutableListTest.covariantTyping() at ImmutableListTest.kt:219
     size(): 0 at SmallPersistentVector.kt:31
     newBuffer[0] = "x" at SmallPersistentVector.kt:31
     new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
+      super@AbstractPersistentList(): SmallPersistentVector@1 at SmallPersistentVector.kt:15
+        super@AbstractList(): SmallPersistentVector@1 at AbstractPersistentList.kt:13
+      buffer = Object;@1 at SmallPersistentVector.kt:15
+      assert(true) at SmallPersistentVector.kt:18
   listS = SmallPersistentVector@1 at ImmutableListTest.kt:221
   plus = SmallPersistentVector@1 at ImmutableListTest.kt:222
   element = null at ImmutableListTest.kt:222
@@ -26,6 +30,10 @@ ImmutableListTest.covariantTyping() at ImmutableListTest.kt:219
     size(): 1 at SmallPersistentVector.kt:31
     newBuffer[1] = null at SmallPersistentVector.kt:31
     new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
+      super@AbstractPersistentList(): SmallPersistentVector@1 at SmallPersistentVector.kt:15
+        super@AbstractList(): SmallPersistentVector@1 at AbstractPersistentList.kt:13
+      buffer = Object;@1 at SmallPersistentVector.kt:15
+      assert(true) at SmallPersistentVector.kt:18
   listSN = SmallPersistentVector@1 at ImmutableListTest.kt:222
   plus = SmallPersistentVector@1 at ImmutableListTest.kt:223
   element = 1 at ImmutableListTest.kt:223
@@ -37,6 +45,10 @@ ImmutableListTest.covariantTyping() at ImmutableListTest.kt:219
     size(): 2 at SmallPersistentVector.kt:31
     newBuffer[2] = 1 at SmallPersistentVector.kt:31
     new SmallPersistentVector(newBuffer): SmallPersistentVector@1 at SmallPersistentVector.kt:32
+      super@AbstractPersistentList(): SmallPersistentVector@1 at SmallPersistentVector.kt:15
+        super@AbstractList(): SmallPersistentVector@1 at AbstractPersistentList.kt:13
+      buffer = Object;@1 at SmallPersistentVector.kt:15
+      assert(true) at SmallPersistentVector.kt:18
   listAny = SmallPersistentVector@1 at ImmutableListTest.kt:223
   Object;@1[0] = "x" at ImmutableListTest.kt:225
   Object;@1[1] = null at ImmutableListTest.kt:225
@@ -48,6 +60,11 @@ ImmutableListTest.covariantTyping() at ImmutableListTest.kt:219
       ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 3) at SmallPersistentVector.kt:143
       size(): 3 at SmallPersistentVector.kt:145
       new BufferIterator(buffer, index ➜ 0, 3): BufferIterator@1 at SmallPersistentVector.kt:145
+        super@AbstractListIterator(index ➜ 0, size ➜ 3): BufferIterator@1 at BufferIterator.kt:12
+          super@Object(): BufferIterator@1 at AbstractListIterator.kt:8
+          index = 0 at AbstractListIterator.kt:8
+          size = 3 at AbstractListIterator.kt:8
+        buffer = Object;@1 at BufferIterator.kt:9
     hasNext(): true at BufferIterator.kt:14
     getIndex(): 0 at BufferIterator.kt:17
     setIndex(1) at BufferIterator.kt:17

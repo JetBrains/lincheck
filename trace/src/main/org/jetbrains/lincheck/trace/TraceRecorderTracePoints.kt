@@ -315,6 +315,9 @@ class TRMethodCallTracePoint(
     fun isMethodIncomplete(): Boolean =
         (flags.toInt() and INCOMPLETE_METHOD_FLAG) != 0
 
+    fun isSuperConstructorCall(): Boolean =
+        (flags.toInt() and SUPER_CONSTRUCTOR_CALL_FLAG) != 0
+
     override fun save(out: TraceWriter) {
         saveReferences(out)
         out.startWriteAnyTracepoint()
@@ -351,8 +354,10 @@ class TRMethodCallTracePoint(
     }
 
     companion object {
-        // Flag that tells that the method was not tracked from its start and has some missing tracepoints
+        // Bit flag that tells that the method was not tracked from its start and has some missing tracepoints
         const val INCOMPLETE_METHOD_FLAG: Int = 1
+        // Bit flag set on a method-call trace point when the constructor invocation is a super()/this() delegation
+        const val SUPER_CONSTRUCTOR_CALL_FLAG: Int = 2
     }
 }
 

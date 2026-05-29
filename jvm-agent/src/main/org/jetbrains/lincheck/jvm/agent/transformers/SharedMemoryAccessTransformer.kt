@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.transformers
 
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -20,6 +21,7 @@ import org.jetbrains.lincheck.descriptors.toType
 import org.jetbrains.lincheck.descriptors.FieldKind
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
+import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
@@ -47,9 +49,9 @@ internal class SharedMemoryAccessTransformer(
         if (
             isCoroutineInternalClass(owner.toCanonicalClassName()) ||
             isCoroutineStateMachineClass(owner.toCanonicalClassName()) ||
-            // when initializing our own fields in constructor, we do not want to track that;
-            // otherwise `VerifyError` will be thrown, see https://github.com/JetBrains/lincheck/issues/424
-            (methodName == "<init>" && className == owner)
+            // TODO: JBRes-6844 Further investigate constructors support for lincheck.
+            //       In lincheck mode we do not fully support tracking events inside constructor bodies, some tests fail.
+            (!isInTraceRecorderMode && methodName == "<init>" && className == owner)
         ) {
             super.visitFieldInsn(opcode, owner, fieldName, desc)
             return
@@ -116,6 +118,7 @@ internal class SharedMemoryAccessTransformer(
     }
 
     private fun GeneratorAdapter.processInstanceFieldGet(owner: String, fieldName: String, opcode: Int, desc: String) {
+        val isUninitThisOwner = typeAnalyzer?.stack?.getStackElementAt(0) == Opcodes.UNINITIALIZED_THIS
         val fieldId = context.createAndRegisterFieldDescriptor(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
@@ -127,8 +130,19 @@ internal class SharedMemoryAccessTransformer(
 
         // STACK: obj
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(0)
-        val ownerLocal = newLocal(getType("L$owner;")).also { copyLocal(it) }
-
+        val ownerLocal: Int = if (isUninitThisOwner) {
+            // We cannot store uninitializedThis to a typed local and pass it to instrumentation
+            // methods (causes VerifyError). Instead, we pop it, substitute UNINITIALIZED_THIS sentinel for
+            // tracking, and restore it via ALOAD 0 just before the real GETFIELD.
+            // STACK: uninitializedThis
+            pushUninitializedThisSubstitute()
+            // STACK: uninitializedThis, substitute
+            newLocal(OBJECT_TYPE).also { storeLocal(it) /* we perform store here instead of load to remove substitute from stack */ }
+        } else {
+            // STACK: obj
+            newLocal(getType("L$owner;")).also { copyLocal(it) }
+        }
+        // STACK: obj | uninitializedThis
         val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
             storeLocal(it)
@@ -143,25 +157,23 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(ownerLocal)
         push(fieldId)
         loadLocal(resultInterceptorLocal)
-        // STACK: obj, descriptor, codeLocation, obj, fieldId, resultInterceptor
         invokeStatic(Injections::beforeReadField)
-        // STACK: obj
-
+        // STACK: obj | uninitializedThis
         processRead(resultInterceptorLocal, getType(desc),
             cleanStack = {
-                // STACK: obj
+                // STACK: obj | uninitializedThis
                 pop()
                 // STACK: <empty>
             },
             emitReadInstruction = {
-                // STACK: obj
+                // STACK: obj | uninitializedThis
                 super.visitFieldInsn(opcode, owner, fieldName, desc)
                 // STACK: value
             }
         )
 
         // STACK: value
-        invokeAfterReadField(ownerLocal, fieldId, getType(desc), codeLocationId, threadDescriptorLocal, resultInterceptorLocal)
+        invokeAfterReadField(ownerLocal, fieldId, getType(desc), codeLocationId, threadDescriptorLocal, resultInterceptorLocal, isUninitThisOwner)
         // STACK: value
         invokeBeforeEventIfPluginEnabled("read field")
         // STACK: value
@@ -201,6 +213,7 @@ internal class SharedMemoryAccessTransformer(
     private fun GeneratorAdapter.processInstanceFieldPut(desc: String, owner: String, fieldName: String, opcode: Int) {
         // STACK: obj, value
         val valueType = getType(desc)
+        val isUninitThisOwner = typeAnalyzer?.stack?.getStackElementAt(valueType.size) == Opcodes.UNINITIALIZED_THIS
         val fieldId = context.createAndRegisterFieldDescriptor(
             className = owner.toCanonicalClassName(),
             fieldName = fieldName,
@@ -209,9 +222,11 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FieldsInfo.isFinalField(owner, fieldName),
             isVolatile = FieldsInfo.isVolatileField(owner, fieldName)
         ).id
-        val valueLocal = newLocal(valueType).also { storeLocal(it) } // we cannot use DUP as long/double require DUP2
-        val ownerLocal = newLocal(getType("L$owner;")).also { storeLocal(it) }
         val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(valueType.size)
+        val valueLocal = newLocal(valueType).also { storeLocal(it) }
+        // STACK: obj | uninitializedThis
+        val ownerLocal: Int = storeOwner(owner, isUninitThisOwner)
+        // STACK: <empty>
 
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
@@ -219,17 +234,41 @@ internal class SharedMemoryAccessTransformer(
         loadLocal(valueLocal)
         box(valueType)
         push(fieldId)
-        // STACK: descriptor, codeLocation, obj, value, fieldId
+        // STACK: descriptor, codeLocation, obj | uninitializedThis, value, fieldId
         invokeStatic(Injections::beforeWriteField)
         // STACK: <empty>
         invokeBeforeEventIfPluginEnabled("write field")
         // STACK: <empty>
-        loadLocal(ownerLocal)
+        loadOwner(ownerLocal, isUninitThisOwner)
         loadLocal(valueLocal)
         // STACK: obj, value
         super.visitFieldInsn(opcode, owner, fieldName, desc)
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
         invokeStatic(Injections::afterWrite)
+    }
+
+    private fun GeneratorAdapter.storeOwner(owner: String, isUninitThisOwner: Boolean): Int {
+        return if (isUninitThisOwner) {
+            // We cannot store uninitializedThis to a typed local and pass it to instrumentation
+            // methods (causes VerifyError). Instead, we pop it, substitute UNINITIALIZED_THIS sentinel for
+            // tracking, and restore it via ALOAD 0 just before the real PUTFIELD.
+            // Discard uninitializedThis — restore via ALOAD 0 when needed for PUTFIELD.
+            pop()
+            pushUninitializedThisSubstitute()
+            newLocal(OBJECT_TYPE).also { storeLocal(it) }
+        } else {
+            newLocal(getType("L$owner;")).also { storeLocal(it) }
+        }
+    }
+
+    private fun GeneratorAdapter.loadOwner(ownerLocal: Int, isUninitThisOwner: Boolean) {
+        // STACK: <empty>
+        if (isUninitThisOwner) {
+            visitVarInsn(ALOAD, 0) // restore this
+        } else {
+            loadLocal(ownerLocal)
+        }
+        // STACK: obj
     }
 
     override fun visitInsn(opcode: Int) = adapter.run {
@@ -362,20 +401,24 @@ internal class SharedMemoryAccessTransformer(
         )
     }
 
-    private fun GeneratorAdapter.invokeAfterReadField(ownerLocal: Int?, fieldId: Int, valueType: Type,
+    private fun GeneratorAdapter.invokeAfterReadField(
+        ownerLocal: Int?,
+        fieldId: Int,
+        valueType: Type,
         codeLocationId: Int,
         threadDescriptorLocal: Int,
         resultInterceptorLocal: Int,
+        isUninitThisOwner: Boolean = false,
     ) {
         // STACK: value
         val resultLocal = newLocal(valueType)
         copyLocal(resultLocal)
         loadLocal(threadDescriptorLocal)
         push(codeLocationId)
-        if (ownerLocal != null) {
-            loadLocal(ownerLocal)
-        } else {
-            pushNull()
+        when {
+            isUninitThisOwner  -> pushUninitializedThisSubstitute()
+            ownerLocal != null -> loadLocal(ownerLocal)
+            else               -> pushNull()
         }
         push(fieldId)
         loadLocal(resultLocal)

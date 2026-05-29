@@ -18,6 +18,9 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
   compareLists(EmptyList@1, empty1) at ImmutableListTest.kt:28
     compare(expected, actual, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:16
       new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+        super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+        expected = EmptyList@1 at ComparisonDSL.kt:15
+        actual = SmallPersistentVector@1 at ComparisonDSL.kt:15
       block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
         listBehavior(compare) at ImmutableListTest.kt:16
           equalityBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:9
@@ -75,6 +78,7 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                 propertyEquals.isEmpty(): true at CollectionBehaviors.kt:107
               assertEquals(true, true, message ➜ "isEmpty") at ComparisonDSL.kt:21
             new CollectionBehaviorsKt$collectionBehavior$3(): CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
+              super@Object(): CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
             it = CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:109
               getter.invoke(expected): false at ComparisonDSL.kt:21
@@ -103,6 +107,9 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
                 compareProperty.iterator(): BufferIterator@1 at CollectionBehaviors.kt:113
               compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
                 new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+                  super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+                  expected = EmptyIterator@1 at ComparisonDSL.kt:15
+                  actual = BufferIterator@1 at ComparisonDSL.kt:15
                 block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                   iteratorBehavior(compareProperty) at CollectionBehaviors.kt:113
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:55
@@ -144,6 +151,9 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
               compareProperty.listIterator(): BufferIterator@1 at CollectionBehaviors.kt:11
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+                super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+                expected = EmptyIterator@1 at ComparisonDSL.kt:15
+                actual = BufferIterator@1 at ComparisonDSL.kt:15
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:11
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
@@ -230,6 +240,9 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:12
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+                super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+                expected = EmptyIterator@1 at ComparisonDSL.kt:15
+                actual = BufferIterator@1 at ComparisonDSL.kt:15
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:12
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
@@ -318,6 +331,9 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
               compareProperty.listIterator(0): BufferIterator@1 at CollectionBehaviors.kt:13
             compare(EmptyIterator@1, BufferIterator@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+                super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+                expected = EmptyIterator@1 at ComparisonDSL.kt:15
+                actual = BufferIterator@1 at ComparisonDSL.kt:15
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:13
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32

@@ -17,6 +17,7 @@ import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
+import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.SUPER_CONSTRUCTOR_CALL_FLAG
 import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -528,6 +529,7 @@ class TraceCollectingEventTracker(
             methodId = methodId,
             obj = TRObjectOrNull(context, receiver),
             parameters = params.map { TRObjectOrNull(context, it) },
+            flags = (if (receiver == Injections.UNINITIALIZED_THIS) SUPER_CONSTRUCTOR_CALL_FLAG else 0).toShort(),
             parentTracePoint = parentTracepoint,
         )
         strategy.tracePointCreated(parentTracepoint, tracePoint)
@@ -622,6 +624,7 @@ class TraceCollectingEventTracker(
             onInlineMethodCallException(threadDescriptor, inlineTracePoint.methodId, t)
         }
 
+        processSuperConstructorCallsOnException(threadData, t)
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
             Logger.error {
@@ -682,6 +685,7 @@ class TraceCollectingEventTracker(
     ): Unit = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
+        processSuperConstructorCallsOnException(threadData, t)
         val tracePoint = threadData.popStackFrame()
         if (tracePoint.methodId != methodId) {
             val methodDescriptor = context.methodPool[methodId]
@@ -1001,6 +1005,24 @@ class TraceCollectingEventTracker(
             strategy.completeContainerTracePoint(thread, tracePoint)
         }
         strategy.completeThread(thread)
+    }
+
+    /**
+     * Process super constructor calls manually on [onMethodCallException] and [onInlineMethodCallException]
+     * because tracking exceptions thrown from them directly is not possible due to instrumentation limitations.
+     */
+    private fun processSuperConstructorCallsOnException(threadData: ThreadData, t: Throwable) {
+        val stack = threadData.getStack()
+        while (stack.isNotEmpty() && stack.last().call.isSuperConstructorCall()) {
+            val frame = stack.last()
+            // we need to set the result to the thrown exception manually
+            if (frame.call.result == null) {
+                frame.call.setExceptionResult(t)
+            }
+            // also, we have to remove them from the stack before reaching the first method
+            // which is not a super constructor call to process this exception
+            threadData.popStackFrame()
+        }
     }
 
     private fun completeRunningThread(thread: Thread, threadDescriptor: ThreadDescriptor) {

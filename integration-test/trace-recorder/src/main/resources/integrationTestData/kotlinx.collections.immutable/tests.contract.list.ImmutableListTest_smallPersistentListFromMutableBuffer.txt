@@ -109,6 +109,16 @@ ImmutableListTest.smallPersistentListFromMutableBuffer() at ImmutableListTest.kt
   mutate = SmallPersistentVector@1 at ImmutableListTest.kt:122
   mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
     new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+      super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+      rootShift = 0 at PersistentVectorBuilder.kt:17
+      builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+      new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+      ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+      root = null at PersistentVectorBuilder.kt:22
+      tail = Object;@1 at PersistentVectorBuilder.kt:30
+      vector.size(): 0 at PersistentVectorBuilder.kt:38
+      size = 0 at PersistentVectorBuilder.kt:38
   it = PersistentVectorBuilder@1 at extensions.kt:41
   it.addAll(list): true at ImmutableListTest.kt:122
     elements.isEmpty(): false at PersistentVectorBuilder.kt:174
@@ -334,9 +344,22 @@ ImmutableListTest.smallPersistentListFromMutableBuffer() at ImmutableListTest.kt
     root = Object;@1 at PersistentVectorBuilder.kt:45
     tail = Object;@1 at PersistentVectorBuilder.kt:46
     new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+      super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
     build$lambda$0.ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
     build$lambda$0.size(): 33 at PersistentVectorBuilder.kt:55
     new PersistentVector(root, tail, 33, build$lambda$0.rootShift ➜ 0): PersistentVector@1 at PersistentVectorBuilder.kt:55
+      super@AbstractPersistentList(): PersistentVector@1 at PersistentVector.kt:27
+        super@AbstractList(): PersistentVector@1 at AbstractPersistentList.kt:13
+      root = Object;@1 at PersistentVector.kt:24
+      tail = Object;@1 at PersistentVector.kt:25
+      size = 33 at PersistentVector.kt:26
+      rootShift = 0 at PersistentVector.kt:27
+      size(): 33 at PersistentVector.kt:30
+      size(): 33 at PersistentVector.kt:31
+      size(): 33 at PersistentVector.kt:31
+      rootSize(33): 32 at PersistentVector.kt:31
+      coerceAtMost(tail.length ➜ 33, 32): 32 at PersistentVector.kt:31
+      assert(true) at PersistentVector.kt:31
     newlyBuiltVector = PersistentVector@1 at PersistentVectorBuilder.kt:48
     build$lambda$0.builtVector = PersistentVector@1 at PersistentVectorBuilder.kt:57
   vector = PersistentVector@1 at ImmutableListTest.kt:122
@@ -356,6 +379,10 @@ ImmutableListTest.smallPersistentListFromMutableBuffer() at ImmutableListTest.kt
         Arrays.copyOf(root, 32): Object;@1 at PersistentVector.kt:183
         buffer = Object;@1 at PersistentVector.kt:183
         new SmallPersistentVector(buffer): SmallPersistentVector@1 at PersistentVector.kt:184
+          super@AbstractPersistentList(): SmallPersistentVector@1 at SmallPersistentVector.kt:15
+            super@AbstractList(): SmallPersistentVector@1 at AbstractPersistentList.kt:13
+          buffer = Object;@1 at SmallPersistentVector.kt:15
+          assert(true) at SmallPersistentVector.kt:18
   vector = SmallPersistentVector@1 at ImmutableListTest.kt:123
   dropLast(list, 1): ArrayList@1 at ImmutableListTest.kt:124
   assertEquals(ArrayList@1, vector, null, 4, null) at ImmutableListTest.kt:124
@@ -365,6 +392,11 @@ ImmutableListTest.smallPersistentListFromMutableBuffer() at ImmutableListTest.kt
         ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 32) at SmallPersistentVector.kt:143
         size(): 32 at SmallPersistentVector.kt:145
         new BufferIterator(buffer, index ➜ 0, 32): BufferIterator@1 at SmallPersistentVector.kt:145
+          super@AbstractListIterator(index ➜ 0, size ➜ 32): BufferIterator@1 at BufferIterator.kt:12
+            super@Object(): BufferIterator@1 at AbstractListIterator.kt:8
+            index = 0 at AbstractListIterator.kt:8
+            size = 32 at AbstractListIterator.kt:8
+          buffer = Object;@1 at BufferIterator.kt:9
     hasNext(): true at BufferIterator.kt:14
     getIndex(): 0 at BufferIterator.kt:17
     setIndex(1) at BufferIterator.kt:17

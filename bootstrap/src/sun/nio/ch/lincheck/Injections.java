@@ -1231,4 +1231,15 @@ public class Injections {
 
     // Special object to represent void method call result.
     public static final Object VOID_RESULT = new Object();
+
+    /**
+     * Sentinel value passed as the receiver when a {@code super()}/{@code this()} constructor call
+     * is instrumented and the actual receiver is the uninitialized {@code this} reference
+     * (i.e., {@code UNINITIALIZED_THIS} in the JVM verification type system).
+     * <p>
+     * Passing the uninitialized {@code this} to instrumentation methods would cause a
+     * {@code VerifyError}, so this constant is used as a safe substitute that event trackers
+     * can recognise to mean "the constructor was called on the not-yet-initialised object".
+     */
+    public static final Object UNINITIALIZED_THIS = new Object();
 }

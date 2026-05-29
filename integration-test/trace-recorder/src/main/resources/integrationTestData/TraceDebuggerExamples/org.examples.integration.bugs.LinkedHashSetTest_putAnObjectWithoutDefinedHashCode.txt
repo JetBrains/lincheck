@@ -1,9 +1,13 @@
 # Thread 1
 LinkedHashSetTest.putAnObjectWithoutDefinedHashCode() at LinkedHashSetTest.kt:10
   new LinkedHashSetTest.A(1): LinkedHashSetTest.A@1 at LinkedHashSetTest.kt:10
+    super@Object(): LinkedHashSetTest.A@1 at LinkedHashSetTest.kt:6
+    a = 1 at LinkedHashSetTest.kt:6
   LinkedHashSetTest.A;@1[0] = LinkedHashSetTest.A@1 at LinkedHashSetTest.kt:10
   linkedSetOf(LinkedHashSetTest.A;@1): LinkedHashSet@1 at LinkedHashSetTest.kt:10
   linkedHashSet = LinkedHashSet@1 at LinkedHashSetTest.kt:10
   new LinkedHashSetTest.A(2): LinkedHashSetTest.A@1 at LinkedHashSetTest.kt:11
+    super@Object(): LinkedHashSetTest.A@1 at LinkedHashSetTest.kt:6
+    a = 2 at LinkedHashSetTest.kt:6
   linkedHashSet.add(LinkedHashSetTest.A@1): true at LinkedHashSetTest.kt:11
   linkedHashSet.size(): 2 at LinkedHashSetTest.kt:12

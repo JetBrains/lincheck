@@ -1,0 +1,8 @@
+# Thread 1
+ConstructorInheritanceTest.operation() at ConstructorInheritanceTest.kt:30
+  new ConstructorInheritanceFoo(): ConstructorInheritanceFoo@1 at ConstructorInheritanceTest.kt:30
+  ConstructorInheritanceFoo@1.foo() at ConstructorInheritanceTest.kt:30
+    super@ConstructorInheritanceBase(): ConstructorInheritanceDerived@1 at ConstructorInheritanceTest.kt:11
+      super@Object(): ConstructorInheritanceDerived@1 at ConstructorInheritanceTest.kt:7
+      x = 1 at ConstructorInheritanceTest.kt:8
+    y = 2 at ConstructorInheritanceTest.kt:12

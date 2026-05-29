@@ -139,8 +139,12 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
     protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         if (tracePoint.isConstructor()) {
-            appendKeyword("new")
-            appendSpecialSymbol(" ")
+            if (tracePoint.isSuperConstructorCall()) {
+                appendKeyword("super@")
+            } else {
+                appendKeyword("new")
+                appendSpecialSymbol(" ")
+            }
             appendClassName(tracePoint.classDescriptor)
             appendSpecialSymbol("(")
             appendParameters(tracePoint)

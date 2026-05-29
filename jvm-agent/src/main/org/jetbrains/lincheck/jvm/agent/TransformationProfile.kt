@@ -322,13 +322,6 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
             }
         }
 
-        // Currently, constructors are treated in a special way to avoid problems
-        // with `VerificationError` due to leaking this problem,
-        // see: https://github.com/JetBrains/lincheck/issues/424
-        if (methodName == "<init>") {
-            return config
-        }
-
         return config.apply {
             trackLocalVariableWrites = true
             trackAllFieldsWrites = true

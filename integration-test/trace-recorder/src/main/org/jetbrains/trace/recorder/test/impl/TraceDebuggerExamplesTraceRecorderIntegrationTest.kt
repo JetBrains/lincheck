@@ -23,6 +23,7 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractGradleTraceInt
             testClassName = "org.examples.hackathon.SimpleProgramNonFailingTest",
             testMethodName = "test",
             commands = listOf(":test"),
+            extraJvmArgs = listOf("-Xshare:off") // disable Class Data Sharing so that System.identityHashCode for Integer becomes deterministic
         )
     }
 
@@ -518,6 +519,204 @@ class TraceDebuggerExamplesTraceRecorderIntegrationTest : AbstractGradleTraceInt
             testClassName = "org.examples.integration.loops.SequenceContinuedForAndMapLoopRepresentationTest",
             testMethodName = "operation",
             commands = listOf(":test"),
+        )
+    }
+
+    // scoping filters for constructor inheritance tests
+    private val constructorInheritanceTestClass =
+        "org.examples.integration.constructors.ConstructorInheritanceTest"
+    private val constructorInheritanceBaseClass =
+        "org.examples.integration.constructors.ConstructorInheritanceBase"
+    private val constructorInheritanceDerivedClass =
+        "org.examples.integration.constructors.ConstructorInheritanceDerived"
+    private val constructorInheritanceFooClass =
+        "org.examples.integration.constructors.ConstructorInheritanceFoo"
+    private val constructorInheritanceBarClass =
+        "org.examples.integration.constructors.ConstructorInheritanceBar"
+
+    /** All classes instrumented — baseline full trace. */
+    @Test
+    fun `constructorInheritance allInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceTestClass,
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    /** Base excluded — Derived constructor body visible but super() body is opaque. */
+    @Test
+    fun `constructorInheritance baseNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "baseNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf("exclude" to constructorInheritanceBaseClass),
+        )
+    }
+
+    /** Derived excluded — constructor call visible from Bar.bar() but no constructor body. */
+    @Test
+    fun `constructorInheritance derivedNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "derivedNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf("exclude" to constructorInheritanceDerivedClass),
+        )
+    }
+
+    /** Foo excluded — foo() call is opaque; Bar and constructors never reached in trace. */
+    @Test
+    fun `constructorInheritance fooNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "fooNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf("exclude" to constructorInheritanceFooClass),
+        )
+    }
+
+    /** Bar excluded — bar() call is opaque; Derived constructor never recorded from call-site perspective. */
+    @Test
+    fun `constructorInheritance barNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "barNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf("exclude" to constructorInheritanceBarClass),
+        )
+    }
+
+    /** Both Base and Derived excluded — constructor calls visible but both bodies are opaque. */
+    @Test
+    fun `constructorInheritance bothConstructorsNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "bothConstructorsNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf(
+                "exclude" to "$constructorInheritanceBaseClass;$constructorInheritanceDerivedClass"
+            ),
+        )
+    }
+
+    /** Both Foo and Bar excluded — callers are opaque; tests TR behaviour for instrumented constructor
+     *  called from an un-instrumented context. */
+    @Test
+    fun `constructorInheritance bothCallersNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "bothCallersNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf(
+                "exclude" to "$constructorInheritanceFooClass;$constructorInheritanceBarClass"
+            ),
+        )
+    }
+
+    // scoping filters for constructor inheritance with exception tests
+    private val constructorInheritanceWithExceptionTestClass =
+        "org.examples.integration.constructors.ConstructorInheritanceWithExceptionTest"
+    private val constructorInheritanceWithExceptionBaseClass =
+        "org.examples.integration.constructors.ConstructorInheritanceWithExceptionBase"
+    private val constructorInheritanceWithExceptionDerivedClass =
+        "org.examples.integration.constructors.ConstructorInheritanceWithExceptionDerived"
+    private val constructorInheritanceWithExceptionFooClass =
+        "org.examples.integration.constructors.ConstructorInheritanceWithExceptionFoo"
+    private val constructorInheritanceWithExceptionBarClass =
+        "org.examples.integration.constructors.ConstructorInheritanceWithExceptionBar"
+
+    /** All classes instrumented — baseline full trace. */
+    @Test
+    fun `constructorInheritanceWithException allInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceWithExceptionTestClass,
+            testMethodName = "operation",
+            commands = listOf(":test"),
+        )
+    }
+
+    /** Base excluded — Derived constructor body visible but super() body is opaque. */
+    @Test
+    fun `constructorInheritanceWithException baseNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceWithExceptionTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "baseNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf("exclude" to constructorInheritanceWithExceptionBaseClass),
+        )
+    }
+
+    /** Derived excluded — constructor call visible from Bar.bar() but no constructor body. */
+    @Test
+    fun `constructorInheritanceWithException derivedNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceWithExceptionTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "derivedNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf("exclude" to constructorInheritanceWithExceptionDerivedClass),
+        )
+    }
+
+    /** Foo excluded — foo() call is opaque; Bar and constructors never reached in trace. */
+    @Test
+    fun `constructorInheritanceWithException fooNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceWithExceptionTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "fooNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf("exclude" to constructorInheritanceWithExceptionFooClass),
+        )
+    }
+
+    /** Bar excluded — bar() call is opaque; Derived constructor never recorded from call-site perspective. */
+    @Test
+    fun `constructorInheritanceWithException barNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceWithExceptionTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "barNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf("exclude" to constructorInheritanceWithExceptionBarClass),
+        )
+    }
+
+    /** Both Base and Derived excluded — constructor calls visible but both bodies are opaque. */
+    @Test
+    fun `constructorInheritanceWithException bothConstructorsNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceWithExceptionTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "bothConstructorsNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf(
+                "exclude" to "$constructorInheritanceWithExceptionBaseClass;$constructorInheritanceWithExceptionDerivedClass"
+            ),
+        )
+    }
+
+    /** Both Foo and Bar excluded — callers are opaque; tests TR behaviour for instrumented constructor
+     *  called from an un-instrumented context. */
+    @Test
+    fun `constructorInheritanceWithException bothCallersNotInstrumented`() {
+        runTest(
+            testClassName = constructorInheritanceWithExceptionTestClass,
+            testMethodName = "operation",
+            testNameSuffix = "bothCallersNotInstrumented",
+            commands = listOf(":test"),
+            extraAgentArgs = mapOf(
+                "exclude" to "$constructorInheritanceWithExceptionFooClass;$constructorInheritanceWithExceptionBarClass"
+            ),
         )
     }
 }
