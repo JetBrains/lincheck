@@ -192,7 +192,9 @@ internal class SnapshotBreakpointTransformer(
         // === STEP 4: Capture local variables and build Object[] array (runtime) ===
         // The condition may reference local variables from the breakpoint location.
         // We need to capture their current values and pass them to the factory.
-        val argNames = breakpoint.conditionCapturedVars.orEmpty()
+        // Extract captured variable names directly from the condition bytecode —
+        // this is the single source of truth, eliminating reliance on the wire-transmitted list.
+        val argNames = extractCapturedVarNamesFromBytecode(breakpoint.conditionCodeFragment!!)
         val capturedLocals = argNames.map { argName ->
             // Look up each captured variable name in the current method's active locals.
             // If a variable isn't found, throw an error (this indicates a bug in condition analysis).
@@ -302,16 +304,12 @@ internal class SnapshotBreakpointTransformer(
             classBytes = conditionClassBytes
         )
         val conditionClassLoader = conditionClass.classLoader
-        val allowedFunctionCalls = { className: String, methodName: String, _: String ->
-            className == conditionClassName.toInternalClassName() && methodName.startsWith("accessToField")
-        }
         val safetyViolation = SideEffectChecker.checkMethodForSideEffects(
             className = conditionClassName,
             methodName = "invoke",
             methodDescriptor = "()Z",
             bytecodeProvider = conditionClassLoader::findClassBytecode,
-            isClassLoaded = { isClassAlreadyLoaded(it, conditionClassLoader) },
-            allowedFunctionCalls = allowedFunctionCalls,
+            isClassLoaded = { it == className || isClassAlreadyLoaded(it, conditionClassLoader) },
         )
         if (safetyViolation != null) {
             Logger.warn {
@@ -376,3 +374,34 @@ internal class SnapshotBreakpointTransformer(
 }
 
 private val booleanSupplierType = Type.getType(BooleanSupplier::class.java)
+
+/**
+ * Extracts captured variable names from compiled condition bytecode using ASM.
+ *
+ * Walks the class fields, skipping synthetic outer-class references (`this$*`),
+ * and remaps the synthetic `__instance` field to `"this"` so the agent looks up
+ * the correct local variable in the target frame.
+ *
+ * This is the single source of truth for captured variable ordering — the agent
+ * extracts it from the same bytecode it loads, eliminating any consistency risk
+ * with a separately transmitted list.
+ */
+private fun extractCapturedVarNamesFromBytecode(bytecode: ByteArray): List<String> {
+    val names = mutableListOf<String>()
+    val classReader = ClassReader(bytecode)
+    classReader.accept(object : ClassVisitor(ASM_API) {
+        override fun visitField(
+            access: Int,
+            name: String,
+            descriptor: String,
+            signature: String?,
+            value: Any?,
+        ): FieldVisitor? {
+            if (!name.startsWith("this\$")) {
+                names.add(if (name == "__instance") "this" else name)
+            }
+            return null
+        }
+    }, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG)
+    return names
+}

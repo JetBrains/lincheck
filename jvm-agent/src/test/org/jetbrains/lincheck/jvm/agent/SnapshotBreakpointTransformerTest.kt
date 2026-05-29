@@ -568,7 +568,6 @@ class SnapshotBreakpointTransformerTest {
             lineNumber = 32,
             conditionClassName = null,
             conditionFactoryMethodName = null,
-            conditionCapturedVars = null,
             conditionCodeFragment = null,
         )
         val sites = transformAndCollect(JavaChainedCallFixture::class.java, listOf(unrelatedBreakpoint))
@@ -701,7 +700,6 @@ internal fun snapshotBreakpoint(
     lineNumber = line,
     conditionClassName = null,
     conditionFactoryMethodName = null,
-    conditionCapturedVars = null,
     conditionCodeFragment = null,
 )
 
@@ -720,7 +718,6 @@ internal fun snapshotBreakpoint(
     lineNumber = line,
     conditionClassName = null,
     conditionFactoryMethodName = null,
-    conditionCapturedVars = null,
     conditionCodeFragment = null,
 )
 

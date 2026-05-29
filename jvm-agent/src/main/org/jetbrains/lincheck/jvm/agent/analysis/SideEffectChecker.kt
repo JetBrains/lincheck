@@ -400,23 +400,33 @@ object SideEffectChecker {
         )
         methodNode.accept(analyzer)
 
-        // Resolve deferred method invocations: recurse with reduced call depth,
-        // or emit `MaxCallDepthExceeded` when the budget is exhausted.
+        // Resolve each deferred method invocation into a violation (or `null` if safe).
+        // Three shapes: depth budget exhausted, field-accessor short-circuit, or recurse
+        // into the call target with one less depth budget.
         val deferredViolations = analyzer.methodInvocations.mapNotNull { call ->
-            if (maxCallDepth == 0) {
-                MaxCallDepthExceeded(call.fileName, call.lineNumber, call.owner, call.name)
-            } else {
-                checkMethodForSideEffects(
-                    internalClassName = call.owner,
-                    methodName = call.name,
-                    methodDescriptor = call.descriptor,
-                    bytecodeProvider = bytecodeProvider,
-                    isClassLoaded = isClassLoaded,
-                    maxCallDepth = maxCallDepth - 1,
-                    callerFileName = call.fileName,
-                    callerLineNumber = call.lineNumber,
-                    allowedFunctionCalls = allowedFunctionCalls,
-                )
+            val fieldTarget = resolveFieldAccessor(call, bytecodeProvider)
+            when {
+                maxCallDepth == 0 ->
+                    MaxCallDepthExceeded(call.fileName, call.lineNumber, call.owner, call.name)
+
+                fieldTarget != null ->
+                    checkResolvedFieldAccessor(fieldTarget, call, analyzerIsSafeStaticFieldRead)
+                
+                else -> {
+                    val target = resolveAccessorTarget(call, bytecodeProvider)
+                        ?: MethodCallTarget(call.owner, call.name, call.descriptor)
+                    checkMethodForSideEffects(
+                        internalClassName = target.internalClassName,
+                        methodName = target.methodName,
+                        methodDescriptor = target.methodDescriptor,
+                        bytecodeProvider = bytecodeProvider,
+                        isClassLoaded = isClassLoaded,
+                        maxCallDepth = maxCallDepth - 1,
+                        callerFileName = call.fileName,
+                        callerLineNumber = call.lineNumber,
+                        allowedFunctionCalls = allowedFunctionCalls,
+                    )
+                }
             }
         }
         val instructionViolations = analyzer.violations + deferredViolations
@@ -434,6 +444,24 @@ object SideEffectChecker {
             methodName = methodName,
             causes = allViolations,
         )
+    }
+
+    /**
+     * Classifies a resolved field accessor as safe / unsafe without recursing
+     * into its body (the reflective machinery there would parse as unsafe).
+     * Instance reads are always safe — the receiver's existence proves the
+     * declaring class is loaded. Static reads go through [isSafeStaticFieldRead],
+     * the same `<clinit>` policy as a direct `GETSTATIC`.
+     */
+    private fun checkResolvedFieldAccessor(
+        target: FieldAccessorTarget,
+        call: MethodInvocationInfo,
+        isSafeStaticFieldRead: StaticFieldReadPredicate,
+    ): SafetyViolation? {
+        if (!target.isStatic) return null
+        val info = StaticFieldReadInfo(target.internalClassName, target.fieldName, call.fileName, call.lineNumber)
+        return if (isSafeStaticFieldRead(info)) null
+        else UninitializedClassStaticFieldRead(call.fileName, call.lineNumber, target.internalClassName, target.fieldName)
     }
 
     /**
@@ -500,9 +528,11 @@ object SideEffectChecker {
             val classNode = ClassNode()
             val bytecode = bytecodeProvider(currentInternalClassName) ?: return null
             ClassReader(bytecode).accept(classNode, ClassReader.SKIP_FRAMES)
-            // Check the current class for the method
+            // For accessorMethods we can recover the method name and parameter types.
+            // However, we cannot resolve it's return type. That is why we match on the descriptor before `()V`.
             val methodNode = classNode.methods.firstOrNull {
-                it.name == methodName && it.desc == methodDescriptor
+                it.name == methodName &&
+                    (it.desc == methodDescriptor || it.desc.substringBefore(')') == methodDescriptor.substringBefore(')'))
             }
             if (methodNode != null) {
                 return classNode to methodNode
@@ -938,4 +968,223 @@ internal val SAFE_DYNAMIC_INVOCATIONS = setOf(
 
 private val STANDARD_LIBRARY_PREFIXES = listOf(
     "java/", "javax/", "kotlin/", "sun/", "jdk/"
+)
+// ── Accessor resolution ───────────────────────────────────────────────────────
+//
+// The IDE-side condition compiler generates synthetic accessor methods
+// (`accessToMethod_*`, `accessToSuper_*`) that wrap reflective calls to
+// otherwise inaccessible target methods. The bodies of these accessors invoke
+// reflective machinery (`Class.forName`, `getDeclaredMethod`, `findSpecial`,
+// `MethodHandle.invokeExact`) — instructions which, if analyzed naively, would
+// be flagged as unsafe. Instead, when the side-effect analyzer encounters such
+// a call, we extract the *real* target (class + method + descriptor) from
+// constants embedded in the accessor's bytecode and recurse into that target,
+// applying the same safety check.
+//
+// `accessToField_*` accessors get the symmetric treatment via
+// [resolveFieldAccessor]: instance-field reads are dropped (the instance proves
+// the declaring class is initialized), static reads are run through the same
+// [isSafeStaticFieldRead] policy as direct `GETSTATIC` so an accessor against a
+// not-yet-initialized class is rejected.
+
+/** Resolved target of an `accessToMethod_*` / `accessToSuper_*` accessor, or any other normal call. */
+private data class MethodCallTarget(
+    val internalClassName: String,
+    val methodName: String,
+    val methodDescriptor: String,
+)
+
+/** Resolved target of an `accessToField_*` synthetic accessor. */
+private data class FieldAccessorTarget(
+    val internalClassName: String,
+    val fieldName: String,
+    val isStatic: Boolean,
+)
+
+/**
+ * Recovers the field referenced by an `accessToField_*` call. Returns `null`
+ * if [call] isn't a field accessor or its constants couldn't be read.
+ */
+private fun resolveFieldAccessor(
+    call: MethodInvocationInfo,
+    bytecodeProvider: ClassBytecodeProvider,
+): FieldAccessorTarget? {
+    if (!call.name.startsWith("accessToField_")) return null
+    val accessorClassBytes = bytecodeProvider(call.owner) ?: return null
+    val constants = readAccessorConstants(accessorClassBytes, call.name) ?: return null
+    val ownerClass = constants.ldcStrings.getOrNull(0)?.toInternalClassName() ?: return null
+    val fieldName = constants.ldcStrings.getOrNull(1) ?: return null
+    val ownerBytes = bytecodeProvider(ownerClass) ?: return null
+    val ownerNode = ClassNode().also {
+        ClassReader(ownerBytes).accept(it, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG or ClassReader.SKIP_FRAMES)
+    }
+    val field = ownerNode.fields.firstOrNull { it.name == fieldName } ?: return null
+    return FieldAccessorTarget(
+        internalClassName = ownerClass,
+        fieldName = fieldName,
+        isStatic = (field.access and ACC_STATIC) != 0,
+    )
+}
+
+/**
+ * Recovers the method referenced by an `accessToMethod_*` / `accessToSuper_*`
+ * call by reading constants out of the accessor body. Returns `null` if [call]
+ * isn't a method/super accessor or its constants couldn't be extracted.
+ */
+private fun resolveAccessorTarget(
+    call: MethodInvocationInfo,
+    bytecodeProvider: ClassBytecodeProvider,
+): MethodCallTarget? {
+    val accessorName = call.name
+    if (!accessorName.startsWith("accessToMethod_") && !accessorName.startsWith("accessToSuper_")) {
+        return null
+    }
+    val classBytes = bytecodeProvider(call.owner) ?: return null
+    val constants = readAccessorConstants(classBytes, accessorName) ?: return null
+    return when {
+        accessorName.startsWith("accessToMethod_") -> constants.toMethodAccessorTarget()
+        accessorName.startsWith("accessToSuper_") -> constants.toSuperAccessorTarget()
+        else -> null
+    }
+}
+
+/**
+ * Runs [AccessorConstantCollector] over the method named [accessorName] in
+ * [classBytes]. Returns `null` if the body never reaches its reflective
+ * lookup call (which can happen for malformed or non-accessor methods).
+ */
+private fun readAccessorConstants(classBytes: ByteArray, accessorName: String): AccessorConstants? {
+    val collector = AccessorConstantCollector(accessorName)
+    ClassReader(classBytes).accept(object : ClassVisitor(ASM_API) {
+        override fun visitMethod(
+            access: Int, name: String, descriptor: String,
+            signature: String?, exceptions: Array<out String>?
+        ): MethodVisitor? = if (name == accessorName) collector else null
+    }, ClassReader.SKIP_FRAMES)
+    return collector.result()
+}
+
+/**
+ * LDC string operands (owner-class binary name, member name, …) and class
+ * literals (parameter types) captured at the accessor's reflective lookup
+ * call. Per-variant interpreters ([toMethodAccessorTarget],
+ * [toSuperAccessorTarget]) pick the right indices because each accessor
+ * shape lays out the same constants in a different order.
+ */
+private data class AccessorConstants(
+    val ldcStrings: List<String>,
+    val classLiterals: List<Type>,
+) {
+    /** Layout: `ldcStrings = [ownerClass, methodName]`, all class literals are parameter types. */
+    fun toMethodAccessorTarget(): MethodCallTarget? =
+        target(classNameIndex = 0, methodNameIndex = 1, parameterTypes = classLiterals)
+
+    /** Layout: `ldcStrings = [callerClass, ownerClass, methodName]`, first class literal is the receiver type (dropped). */
+    fun toSuperAccessorTarget(): MethodCallTarget? =
+        target(classNameIndex = 1, methodNameIndex = 2, parameterTypes = classLiterals.drop(1))
+
+    private fun target(classNameIndex: Int, methodNameIndex: Int, parameterTypes: List<Type>): MethodCallTarget? {
+        val className = ldcStrings.getOrNull(classNameIndex) ?: return null
+        val methodName = ldcStrings.getOrNull(methodNameIndex) ?: return null
+        // Return type is unrecoverable from the accessor body — synthesize as `V`;
+        // `findMethodInHierarchy` falls back to parameter-prefix matching.
+        val descriptor = Type.getMethodDescriptor(Type.VOID_TYPE, *parameterTypes.toTypedArray())
+        return MethodCallTarget(className.toInternalClassName(), methodName, descriptor)
+    }
+}
+
+/**
+ * Method visitor that walks an accessor body and snapshots the constants in
+ * play at its reflective lookup call — `getDeclaredMethod` for method
+ * accessors, `findSpecial` for super accessors, `getDeclaredField` for field
+ * accessors (see [isAccessorTargetLookup]).
+ *
+ * Captures three kinds of constants:
+ * - LDC `String` operands (target's owner-class binary name + member name);
+ * - LDC `Type` class literals (parameter types known at compile time);
+ * - the LDC string consumed by each `Class.forName(<binary name>)` call,
+ *   materialised as a parameter-type class literal — except the very first
+ *   such call, which resolves the enclosing outer class and isn't a parameter.
+ *
+ * Stops capturing once the lookup call is seen; constants emitted after
+ * (e.g. `setAccessible(true)`, `invoke(...)`) are ignored.
+ */
+private class AccessorConstantCollector(private val accessorName: String) : MethodVisitor(ASM_API) {
+    private val ldcStrings = mutableListOf<String>()
+    private val classLiterals = mutableListOf<Type>()
+    private var capturedConstants: AccessorConstants? = null
+    private var pendingLdcString: String? = null
+    private var seenOuterClassLookup = false
+
+    override fun visitLdcInsn(value: Any?) {
+        if (capturedConstants != null) return
+        when (value) {
+            is String -> {
+                ldcStrings.add(value)
+                pendingLdcString = value
+            }
+            is Type -> {
+                classLiterals.add(value)
+                pendingLdcString = null
+            }
+        }
+    }
+
+    override fun visitFieldInsn(opcode: Int, owner: String, name: String, descriptor: String) {
+        if (capturedConstants != null) return
+        if (opcode == GETSTATIC && name == "TYPE" && descriptor == "Ljava/lang/Class;") {
+            PRIMITIVE_TYPE_FIELDS[owner]?.let(classLiterals::add)
+        }
+        pendingLdcString = null
+    }
+
+    override fun visitMethodInsn(
+        opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean
+    ) {
+        if (capturedConstants != null) return
+        // Non-primitive parameter classes are emitted by `ReflectionAccessMethodBuilder`
+        // as `Class.forName("<binary name>")`. Treat the LDC just consumed by such a call
+        // as a class literal. The very first such call resolves the outer class containing
+        // the target member — it isn't a parameter type, so skip it.
+        if (isClassForName(owner, name, descriptor)) {
+            val lookupName = pendingLdcString
+            if (seenOuterClassLookup && lookupName != null) {
+                classLiterals.add(toReferenceType(lookupName))
+            }
+            seenOuterClassLookup = true
+        }
+        if (isAccessorTargetLookup(owner, name)) {
+            capturedConstants = AccessorConstants(ldcStrings.toList(), classLiterals.toList())
+        }
+        pendingLdcString = null
+    }
+
+    private fun isClassForName(owner: String, name: String, descriptor: String): Boolean =
+        owner == "java/lang/Class" && name == "forName" && descriptor == "(Ljava/lang/String;)Ljava/lang/Class;"
+
+    private fun toReferenceType(binaryName: String): Type {
+        val internal = binaryName.toInternalClassName()
+        return if (internal.startsWith('[')) Type.getType(internal) else Type.getObjectType(internal)
+    }
+
+    private fun isAccessorTargetLookup(owner: String, name: String): Boolean = when {
+        accessorName.startsWith("accessToMethod_") -> owner == "java/lang/Class" && name == "getDeclaredMethod"
+        accessorName.startsWith("accessToSuper_") -> owner == "java/lang/invoke/MethodHandles\$Lookup" && name == "findSpecial"
+        accessorName.startsWith("accessToField_") -> owner == "java/lang/Class" && name == "getDeclaredField"
+        else -> false
+    }
+
+    fun result(): AccessorConstants? = capturedConstants
+}
+
+private val PRIMITIVE_TYPE_FIELDS = mapOf(
+    "java/lang/Integer" to Type.INT_TYPE,
+    "java/lang/Long" to Type.LONG_TYPE,
+    "java/lang/Double" to Type.DOUBLE_TYPE,
+    "java/lang/Float" to Type.FLOAT_TYPE,
+    "java/lang/Boolean" to Type.BOOLEAN_TYPE,
+    "java/lang/Byte" to Type.BYTE_TYPE,
+    "java/lang/Short" to Type.SHORT_TYPE,
+    "java/lang/Character" to Type.CHAR_TYPE,
+    "java/lang/Void" to Type.VOID_TYPE,
 )

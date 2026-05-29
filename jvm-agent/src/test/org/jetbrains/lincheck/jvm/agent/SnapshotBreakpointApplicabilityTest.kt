@@ -27,7 +27,6 @@ class SnapshotBreakpointApplicabilityTest {
             lineNumber = line,
             conditionClassName = null,
             conditionFactoryMethodName = null,
-            conditionCapturedVars = null,
             conditionCodeFragment = null,
         )
 

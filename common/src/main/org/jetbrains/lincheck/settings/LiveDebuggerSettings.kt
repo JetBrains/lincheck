@@ -171,7 +171,6 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
  * @property lineNumber The specific line number in the file where the breakpoint is set.
  * @property conditionClassName The class name that provides the conditional logic for the breakpoint, if any.
  * @property conditionFactoryMethodName The factory method name in the [conditionClassName] that generates the condition logic, if any.
- * @property conditionCapturedVars A list of variable names captured as part of the condition, if any.
  * @property conditionCodeFragment A serialized byte array of code fragments used for evaluating the condition, if any.
  * @property hitLimit The maximum number of times the breakpoint can be hit before it is automatically disabled.
  */
@@ -182,7 +181,6 @@ class SnapshotBreakpoint(
     val lineNumber: Int,
     val conditionClassName: String?,
     val conditionFactoryMethodName: String?,
-    val conditionCapturedVars: List<String>?,
     val conditionCodeFragment: ByteArray?,
     val hitLimit: Int = DEFAULT_HIT_LIMIT,
 ) {
@@ -200,14 +198,12 @@ class SnapshotBreakpoint(
             val fileName = parts[2]
             val lineNumber = parts[3].toInt()
 
-            // Condition format: "$className:$factoryMethodName:$capturedVarsStr:$encodedBytecode"
             val conditionClassName = parts.getOrNull(4)?.let { if (it == "null") null else it }
             val conditionFactoryMethodName = parts.getOrNull(5)?.let { if (it == "null") null else it }
-            val conditionCapturedVars = parts.getOrNull(6)?.let { if (it == "null") null else it.split(",") }
-            val conditionCodeFragment = parts.getOrNull(7)?.let {
+            val conditionCodeFragment = parts.getOrNull(6)?.let {
                 if (it == "null") null else Base64.getDecoder().decode(it)
             }
-            val hitLimit = parts.getOrNull(8)?.toIntOrNull() ?: DEFAULT_HIT_LIMIT
+            val hitLimit = parts.getOrNull(7)?.toIntOrNull() ?: DEFAULT_HIT_LIMIT
 
             return SnapshotBreakpoint(
                 uuid = uuid,
@@ -216,7 +212,6 @@ class SnapshotBreakpoint(
                 lineNumber = lineNumber,
                 conditionClassName = conditionClassName,
                 conditionFactoryMethodName = conditionFactoryMethodName,
-                conditionCapturedVars = conditionCapturedVars,
                 conditionCodeFragment = conditionCodeFragment,
                 hitLimit = hitLimit,
             )
@@ -234,7 +229,7 @@ class SnapshotBreakpoint(
      * Encodes this breakpoint as a colon-separated string accepted by [decodeListFromString].
      *
      * Format:
-     *   `uuid:className:fileName:lineNumber:conditionClassName:conditionFactoryMethodName:conditionCapturedVars:conditionCodeFragment:hitLimit`.
+     *   `uuid:className:fileName:lineNumber:conditionClassName:conditionFactoryMethodName:conditionCodeFragment:hitLimit`.
      *
      * Missing condition fields are encoded as the literal `"null"`.
      */
@@ -246,7 +241,6 @@ class SnapshotBreakpoint(
             lineNumber.toString(),
             conditionClassName ?: "null",
             conditionFactoryMethodName ?: "null",
-            conditionCapturedVars?.joinToString(",") ?: "null",
             conditionCodeFragment?.let { Base64.getEncoder().encodeToString(it) } ?: "null",
             hitLimit.toString(),
         )
@@ -273,9 +267,6 @@ class SnapshotBreakpoint(
             }
             if (conditionFactoryMethodName != null) {
                 append("factory=$conditionFactoryMethodName,")
-            }
-            if (conditionCapturedVars != null) {
-                append("captured=(${conditionCapturedVars.joinToString(", ")}),")
             }
             if (conditionCodeFragment != null) {
                 append("code=${conditionCodeFragment.toHexPreview(8)},")
@@ -354,7 +345,6 @@ fun Iterable<SnapshotBreakpoint>.applicableTo(className: String, sourceFileName:
  *   hitLimit = 50
  *   conditionClassName = org.example.MyCondition
  *   conditionFactoryMethodName = create
- *   conditionCapturedVars = var1,var2
  *   conditionCodeFragment = <base64-encoded bytecode>
  * ```
  *
@@ -371,7 +361,6 @@ object BreakpointsFileParser {
     private const val KEY_HIT_LIMIT = "hitLimit"
     private const val KEY_CONDITION_CLASS_NAME = "conditionClassName"
     private const val KEY_CONDITION_FACTORY_METHOD_NAME = "conditionFactoryMethodName"
-    private const val KEY_CONDITION_CAPTURED_VARS = "conditionCapturedVars"
     private const val KEY_CONDITION_CODE_FRAGMENT = "conditionCodeFragment"
 
     /**
@@ -459,10 +448,6 @@ object BreakpointsFileParser {
         val conditionClassName = properties[KEY_CONDITION_CLASS_NAME]
         val conditionFactoryMethodName = properties[KEY_CONDITION_FACTORY_METHOD_NAME]
 
-        val conditionCapturedVars = properties[KEY_CONDITION_CAPTURED_VARS]
-            ?.split(",")
-            ?.map { it.trim() }
-
         val conditionCodeFragment = properties[KEY_CONDITION_CODE_FRAGMENT]?.let {
             try {
                 Base64.getDecoder().decode(it)
@@ -492,7 +477,6 @@ object BreakpointsFileParser {
             lineNumber = lineNumber,
             conditionClassName = conditionClassName,
             conditionFactoryMethodName = conditionFactoryMethodName,
-            conditionCapturedVars = conditionCapturedVars,
             conditionCodeFragment = conditionCodeFragment,
             hitLimit = hitLimit,
         )
