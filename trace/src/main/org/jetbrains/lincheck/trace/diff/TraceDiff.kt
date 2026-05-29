@@ -167,7 +167,7 @@ private fun diffOneThread(
             methodId = output.context.createAndRegisterMethodDescriptor(
                 "<diff>", "<root>", Types.MethodType(Types.VOID_TYPE)
             ).id,
-            obj = null,
+            obj = TRNull,
             parameters = emptyList(),
             eventId = cloner.generateEventId(),
         ).also { it.save(output) }

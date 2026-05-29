@@ -407,7 +407,7 @@ ImmutableListTest.replaceElements() at ImmutableListTest.kt:91
   catch(IndexOutOfBoundsException@1) at ImmutableListTest.kt:98
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:98
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:98
-  checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:98
+  checkResultIsFailure(java.lang.IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:98
   list.size(): 10 at ImmutableListTest.kt:99
   list.set(11, '0'): threw IndexOutOfBoundsException at ImmutableListTest.kt:99
     size(): 10 at SmallPersistentVector.kt:156
@@ -423,4 +423,4 @@ ImmutableListTest.replaceElements() at ImmutableListTest.kt:91
   catch(IndexOutOfBoundsException@1) at ImmutableListTest.kt:99
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:99
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:99
-  checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:99
+  checkResultIsFailure(java.lang.IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:99

@@ -184,7 +184,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
                     appendSpecialSymbol(".")
                 }
             }
-        } else if (tracePoint.obj != null) {
+        } else if (tracePoint.obj !is TRNull) {
             appendObject(tracePoint.obj)
             appendSpecialSymbol(".")
         } else if (!(tracePoint.isStatic() && tracePoint.className.isKtClass())) {
@@ -213,7 +213,10 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             val accessPath = argumentNames[i]
             when {
                 accessPath == null -> appendObject(parameter)
-                parameter is TRPrimitive -> {
+                // Inline-renderable values (their toString reveals the full content) get the
+                // `name ➜ value` form. Identity-tracked objects/arrays render as `ClassName@hash`,
+                // which adds no information over the name, so we just print the name.
+                parameter is TRValueLike || parameter is TRClassReference || parameter is TRCharSequence -> {
                     appendAccessPath(accessPath)
                     append(" ")
                     appendSpecialSymbol(READ_ACCESS_SYMBOL)
@@ -238,7 +241,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         } else if (tracePoint.isMethodResultUntracked()) {
             append(": ")
             appendSpecialSymbol(UNTRACKED_METHOD_RESULT_SYMBOL)
-        } else if (tracePoint.result != TR_OBJECT_VOID) {
+        } else if (tracePoint.result != TRVoid) {
             append(": ")
             appendObject(tracePoint.result)
         }
@@ -323,7 +326,7 @@ abstract class AbstractTRFieldTracePointPrinter {
                 appendAccessPath(it)
                 appendDot()
             }
-        } else if (tracePoint.obj != null) {
+        } else if (tracePoint.obj !is TRNull) {
             appendObject(tracePoint.obj)
             appendDot()
         } else {

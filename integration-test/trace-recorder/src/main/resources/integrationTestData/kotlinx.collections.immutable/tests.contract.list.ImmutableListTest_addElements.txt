@@ -918,9 +918,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                         actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                         assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                          expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                          actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                          assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                          expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                          actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                          assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:11
             getter.invoke(expected): ArrayList.ListItr@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(): ArrayList.ListItr@1 at CollectionBehaviors.kt:11
@@ -1374,9 +1374,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
                   loop(11 iterations) at CollectionBehaviors.kt:40
                     <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): ArrayList.ListItr@1 at CollectionBehaviors.kt:40
@@ -1793,9 +1793,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:12
             getter.invoke(expected): ArrayList.ListItr@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(0): ArrayList.ListItr@1 at CollectionBehaviors.kt:12
@@ -2248,9 +2248,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
                   loop(11 iterations) at CollectionBehaviors.kt:40
                     <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): ArrayList.ListItr@1 at CollectionBehaviors.kt:40
@@ -2667,9 +2667,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:13
             getter.invoke(expected): ArrayList.ListItr@1 at ComparisonDSL.kt:27
               compareProperty.size(): 10 at CollectionBehaviors.kt:13
@@ -2934,9 +2934,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
                   loop(11 iterations) at CollectionBehaviors.kt:40
                     <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): ArrayList.ListItr@1 at CollectionBehaviors.kt:40
@@ -3353,9 +3353,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:15
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
@@ -3385,9 +3385,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                expected.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                actual.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                assertEquals(IndexOutOfBoundsException.class, IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
+                expected.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                actual.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                assertEquals(java.lang.IndexOutOfBoundsException.class, java.lang.IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:16
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
@@ -3419,9 +3419,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                expected.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                actual.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                assertEquals(IndexOutOfBoundsException.class, IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
+                expected.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                actual.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                assertEquals(java.lang.IndexOutOfBoundsException.class, java.lang.IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
           index = 0 at CollectionBehaviors.kt:18
           listBehavior.getExpected(): ArrayList@1 at CollectionBehaviors.kt:18
           ArrayList@1.size(): 10 at CollectionBehaviors.kt:18
@@ -3627,9 +3627,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                expected.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                actual.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                assertEquals(IndexOutOfBoundsException.class, IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
+                expected.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                actual.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                assertEquals(java.lang.IndexOutOfBoundsException.class, java.lang.IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:27
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
@@ -3669,9 +3669,9 @@ ImmutableListTest.addElements() at ImmutableListTest.kt:79
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                expected.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                actual.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                assertEquals(IndexOutOfBoundsException.class, IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
+                expected.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                actual.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                assertEquals(java.lang.IndexOutOfBoundsException.class, java.lang.IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:28
             getter.invoke(expected): ArrayList.SubList@1 at ComparisonDSL.kt:21
               propertyEquals.size(): 10 at CollectionBehaviors.kt:28

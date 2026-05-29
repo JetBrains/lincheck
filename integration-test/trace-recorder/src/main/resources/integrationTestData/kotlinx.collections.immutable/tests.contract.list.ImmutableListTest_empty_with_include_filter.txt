@@ -13,7 +13,7 @@ ImmutableListTest.empty() at ImmutableListTest.kt:20
   catch(NoSuchElementException@1) at ImmutableListTest.kt:26
   createFailure(NoSuchElementException@1): Result.Failure@1 at ImmutableListTest.kt:26
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:26
-  checkResultIsFailure(NoSuchElementException.kclass, null, Result.Failure@1): NoSuchElementException@1 at ImmutableListTest.kt:26
+  checkResultIsFailure(java.util.NoSuchElementException.kclass, null, Result.Failure@1): NoSuchElementException@1 at ImmutableListTest.kt:26
   emptyList(): EmptyList@1 at ImmutableListTest.kt:28
   compareLists(EmptyList@1, empty1) at ImmutableListTest.kt:28
     compare(expected, actual, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:16

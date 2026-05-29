@@ -25,7 +25,7 @@ import java.util.EnumSet
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 23
+internal const val TRACE_VERSION : Long = 24
 
 // Buffer for saving trace in one piece
 internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -434,107 +434,230 @@ private fun DataInput.readArrayElementByNameAccessLocation(context: TraceContext
 
 // ======== TR Values ========
 
-internal fun DataOutput.writeTRValue(value: TRValue?) {
+// The enum ordinal is the on-wire kind discriminator (byte). One entry per concrete `TRValue`
+// subclass — and one extra primitive entry per JVM primitive type because `TRPrimitive` is a
+// single Kotlin type that carries any of nine value shapes.
+//
+// If you reorder entries — remember to update `TRACE_VERSION` (kind numeration order is part of
+// the serialization format).
+internal enum class TRValueKind {
+    // language-level singletons
+    NULL,
+    VOID,
+    UNIT,
+
+    // JVM primitives
+    PRIMITIVE_BYTE,
+    PRIMITIVE_SHORT,
+    PRIMITIVE_INT,
+    PRIMITIVE_LONG,
+    PRIMITIVE_FLOAT,
+    PRIMITIVE_DOUBLE,
+    PRIMITIVE_CHAR,
+    PRIMITIVE_BOOLEAN,
+
+    // value-like types
+    STRING,
+    ENUM,
+    BIG_INTEGER,
+    BIG_DECIMAL,
+
+    // reference-like types
+    OBJECT,
+    OBJECT_SNAPSHOT,
+    ARRAY,
+    ARRAY_SNAPSHOT,
+
+    // char sequence
+    CHAR_SEQUENCE,
+
+    // reflection class types
+    JAVA_CLASS,
+    KOTLIN_CLASS,
+
+    // synthetic markers
+    UNFINISHED_METHOD_RESULT,
+    UNTRACKED_METHOD_RESULT,
+}
+
+internal fun DataOutput.writeTRValueKind(value: TRValueKind) {
+    writeByte(value.ordinal)
+}
+
+internal fun DataInput.readTRValueKind(): TRValueKind {
+    val ordinal = readByte().toInt()
+    val values = TRValueKind.entries
+    if (ordinal !in values.indices) {
+        throw IOException("Cannot read TRValueKind: unknown ordinal $ordinal")
+    }
+    return values[ordinal]
+}
+
+internal fun DataOutput.writeTRValue(value: TRValue) {
     when (value) {
-        null -> {
-            writeInt(TR_OBJECT_NULL_CLASSNAME)
+        is TRNull -> writeTRValueKind(TRValueKind.NULL)
+        is TRVoid -> writeTRValueKind(TRValueKind.VOID)
+        is TRUnit -> writeTRValueKind(TRValueKind.UNIT)
+
+        // primitives
+        is TRPrimitive -> when (val v = value.value) {
+            is Byte    -> { writeTRValueKind(TRValueKind.PRIMITIVE_BYTE);       writeByte(v.toInt())  }
+            is Short   -> { writeTRValueKind(TRValueKind.PRIMITIVE_SHORT);      writeShort(v.toInt()) }
+            is Int     -> { writeTRValueKind(TRValueKind.PRIMITIVE_INT);        writeInt(v)           }
+            is Long    -> { writeTRValueKind(TRValueKind.PRIMITIVE_LONG);       writeLong(v)          }
+            is Float   -> { writeTRValueKind(TRValueKind.PRIMITIVE_FLOAT);      writeFloat(v)         }
+            is Double  -> { writeTRValueKind(TRValueKind.PRIMITIVE_DOUBLE);     writeDouble(v)        }
+            is Char    -> { writeTRValueKind(TRValueKind.PRIMITIVE_CHAR);       writeChar(v.code)     }
+            is Boolean -> { writeTRValueKind(TRValueKind.PRIMITIVE_BOOLEAN);    writeBoolean(v)       }
+
+            else -> error("Unknown primitive value $v")
         }
 
+        // value-like types
+        is TRString -> {
+            writeTRValueKind(TRValueKind.STRING)
+            writeString(value.value)
+        }
+        is TREnum -> {
+            writeTRValueKind(TRValueKind.ENUM)
+            writeInt(value.classDescriptor.id)
+            writeNullableString(value.name)
+        }
+        is TRBigInteger -> {
+            writeTRValueKind(TRValueKind.BIG_INTEGER)
+            writeString(value.value)
+        }
+        is TRBigDecimal -> {
+            writeTRValueKind(TRValueKind.BIG_DECIMAL)
+            writeString(value.value)
+        }
+
+        // reference-like types
         is TRObject -> {
-            // Negatives are special markers
-            writeInt(value.classNameId)
-            if (value.classNameId >= 0) {
-                writeInt(value.identityHashCode)
-
-                // Positive for objects
-                writeInt(value.fields.size)
-                value.fields.forEach { (fieldName, fieldValue) ->
-                    writeString(fieldName)
-                    this@writeTRValue.writeTRValue(fieldValue)
-                }
+            writeTRValueKind(TRValueKind.OBJECT)
+            writeInt(value.classDescriptor.id)
+            writeInt(value.identityHashCode)
+        }
+        is TRObjectSnapshot -> {
+            writeTRValueKind(TRValueKind.OBJECT_SNAPSHOT)
+            writeInt(value.classDescriptor.id)
+            writeInt(value.identityHashCode)
+            writeInt(value.fields.size)
+            value.fields.forEach { (fieldName, fieldValue) ->
+                writeString(fieldName)
+                this@writeTRValue.writeTRValue(fieldValue)
             }
         }
-
-        is TRPrimitive -> {
-            writeInt(value.classNameId)
-            when (value.primitiveValue) {
-                is Byte -> writeByte(value.primitiveValue.toInt())
-                is Short -> writeShort(value.primitiveValue.toInt())
-                is Int -> writeInt(value.primitiveValue)
-                is Long -> writeLong(value.primitiveValue)
-                is Float -> writeFloat(value.primitiveValue)
-                is Double -> writeDouble(value.primitiveValue)
-                is Char -> writeChar(value.primitiveValue.code)
-                is String if value.classNameId == TR_OBJECT_P_STRING_BUILDER -> {
-                    writeInt(value.identityHashCode)
-                    writeString(value.primitiveValue)
-                }
-
-                is String -> writeString(value.primitiveValue) // Both STRING and RAW_STRING
-                is Boolean -> writeBoolean(value.primitiveValue)
-                is Unit -> {}
-                else -> error("Unknown primitive value ${value.primitiveValue}")
-            }
-        }
-
         is TRArray -> {
-            writeInt(value.classNameId)
-            if (value.classNameId >= 0) {
-                writeInt(value.identityHashCode)
-
-                // Negative for arrays where -1 is empty array
-                val encodedElementsSize = (value.capturedElements.size + 1) * -1
-                writeInt(encodedElementsSize)
-                value.capturedElements.forEach { element -> this@writeTRValue.writeTRValue(element) }
-                writeInt(value.totalSize)
-            }
+            writeTRValueKind(TRValueKind.ARRAY)
+            writeInt(value.classDescriptor.id)
+            writeInt(value.identityHashCode)
+            writeInt(value.totalSize)
         }
+        is TRArraySnapshot -> {
+            writeTRValueKind(TRValueKind.ARRAY_SNAPSHOT)
+            writeInt(value.classDescriptor.id)
+            writeInt(value.identityHashCode)
+            writeInt(value.totalSize)
+            writeInt(value.capturedElements.size)
+            value.capturedElements.forEach { element -> this@writeTRValue.writeTRValue(element) }
+        }
+
+        // char sequence
+        is TRCharSequence -> {
+            writeTRValueKind(TRValueKind.CHAR_SEQUENCE)
+            writeInt(value.classDescriptor.id)
+            writeInt(value.identityHashCode)
+            writeString(value.content)
+        }
+
+        // reflection class types
+        is TRJavaClass -> {
+            writeTRValueKind(TRValueKind.JAVA_CLASS)
+            writeString(value.referencedClassName)
+        }
+        is TRKotlinClass -> {
+            writeTRValueKind(TRValueKind.KOTLIN_CLASS)
+            writeString(value.referencedClassName)
+        }
+
+        // synthetic markers
+        is TRUnfinishedMethodResult -> writeTRValueKind(TRValueKind.UNFINISHED_METHOD_RESULT)
+        is TRUntrackedMethodResult -> writeTRValueKind(TRValueKind.UNTRACKED_METHOD_RESULT)
     }
 }
 
-internal fun DataInput.readTRValue(context: TraceContext): TRValue? {
-    return when (val classNameId = readInt()) {
-        TR_OBJECT_NULL_CLASSNAME -> null
-        TR_OBJECT_VOID_CLASSNAME -> TR_OBJECT_VOID
-        TR_OBJECT_P_BYTE -> TRPrimitive(classNameId, 0, readByte())
-        TR_OBJECT_P_SHORT -> TRPrimitive(classNameId, 0, readShort())
-        TR_OBJECT_P_INT -> TRPrimitive(classNameId, 0, readInt())
-        TR_OBJECT_P_LONG -> TRPrimitive(classNameId, 0, readLong())
-        TR_OBJECT_P_FLOAT -> TRPrimitive(classNameId, 0, readFloat())
-        TR_OBJECT_P_DOUBLE -> TRPrimitive(classNameId, 0, readDouble())
-        TR_OBJECT_P_CHAR -> TRPrimitive(classNameId, 0, readChar())
-        TR_OBJECT_P_STRING -> TRPrimitive(classNameId, 0, readString())
-        TR_OBJECT_P_UNIT -> TRPrimitive(classNameId, 0, Unit)
-        TR_OBJECT_P_RAW_STRING -> TRPrimitive(classNameId, 0, readString())
-        TR_OBJECT_P_BOOLEAN -> TRPrimitive(classNameId, 0, readBoolean())
-        TR_OBJECT_P_JAVA_CLASS -> TRPrimitive(classNameId, 0, readString())
-        TR_OBJECT_P_KOTLIN_CLASS -> TRPrimitive(classNameId, 0, readString())
-        TR_OBJECT_P_STRING_BUILDER -> TRPrimitive(classNameId, readInt(), readString())
-        else if (classNameId >= 0) -> {
-            val identityHashCode = readInt()
-            val childrenSize = readInt()
-            if (childrenSize < 0) {
-                val decodedElementsSize = childrenSize * -1 - 1
-                val capturedElements = buildList {
-                    repeat(decodedElementsSize) {
-                        add(readTRValue(context))
-                    }
-                }
-                val totalSize = readInt()
-                TRArray(classNameId, identityHashCode, context.classPool[classNameId], totalSize, capturedElements)
-            } else {
-                val fields = buildMap {
-                    repeat(childrenSize) {
-                        val fieldName = readString()
-                        val fieldValue = readTRValue(context)
-                        put(fieldName, fieldValue)
-                    }
-                }
-                TRObject(classNameId, identityHashCode, context.classPool[classNameId], fields)
+internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readTRValueKind()) {
+    // language-level singletons
+    TRValueKind.NULL -> TRNull
+    TRValueKind.VOID -> TRVoid
+    TRValueKind.UNIT -> TRUnit
+
+    // primitives
+    TRValueKind.PRIMITIVE_BYTE    -> TRPrimitive(readByte())
+    TRValueKind.PRIMITIVE_SHORT   -> TRPrimitive(readShort())
+    TRValueKind.PRIMITIVE_INT     -> TRPrimitive(readInt())
+    TRValueKind.PRIMITIVE_LONG    -> TRPrimitive(readLong())
+    TRValueKind.PRIMITIVE_FLOAT   -> TRPrimitive(readFloat())
+    TRValueKind.PRIMITIVE_DOUBLE  -> TRPrimitive(readDouble())
+    TRValueKind.PRIMITIVE_CHAR    -> TRPrimitive(readChar())
+    TRValueKind.PRIMITIVE_BOOLEAN -> TRPrimitive(readBoolean())
+
+    // value-like types
+    TRValueKind.STRING -> TRString(readString())
+    TRValueKind.ENUM -> TREnum(context.classPool[readInt()], readNullableString())
+    TRValueKind.BIG_INTEGER -> TRBigInteger(readString())
+    TRValueKind.BIG_DECIMAL -> TRBigDecimal(readString())
+
+    // reference-like types
+    TRValueKind.OBJECT -> {
+        val cd = context.classPool[readInt()]
+        val hash = readInt()
+        TRObject(cd, hash)
+    }
+    TRValueKind.OBJECT_SNAPSHOT -> {
+        val cd = context.classPool[readInt()]
+        val hash = readInt()
+        val fieldsSize = readInt()
+        val fields = buildMap {
+            repeat(fieldsSize) {
+                val fieldName = readString()
+                val fieldValue = readTRValue(context)
+                put(fieldName, fieldValue)
             }
         }
-        else -> error("TRObject: Unknown Class Id $classNameId")
+        TRObjectSnapshot(cd, hash, fields)
     }
+    TRValueKind.ARRAY -> {
+        val cd = context.classPool[readInt()]
+        val hash = readInt()
+        val totalSize = readInt()
+        TRArray(cd, hash, totalSize)
+    }
+    TRValueKind.ARRAY_SNAPSHOT -> {
+        val cd = context.classPool[readInt()]
+        val hash = readInt()
+        val totalSize = readInt()
+        val capturedSize = readInt()
+        val capturedElements = buildList { repeat(capturedSize) { add(readTRValue(context)) } }
+        TRArraySnapshot(cd, hash, totalSize, capturedElements)
+    }
+
+    // char sequence
+    TRValueKind.CHAR_SEQUENCE -> {
+        val cd = context.classPool[readInt()]
+        val hash = readInt()
+        val content = readString()
+        TRCharSequence(cd, hash, content)
+    }
+
+    // reflection class types
+    TRValueKind.JAVA_CLASS -> TRJavaClass(readString())
+    TRValueKind.KOTLIN_CLASS -> TRKotlinClass(readString())
+
+    // synthetic markers
+    TRValueKind.UNFINISHED_METHOD_RESULT -> TRUnfinishedMethodResult
+    TRValueKind.UNTRACKED_METHOD_RESULT -> TRUntrackedMethodResult
 }
 
 // ======== Diff Status ========
@@ -810,7 +933,7 @@ private fun DataInput.readArrayTracePoint(
     threadId: Int,
     eventId: Int,
 ): TRArrayTracePoint {
-    val array = readTRValue(context) ?: TR_OBJECT_NULL
+    val array = readTRValue(context) ?: TRNull
     val index = readInt()
     val value = readTRValue(context)
     return when (kind) {
@@ -961,7 +1084,7 @@ private fun DataInput.readExceptionProcessingTracePoint(
     threadId: Int,
     eventId: Int,
 ): TRExceptionProcessingTracePoint {
-    val exception = readTRValue(context) ?: TR_OBJECT_NULL
+    val exception = readTRValue(context) ?: TRNull
     return when (kind) {
         TRTracePointKind.THROW -> TRThrowTracePoint(context, threadId, codeLocationId, exception, eventId)
         TRTracePointKind.CATCH -> TRCatchTracePoint(context, threadId, codeLocationId, exception, eventId)

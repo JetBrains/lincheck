@@ -25,13 +25,13 @@ internal interface TraceWriter : DataOutput, Closeable {
      * Saves dependencies of [TRValue], if needed.
      * This must be called before [startWriteAnyTracepoint] for all used [TRValue]s.
      */
-    fun preWriteTRValue(value: TRValue?)
+    fun preWriteTRValue(value: TRValue)
 
     /**
      * Saves [TRValue] itself.
      * Must be called after [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter].
      */
-    fun writeTRValue(value: TRValue?)
+    fun writeTRValue(value: TRValue)
 
     /**
      * Marks the beginning of a tracepoint (before the first byte of tracepoint is written).
@@ -126,25 +126,22 @@ internal abstract class ContextAwareTraceWriter(
         writeIndexCell(ObjectKind.EOF,-1, -1, -1)
     }
 
-    override fun preWriteTRValue(value: TRValue?) {
+    override fun preWriteTRValue(value: TRValue) {
         check(!inTracepointBody) { "Cannot write TRObject dependency into tracepoint body" }
-        if (value == null || value is TRPrimitive || value.isSpecial) return
-        writeClassDescriptor(value.classNameId)
-        // Recursively register class descriptors for all field values
-        if (value is TRObject) {
-            value.fields.values.forEach { fieldValue ->
-                preWriteTRValue(fieldValue)
-            }
+        // Only types that carry a real [ClassDescriptor] need pre-registration on the wire;
+        // [TRValue.classId] returns `null` for sentinels, primitives, strings, etc.
+        val classId = value.classId ?: return
+        writeClassDescriptor(classId)
+        // Recursively register class descriptors for all field values.
+        if (value is TRObjectSnapshot) {
+            value.fields.values.forEach { fieldValue -> preWriteTRValue(fieldValue) }
         }
-        
-        if (value is TRArray) {
-            value.capturedElements.forEach { capturedElement ->
-                preWriteTRValue(capturedElement)
-            }
+        if (value is TRArraySnapshot) {
+            value.capturedElements.forEach { capturedElement -> preWriteTRValue(capturedElement) }
         }
     }
 
-    override fun writeTRValue(value: TRValue?) {
+    override fun writeTRValue(value: TRValue) {
         check(inTracepointBody) { "Cannot write TRObject outside tracepoint body" }
         dataOutput.writeTRValue(value)
     }

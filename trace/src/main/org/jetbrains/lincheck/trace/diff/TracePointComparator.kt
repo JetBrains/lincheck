@@ -116,11 +116,22 @@ internal object TracePointComparator {
     private fun HasherMzHash64.add(type: Types.Type): HasherMzHash64 =
         add(type.hashCode())
 
-    private fun HasherMzHash64.add(obj: TRValue?): HasherMzHash64 =
-        if (obj == null) add(TR_OBJECT_NULL)
-        else if (obj is TRPrimitive) add(obj.classNameId).add(obj.primitiveValue.hashCode())
-        else if (obj.classNameId < 0) add(obj.classNameId)
-        else add(obj.className.adornedClassNameRepresentation())
+    private fun HasherMzHash64.add(obj: TRValue?): HasherMzHash64 = when (obj) {
+        null, TRNull -> add("TRNull")
+        TRVoid -> add("TRVoid")
+        TRUnit -> add("TRUnit")
+        is TRPrimitive -> add("TRPrimitive").add(obj.value.hashCode())
+        is TRString -> add("TRString").add(obj.value.hashCode())
+        is TREnum -> add(obj.className.adornedClassNameRepresentation()).add(obj.name.hashCode())
+        is TRBigInteger -> add("TRBigInteger").add(obj.value.hashCode())
+        is TRBigDecimal -> add("TRBigDecimal").add(obj.value.hashCode())
+        is TRCharSequence -> add(obj.className.adornedClassNameRepresentation()).add(obj.content.hashCode())
+        is TRReferenceLike -> add(obj.className.adornedClassNameRepresentation())
+        is TRJavaClass -> add("TRJavaClass").add(obj.referencedClassName.hashCode())
+        is TRKotlinClass -> add("TRKotlinClass").add(obj.referencedClassName.hashCode())
+        TRUnfinishedMethodResult -> add("TRUnfinishedMethodResult")
+        TRUntrackedMethodResult -> add("TRUntrackedMethodResult")
+    }
 
     private fun HasherMzHash64.addTRList(list: List<TRValue?>): HasherMzHash64 {
         list.forEach { add(it) }

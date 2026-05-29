@@ -281,7 +281,7 @@ class TraceCollectingEventTracker(
 
     override fun afterThreadRunReturn(threadDescriptor: ThreadDescriptor) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        completeInvokedMethodCalls(Thread.currentThread(), threadData) { _, tp -> tp.result = TR_OBJECT_UNTRACKED_METHOD_RESULT }
+        completeInvokedMethodCalls(Thread.currentThread(), threadData) { _, tp -> tp.result = TRUntrackedMethodResult }
         threadDescriptor.disableAnalysis()
     }
 
@@ -395,8 +395,8 @@ class TraceCollectingEventTracker(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             fieldId = fieldId,
-            obj = TRObjectOrNull(context, obj),
-            value = TRObjectOrNull(context, value)
+            obj = TRValue(context, obj),
+            value = TRValue(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -416,7 +416,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             array = TRValue(context, array),
             index = index,
-            value = TRObjectOrNull(context, value)
+            value = TRValue(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -440,8 +440,8 @@ class TraceCollectingEventTracker(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             fieldId = fieldId,
-            obj = TRObjectOrNull(context, obj),
-            value = TRObjectOrNull(context, value)
+            obj = TRValue(context, obj),
+            value = TRValue(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -461,7 +461,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             array = TRValue(context, array),
             index = index,
-            value = TRObjectOrNull(context, value)
+            value = TRValue(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -480,7 +480,7 @@ class TraceCollectingEventTracker(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             localVariableId = variableId,
-            value = TRObjectOrNull(context, value)
+            value = TRValue(context, value)
         )
         strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
     }
@@ -497,7 +497,7 @@ class TraceCollectingEventTracker(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             localVariableId = variableId,
-            value = TRObjectOrNull(context, value)
+            value = TRValue(context, value)
         )
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
     }
@@ -527,8 +527,8 @@ class TraceCollectingEventTracker(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
-            obj = TRObjectOrNull(context, receiver),
-            parameters = params.map { TRObjectOrNull(context, it) },
+            obj = TRValue(context, receiver),
+            parameters = params.map { TRValue(context, it) },
             flags = (if (receiver == Injections.UNINITIALIZED_THIS) SUPER_CONSTRUCTOR_CALL_FLAG else 0).toShort(),
             parentTracePoint = parentTracepoint,
         )
@@ -582,7 +582,7 @@ class TraceCollectingEventTracker(
             }
         }
 
-        tracePoint.result = TRObjectOrVoid(context, result)
+        tracePoint.result = TRValue(context, result)
         strategy.completeContainerTracePoint(thread, tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
@@ -652,7 +652,7 @@ class TraceCollectingEventTracker(
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
-            obj = TRObjectOrNull(context, owner),
+            obj = TRValue(context, owner),
             parameters = emptyList(),
             parentTracePoint = threadData.currentTopTracePoint()
         )
@@ -674,7 +674,7 @@ class TraceCollectingEventTracker(
                 "but on stack ${tracePoint.methodId} ${tracePoint.className}.${tracePoint.methodName}"
             }
         }
-        tracePoint.result = TR_OBJECT_VOID
+        tracePoint.result = TRVoid
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
@@ -731,19 +731,19 @@ class TraceCollectingEventTracker(
 
         val locals = locals.map { local ->
             when {
-                local == null -> null
+                local == null -> TRNull
 
                 local::class.java.isArray -> {
                     val arraySize = findArrayLength(local)
                     val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
                     val elements = findElementsForArray(local, elementsToRead)
-                    TRArrayWithElements(context, local, arraySize, elements)
+                    TRArraySnapshot(context, local, arraySize, elements)
                 }
 
                 else -> {
                     val objectFields = findFieldsForObject(local)
                     when {
-                        objectFields.isNotEmpty() -> TRObjectWithFields(context, local, objectFields)
+                        objectFields.isNotEmpty() -> TRObjectSnapshot(context, local, objectFields)
                         else -> TRValue(context, local)
                     }
                 }
@@ -917,7 +917,7 @@ class TraceCollectingEventTracker(
                 methodId = context.createAndRegisterMethodDescriptor(
                     className, methodName, Types.MethodType(Types.VOID_TYPE)
                 ).id,
-                obj = null,
+                obj = TRNull,
                 parameters = emptyList()
             )
             strategy.tracePointCreated(null, tracePoint)
@@ -930,7 +930,7 @@ class TraceCollectingEventTracker(
     private fun pushMethodCall(
         thread: Thread,
         threadData: ThreadData,
-        obj: TRValue?,
+        obj: TRValue,
         className: String,
         methodName: String,
         methodType: Types.MethodType,
@@ -969,7 +969,7 @@ class TraceCollectingEventTracker(
             ) continue
 
             pushMethodCall(thread, threadData,
-                obj = null,
+                obj = TRNull,
                 className = frame.className,
                 methodName = frame.methodName,
                 methodType = UNKNOWN_METHOD_TYPE,
@@ -1015,8 +1015,9 @@ class TraceCollectingEventTracker(
         val stack = threadData.getStack()
         while (stack.isNotEmpty() && stack.last().call.isSuperConstructorCall()) {
             val frame = stack.last()
-            // we need to set the result to the thrown exception manually
-            if (frame.call.result == null) {
+            // we need to set the result to the thrown exception manually,
+            // but only if it hasn't been set yet (i.e. the call is still in its initial "unfinished" state)
+            if (frame.call.result is TRUnfinishedMethodResult) {
                 frame.call.setExceptionResult(t)
             }
             // also, we have to remove them from the stack before reaching the first method
@@ -1037,7 +1038,7 @@ class TraceCollectingEventTracker(
         // Early exit because we must skip `strategy.completeThread(thread)` for this thread too.
         if (threadData.getStack().isEmpty()) return
 
-        completeInvokedMethodCalls(thread, threadData) { _, tp -> tp.result = TR_OBJECT_UNFINISHED_METHOD_RESULT }
+        completeInvokedMethodCalls(thread, threadData) { _, tp -> tp.result = TRUnfinishedMethodResult }
     }
 
     private fun completeCurrentThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
@@ -1058,7 +1059,7 @@ class TraceCollectingEventTracker(
             if (stackLevel != 0) {
                 overflowStack.add("${tp.className}.${tp.methodName}")
             }
-            tp.result = if (stackLevel == 0) TR_OBJECT_VOID else TR_OBJECT_UNFINISHED_METHOD_RESULT
+            tp.result = if (stackLevel == 0) TRVoid else TRUnfinishedMethodResult
         }
 
         // Report error if stack was too deep

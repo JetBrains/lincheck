@@ -30,8 +30,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 private val EVENT_ID_GENERATOR = AtomicInteger(0)
 
-var INJECTIONS_VOID_OBJECT: Any? = null
-
 /**
  * Describes status of tracepoint in trace diff
  */
@@ -261,13 +259,13 @@ class TRMethodCallTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val methodId: Int,
-    val obj: TRValue?,
-    val parameters: List<TRValue?>,
+    val obj: TRValue,
+    val parameters: List<TRValue>,
     val flags: Short = 0,
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
-    var result: TRValue? = null
+    var result: TRValue = TRUnfinishedMethodResult
     var exceptionClassName: String? = null
 
     // TODO Make parametrized
@@ -281,7 +279,7 @@ class TRMethodCallTracePoint(
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
 
-    fun isStatic(): Boolean = obj == null
+    fun isStatic(): Boolean = obj is TRNull
 
     fun isConstructor(): Boolean = methodName == "<init>"
 
@@ -301,13 +299,13 @@ class TRMethodCallTracePoint(
      * @return `true` if tracing of the thread was ended before this method returned its value, `false` otherwise.
      */
     fun isMethodUnfinished(): Boolean =
-        result == TR_OBJECT_UNFINISHED_METHOD_RESULT
+        result is TRUnfinishedMethodResult
 
     /**
      * Returns `true` if method completion was not tracked and its return value is unknown, `false` otherwise.
      */
     fun isMethodResultUntracked(): Boolean =
-        result == TR_OBJECT_UNTRACKED_METHOD_RESULT
+        result is TRUntrackedMethodResult
 
     /**
      * @return `true` if tracing of the thread was started after this method call and there some missing tracepoints, `false` otherwise.
@@ -455,8 +453,8 @@ sealed class TRFieldTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val fieldId: Int,
-    val obj: TRValue?,
-    val value: TRValue?,
+    val obj: TRValue,
+    val value: TRValue,
     eventId: Int
 ) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
@@ -496,8 +494,8 @@ class TRReadFieldTracePoint(
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
-    obj: TRValue?,
-    value: TRValue?,
+    obj: TRValue,
+    value: TRValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
@@ -509,8 +507,8 @@ class TRWriteFieldTracePoint(
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
-    obj: TRValue?,
-    value: TRValue?,
+    obj: TRValue,
+    value: TRValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
@@ -522,7 +520,7 @@ sealed class TRLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     val localVariableId: Int,
-    val value: TRValue?,
+    val value: TRValue,
     eventId: Int
 ) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
@@ -555,7 +553,7 @@ class TRReadLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
-    value: TRValue?,
+    value: TRValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
@@ -567,7 +565,7 @@ class TRWriteLocalVariableTracePoint(
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
-    value: TRValue?,
+    value: TRValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
@@ -581,7 +579,7 @@ class TRSnapshotLineBreakpointTracePoint(
     val breakpointUuid: UUID,
     val stackTraceCodeLocationIds: List<Int>,
     val currentTimeMillis: Long,
-    val locals: List<TRValue?>,
+    val locals: List<TRValue>,
     val traceId: String?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ): TRTracePoint(context, threadId, codeLocationId, eventId) {
@@ -618,7 +616,7 @@ sealed class TRArrayTracePoint(
     codeLocationId: Int,
     val array: TRValue,
     val index: Int,
-    val value: TRValue?,
+    val value: TRValue,
     eventId: Int
 ) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
@@ -648,7 +646,7 @@ class TRReadArrayTracePoint(
     codeLocationId: Int,
     array: TRValue,
     index: Int,
-    value: TRValue?,
+    value: TRValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 
@@ -661,7 +659,7 @@ class TRWriteArrayTracePoint(
     codeLocationId: Int,
     array: TRValue,
     index: Int,
-    value: TRValue?,
+    value: TRValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 

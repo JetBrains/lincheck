@@ -26,8 +26,8 @@ SimpleProgramNonFailingTest.test() at SimpleProgramNonFailingTest.kt:9
         super@ValueWrapper(value ➜ 6, "6"): ValueWrapper@1 at ValueWrapper.java:112
           super@Object(): ValueWrapper@1 at ValueWrapper.java:103
           ValueWrapper@1.value = 6 at ValueWrapper.java:104
-          value.getClass(): Integer.class at ValueWrapper.java:105
-          ValueWrapper@1.type = Integer.class at ValueWrapper.java:105
+          value.getClass(): java.lang.Integer.class at ValueWrapper.java:105
+          ValueWrapper@1.type = java.lang.Integer.class at ValueWrapper.java:105
           ValueWrapper@1.stringRepresentation = "6" at ValueWrapper.java:106
           System.identityHashCode(value ➜ 6): 1 at ValueWrapper.java:107
           identityHashCode = 1 at ValueWrapper.java:107
@@ -38,8 +38,8 @@ SimpleProgramNonFailingTest.test() at SimpleProgramNonFailingTest.kt:9
         super@ValueWrapper(value ➜ 3, "3"): ValueWrapper@1 at ValueWrapper.java:112
           super@Object(): ValueWrapper@1 at ValueWrapper.java:103
           ValueWrapper@1.value = 3 at ValueWrapper.java:104
-          value.getClass(): Integer.class at ValueWrapper.java:105
-          ValueWrapper@1.type = Integer.class at ValueWrapper.java:105
+          value.getClass(): java.lang.Integer.class at ValueWrapper.java:105
+          ValueWrapper@1.type = java.lang.Integer.class at ValueWrapper.java:105
           ValueWrapper@1.stringRepresentation = "3" at ValueWrapper.java:106
           System.identityHashCode(value ➜ 3): 1 at ValueWrapper.java:107
           identityHashCode = 1 at ValueWrapper.java:107

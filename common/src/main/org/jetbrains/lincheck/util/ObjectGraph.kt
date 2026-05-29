@@ -126,7 +126,7 @@ internal fun traverseObjectGraph(
 internal inline fun traverseArrayElements(array: Any, onArrayElement: (array: Any, index: Int, element: Any?) -> Unit) {
     require(array.javaClass.isArray || isAtomicArray(array))
 
-    val length = getArrayLength(array)
+    val length = getArraySize(array)
     // TODO: casting `obj` to atomicfu class and accessing its field directly causes compilation error,
     //  see https://youtrack.jetbrains.com/issue/KT-49792 and https://youtrack.jetbrains.com/issue/KT-47749
     val cachedAtomicFUGetMethod: Method? = if (isAtomicFUArray(array)) array.javaClass.getMethod("get", Int::class.java) else null
@@ -268,7 +268,7 @@ internal val Any?.isPrimitive get() = when (this) {
     else -> false
 }
 
-internal fun getArrayLength(arr: Any): Int {
+internal fun getArraySize(arr: Any): Int {
     return when {
         arr is Array<*>     -> arr.size
         arr is IntArray     -> arr.size
@@ -279,12 +279,12 @@ internal fun getArrayLength(arr: Any): Int {
         arr is ByteArray    -> arr.size
         arr is BooleanArray -> arr.size
         arr is CharArray    -> arr.size
-        isAtomicArray(arr)  -> getAtomicArrayLength(arr)
+        isAtomicArray(arr)  -> getAtomicArraySize(arr)
         else -> error("Argument is not an array")
     }
 }
 
-internal fun getAtomicArrayLength(arr: Any): Int {
+internal fun getAtomicArraySize(arr: Any): Int {
     return when {
         arr is AtomicReferenceArray<*> -> arr.length()
         arr is AtomicIntegerArray -> arr.length()
