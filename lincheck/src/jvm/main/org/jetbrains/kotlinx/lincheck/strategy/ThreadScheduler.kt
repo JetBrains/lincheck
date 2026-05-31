@@ -211,37 +211,39 @@ open class ThreadScheduler {
     protected fun createThreadHandle(id: ThreadId, descriptor: ThreadDescriptor): ThreadHandleImpl =
         ThreadHandleImpl(id, descriptor, this)
 
-    protected val ThreadDescriptor.threadHandle: ThreadHandle? get() =
-        (eventTrackerData as? ThreadHandle)
-
     /**
      * Retrieves the thread handle associated with the given thread descriptor.
      *
      * @param descriptor The descriptor of the thread for which the handle is to be retrieved.
-     * @return The thread handle if it exists, or `null` if the thread handle is not found.
+     * @return The thread handle associated with the descriptor.
+     * @throws IllegalStateException if the thread handle is not found for the given descriptor.
      */
-    fun getThreadHandle(descriptor: ThreadDescriptor): ThreadHandle? =
-        descriptor.threadHandle
+    fun getThreadHandle(descriptor: ThreadDescriptor): ThreadHandle =
+        (descriptor.eventTrackerData as? ThreadHandle)
+            ?: error("Thread handle not found for descriptor: $descriptor")
 
     /**
      * Retrieves the handle of the current thread.
      *
-     * @return The thread handle of the current thread, or `null` if no handle is associated with it.
+     * @return The thread handle of the current thread.
+     * @throws IllegalStateException if the current thread has no associated handle.
      */
-    fun getCurrentThreadHandle(): ThreadHandle? {
+    fun getCurrentThreadHandle(): ThreadHandle {
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-        return descriptor?.threadHandle
+            ?: error("Current thread has no associated descriptor")
+        return getThreadHandle(descriptor)
     }
 
     /**
      * Retrieves the thread handle associated with the given thread id.
      *
      * @param threadId The id of the thread for which the handle is to be retrieved.
-     * @return The thread handle if the thread with the requested id was registered withing this thread scheduler,
-     *   or `null` if the thread handle is not found.
+     * @return The thread handle for the given thread id.
+     * @throws IllegalStateException if no thread with the given id is registered in this scheduler.
      */
-    fun getThreadHandle(threadId: ThreadId): ThreadHandle? =
+    fun getThreadHandle(threadId: ThreadId): ThreadHandle =
         _threads.getOrNull(threadId)
+            ?: error("Thread handle not found for thread id: $threadId")
 
     /**
      * Retrieves the identifier of the specified thread.
@@ -252,7 +254,7 @@ open class ThreadScheduler {
      */
     fun getThreadId(thread: Thread): ThreadId {
         val descriptor = ThreadDescriptor.getThreadDescriptor(thread)
-        return (descriptor?.threadHandle)?.id ?: -1
+        return (descriptor?.eventTrackerData as? ThreadHandle)?.id ?: -1
     }
 
     /**
@@ -263,7 +265,7 @@ open class ThreadScheduler {
      */
     fun getCurrentThreadId(): ThreadId {
         val descriptor = ThreadDescriptor.getCurrentThreadDescriptor()
-        return (descriptor?.threadHandle)?.id ?: -1
+        return (descriptor?.eventTrackerData as? ThreadHandle)?.id ?: -1
     }
 
     /**
@@ -340,9 +342,9 @@ open class ThreadScheduler {
      * @see [ThreadHandle.abortThread]
      */
     fun abortOtherThreads() {
-        val currentThreadHandle = ThreadDescriptor.getCurrentThreadDescriptor().threadHandle
+        val currentThreadHandle = getCurrentThreadHandle()
         for (threadHandle in threads) {
-            if (threadHandle.isFinished || threadHandle.id == currentThreadHandle?.id) continue
+            if (threadHandle.isFinished || threadHandle.id == currentThreadHandle.id) continue
             threadHandle.abortThread()
         }
     }

@@ -66,7 +66,7 @@ class ManagedThreadScheduler : ThreadScheduler() {
      * @return Nothing as this method always throws [LincheckAnalysisAbortedError].
      */
     fun abortCurrentThread(): Nothing {
-        val threadHandle = getCurrentThreadHandle()!!
+        val threadHandle = getCurrentThreadHandle()
         if (threadHandle.state != ThreadState.ABORTED) {
            check(threadHandle.id == scheduledThreadId)
         }
