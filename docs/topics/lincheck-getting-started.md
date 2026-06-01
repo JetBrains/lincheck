@@ -79,7 +79,7 @@ dependencies {
 
 For a basic concurrent test, create a test function that describes what operations should be executed in each 
 thread and the expected assertions. Lincheck explores possible thread interleavings of the program using 
-[model checking](testing-strategies.md#how-model-checking-works) and provides an error report in case of 
+[model checking](lincheck-testing-strategies.md#model-checking) and provides an error report in case of 
 incorrect behavior.
 
 1. In the `src/test` directory, create a `CounterTest.kt` file.
@@ -159,7 +159,8 @@ incorrect behavior.
 
 ## Write a test for a data structure
 
-In addition to basic concurrent tests, Lincheck supports a declarative approach to testing concurrent data structures.
+In addition to basic concurrent tests, Lincheck supports a [declarative approach](lincheck-how-to-test-data-structures.md) 
+to testing concurrent data structures.
 
 To test a data structure in Lincheck, you only need to declare the concurrent methods of the structure and a test 
 function. Lincheck generates random concurrent scenarios, executes them using the specified testing strategy, and 
@@ -211,7 +212,7 @@ In this section, you will test a simple counter:
     fun stressTest() = ModelCheckingOptions().check(this::class)
     ```
    
-    > Learn how model checking works in the [Testing Strategies](testing-strategies.md#how-model-checking-works) 
+    > Learn how model checking works in the [Testing Strategies](lincheck-testing-strategies.md#model-checking) 
     > article.
     > 
     {style=”tip”}
@@ -244,5 +245,5 @@ In this section, you will test a simple counter:
 
 ## What's next
 
-Read more about the declarative approach to testing data structures and supported testing strategies in the
-[Testing strategies](testing-strategies.md) article.
+Learn about the [declarative approach to testing concurrent data structures](lincheck-how-to-test-data-structures.md)
+in Lincheck.
