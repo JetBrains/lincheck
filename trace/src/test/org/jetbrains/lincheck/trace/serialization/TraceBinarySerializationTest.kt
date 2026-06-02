@@ -1615,6 +1615,7 @@ class TraceBinarySerializationTest {
             assertEquals(a.stackTraceCodeLocationIds, b.stackTraceCodeLocationIds)
             assertEquals(a.currentTimeMillis, b.currentTimeMillis)
             assertEquals(a.locals, b.locals)
+            assertEquals(a.watches, b.watches)
             assertEquals(a.traceId, b.traceId)
         }
 
@@ -1631,6 +1632,10 @@ class TraceBinarySerializationTest {
                 TRPrimitive(1),
                 TRNull,
                 TRString("hi"),
+            ),
+            watches = listOf(
+                TRString("watch"),
+                TRPrimitive(42),
             ),
             traceId = "trace-abc-123",
             eventId = eventIdPopulated,
@@ -1650,6 +1655,7 @@ class TraceBinarySerializationTest {
             stackTraceCodeLocationIds = emptyList(),
             currentTimeMillis = 0L,
             locals = emptyList(),
+            watches = emptyList(),
             traceId = null,
             eventId = eventIdEmpty,
         )

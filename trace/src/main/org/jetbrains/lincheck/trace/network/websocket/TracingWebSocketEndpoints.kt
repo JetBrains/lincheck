@@ -15,6 +15,7 @@ import org.java_websocket.client.WebSocketClient
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.handshake.ServerHandshake
 import org.java_websocket.server.WebSocketServer
+import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
@@ -92,15 +93,21 @@ fun TracingCallbacks.handleMessage(message: String?) {
                 }
                 hitLimitReached(breakpointData, timestamp)
             }
-            TracingCallbacks.CONDITION_UNSAFE -> {
-                val dataParts = data.split(";", limit = 2)
-                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[0])
-                val safetyViolationMessage = dataParts[1]
-                if (breakpointData == null) {
-                    Logger.warn { "Failed to parse breakpoint data from conditionUnsafe notification: $data" }
+            TracingCallbacks.BREAKPOINT_EXPRESSION_UNSAFE -> {
+                // Layout: kind ; breakpointData ; safetyViolationMessage
+                val dataParts = data.split(";", limit = 3)
+                if (dataParts.size < 3) {
+                    Logger.warn { "Malformed breakpointExpressionUnsafe notification: $data" }
                     return
                 }
-                conditionUnsafe(breakpointData, safetyViolationMessage, timestamp)
+                val slot = runCatching { BreakpointExpressionSlot.valueOf(dataParts[0]) }.getOrNull()
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[1])
+                if (slot == null || breakpointData == null) {
+                    Logger.warn { "Failed to parse breakpointExpressionUnsafe notification: $data" }
+                    return
+                }
+                val safetyViolationMessage = dataParts[2]
+                breakpointExpressionUnsafe(breakpointData, slot, safetyViolationMessage, timestamp)
             }
             else -> Logger.warn { "Unknown notification received: $type" }
         }

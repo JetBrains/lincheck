@@ -1994,6 +1994,7 @@ internal abstract class ManagedStrategy(
         descriptor: ThreadDescriptor?,
         codeLocation: Int,
         locals: Array<Any?>,
+        watches: Array<Any?>,
         traceId: String?,
         breakpointId: Int,
     ) {}

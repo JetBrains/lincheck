@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
@@ -25,6 +26,7 @@ import sun.nio.ch.lincheck.*
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.util.function.BooleanSupplier
 import java.util.function.Function
+import java.util.function.Supplier
 
 internal class SnapshotBreakpointTransformer(
     fileName: String,
@@ -112,6 +114,9 @@ internal class SnapshotBreakpointTransformer(
         // Check condition safety before emitting any breakpoint code.
         // Must happen before bytecode emission so we can cleanly skip the breakpoint if unsafe.
         if (!isConditionSafe(breakpointId, breakpoint)) return
+        // TODO: in the future we can relax this check and still inject the breakpoint even if watches are unsafe,
+        //   skipping the watches evaluation and continuing collecting other breakpoint data.
+        if (!areWatchesSafe(breakpointId, breakpoint)) return
 
         Logger.debug { "Inserting snapshot breakpoint at ${breakpoint.fileName}:${breakpoint.lineNumber}" }
 
@@ -123,18 +128,19 @@ internal class SnapshotBreakpointTransformer(
 
         callIfNotInsideBreakpointCondition(threadDescriptorLocal) {
             if (breakpoint.conditionClassName == null) {
-                injectBreakpointHit(threadDescriptorLocal, breakpointId)
+                injectBreakpointHit(threadDescriptorLocal, breakpointId, breakpoint)
             } else {
                 ifStatement(
                     condition = {
                         // The condition may execute code with an installed breakpoint.
                         // To not make a breakpoint hit, we track when we compute the condition.
+                        // TODO: check if we can re-use ignored sections mechanism instead
                         enterBreakpointCondition(threadDescriptorLocal)
                         injectConditionCallWithTryCatch(breakpointId, breakpoint)
                         leaveBreakpointCondition(threadDescriptorLocal)
                     },
                     thenClause = {
-                        injectBreakpointHit(threadDescriptorLocal, breakpointId)
+                        injectBreakpointHit(threadDescriptorLocal, breakpointId, breakpoint)
                     }
                 )
             }
@@ -194,40 +200,7 @@ internal class SnapshotBreakpointTransformer(
         // We need to capture their current values and pass them to the factory.
         // Extract captured variable names directly from the condition bytecode —
         // this is the single source of truth, eliminating reliance on the wire-transmitted list.
-        val argNames = extractCapturedVarNamesFromBytecode(breakpoint.conditionCodeFragment!!)
-        val capturedLocals = argNames.map { argName ->
-            // Look up each captured variable name in the current method's active locals.
-            // If a variable isn't found, throw an error (this indicates a bug in condition analysis).
-            currentActiveLocalVariablesInfo.firstOrNull { it.name == argName }
-                ?: throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpoint.lineNumber}")
-        }
-
-        // TODO: the fragment below is essentially a copy-paste of `pushArray` method,
-        //   but using given types and `visitVarInsn` instead of `loadLocal`;
-        //   `pushArray` is not used directly because there is some problem with locals numeration;
-        //   probably, we need to somehow take into account locals re-enumeration performed by `GeneratorAdapter`.
-
-        // STACK: <empty>
-        push(capturedLocals.size)
-        // STACK: arraySize
-        visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
-        // STACK: array
-        for (i in capturedLocals.indices) {
-            val idx = capturedLocals[i].index
-            val type = capturedLocals[i].type
-
-            // STACK: array
-            dup()
-            // STACK: array, array
-            push(i)
-            // STACK: array, array, index
-            visitVarInsn(type.getOpcode(ILOAD), idx)
-            // STACK: array, array, index, value[index]
-            box(type)
-            arrayStore(OBJECT_TYPE)
-            // STACK: array
-        }
-        // STACK: array
+        pushCapturedValuesArray(breakpoint.conditionCodeFragment!!, breakpoint)
 
         // Stack after loop: [...lookup params..., capturedValuesArray]
 
@@ -238,12 +211,12 @@ internal class SnapshotBreakpointTransformer(
         // Stack: [BooleanSupplier instance]
 
         // Cast to BooleanSupplier (for type safety)
-        checkCast(booleanSupplierType)
+        checkCast(BOOLEAN_SUPPLIER_TYPE)
         // Stack: [BooleanSupplier instance]
 
         // Call getAsBoolean() on the BooleanSupplier to evaluate the condition.
         invokeInterface(
-            booleanSupplierType,
+            BOOLEAN_SUPPLIER_TYPE,
             Method(
                 "getAsBoolean",
                 Type.BOOLEAN_TYPE,
@@ -251,6 +224,38 @@ internal class SnapshotBreakpointTransformer(
             )
         )
         // Stack: [boolean result] - this will be consumed by the surrounding ifStatement
+    }
+
+
+    private fun GeneratorAdapter.injectWatchCall(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint) {
+        val watchesClass = loadClassFromBytes(
+            userCodeClassLoader = classLoader,
+            className = breakpoint.watchClassName!!,
+            classBytes = breakpoint.watchCodeFragment!!
+        )
+
+        val factoryMethodName = breakpoint.watchFactoryMethodName ?: "createFactory"
+        val createFactoryMethod = watchesClass.getDeclaredMethod(factoryMethodName)
+        createFactoryMethod.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val factory = createFactoryMethod.invoke(null) as Function<Array<Any?>, Supplier<Any?>>
+        BreakpointStorage.registerWatchFactory(breakpointId, factory)
+
+        push(breakpointId)
+        pushCapturedValuesArray(breakpoint.watchCodeFragment!!, breakpoint)
+        invokeStatic(Injections::createWatchInstance)
+        checkCast(SUPPLIER_TYPE)
+        invokeInterface(
+            SUPPLIER_TYPE,
+            Method(
+                "get",
+                OBJECT_TYPE,
+                emptyArray()
+            )
+        )
+        // The watch supplier's get() returns the captured values as an Object[]
+        // (see ExpressionCompiler), so cast straight to the array — no List unwrap.
+        checkCast(OBJECT_ARRAY_TYPE)
     }
 
     /**
@@ -282,6 +287,74 @@ internal class SnapshotBreakpointTransformer(
         loadLocal(resultLocal)
     }
 
+
+    /**
+     * Evaluates watches under the breakpoint-condition guard and leaves
+     * an Object[] with expression values on the stack. On evaluation failure,
+     * leaves an empty Object[] so the application keeps running.
+     */
+    private fun GeneratorAdapter.injectWatchValuesWithTryCatch(
+        threadDescriptorLocal: Int,
+        breakpointId: BreakpointId,
+        breakpoint: SnapshotBreakpoint,
+    ) {
+        if (breakpoint.watchClassName == null) {
+            pushEmptyObjectArray()
+            return
+        }
+
+        val resultLocal = newLocal(OBJECT_ARRAY_TYPE)
+        pushEmptyObjectArray()
+        storeLocal(resultLocal)
+
+        tryCatchFinally(
+            tryBlock = {
+                // TODO: check if we can re-use ignored sections mechanism instead
+                enterBreakpointCondition(threadDescriptorLocal)
+                injectWatchCall(breakpointId, breakpoint)
+                storeLocal(resultLocal)
+                leaveBreakpointCondition(threadDescriptorLocal)
+            },
+            exceptionType = Type.getType(Throwable::class.java),
+            catchBlock = {
+                pop()
+                leaveBreakpointCondition(threadDescriptorLocal)
+            }
+        )
+
+        loadLocal(resultLocal)
+    }
+
+    private fun GeneratorAdapter.pushEmptyObjectArray() {
+        push(0)
+        newArray(OBJECT_TYPE)
+    }
+
+    private fun GeneratorAdapter.pushCapturedValuesArray(bytecode: ByteArray, breakpoint: SnapshotBreakpoint) {
+        val argNames = extractCapturedVarNamesFromBytecode(bytecode)
+        val capturedLocals = argNames.map { argName ->
+            currentActiveLocalVariablesInfo.firstOrNull { it.name == argName }
+                ?: throw IllegalStateException("Local variable '$argName' not found in active locals at line ${breakpoint.lineNumber}")
+        }
+
+        // TODO: the fragment below is essentially a copy-paste of `pushArray` method,
+        //   but using given types and `visitVarInsn` instead of `loadLocal`;
+        //   `pushArray` is not used directly because there is some problem with locals numeration;
+        //   probably, we need to somehow take into account locals re-enumeration performed by `GeneratorAdapter`.
+        push(capturedLocals.size)
+        visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
+        for (i in capturedLocals.indices) {
+            val idx = capturedLocals[i].index
+            val type = capturedLocals[i].type
+
+            dup()
+            push(i)
+            visitVarInsn(type.getOpcode(ILOAD), idx)
+            box(type)
+            arrayStore(OBJECT_TYPE)
+        }
+    }
+
     /**
      * Checks whether the condition bytecode for the given breakpoint is safe (has no side effects).
      * If unsafe, fires the condition-unsafety notification via [BreakpointStorage] and returns `false`.
@@ -298,27 +371,82 @@ internal class SnapshotBreakpointTransformer(
             return false
         }
 
-        val conditionClass = loadClassFromBytes(
-            userCodeClassLoader = classLoader,
-            className = conditionClassName,
-            classBytes = conditionClassBytes
-        )
-        val conditionClassLoader = conditionClass.classLoader
-        val safetyViolation = SideEffectChecker.checkMethodForSideEffects(
+        val safetyViolation = checkClassSafety(
             className = conditionClassName,
             methodName = "invoke",
             methodDescriptor = "()Z",
-            bytecodeProvider = conditionClassLoader::findClassBytecode,
-            isClassLoaded = { it == className || isClassAlreadyLoaded(it, conditionClassLoader) },
+            classBytes = conditionClassBytes,
         )
         if (safetyViolation != null) {
             Logger.warn {
                 "Breakpoint condition at ${breakpoint.fileName}:${breakpoint.lineNumber} is not safe: $safetyViolation"
             }
-            BreakpointStorage.notifyConditionUnsafetyDetected(breakpointId, breakpoint, safetyViolation)
+            BreakpointStorage.notifyBreakpointExpressionUnsafetyDetected(
+                breakpointId, breakpoint, BreakpointExpressionSlot.Condition, safetyViolation,
+            )
             return false
         }
         return true
+    }
+
+    /**
+     * Checks whether watch expression bytecode is safe (has no side effects).
+     * If unsafe, fires the same unsafety notification path as conditions and returns `false`.
+     */
+    private fun areWatchesSafe(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint): Boolean {
+        val watchClassName = breakpoint.watchClassName
+            ?: return true // no watches are always safe
+
+        val watchesClassBytes = breakpoint.watchCodeFragment
+        if (watchesClassBytes == null) {
+            Logger.error {
+                "Watches code for breakpoint at ${breakpoint.fileName}:${breakpoint.lineNumber} is not available"
+            }
+            return false
+        }
+
+        val safetyViolation = checkClassSafety(
+            className = watchClassName,
+            methodName = "invoke",
+            methodDescriptor = "()[Ljava/lang/Object;",
+            classBytes = watchesClassBytes,
+            allowedFunctionCalls = { className: String, methodName: String, _: String ->
+                className == watchClassName.toInternalClassName() && methodName == WATCH_VALUES_HELPER_NAME
+            },
+        )
+        if (safetyViolation != null) {
+            Logger.warn {
+                "Watches at ${breakpoint.fileName}:${breakpoint.lineNumber} are not safe: $safetyViolation"
+            }
+            BreakpointStorage.notifyBreakpointExpressionUnsafetyDetected(
+                breakpointId, breakpoint, BreakpointExpressionSlot.Watch, safetyViolation,
+            )
+            return false
+        }
+        return true
+    }
+
+    private fun checkClassSafety(
+        className: String,
+        methodName: String,
+        methodDescriptor: String,
+        classBytes: ByteArray,
+        allowedFunctionCalls: FunctionCallPredicate = { _, _, _ -> false },
+    ): SafetyViolation? {
+        val clazz = loadClassFromBytes(
+            userCodeClassLoader = classLoader,
+            className = className,
+            classBytes = classBytes,
+        )
+        return SideEffectChecker.checkMethodForSideEffects(
+            className = className,
+            methodName = methodName,
+            methodDescriptor = methodDescriptor,
+            allowedFunctionCalls = allowedFunctionCalls,
+            // IMPORTANT: use class loader of the loaded class to resolve classes in the side-effect checker
+            bytecodeProvider = { clazz.classLoader.findClassBytecode(it) },
+            isClassLoaded = { it == this.className || isClassAlreadyLoaded(it, clazz.classLoader) },
+        )
     }
 
     private fun GeneratorAdapter.callIfNotInsideBreakpointCondition(threadDescriptorLocal: Int, block: () -> Unit) {
@@ -336,10 +464,11 @@ internal class SnapshotBreakpointTransformer(
     private fun GeneratorAdapter.injectBreakpointHit(
         threadDescriptorLocal: Int,
         breakpointId: Int,
+        breakpoint: SnapshotBreakpoint,
     ) {
-        loadLocal(threadDescriptorLocal)
-        loadNewCodeLocationId(createCurrentLineCodeLocation())
         val activeLocals = currentActiveLocalVariablesInfo
+        val localsArrayLocal = newLocal(OBJECT_ARRAY_TYPE)
+        val watchValuesArrayLocal = newLocal(OBJECT_ARRAY_TYPE)
 
         // Pushes local variable values onto the stack as Object[], including
         // - this
@@ -364,7 +493,19 @@ internal class SnapshotBreakpointTransformer(
             // Stores the boxed variable value in the new array
             arrayStore(OBJECT_TYPE)
         }
+        storeLocal(localsArrayLocal)
 
+        // Evaluate watches with an empty operand stack: the generated try/catch
+        // block must not be surrounded by already-pushed onSnapshotLineBreakpoint
+        // arguments, otherwise the verifier sees inconsistent stack-map frames at
+        // the catch exit.
+        injectWatchValuesWithTryCatch(threadDescriptorLocal, breakpointId, breakpoint)
+        storeLocal(watchValuesArrayLocal)
+
+        loadLocal(threadDescriptorLocal)
+        loadNewCodeLocationId(createCurrentLineCodeLocation())
+        loadLocal(localsArrayLocal)
+        loadLocal(watchValuesArrayLocal)
         traceIdCapturers.loadTraceIdIfAvailable(adapter)
         // Push the breakpoint's integer id as a compile-time constant.
         // Used by the event tracker for O(1) hit-limit checking and condition lookup.
@@ -372,8 +513,6 @@ internal class SnapshotBreakpointTransformer(
         invokeStatic(Injections::onSnapshotLineBreakpoint)
     }
 }
-
-private val booleanSupplierType = Type.getType(BooleanSupplier::class.java)
 
 /**
  * Extracts captured variable names from compiled condition bytecode using ASM.
@@ -405,3 +544,8 @@ private fun extractCapturedVarNamesFromBytecode(bytecode: ByteArray): List<Strin
     }, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG)
     return names
 }
+
+private val BOOLEAN_SUPPLIER_TYPE = Type.getType(BooleanSupplier::class.java)
+private val SUPPLIER_TYPE = Type.getType(Supplier::class.java)
+
+private const val WATCH_VALUES_HELPER_NAME = "__watchValues"

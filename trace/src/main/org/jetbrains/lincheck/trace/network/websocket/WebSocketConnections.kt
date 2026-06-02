@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.trace.network.websocket
 
 import org.java_websocket.WebSocket
-import org.java_websocket.client.WebSocketClient
+import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.encodeToString
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
@@ -60,12 +60,16 @@ class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
         webSocket.send("${TracingCallbacks.HIT_LIMIT_REACHED}:$timestamp:$breakpointData")
     }
 
-    override fun conditionUnsafe(
+    override fun breakpointExpressionUnsafe(
         breakpointData: LiveDebuggerNotification.BreakpointData,
+        slot: BreakpointExpressionSlot,
         safetyViolationMessage: String,
         timestamp: Long
     ) {
-        webSocket.send("${TracingCallbacks.CONDITION_UNSAFE}:$timestamp:$breakpointData;$safetyViolationMessage")
+        // Layout: kind ; breakpointData ; safetyViolationMessage.
+        // breakpointData has no `;`; the trailing message absorbs everything after the 2nd `;`.
+        val payload = "${slot.name};$breakpointData;$safetyViolationMessage"
+        webSocket.send("${TracingCallbacks.BREAKPOINT_EXPRESSION_UNSAFE}:$timestamp:$payload")
     }
 
     override fun binaryTraceData(data: ByteArray) {
@@ -84,8 +88,13 @@ class ClientSink: Closeable, TracingCallbacks {
     override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
         Logger.warn { "hitLimitReached dropped: no client connected (breakpoint=$breakpointData)" }
     }
-    override fun conditionUnsafe(breakpointData: LiveDebuggerNotification.BreakpointData, safetyViolationMessage: String, timestamp: Long) {
-        Logger.warn { "conditionUnsafe dropped: no client connected (breakpoint=$breakpointData, violation=$safetyViolationMessage)" }
+    override fun breakpointExpressionUnsafe(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        slot: BreakpointExpressionSlot,
+        safetyViolationMessage: String,
+        timestamp: Long,
+    ) {
+        Logger.warn { "breakpointExpressionUnsafe dropped: no client connected (breakpoint=$breakpointData, kind=$slot, violation=$safetyViolationMessage)" }
     }
     override fun binaryTraceData(data: ByteArray) {
         Logger.warn { "binaryTraceData dropped: no client connected (${data.size} bytes)" }

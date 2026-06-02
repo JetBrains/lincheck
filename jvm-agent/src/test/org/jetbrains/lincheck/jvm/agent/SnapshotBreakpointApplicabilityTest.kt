@@ -25,9 +25,6 @@ class SnapshotBreakpointApplicabilityTest {
             className = className,
             fileName = fileName,
             lineNumber = line,
-            conditionClassName = null,
-            conditionFactoryMethodName = null,
-            conditionCodeFragment = null,
         )
 
     @Test

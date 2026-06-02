@@ -703,6 +703,7 @@ class TraceCollectingEventTracker(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         locals: Array<Any?>,
+        watches: Array<Any?>,
         traceId: String?,
         breakpointId: Int,
     ) = threadDescriptor.runInsideInjectedCode {
@@ -713,9 +714,10 @@ class TraceCollectingEventTracker(
         // the thread that hits the limit exactly fires the removal callback.
         if (!BreakpointStorage.incrementAndCheckHitLimit(breakpointId)) return
 
-        // Resolve the breakpoint's UUID.
+        // Resolve the registered breakpoint.
         // Skip the hit if the breakpoint was unregistered between increment and lookup.
-        val breakpointUuid = (BreakpointStorage.getUserData(breakpointId) as? SnapshotBreakpoint)?.uuid ?: return
+        val breakpoint = BreakpointStorage.getUserData(breakpointId) as? SnapshotBreakpoint ?: return
+        val breakpointUuid = breakpoint.uuid
 
         // We do not use threadData.getStack() as we might not track (all) method calls in live debug mode
         val stackTrace = Exception().stackTrace
@@ -729,26 +731,8 @@ class TraceCollectingEventTracker(
         
         val timeStamp = System.currentTimeMillis()
 
-        val locals = locals.map { local ->
-            when {
-                local == null -> TRNull
-
-                local::class.java.isArray -> {
-                    val arraySize = findArrayLength(local)
-                    val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
-                    val elements = findElementsForArray(local, elementsToRead)
-                    TRArraySnapshot(context, local, arraySize, elements)
-                }
-
-                else -> {
-                    val objectFields = findFieldsForObject(local)
-                    when {
-                        objectFields.isNotEmpty() -> TRObjectSnapshot(context, local, objectFields)
-                        else -> TRValue(context, local)
-                    }
-                }
-            }
-        }
+        val locals = locals.map { captureValueSnapshot(it) }
+        val watches = watches.map { captureValueSnapshot(it) }
         
         val tracePoint = TRSnapshotLineBreakpointTracePoint(
             context = context,
@@ -758,10 +742,35 @@ class TraceCollectingEventTracker(
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
             locals = locals,
+            watches = watches,
             traceId = traceId,
         )
         // TODO maybe these tracepoints should be collected separately
         strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+    }
+
+    private fun captureValueSnapshot(value: Any?): TRValue = when {
+        // TODO: we should re-use `TRValue` factory instead of case analysis here;
+        //   also moving object fields & array elements capturing logic there.
+
+        value == null -> TRNull
+
+        value is Enum<*> -> TRValue(context, value)
+
+        value::class.java.isArray -> {
+            val arraySize = findArrayLength(value)
+            val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
+            val elements = findElementsForArray(value, elementsToRead)
+            TRArraySnapshot(context, value, arraySize, elements)
+        }
+
+        else -> {
+            val objectFields = findFieldsForObject(value)
+            when {
+                objectFields.isNotEmpty() -> TRObjectSnapshot(context, value, objectFields)
+                else -> TRValue(context, value)
+            }
+        }
     }
 
     override fun onLoopIteration(

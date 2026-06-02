@@ -706,12 +706,15 @@ internal val SAFE_STATIC_METHODS = setOf(
     "java/lang/StrictMath.min",
 
     // Primitive wrapper static methods (boxing, parsing)
+    "java/lang/Boolean.valueOf",
+    "java/lang/Character.valueOf",
+    "java/lang/Byte.valueOf",
+    "java/lang/Short.valueOf",
     "java/lang/Integer.valueOf",
     "java/lang/Integer.parseInt",
     "java/lang/Integer.bitCount",
     "java/lang/Long.valueOf",
     "java/lang/Long.parseLong",
-    "java/lang/Boolean.valueOf",
     "java/lang/Double.valueOf",
     "java/lang/Double.parseDouble",
     "java/lang/Float.valueOf",

@@ -16,6 +16,7 @@ import java.io.DataInput
 import java.io.DataOutput
 import java.io.IOException
 import java.util.EnumSet
+import java.util.UUID
 
 /**
  * This file contains utilities for saving trace data in binary format using [DataInput] and [DataOutput].
@@ -25,7 +26,7 @@ import java.util.EnumSet
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 24
+internal const val TRACE_VERSION : Long = 25
 
 // Buffer for saving trace in one piece
 internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -125,6 +126,19 @@ internal fun DataOutput.writeNullableString(value: String?) {
 internal fun DataInput.readNullableString(): String? {
     val hasString = readBoolean()
     return if (hasString) readString() else null
+}
+
+// ======== UUIDs ========
+
+private fun DataOutput.writeUUID(value: UUID) {
+    writeLong(value.mostSignificantBits)
+    writeLong(value.leastSignificantBits)
+}
+
+private fun DataInput.readUUID(): UUID {
+    val mostSignificantBits = readLong()
+    val leastSignificantBits = readLong()
+    return UUID(mostSignificantBits, leastSignificantBits)
 }
 
 // ======== Thread Names ========
@@ -1095,13 +1109,14 @@ private fun DataInput.readExceptionProcessingTracePoint(
 // -------- Snapshot Line Breakpoint --------
 
 private fun DataOutput.writeSnapshotLineBreakpointTracePoint(value: TRSnapshotLineBreakpointTracePoint) {
-    writeLong(value.breakpointUuid.mostSignificantBits)
-    writeLong(value.breakpointUuid.leastSignificantBits)
+    writeUUID(value.breakpointUuid)
     writeInt(value.stackTraceCodeLocationIds.size)
     value.stackTraceCodeLocationIds.forEach { writeInt(it) }
     writeLong(value.currentTimeMillis)
     writeInt(value.locals.size)
     value.locals.forEach { writeTRValue(it) }
+    writeInt(value.watches.size)
+    value.watches.forEach { writeTRValue(it) }
     writeNullableString(value.traceId)
 }
 
@@ -1111,12 +1126,14 @@ private fun DataInput.readSnapshotLineBreakpointTracePoint(
     threadId: Int,
     eventId: Int,
 ): TRSnapshotLineBreakpointTracePoint {
-    val breakpointUuid = java.util.UUID(readLong(), readLong())
+    val breakpointUuid = readUUID()
     val size = readInt()
     val stackTraceCodeLocationIds = List(size) { readInt() }
     val currentTimeMillis = readLong()
     val localsSize = readInt()
     val locals = List(localsSize) { readTRValue(context) }
+    val watchValuesSize = readInt()
+    val watchValues = List(watchValuesSize) { readTRValue(context) }
     val traceId = readNullableString()
     return TRSnapshotLineBreakpointTracePoint(
         context = context,
@@ -1126,7 +1143,9 @@ private fun DataInput.readSnapshotLineBreakpointTracePoint(
         stackTraceCodeLocationIds = stackTraceCodeLocationIds,
         currentTimeMillis = currentTimeMillis,
         locals = locals,
+        watches = watchValues,
         traceId = traceId,
         eventId = eventId,
     )
 }
+

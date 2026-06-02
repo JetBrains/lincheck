@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Central registry for the live-debugger breakpoint runtime state.
@@ -51,6 +52,12 @@ public class BreakpointStorage {
          * Written once (at transformation time) and then read-only.
          */
         public volatile Function<Object[], BooleanSupplier> conditionFactory = null;
+        /**
+         * Factory that creates a fresh {@link Supplier} of watch values for each hit.
+         * {@code null} when the breakpoint has no watches.
+         * Written once (at transformation time) and then read-only.
+         */
+        public volatile Function<Object[], Supplier> watchFactory = null;
 
         public BreakpointState(int hitLimit, Object userData) {
             this.hitLimit = hitLimit;
@@ -71,10 +78,10 @@ public class BreakpointStorage {
     private static volatile HitLimitListener onHitLimitReached = null;
 
     /**
-     * Called when a breakpoint's condition is detected to be unsafe (has side effects).
-     * Receives the breakpoint id, {@link BreakpointState#userData}, and `SafetyViolation`.
+     * Called when a breakpoint expression (condition or watch) is detected to be unsafe (has side effects).
+     * Receives the breakpoint id, {@link BreakpointState#userData}, the expression kind, and `SafetyViolation`.
      */
-    private static volatile ConditionUnsafetyListener onConditionUnsafetyDetected = null;
+    private static volatile BreakpointExpressionUnsafetyListener onBreakpointExpressionUnsafetyDetected = null;
 
     /**
      * Listener for hit-limit events.
@@ -85,11 +92,13 @@ public class BreakpointStorage {
     }
 
     /**
-     * Listener for condition-unsafety events.
+     * Listener for breakpoint-expression-unsafety events (conditions and watches alike).
+     * The {@code expressionKind} is an opaque token (a {@code BreakpointExpressionKind} enum
+     * value) the bootstrap layer forwards without inspecting.
      */
     @FunctionalInterface
-    public interface ConditionUnsafetyListener {
-        void onConditionUnsafetyDetected(int breakpointId, Object userData, Object safetyViolation);
+    public interface BreakpointExpressionUnsafetyListener {
+        void onBreakpointExpressionUnsafetyDetected(int breakpointId, Object userData, Object expressionKind, Object safetyViolation);
     }
 
     // -------------------------------------------------------------------------
@@ -122,6 +131,19 @@ public class BreakpointStorage {
     public static void registerConditionFactory(int breakpointId, Function<Object[], BooleanSupplier> factory) {
         BreakpointState state = states.get(breakpointId);
         if (state != null) state.conditionFactory = factory;
+    }
+
+    /**
+     * Attaches a watch factory to a previously registered breakpoint.
+     * Called once per breakpoint at class-transformation time.
+     *
+     * @param breakpointId the breakpoint id returned by {@link #registerBreakpoint}
+     * @param factory a function that accepts captured local-variable values and
+     *                returns a {@link Supplier} that evaluates watches
+     */
+    public static void registerWatchFactory(int breakpointId, Function<Object[], Supplier> factory) {
+        BreakpointState state = states.get(breakpointId);
+        if (state != null) state.watchFactory = factory;
     }
 
     /**
@@ -170,6 +192,26 @@ public class BreakpointStorage {
     }
 
     /**
+     * Creates a watch supplier instance for the given breakpoint.
+     *
+     * @param breakpointId the breakpoint id
+     * @param args captured local-variable values to pass to the factory
+     * @return a fresh {@link Supplier} that evaluates watches
+     * @throws IllegalStateException if no breakpoint or no factory is registered for {@code id}
+     */
+    public static Supplier createWatchInstance(int breakpointId, Object[] args) {
+        BreakpointState state = states.get(breakpointId);
+        if (state == null) {
+            throw new IllegalStateException("No breakpoint registered with id=" + breakpointId);
+        }
+        Function<Object[], Supplier> factory = state.watchFactory;
+        if (factory == null) {
+            throw new IllegalStateException("No watch factory for breakpoint id=" + breakpointId);
+        }
+        return factory.apply(args);
+    }
+
+    /**
      * Increments the hit count for the given breakpoint and checks whether it has
      * reached its configured limit.
      * <p>
@@ -208,37 +250,39 @@ public class BreakpointStorage {
     }
 
     /**
-     * Registers the callback that fires when a breakpoint's condition is detected to be unsafe.
-     * The callback receives the breakpoint id, {@code userData}, and the safety violation.
+     * Registers the callback that fires when a breakpoint expression (condition or watch)
+     * is detected to be unsafe. The callback receives the breakpoint id, {@code userData},
+     * the expression kind, and the safety violation.
      * <p>
      *
      * Should be called before any class transformation can occur, so that no
-     * condition-unsafety event can fire before the callback is in place.
+     * unsafety event can fire before the callback is in place.
      *
      * @param callback invoked (on the transformation thread) with the breakpoint id,
-     *                 {@code userData}, and safety violation.
+     *                 {@code userData}, expression kind, and safety violation.
      */
-    public static void setOnConditionUnsafetyDetected(ConditionUnsafetyListener callback) {
-        onConditionUnsafetyDetected = callback;
+    public static void setOnBreakpointExpressionUnsafetyDetected(BreakpointExpressionUnsafetyListener callback) {
+        onBreakpointExpressionUnsafetyDetected = callback;
     }
 
     /**
-     * Fires the condition-unsafety callback for the given breakpoint.
-     * Called at class-transformation time when a breakpoint's condition is found to have
-     * side effects and is therefore unsafe to evaluate at runtime.
+     * Fires the breakpoint-expression-unsafety callback for the given breakpoint.
+     * Called at class-transformation time when a breakpoint condition or watch is found to
+     * have side effects and is therefore unsafe to evaluate at runtime.
      *
      * @param breakpointId    the breakpoint id
      * @param userData        the breakpoint's {@code userData} (typically a {@code SnapshotBreakpoint})
-     * @param safetyViolation describes why the condition was rejected
+     * @param expressionKind  which expression was rejected (opaque {@code BreakpointExpressionKind})
+     * @param safetyViolation describes why the expression was rejected
      */
-    public static void notifyConditionUnsafetyDetected(int breakpointId, Object userData, Object safetyViolation) {
-        ConditionUnsafetyListener callback = onConditionUnsafetyDetected;
-        if (callback != null) callback.onConditionUnsafetyDetected(breakpointId, userData, safetyViolation);
+    public static void notifyBreakpointExpressionUnsafetyDetected(int breakpointId, Object userData, Object expressionKind, Object safetyViolation) {
+        BreakpointExpressionUnsafetyListener callback = onBreakpointExpressionUnsafetyDetected;
+        if (callback != null) callback.onBreakpointExpressionUnsafetyDetected(breakpointId, userData, expressionKind, safetyViolation);
     }
 
     /**
      * Clears all stored breakpoint states and associated data,
-     * including breakpoint condition factories.
+     * including breakpoint condition and watch factories.
      */
     public static void clear() {
         states.clear();

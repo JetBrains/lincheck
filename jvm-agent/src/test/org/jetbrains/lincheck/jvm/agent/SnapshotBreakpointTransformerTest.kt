@@ -566,9 +566,6 @@ class SnapshotBreakpointTransformerTest {
             // Same line as `JavaChainedCallFixture.findOrThrow`'s chained call so the
             // line check would match if the className safeguard weren't applied.
             lineNumber = 32,
-            conditionClassName = null,
-            conditionFactoryMethodName = null,
-            conditionCodeFragment = null,
         )
         val sites = transformAndCollect(JavaChainedCallFixture::class.java, listOf(unrelatedBreakpoint))
         assertEquals(emptyList<HookSite>(), sites)
@@ -698,9 +695,6 @@ internal fun snapshotBreakpoint(
     // `fileName` is informational and unused by dedup, so any value works here.
     fileName = "${fixtureClass.simpleName}.unknown",
     lineNumber = line,
-    conditionClassName = null,
-    conditionFactoryMethodName = null,
-    conditionCodeFragment = null,
 )
 
 /**
@@ -716,9 +710,6 @@ internal fun snapshotBreakpoint(
     className = className,
     fileName = fileName,
     lineNumber = line,
-    conditionClassName = null,
-    conditionFactoryMethodName = null,
-    conditionCodeFragment = null,
 )
 
 /**

@@ -422,6 +422,11 @@ object DefaultTRLineBreakpointSnapshotTracePointPrinter {
     fun TRAppendable.append(tracePoint: TRSnapshotLineBreakpointTracePoint): TRAppendable {
         append("Live breakpoint [${tracePoint.breakpointUuid}]")
         append(tracePoint, verbose)
+        if (tracePoint.watches.isNotEmpty()) {
+            append(", watches: [")
+            append(tracePoint.watches.joinToString(", "))
+            append("]")
+        }
         append(", ")
 
         // timestamp is not printed to ensure printed text is deterministic

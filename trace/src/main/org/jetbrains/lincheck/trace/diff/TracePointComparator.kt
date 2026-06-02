@@ -41,6 +41,7 @@ internal object TracePointComparator {
                 .add(tracePoint.breakpointUuid.toString())
                 .add(tracePoint.stackTrace) // Should we add it as-is?
                 .addTRList(tracePoint.locals)
+                .addTRList(tracePoint.watches)
                 .add(tracePoint.traceId ?: "")
             is TRThrowTracePoint -> h
                 .add(tracePoint.exception)

@@ -64,7 +64,7 @@ public interface EventTracker {
     void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId);
     void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t);
     
-    void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId, int breakpointId);
+    void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, Object[] watches, String traceId, int breakpointId);
 
     void onLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId);
     void onIrreducibleLoopIteration(ThreadDescriptor descriptor, int codeLocation, int loopId);

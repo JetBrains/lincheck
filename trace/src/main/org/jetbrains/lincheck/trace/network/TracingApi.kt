@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace.network
 
+import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import java.io.Closeable
@@ -27,17 +28,18 @@ interface TracingCallbacks : Closeable {
         timestamp: Long
     )
 
-    fun conditionUnsafe(
+    fun breakpointExpressionUnsafe(
         breakpointData: LiveDebuggerNotification.BreakpointData,
+        slot: BreakpointExpressionSlot,
         safetyViolationMessage: String,
         timestamp: Long
     )
 
     fun binaryTraceData(data: ByteArray)
-    
+
     companion object {
         internal const val HIT_LIMIT_REACHED = "hitLimitReached"
-        internal const val CONDITION_UNSAFE = "conditionUnsafe"
+        internal const val BREAKPOINT_EXPRESSION_UNSAFE = "breakpointExpressionUnsafe"
     }
 }
 

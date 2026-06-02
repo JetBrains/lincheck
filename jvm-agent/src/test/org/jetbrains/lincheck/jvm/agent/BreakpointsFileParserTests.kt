@@ -68,6 +68,9 @@ class BreakpointsFileParserTests {
         assertNull(bp.conditionClassName)
         assertNull(bp.conditionFactoryMethodName)
         assertNull(bp.conditionCodeFragment)
+        assertNull(bp.watchClassName)
+        assertNull(bp.watchFactoryMethodName)
+        assertNull(bp.watchCodeFragment)
     }
 
     // --- One breakpoint, all fields ---
@@ -85,6 +88,9 @@ class BreakpointsFileParserTests {
             conditionClassName = org.example.MyCondition
             conditionFactoryMethodName = create
             conditionCodeFragment = $encodedBytecode
+            watchClassName = org.example.MyWatches
+            watchFactoryMethodName = createWatches
+            watchCodeFragment = $encodedBytecode
         """.trimIndent())
 
         val result = BreakpointsFileParser.parseBreakpointsFile(path)
@@ -97,6 +103,9 @@ class BreakpointsFileParserTests {
         assertEquals("org.example.MyCondition", bp.conditionClassName)
         assertEquals("create", bp.conditionFactoryMethodName)
         assertArrayEquals(bytecode, bp.conditionCodeFragment)
+        assertEquals("org.example.MyWatches", bp.watchClassName)
+        assertEquals("createWatches", bp.watchFactoryMethodName)
+        assertArrayEquals(bytecode, bp.watchCodeFragment)
     }
 
     // --- Several breakpoints, different subsets of fields ---

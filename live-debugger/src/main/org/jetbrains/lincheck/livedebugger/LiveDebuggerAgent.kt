@@ -174,9 +174,10 @@ internal object LiveDebuggerAgent {
                             notification.timestamp
                         )
 
-                    is LiveDebuggerNotification.BreakpointConditionUnsafetyDetected ->
-                        server.connection.conditionUnsafe(
+                    is LiveDebuggerNotification.BreakpointExpressionUnsafetyDetected ->
+                        server.connection.breakpointExpressionUnsafe(
                             notification.breakpointData,
+                            notification.slot,
                             notification.safetyViolationMessage,
                             notification.timestamp
                         )
@@ -214,6 +215,6 @@ internal object LiveDebuggerAgent {
     @JvmStatic
     private fun installCallbacks() {
         LiveDebugger.ensureHitLimitCallbackInstalled()
-        LiveDebugger.ensureConditionUnsafetyCallbackInstalled()
+        LiveDebugger.ensureBreakpointExpressionUnsafetyCallbackInstalled()
     }
 }
