@@ -1635,14 +1635,6 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * Tracks all objects in [objs] eagerly.
-     * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
-     */
-    override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInsideIgnoredSection {
-        memorySnapshot.trackObjects(objs)
-    }
-
-    /**
      * Tracks fields that are accessed via System.arraycopy, Unsafe API, VarHandle API, Java AFU API, and kotlinx.atomicfu.
      *
      * *Must be called from [runInsideIgnoredSection].*

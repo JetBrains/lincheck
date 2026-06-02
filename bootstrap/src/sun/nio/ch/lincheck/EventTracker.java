@@ -42,8 +42,6 @@ public interface EventTracker {
     void afterObjectConstructor(ThreadDescriptor descriptor, Object obj, String className);
     void afterInvokeDynamicObjectCreation(ThreadDescriptor descriptor, Object obj);
 
-    void updateSnapshotBeforeConstructorCall(Object[] objs);
-
     void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor);
     void beforeReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, ResultInterceptor interceptor);
 

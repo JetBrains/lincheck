@@ -244,16 +244,6 @@ internal class LincheckClassVisitor(
         adapter: GeneratorAdapter,
         methodVisitor: MethodVisitor,
     ): SharedMemoryAccessTransformer {
-        var mv = methodVisitor
-        if (instrumentationMode != TRACE_RECORDING) {
-            // this transformer is required because currently the snapshot tracker
-            // does not trace memory accesses inside constructors
-            mv = ConstructorArgumentsSnapshotTrackerTransformer(
-                fileName, className, methodName, desc, access, methodInfo, context, adapter, mv,
-                classVisitor::isInstanceOf
-            )
-        }
-        mv = SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, configuration)
-        return mv
+        return SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, methodVisitor, configuration)
     }
 }
