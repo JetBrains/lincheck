@@ -1546,6 +1546,13 @@ internal abstract class ManagedStrategy(
             }
         }
 
+    override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String): Unit =
+        threadDescriptor.runInsideIgnoredSection {
+            if (objectTracker.shouldTrackObject(obj)) {
+                objectTracker.registerNewObject(obj)
+            }
+        }
+
     override fun afterInvokeDynamicObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
         threadDescriptor.runInsideIgnoredSection {
             if (objectTracker.shouldTrackObject(obj)) {

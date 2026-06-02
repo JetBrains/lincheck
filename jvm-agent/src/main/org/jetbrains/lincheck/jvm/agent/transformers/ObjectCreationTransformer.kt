@@ -36,8 +36,12 @@ internal class ObjectCreationTransformer(
     methodVisitor: MethodVisitor,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
-    /* To track object creation, this transformer inserts `Injections::afterNewObjectCreation` calls
-     * after an object is allocated and initialized.
+    override val requiresTypeAnalyzer: Boolean = true
+
+    /* To track object creation, this transformer inserts:
+     *  - `Injections::afterNewObjectCreation` after an array is allocated;
+     *  - `Injections::afterObjectConstructor` after each object constructor invocation.
+     *
      * The created object is passed into the injected function as an argument.
      *
      * In order to achieve this, this transformer tracks the following instructions:
@@ -58,8 +62,11 @@ internal class ObjectCreationTransformer(
      * and the actual initializing constructor call from the object creation call size.
      *
      * Therefore, to tackle these issues, we maintain a counter of allocated, but not yet initialized objects.
-     * Whenever we encounter a constructor call (i.e., `<init>`) we check for the counter
-     * and inject the object creation tracking method if the counter is not null.
+     * Whenever we encounter a constructor call (i.e., `<init>`) we either:
+     *  - check the counter and inject the object constructor tracking method
+     *    if the constructor corresponds to a preceding `NEW` instruction; or
+     *  - detect a `super()`/`this()` constructor call via the stack frame and inject
+     *    the same tracking method for `this` after that call returns.
      *
      * The solution with allocated objects counter is inspired by:
      * https://github.com/google/allocation-instrumenter
@@ -71,51 +78,84 @@ internal class ObjectCreationTransformer(
     private var uninitializedObjects = 0
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        // special handling for a common case of `Object` constructor
-        if (name == "<init>" && owner == "java/lang/Object" && uninitializedObjects > 0) {
-            invokeIfInAnalyzedCode(
-                original = {
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
-                },
-                instrumented = {
-                    val objectLocal = newLocal(OBJECT_TYPE)
-                    copyLocal(objectLocal)
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
-                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(objectLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
+        if (name != "<init>") {
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
+            return
+        }
+
+        if (isReceiverUninitializedThis(desc)) {
+            invokeAfterConstructorForCurrentThis(opcode, owner, name, desc, itf)
+            return
+        }
+
+        if (uninitializedObjects > 0) {
+            invokeAfterConstructorForNewObject(opcode, owner, name, desc, itf)
             uninitializedObjects--
             return
         }
-        if (name == "<init>" && uninitializedObjects > 0) {
-            invokeIfInAnalyzedCode(
-                original = {
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
-                },
-                instrumented = {
-                    val objectLocal = newLocal(OBJECT_TYPE)
-                    // save and pop the constructor parameters from the stack
-                    val constructorType = Type.getType(desc)
-                    val params = storeLocals(constructorType.argumentTypes)
-                    // copy the object on which we call the constructor
-                    copyLocal(objectLocal)
-                    // push constructor parameters back on the stack
-                    params.forEach { loadLocal(it) }
-                    // call the constructor
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
-                    // call the injected method
-                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(objectLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
-            uninitializedObjects--
-            return
-        }
+
         super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
+
+    private fun GeneratorAdapter.invokeAfterConstructorForNewObject(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean
+    ) {
+        invokeIfInAnalyzedCode(
+            original = {
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+            },
+            instrumented = {
+                val objectLocal = newLocal(OBJECT_TYPE)
+                val constructorType = Type.getType(desc)
+                val params = storeLocals(constructorType.argumentTypes)
+                copyLocal(objectLocal)
+                params.forEach { loadLocal(it) }
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                loadLocal(objectLocal)
+                push(owner.toCanonicalClassName())
+                invokeStatic(Injections::afterObjectConstructor)
+            }
+        )
+    }
+
+    private fun GeneratorAdapter.invokeAfterConstructorForCurrentThis(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean
+    ) {
+        invokeIfInAnalyzedCode(
+            original = {
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+            },
+            instrumented = {
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                loadThis()
+                push(owner.toCanonicalClassName())
+                invokeStatic(Injections::afterObjectConstructor)
+            }
+        )
+    }
+
+    /**
+     * Returns true when the receiver of the constructor call being visited is
+     * [UNINITIALIZED_THIS], i.e. this is a `super()` or `this()` delegation call
+     * inside the current constructor body.
+     */
+    private fun isReceiverUninitializedThis(desc: String): Boolean {
+        if (methodName != "<init>") return false
+        val stack = typeAnalyzer?.stack ?: return false
+        val argSlots = Type.getArgumentTypes(desc).sumOf { it.size }
+        return stack.getStackElementAt(argSlots) == UNINITIALIZED_THIS
+    }
+
 
     override fun visitIntInsn(opcode: Int, operand: Int) = adapter.run {
         super.visitIntInsn(opcode, operand)
@@ -203,7 +243,7 @@ internal class ObjectCreationTransformer(
      * The cleanest place to hook this allocation is the `invokedynamic` call site itself:
      * the freshly allocated object is left on the operand stack
      * as the instruction's result, so we can `dup` it and feed it to
-     * `afterNewObjectCreation` exactly as we do for `NEW`/`<init>` pairs.
+     * `afterNewObjectCreation` similarly to arrays.
      *
      * One subtlety: a non-capturing lambda's call site target returns a JVM-cached singleton,
      * so the same instance shows up on the stack each time the `invokedynamic` is executed.

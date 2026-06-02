@@ -128,14 +128,14 @@ internal class LincheckClassVisitor(
             ThreadStartJoinTransformer(fileName, className, methodName, methodInfo, context, desc, access, adapter, mv, config)
         }
 
-        // ======== Method Calls ========
-        chain.addTransformer { adapter, mv ->
-            MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config)
-        }
-
         // ======== Object Creation ========
         chain.addTransformer { adapter, mv ->
             ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+        }
+
+        // ======== Method Calls ========
+        chain.addTransformer { adapter, mv ->
+            MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config)
         }
 
         // ======== Invokedynamic ========

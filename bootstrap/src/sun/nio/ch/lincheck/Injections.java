@@ -933,11 +933,21 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code after any object is created
+     * Called from the instrumented code after an array object is created.
      */
     public static void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj) {
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.afterNewObjectCreation(descriptor, obj);
+    }
+
+    /**
+     * Called from the instrumented code after an object constructor has completed.
+     *
+     * @param className the name of the class whose constructor was just called.
+     */
+    public static void afterObjectConstructor(ThreadDescriptor descriptor, Object obj, String className) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        eventTracker.afterObjectConstructor(descriptor, obj, className);
     }
 
     /**
