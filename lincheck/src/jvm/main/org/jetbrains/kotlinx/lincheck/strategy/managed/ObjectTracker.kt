@@ -612,8 +612,9 @@ open class BaseObjectTracker(
     }
 
     private fun overwriteIdentityHashCode(obj: Any) {
-        // Zero out the identity hash code in the object header to ensure deterministic behavior.
-        UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, 0)
+        // Use a non-zero identity hash code: zero is treated by HotSpot as "hash not yet set"
+        // and may be overwritten by a later identityHashCode/hashCode call.
+        UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, DETERMINISTIC_IDENTITY_HASHCODE)
     }
 }
 
@@ -646,3 +647,5 @@ private typealias IdentityHashCode = Int
  *      https://wiki.openjdk.org/display/lilliput/Compact+Identity+Hashcode
  */
 private const val IDENTITY_HASHCODE_OFFSET = 1L
+
+private const val DETERMINISTIC_IDENTITY_HASHCODE = 1
