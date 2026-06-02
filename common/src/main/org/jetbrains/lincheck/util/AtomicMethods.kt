@@ -512,6 +512,7 @@ internal fun getAtomicType(atomic: Any?): Types.Type? = when (atomic) {
     is AtomicReference<*>       -> Types.OBJECT_TYPE
     is AtomicBoolean            -> Types.BOOLEAN_TYPE
     is AtomicInteger            -> Types.INT_TYPE
+    is AtomicLong               -> Types.LONG_TYPE
     else                        -> null
 }
 
