@@ -57,6 +57,14 @@ abstract class AbstractLincheckTest(
         runInternalTest()
     }
 
+    @Test(timeout = TIMEOUT)
+    fun testWithEventStructureStrategy() : Unit = ModelCheckingOptions().run {
+        invocationsPerIteration(1_000)
+        commonConfiguration()
+        useExperimentalModelChecking()
+        runInternalTest()
+    }
+
     private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
         iterations(30)
         actorsBefore(2)

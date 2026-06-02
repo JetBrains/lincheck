@@ -110,7 +110,8 @@ class ModelCheckingCTestConfiguration(
     private val useExperimentalModelChecking =
         experimentalModelChecking || System.getProperty("lincheck.useExperimentalModelChecking")?.toBoolean() ?: false
 
-    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
+    override val instrumentationMode: InstrumentationMode get() =
+        if (useExperimentalModelChecking) InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING else MODEL_CHECKING
 
     override fun createStrategy(
         testClass: Class<*>,
