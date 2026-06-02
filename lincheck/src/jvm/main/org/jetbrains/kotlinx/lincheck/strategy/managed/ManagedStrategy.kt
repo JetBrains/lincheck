@@ -335,7 +335,7 @@ internal abstract class ManagedStrategy(
         if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
         val registeredThreads = getRegisteredThreads()
-        val threadNames = MutableList(registeredThreads.size) { "" }
+        val threadNames = MutableList((registeredThreads.keys.maxOrNull() ?: -1) + 1) { "" }
         registeredThreads.forEach { (threadId, thread) ->
             when (val threadNumber = objectTracker.getObjectDisplayNumber(thread)) {
                 0    -> threadNames[threadId] = "Main Thread"
