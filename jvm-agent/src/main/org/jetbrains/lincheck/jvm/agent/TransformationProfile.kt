@@ -428,6 +428,23 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             }
         }
 
+        // Keep platform/library constructors at the previous instrumentation level:
+        // constructor call events inside these runtimes add many scheduling points and can
+        // make replay of coroutine and JDK internals non-deterministic. User/tested classes
+        // below still get full constructor method-call tracking.
+        if (methodName == "<init>" && (
+            className.startsWith("java.") ||
+            className.startsWith("javax.") ||
+            className.startsWith("jdk.") ||
+            className.startsWith("kotlin.") ||
+            className.startsWith("kotlinx.coroutines.")
+        )) {
+            return config.apply {
+                trackObjectCreations = true
+                trackAllSharedMemoryAccesses = true
+            }
+        }
+
         return config.apply {
             trackObjectCreations = true
 
