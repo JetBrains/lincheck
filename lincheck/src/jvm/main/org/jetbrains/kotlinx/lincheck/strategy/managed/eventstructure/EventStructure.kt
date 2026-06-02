@@ -30,8 +30,8 @@ import org.jetbrains.lincheck.util.collections.*
 
 
 internal class EventStructure(
-    val memoryInitializer: MemoryInitializer,
     private val memoryModel: MemoryModel,
+    val memoryInitializer: MemoryInitializer,
     // TODO: refactor --- avoid using callbacks!
     private val reportInconsistencyCallback: ReportInconsistencyCallback,
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
@@ -632,18 +632,11 @@ internal class EventStructure(
              * reading from them will result in coherence cycle and will violate consistency
              */
             label is ReadAccessLabel && label.isRequest -> {
-                filterSynchronizationReadCandidates(event, candidates)
+                filterReadSynchronizationCandidates(event, candidates)
             }
 
             label is WriteAccessLabel -> {
-                if (
-                    memoryModel == MemoryModel.SequentialConsistency &&
-                    execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)
-                ) {
-                    return sequenceOf()
-                }
-
-                candidates
+                filterWriteSynchronizationCandidates(event, candidates)
             }
 
             // an allocation event, at the point when it is added to the execution,
@@ -663,7 +656,7 @@ internal class EventStructure(
         }
     }
 
-    private fun filterSynchronizationReadCandidates(event: ThreadEvent, candidates: Sequence<AtomicThreadEvent>) : Sequence<AtomicThreadEvent> {
+    private fun filterReadSynchronizationCandidates(event: ThreadEvent, candidates: Sequence<AtomicThreadEvent>) : Sequence<AtomicThreadEvent> {
         val label: ReadAccessLabel = event.label as ReadAccessLabel
         return when (memoryModel) {
             MemoryModel.SequentialConsistency -> {
@@ -693,6 +686,19 @@ internal class EventStructure(
             MemoryModel.JAM21 ->
                 candidates
         }
+    }
+
+
+    private fun filterWriteSynchronizationCandidates(event: ThreadEvent, candidates : Sequence<AtomicThreadEvent>) : Sequence<AtomicThreadEvent> {
+        val label: WriteAccessLabel = event.label as WriteAccessLabel
+        if (
+            memoryModel == MemoryModel.SequentialConsistency &&
+            execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)
+        ) {
+            return sequenceOf()
+        }
+
+        return candidates
     }
 
     /**

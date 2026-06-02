@@ -52,7 +52,7 @@ internal class EventStructureStrategy(
     }
 
     private val eventStructure: EventStructure =
-        EventStructure( memoryInitializer, memoryModel,  ::onInconsistency) { iThread, reason ->
+        EventStructure( memoryModel, memoryInitializer, ::onInconsistency) { iThread, reason ->
             switchCurrentThread(iThread, reason)
         }
 
