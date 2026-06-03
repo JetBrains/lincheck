@@ -18,7 +18,7 @@ All operations above the horizontal line | ----- | happen before those below the
 
 #1: java.lang.IllegalStateException: Validation works!
 	at org.jetbrains.kotlinx.lincheck_test.representation.ValidationFunctionCallTest.validateWithError(ValidationFunctionTests.kt:42)
-	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution4.run(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck.runner.TestThreadExecution1040.run(Unknown Source)
 	at org.jetbrains.kotlinx.lincheck.runner.ActiveThreadPoolExecutor.testThreadRunnable$lambda$10(ActiveThreadPoolExecutor.kt:178)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 

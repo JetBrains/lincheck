@@ -3,7 +3,7 @@
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:51)
 	at org.jetbrains.kotlinx.lincheck_test.representation.SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:39)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50)
 	at java.base/java.lang.Thread.run(Unknown Source)
 
 The following interleaving leads to the error:
@@ -25,7 +25,7 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |                                                                                   Main Thread                                                                                   |                                                 Thread 1                                                 |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |                                                                                                          |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50) |                                                                                                          |
 |   block(): threw IllegalStateException at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:39)                                                  |                                                                                                          |
 |     thread(block = Lambda#1): Thread#1 at SimpleThreadCreationRepresentationTest.block(ThreadCreationRepresentationTest.kt:47)                                                  |                                                                                                          |
 |       Thread#1.start() at ThreadsKt.<unknown method>(Thread.kt:42)                                                                                                              |                                                                                                          |
