@@ -107,7 +107,7 @@ class MemoryModelTest {
             (2 to 1),
             (2 to 2), // This outcome is not observed without the completeness fix
         )
-        litmusTest(expectedOutcomes) {
+        litmusTest(assertSame(expectedOutcomes)) {
             val x = AtomicInteger(0)
             var r1 = 0
             var r2 = 0
@@ -140,7 +140,7 @@ class MemoryModelTest {
             (2 to 0),
             (2 to 2), // This outcome is also missing without the completeness fix
         )
-        litmusTest(expectedOutcomes) {
+        litmusTest(assertSame(expectedOutcomes)) {
             val x = AtomicInteger(0)
             var r1 = 0
             var r2 = 0
@@ -165,7 +165,7 @@ class MemoryModelTest {
     @Test
     fun testW_R_W() {
         val expectedOutcomes: Set<Int> = setOf(0, 1, 2)
-        litmusTest(expectedOutcomes) {
+        litmusTest(assertSame(expectedOutcomes)) {
             val x = AtomicInteger(0)
             var r1 = 0
             val t1 = thread {
@@ -182,7 +182,6 @@ class MemoryModelTest {
             t3.join()
             r1
         }
-
-
     }
+
 }
