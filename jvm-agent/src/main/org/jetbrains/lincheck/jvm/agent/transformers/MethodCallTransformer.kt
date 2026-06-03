@@ -424,7 +424,7 @@ internal class MethodCallTransformer(
 
     @Suppress("UNUSED_PARAMETER")
     private fun shouldTrackMethodCall(className: String, methodName: String, descriptor: String): Boolean {
-        // TODO: do not ignore <init>
+        if (methodName == "<init>" && isPlatformConstructorOwner(className)) return false
         if (methodName == "<init>" && !configuration.trackConstructorCalls) return false
         if (isIgnoredClass(className)) return false
         if (isCoroutineResumptionSyntheticAccessor(className, methodName)) return false
@@ -432,6 +432,11 @@ internal class MethodCallTransformer(
         // and it depends on static initialization which is not instrumented.
         if (isThreadLocalRandomCurrent(className, methodName)) return false
         return true
+    }
+
+    private fun isPlatformConstructorOwner(className: String): Boolean {
+        val canonicalClassName = className.toCanonicalClassName()
+        return isPlatformConstructorClass(canonicalClassName)
     }
 
     private fun isIgnoredClass(className: String) =
