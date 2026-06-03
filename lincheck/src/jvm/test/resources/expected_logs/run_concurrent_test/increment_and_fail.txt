@@ -21,5 +21,6 @@ Detailed trace:
 |   block(): threw IllegalStateException at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:86)                                            |
 |     x ➜ 0 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:92)                                                                         |
 |     x = 1 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:92)                                                                         |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at IncrementAndFailConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:93)        |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

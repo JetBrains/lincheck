@@ -23,9 +23,11 @@ Detailed trace:
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                                |
 |         inc1() at AccessFunctionRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:19)                                                                               |
 |           AccessFunctionRepresentationTest.Nested.<init>(AccessFunctionRepresentationTest#1): Nested#1 at AccessFunctionRepresentationTest.inc1(AccessFunctionRepresentationTest.kt:24) |
+|             <init>(): Nested#1 at AccessFunctionRepresentationTest.Nested.<init>(AccessFunctionRepresentationTest.kt:31)                                                                |
 |           Nested#1.inc2() at AccessFunctionRepresentationTest.inc1(AccessFunctionRepresentationTest.kt:24)                                                                              |
 |             AccessFunctionRepresentationTest.inc3() at AccessFunctionRepresentationTest.Nested.inc2(AccessFunctionRepresentationTest.kt:33)                                             |
 |               a ➜ 0 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                                    |
 |               a = 1 at AccessFunctionRepresentationTest.inc3(AccessFunctionRepresentationTest.kt:28)                                                                                    |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at AccessFunctionRepresentationTest.block(AccessFunctionRepresentationTest.kt:20)                            |
 |   result: IllegalStateException #1                                                                                                                                                      |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

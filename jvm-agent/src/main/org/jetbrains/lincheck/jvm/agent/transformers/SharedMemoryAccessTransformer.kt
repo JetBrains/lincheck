@@ -47,8 +47,7 @@ internal class SharedMemoryAccessTransformer(
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
             isCoroutineInternalClass(owner.toCanonicalClassName()) ||
-            isCoroutineStateMachineClass(owner.toCanonicalClassName()) ||
-            (methodName == "<init>" && isPlatformConstructorClass(className.toCanonicalClassName()))
+            isCoroutineStateMachineClass(owner.toCanonicalClassName())
         ) {
             super.visitFieldInsn(opcode, owner, fieldName, desc)
             return

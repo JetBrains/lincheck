@@ -19,5 +19,6 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50) |
 |   block(): threw IllegalStateException at NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:78)                                                 |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:82)             |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

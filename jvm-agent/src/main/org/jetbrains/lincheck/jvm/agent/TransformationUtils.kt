@@ -600,18 +600,6 @@ internal fun isCoroutineInternalClass(className: String): Boolean =
     isCoroutineConcurrentKtInternalClass(className)
 
 /**
- * Platform/library constructors stay at the pre-constructor-support instrumentation level:
- * method-call events inside them add many scheduling points and can make replay of JDK,
- * Kotlin stdlib, and coroutine internals non-deterministic.
- */
-internal fun isPlatformConstructorClass(className: String): Boolean =
-    className.startsWith("java.") ||
-        className.startsWith("javax.") ||
-        className.startsWith("jdk.") ||
-        className.startsWith("kotlin.") ||
-        className.startsWith("kotlinx.coroutines.")
-
-/**
  * Tests if the provided [className] represents an internal coroutine dispatcher class.
  */
 internal fun isCoroutineDispatcherInternalClass(className: String): Boolean =

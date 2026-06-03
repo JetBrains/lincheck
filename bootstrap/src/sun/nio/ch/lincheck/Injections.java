@@ -673,6 +673,7 @@ public class Injections {
      * Called from the instrumented code before each field read.
      */
     public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor) {
+        if (obj == UNINITIALIZED_THIS) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
         eventTracker.beforeReadField(descriptor, codeLocation, obj, fieldId, interceptor);
@@ -709,6 +710,10 @@ public class Injections {
      * Called from the instrumented code after each field read (final field reads can be ignored here).
      */
     public static void afterReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, Object value, ResultInterceptor interceptor) {
+        if (obj == UNINITIALIZED_THIS) {
+            recycleResultInterceptor(descriptor, interceptor);
+            return;
+        }
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
         eventTracker.afterReadField(descriptor, codeLocation, obj, fieldId, value);
@@ -729,6 +734,7 @@ public class Injections {
      * Called from the instrumented code before each field write.
      */
     public static void beforeWriteField(ThreadDescriptor descriptor, int codeLocation, Object obj, Object value, int fieldId) {
+        if (obj == UNINITIALIZED_THIS) return;
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
         eventTracker.beforeWriteField(descriptor, codeLocation, obj, value, fieldId);

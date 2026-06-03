@@ -23,6 +23,8 @@ Detailed trace:
 |     atomicReference2 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:223)                                                     |
 |     atomicReference1.get(): Node#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:223)                                                           |
 |     AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.Node.<init>(2): Node#2 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:223) |
+|       <init>(): Node#2 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.Node.<init>(RunConcurrentRepresentationTests.kt:227)                                                                 |
 |     atomicReference1.compareAndSet(Node#1, Node#2): true at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:223)                                     |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at AtomicReferencesFromMultipleFieldsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:224)                   |
 |   result: IllegalStateException #1                                                                                                                                                                               |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -23,5 +23,6 @@ Detailed trace:
 |       r.invoke() at AccessFunctionRepresentationTestKt.runLambda(AccessFunctionRepresentationTest.kt:40)                                                                        |
 |         a ➜ 0 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                           |
 |         a = 1 at AccessFieldRepresentationTest.block$lambda$0(AccessFunctionRepresentationTest.kt:49)                                                                           |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at AccessFieldRepresentationTest.block(AccessFunctionRepresentationTest.kt:50)                       |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -20,9 +20,13 @@ Detailed trace:
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
 |     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
+|       ConcurrentHashMap.<init>(): ConcurrentHashMap#1 at BaseMethodHandleLookupRepresentationTest.ensureConcurrentHashMapIsInstrumented(MethodHandlesLookupTests.kt:64)         |
+|         <init>(): ConcurrentHashMap#1 at ConcurrentHashMap.<init>(ConcurrentHashMap.java:828)                                                                                   |
+|           <init>(): ConcurrentHashMap#1 at AbstractMap.<init>(AbstractMap.java:73)                                                                                              |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:86)                                                        |
 |         Counter.<init>(): Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                      |
+|           <init>(): Counter#1 at Counter.<init>(MethodHandlesLookupTests.kt:143)                                                                                                |
 |         Counter.shared = Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                       |
 |       methodHandle.invoke(Counter#1) at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:91)                                                       |
 |         value ➜ 0 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
@@ -31,5 +35,6 @@ Detailed trace:
 |         value ➜ 1 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
 |         value = 2 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
 |       counter.value ➜ 2 at MethodHandlesFindVirtualRepresentationTest.doTest(MethodHandlesLookupTests.kt:93)                                                                    |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

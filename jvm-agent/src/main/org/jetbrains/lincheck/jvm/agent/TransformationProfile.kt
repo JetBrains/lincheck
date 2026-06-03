@@ -428,13 +428,6 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             }
         }
 
-        if (methodName == "<init>" && isPlatformConstructorClass(className)) {
-            return config.apply {
-                trackObjectCreations = true
-                trackAllSharedMemoryAccesses = true
-            }
-        }
-
         return config.apply {
             trackObjectCreations = true
 

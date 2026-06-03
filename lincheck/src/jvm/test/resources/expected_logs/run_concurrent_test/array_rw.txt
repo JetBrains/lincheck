@@ -22,5 +22,6 @@ Detailed trace:
 |     IntArray#1[0] ➜ 0 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:128)                                                           |
 |     IntArray#1[0] = 1 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:128)                                                           |
 |     IntArray#1[0] ➜ 1 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:129)                                                           |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at ArrayReadWriteRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:130)      |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -20,8 +20,12 @@ Detailed trace:
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
 |     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
+|       ConcurrentHashMap.<init>(): ConcurrentHashMap#1 at BaseMethodHandleLookupRepresentationTest.ensureConcurrentHashMapIsInstrumented(MethodHandlesLookupTests.kt:64)         |
+|         <init>(): ConcurrentHashMap#1 at ConcurrentHashMap.<init>(ConcurrentHashMap.java:828)                                                                                   |
+|           <init>(): ConcurrentHashMap#1 at AbstractMap.<init>(AbstractMap.java:73)                                                                                              |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       constructorHandle.invoke(42): Counter#1 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:76)                                          |
 |       counter.value ➜ 42 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:77)                                                               |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

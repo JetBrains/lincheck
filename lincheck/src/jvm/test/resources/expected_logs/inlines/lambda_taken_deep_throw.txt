@@ -28,6 +28,7 @@ Detailed trace:
 |           escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:19)                                               |
 |         run$Lambda(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:50)                                    |
 |           escape = "IN LAMBDA 2" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:36)                                                |
+|           RuntimeException.<init>(): RuntimeException#1 at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:37)                         |
 |   escape = "CATCH" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:43)                                                              |
 |   escape = "END" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:45)                                                                |
 |   result: void                                                                                                                                                                                 |
