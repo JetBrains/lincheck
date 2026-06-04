@@ -584,6 +584,9 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
     return cleanBackEdges
 }
 
+/**
+ * Checks whether a block writes to a local variable loaded by the loop header, which can make a path to not be await-clean.
+ */
 private fun BasicBlockControlFlowGraph.headerGuard(
     blockIndex: BasicBlockIndex,
     localVariables: Set<Int>,
