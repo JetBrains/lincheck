@@ -381,12 +381,14 @@ internal class EventStructureStrategy(
         startingThreadDescriptor: ThreadDescriptor
     ) {
         super.beforeThreadStart(threadDescriptor, startingThread, startingThreadDescriptor)
-        val newThreadId = threadScheduler.getThreadId(startingThread)
-        //NOTE: Main thread is special cased, since it is forked from the "initial" thread
-        //      which is not tracked in the eventstrcuture. Therefore, we want to skip tracking it
-        if (newThreadId != -1 || newThreadId != eventStructure.mainThreadId) {
-            val currentThreadId = threadScheduler.getCurrentThreadId()
-            eventStructure.addThreadForkEvent(currentThreadId, setOf(newThreadId))
+        runInsideIgnoredSection {
+            val newThreadId = threadScheduler.getThreadId(startingThread)
+            //NOTE: Main thread is special cased, since it is forked from the "initial" thread
+            //      which is not tracked in the eventstrcuture. Therefore, we want to skip tracking it
+            if (newThreadId != -1 || newThreadId != eventStructure.mainThreadId) {
+                val currentThreadId = threadScheduler.getCurrentThreadId()
+                eventStructure.addThreadForkEvent(currentThreadId, setOf(newThreadId))
+            }
         }
     }
 
@@ -394,12 +396,14 @@ internal class EventStructureStrategy(
         // TODO: refactor, make `switchCurrentThread` private again in ManagedStrategy,
         //   call overridden `onStart` and `onFinish` methods only when thread is active
         //   and the `currentThread` lock is held
-        threadScheduler.awaitTurn(threadId)
-        // TODO: extract this check into a method ?
-        while (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(threadId)) {
-            switchCurrentThread(threadId, null) // TODO: Should not be null, since we would not switch we need another blocking reason
+        runInsideIgnoredSection {
+            threadScheduler.awaitTurn(threadId)
+            // TODO: extract this check into a method ?
+            while (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(threadId)) {
+                switchCurrentThread(threadId, null) // TODO: Should not be null, since we would not switch we need another blocking reason
+            }
+            eventStructure.addThreadFinishEvent(threadId)
         }
-        eventStructure.addThreadFinishEvent(threadId)
         super.onThreadFinish(threadId)
     }
 
