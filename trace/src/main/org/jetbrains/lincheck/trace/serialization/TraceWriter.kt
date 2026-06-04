@@ -272,6 +272,10 @@ internal abstract class ContextAwareTraceWriter(
         val accessPath = codeLocation.accessPath
         val argumentNames = codeLocation.argumentNames
         val activeLocals = codeLocation.activeLocals
+        val loopIds = when (codeLocation) {
+            is LoopHeaderCodeLocation -> codeLocation.loopIds
+            else -> null
+        }
         // All strings only once. It will have duplications with class and method descriptors,
         // but size loss is negligible and this way is simpler
         val fileNameId = if (stackTrace.fileName != FALLBACK_STRING) writeString(stackTrace.fileName) else -1
@@ -298,6 +302,8 @@ internal abstract class ContextAwareTraceWriter(
         dataOutput.writeInt(activeLocalNameIds?.size ?: 0)
         activeLocalNameIds?.forEach { dataOutput.writeInt(it) }
         activeLocals?.forEach { dataOutput.writeInt(it.localKind.ordinal) }
+        dataOutput.writeInt(loopIds?.size ?: 0)
+        loopIds?.forEach { dataOutput.writeInt(it) }
         contextState.markDescriptorSaved<CodeLocation>(id)
 
         writeIndexCell(ObjectKind.CODE_LOCATION, id, position, -1)

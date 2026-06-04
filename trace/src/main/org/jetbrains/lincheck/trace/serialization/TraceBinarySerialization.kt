@@ -26,7 +26,7 @@ import java.util.UUID
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 25
+internal const val TRACE_VERSION : Long = 26
 
 // Buffer for saving trace in one piece
 internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -292,11 +292,12 @@ internal enum class CodeLocationKind {
     LINE,
     ACCESS,
     METHOD_CALL,
+    LOOP,
 }
 
 internal val CodeLocation.kind: CodeLocationKind get() = when (this) {
     is LineCodeLocation -> CodeLocationKind.LINE
-    is LoopHeaderCodeLocation -> CodeLocationKind.ACCESS
+    is LoopHeaderCodeLocation -> CodeLocationKind.LOOP
     is AccessCodeLocation -> CodeLocationKind.ACCESS
     is MethodCallCodeLocation -> CodeLocationKind.METHOD_CALL
 }
