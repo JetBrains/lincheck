@@ -30,6 +30,7 @@ import org.jetbrains.lincheck.util.collections.*
 
 
 internal class EventStructure(
+    private val memoryModel: MemoryModel,
     val memoryInitializer: MemoryInitializer,
     // TODO: refactor --- avoid using callbacks!
     private val reportInconsistencyCallback: ReportInconsistencyCallback,
@@ -176,8 +177,6 @@ internal class EventStructure(
             }
             replayer.setNextEvent()
         }
-        // reset object indices --- retain only external events
-//        objectRegistry.retain { it.isExternal }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
         readCodeLocationsCounter.clear()
@@ -293,12 +292,34 @@ internal class EventStructure(
     }
 
     private fun createBacktrackingPoint(event: AtomicThreadEvent, conflicts: List<AtomicThreadEvent>) {
-        val frontier = execution.toMutableFrontier().apply {
+        // This check is guaranteed to hold for now, since this is called only by the
+        // [addBinarySynchronizedEvents] and [addBarrierSynchronizedEvents] methods
+        // which always pass in a parent
+        check((event.label !is InitializationLabel) implies (event.parent != null)) { "Backtracked event must have a parent: $event" }
+
+        val newPinnedEvents = pinnedEvents.copy().apply {
+            val causalityFrontier = execution.calculateFrontier(event.causalityClock)
+            merge(causalityFrontier)
             cut(conflicts)
-            // for already unblocked dangling requests,
-            // also put their responses into the frontier
+            cut(getDanglingRequests())
+            cut(event)
+        }
+
+        val frontier = execution.toMutableFrontier().apply {
+            // We need to keep events in the frontier that are either have: id <= (parent.id)
+            // or are observed by the event, a la GenMC
+            cut(conflicts)
+            cut { cutEvent ->
+                (
+                    // This is safe because of the check at the beginning of the function
+                    cutEvent.id <= event.parent!!.id  ||
+                    newPinnedEvents.contains(cutEvent)
+                )
+            }
+            // NOTE: this can break some tests when locks and monitors are introduced again.
             addUnblockingResponses(conflicts)
         }
+
         val danglingRequests = frontier.getDanglingRequests()
 
         val blockedRequests = danglingRequests
@@ -324,17 +345,10 @@ internal class EventStructure(
             cut(danglingRequests)
             set(event.threadId, event.parent)
         }
-        val pinnedEvents = pinnedEvents.copy().apply {
-            val causalityFrontier = execution.calculateFrontier(event.causalityClock)
-            merge(causalityFrontier)
-            cut(conflicts)
-            cut(getDanglingRequests())
-            cut(event)
-        }
         val backtrackingPoint = BacktrackingPoint(
             event = event,
             frontier = frontier,
-            pinnedEvents = pinnedEvents,
+            pinnedEvents = newPinnedEvents,
             blockedRequests = blockedRequests,
         )
         backtrackingPoints.add(backtrackingPoint)
@@ -618,6 +632,35 @@ internal class EventStructure(
              * reading from them will result in coherence cycle and will violate consistency
              */
             label is ReadAccessLabel && label.isRequest -> {
+                filterReadSynchronizationCandidates(event, candidates)
+            }
+
+            label is WriteAccessLabel -> {
+                filterWriteSynchronizationCandidates(event, candidates)
+            }
+
+            // an allocation event, at the point when it is added to the execution,
+            // cannot synchronize with anything, because there are no events yet
+            // that access the allocated object
+            label is ObjectAllocationLabel -> {
+                sequenceOf()
+            }
+
+            label is CoroutineSuspendLabel && label.isRequest -> {
+                // filter-out InitializationLabel to prevent creating cancellation response
+                // TODO: refactor!!!
+                candidates.filter { it.label !is InitializationLabel }
+            }
+
+            else -> candidates
+        }
+    }
+
+    private fun filterReadSynchronizationCandidates(event: ThreadEvent, candidates: Sequence<AtomicThreadEvent>) : Sequence<AtomicThreadEvent> {
+        val label: ReadAccessLabel = event.label as ReadAccessLabel
+        return when (memoryModel) {
+            MemoryModel.SequentialConsistency -> {
+                // We can optimize and remove some synchronized events if we are checking for sequential consistency
                 if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
                     val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
                     return sequenceOf(lastWrite)
@@ -635,32 +678,27 @@ internal class EventStructure(
                 candidates.filter {
                     // !causalityOrder.lessThan(it, threadLastWrite) &&
                     !racyWrites.any { write -> causalityOrder(it, write) } &&
-                    !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
+                            !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
                 }
             }
-
-            label is WriteAccessLabel -> {
-                if (execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)) {
-                    return sequenceOf()
-                }
+            MemoryModel.ReleaseAcquire ->
                 candidates
-            }
-
-            // an allocation event, at the point when it is added to the execution,
-            // cannot synchronize with anything, because there are no events yet
-            // that access the allocated object
-            label is ObjectAllocationLabel -> {
-                return sequenceOf()
-            }
-
-            label is CoroutineSuspendLabel && label.isRequest -> {
-                // filter-out InitializationLabel to prevent creating cancellation response
-                // TODO: refactor!!!
-                candidates.filter { it.label !is InitializationLabel }
-            }
-
-            else -> candidates
+            MemoryModel.JAM21 ->
+                candidates
         }
+    }
+
+
+    private fun filterWriteSynchronizationCandidates(event: ThreadEvent, candidates : Sequence<AtomicThreadEvent>) : Sequence<AtomicThreadEvent> {
+        val label: WriteAccessLabel = event.label as WriteAccessLabel
+        if (
+            memoryModel == MemoryModel.SequentialConsistency &&
+            execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)
+        ) {
+            return sequenceOf()
+        }
+
+        return candidates
     }
 
     /**

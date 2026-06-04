@@ -17,6 +17,8 @@ import kotlin.math.*
 interface VectorClock {
     fun isEmpty(): Boolean
 
+    fun maxThreadId(): Int
+
     operator fun get(tid: ThreadId): Int
 }
 
@@ -62,6 +64,9 @@ private class IntArrayClock(capacity: Int = 0) : MutableVectorClock {
 
     override fun isEmpty(): Boolean =
         clock.all { it == -1 }
+
+    // NOTE: potentially incorrect
+    override fun maxThreadId(): Int = capacity
 
     override fun get(tid: ThreadId): Int =
         if (tid < capacity) clock[tid] else -1
@@ -139,6 +144,10 @@ private class ThreadMapClock(private val defaultVal: Int = -1) : MutableVectorCl
 
     override fun get(tid: ThreadId): Int =
         clock.getOrDefault(tid, defaultVal)
+
+    override fun maxThreadId(): Int {
+        return clock.keys.maxOrNull() ?: -1
+    }
 
     override fun set(tid: ThreadId, timestamp: Int) {
         clock.set(tid, timestamp)
