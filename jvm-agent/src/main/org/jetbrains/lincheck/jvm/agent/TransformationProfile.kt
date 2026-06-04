@@ -428,6 +428,12 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             }
         }
 
+        if (methodName == "<init>" && shouldAvoidConstructorSwitching(className)) {
+            return config.apply {
+                trackObjectCreations = true
+            }
+        }
+
         return config.apply {
             trackObjectCreations = true
 
@@ -547,7 +553,7 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
         if (methodName == "<init>") {
             return config.apply {
                 trackObjectCreations = true
-                trackAllSharedMemoryAccesses = true
+                trackAllSharedMemoryAccesses = !shouldAvoidConstructorSwitching(className)
             }
         }
 
@@ -701,3 +707,10 @@ private fun shouldNotInstrument(className: String, methodName: String, descripto
 
     return false
 }
+
+private fun shouldAvoidConstructorSwitching(className: String): Boolean =
+    className.startsWith("java.") ||
+        className.startsWith("javax.") ||
+        className.startsWith("jdk.") ||
+        className.startsWith("kotlin.coroutines.") ||
+        className.startsWith("kotlinx.coroutines.")
