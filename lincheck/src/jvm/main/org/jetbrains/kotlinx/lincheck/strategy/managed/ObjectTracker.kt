@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.collections.*
+import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.WeakIdentityReference
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
@@ -524,10 +525,12 @@ open class BaseObjectTracker(
     override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
 
     override fun shouldTrackObject(obj: Any): Boolean =
-        !obj.isPrimitive && (obj.isImmutable implies shouldTrackImmutableValues)
+        obj !== Injections.UNINITIALIZED_THIS &&
+            !obj.isPrimitive &&
+            (obj.isImmutable implies shouldTrackImmutableValues)
 
     override fun shouldTrackObjectAccess(obj: Any?): Boolean =
-        true // track all accesses by default
+        obj !== Injections.UNINITIALIZED_THIS // track all initialized accesses by default
 
     private fun getEntries(objHashCode: IdentityHashCode): List<ObjectEntry>? {
         val entries = objectIndex[objHashCode] ?: return null

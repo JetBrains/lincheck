@@ -1568,15 +1568,12 @@ internal abstract class ManagedStrategy(
             }
         }
 
-    private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
+    private fun shouldTrackArrayAccess(obj: Any?): Boolean = objectTracker.shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldDescriptor: FieldDescriptor): Boolean =
-      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && (trackFinalFields || !fieldDescriptor.isFinal)
-
-    private fun shouldTrackObjectAccess(obj: Any?): Boolean {
-        // by default, we track accesses to all objects
-        return objectTracker.shouldTrackObjectAccess(obj)
-    }
+        objectTracker.shouldTrackObjectAccess(obj) &&
+            !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) &&
+            (trackFinalFields || !fieldDescriptor.isFinal)
 
     private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
         obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
