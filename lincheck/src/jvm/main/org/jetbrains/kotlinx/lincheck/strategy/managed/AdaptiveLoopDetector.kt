@@ -100,6 +100,9 @@ class AdaptiveLoopDetector(
         return instances(threadId)[loop.key]
     }
 
+    override fun getCurrentLoopKind(threadId: Int, loopId: Int, codeLocation: Int): LoopKind =
+        instances(threadId)[LoopKey(loopId, codeLocation)]?.kind ?: LoopKind.UNKNOWN
+
     // --- LOOP LEVEL ---
     override fun onLoopIteration(
         threadId: Int,
@@ -133,7 +136,7 @@ class AdaptiveLoopDetector(
         inst.consecutiveAwaitBackEdgeHits ++
 
         if (inst.kind == LoopKind.UNKNOWN && inst.iterNumber >= 3 && inst.consecutiveAwaitBackEdgeHits > awaitClassificationThreshold) {
-            inst.kind = LoopKind.AWAIT
+            inst.kind = LoopKind.RELAXED_AWAIT
             inst.requiresExternalProgress = true
         }
 //        println("Classified loop ${inst.ownerThreadId}:${inst.signatureHistory.joinToString(",")} as ${inst.kind}")
@@ -306,7 +309,7 @@ class AdaptiveLoopDetector(
 
     private fun updateExternalProgressRequirement(inst: LoopInstanceState) {
         val repeatsObservedState = inst.repeatCount > 0 || hasCycle(inst.signatureHistory)
-        if (!repeatsObservedState && inst.kind != LoopKind.AWAIT) return
+        if (!repeatsObservedState && inst.kind != LoopKind.RELAXED_AWAIT) return
 
         val readOnlyIteration =
             inst.obs.reads.isNotEmpty() &&
@@ -327,7 +330,7 @@ class AdaptiveLoopDetector(
                 inst.staleWriteCount >= zneSwitchThreshold
 
         inst.requiresExternalProgress = when {
-            inst.kind == LoopKind.AWAIT -> true
+            inst.kind == LoopKind.RELAXED_AWAIT -> true
             readOnlyIteration -> true
             repeatedFailedCas -> true
             repeatedSameWrites -> true
@@ -361,7 +364,7 @@ class AdaptiveLoopDetector(
 
         // Otherwise check the thresholds for each loop kind for switching threads
         when (inst.kind) {
-            LoopKind.AWAIT -> {
+            LoopKind.RELAXED_AWAIT -> {
                 if (inst.repeatCount >= awaitSwitchThreshold)
                     return LoopDetector.Decision.SWITCH_THREAD
             }

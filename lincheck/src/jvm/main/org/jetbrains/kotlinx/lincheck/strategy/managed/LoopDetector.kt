@@ -55,6 +55,7 @@ interface LoopDetector {
     )
 
     fun getCurrentLoopIteration(threadId: Int, loopId: Int, codeLocation: Int) : Int
+    fun getCurrentLoopKind(threadId: Int, loopId: Int, codeLocation: Int) : LoopKind = LoopKind.UNKNOWN
     fun getCurrentMethodId(threadId: Int): Int
 
     fun resetAll()                  // between iterations
@@ -104,9 +105,9 @@ data class LoopDetectorThreadState(
 // --- Data classes for the adaptive loop detector ---
 
 // Loop classifications
-internal enum class LoopKind {
+enum class LoopKind {
     // Loop reads shared state and waits for an external change.
-    AWAIT,
+    RELAXED_AWAIT,
     // Loop repeatedly attempts CAS operations, but losses races with other threads.
     CAS,
     // Loop writes cancel out across iterations (zero net effect).
