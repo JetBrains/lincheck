@@ -164,4 +164,26 @@ class AwaitLoopDetectionTests {
     // Case 22: Nested loop with a break from the inner loop out of the outer loop
     @Test
     fun nestedLoopWithBreakOuter() = test("nestedLoopWithBreakOuter", "()V")
+
+    // Case 23: Nested loop where the outer loop has a side effect after the inner loop
+    @Test
+    fun nestedLoopWithOuterSideEffectAfterInnerLoop() = test("nestedLoopWithOuterSideEffectAfterInnerLoop", "()V")
+
+    // Case 24: Nested loop where the outer loop has a side effect before the inner loop
+    @Test
+    fun nestedLoopWithOuterSideEffectBeforeInnerLoop() = test("nestedLoopWithOuterSideEffectBeforeInnerLoop", "()V")
+
+    // Case 25: Nested loop where the inner loop has a side effect
+    @Test
+    fun nestedLoopWithInnerSideEffect() = test("nestedLoopWithInnerSideEffect", "()V")
+
+    // Case 26: Await path before a side-effecting inner loop
+    @Test
+    fun nestedLoopWithAwaitPathBeforeSideEffectingInnerLoop() =
+        test("nestedLoopWithAwaitPathBeforeSideEffectingInnerLoop", "()V")
+
+    // Case 27: Three nested loops inherit an outer side effect
+    @Test
+    fun nestedLoopsWithOuterSideEffectBeforeTwoCleanInnerLoops() =
+        test("nestedLoopsWithOuterSideEffectBeforeTwoCleanInnerLoops", "()V")
 }

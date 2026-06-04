@@ -306,4 +306,71 @@ public class AwaitLoopCases {
             }
         }
     }
+
+    // --- Case 23: Nested loop where the outer loop has a side effect after the inner loop ---
+    public void nestedLoopWithOuterSideEffectAfterInnerLoop() {
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 0) {
+                    break;
+                }
+            }
+            counter++;
+        }
+    }
+
+    // --- Case 24: Nested loop where the outer loop has a side effect before the inner loop ---
+    public void nestedLoopWithOuterSideEffectBeforeInnerLoop() {
+        while (!flag) {
+            counter++;
+            while (state == 0) {
+                if (counter == 0) {
+                    break;
+                }
+            }
+        }
+    }
+
+    // --- Case 25: Nested loop where the inner loop has a side effect ---
+    public void nestedLoopWithInnerSideEffect() {
+        while (!flag) {
+            while (state == 0) {
+                counter++;
+            }
+            if (counter < 10) {
+                continue;
+            }
+            flag = true;
+        }
+    }
+
+    // --- Case 26: Await path before a side-effecting inner loop ---
+    public void nestedLoopWithAwaitPathBeforeSideEffectingInnerLoop() {
+        while (!flag) {
+            if (counter < 10) {
+                continue;
+            }
+            while (state == 0) {
+                counter++;
+            }
+            flag = true;
+        }
+    }
+
+    // --- Case 27: Three nested loops inherit an outer side effect ---
+    public void nestedLoopsWithOuterSideEffectBeforeTwoCleanInnerLoops() {
+        while (!flag) {
+            counter++;
+            while (state == 0) {
+                while (tail == 0) {
+                    if (counter == 0) {
+                        break;
+                    }
+                }
+                if (counter == 1) {
+                    break;
+                }
+            }
+        }
+    }
 }
