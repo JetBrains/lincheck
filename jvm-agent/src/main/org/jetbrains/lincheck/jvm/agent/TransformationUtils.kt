@@ -528,6 +528,12 @@ internal fun getLocalVarAccessOpcodeType(opcode: Int): Type = when (opcode) {
     else -> throw IllegalArgumentException("Invalid opcode: $opcode")
 }
 
+internal fun isLoadOpcode(opcode: Int): Boolean =
+    opcode == ILOAD || opcode == LLOAD || opcode == FLOAD || opcode == DLOAD || opcode == ALOAD
+
+internal fun isStoreOpcode(opcode: Int): Boolean =
+    opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
+
 internal fun getArrayAccessOpcodeType(opcode: Int): Type = when (opcode) {
     IALOAD, IASTORE -> INT_TYPE
     FALOAD, FASTORE -> FLOAT_TYPE
