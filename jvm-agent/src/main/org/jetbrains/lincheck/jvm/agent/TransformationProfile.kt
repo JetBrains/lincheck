@@ -276,7 +276,7 @@ object StressDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
-        if (methodName == "<clinit>" || methodName == "<init>") {
+        if (methodName == "<clinit>") {
             return config
         }
 
@@ -428,12 +428,6 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             }
         }
 
-        if (methodName == "<init>" && shouldAvoidConstructorSwitching(className)) {
-            return config.apply {
-                trackObjectCreations = true
-            }
-        }
-
         return config.apply {
             trackObjectCreations = true
 
@@ -544,16 +538,6 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
         if (ideaPluginEnabled && isToStringMethod(methodName, descriptor)) {
             return config.apply {
                 trackObjectCreations = true
-            }
-        }
-
-        // Currently, constructors are treated in a special way to avoid problems
-        // with `VerificationError` due to leaking this problem,
-        // see: https://github.com/JetBrains/lincheck/issues/424
-        if (methodName == "<init>") {
-            return config.apply {
-                trackObjectCreations = true
-                trackAllSharedMemoryAccesses = !shouldAvoidConstructorSwitching(className)
             }
         }
 
@@ -707,10 +691,3 @@ private fun shouldNotInstrument(className: String, methodName: String, descripto
 
     return false
 }
-
-private fun shouldAvoidConstructorSwitching(className: String): Boolean =
-    className.startsWith("java.") ||
-        className.startsWith("javax.") ||
-        className.startsWith("jdk.") ||
-        className.startsWith("kotlin.coroutines.") ||
-        className.startsWith("kotlinx.coroutines.")

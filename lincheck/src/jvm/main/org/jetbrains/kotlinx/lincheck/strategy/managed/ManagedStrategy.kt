@@ -1910,9 +1910,9 @@ internal abstract class ManagedStrategy(
             if (callStackTrace[threadId]!!.isNotEmpty()) {
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when {
-                    result == Unit -> tracePoint.initializeVoidReturnedValue()
-                    result == Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
-                    result == COROUTINE_SUSPENDED && isSuspendFunction(
+                    result === Unit -> tracePoint.initializeVoidReturnedValue()
+                    result === Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
+                    result === COROUTINE_SUSPENDED && isSuspendFunction(
                         methodDescriptor.className,
                         methodDescriptor.methodName,
                         params.asList()
