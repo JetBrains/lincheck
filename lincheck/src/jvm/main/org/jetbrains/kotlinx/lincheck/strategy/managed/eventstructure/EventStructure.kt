@@ -591,6 +591,23 @@ internal class EventStructure(
             label is ReadAccessLabel && label.isResponse ->
                 sequenceOf()
 
+            // Non-re-entrant lock-request synchronizes only with non-reentrant unlock event or allocation event that are not pinned
+            (label is LockLabel && !label.isReentry) -> {
+                //TODO: We can compute this incrementally
+                val banned = execution.mapNotNull {
+                    val label = it.label.refine<LockLabel> { isResponse && !isReentry && mutexID == label.mutexID }
+                    if (label == null) return@mapNotNull null
+                    if (!pinnedEvents.contains(it)) return@mapNotNull null
+                    it.syncFrom
+                }.toSet()
+
+                (
+                    sequenceOf(allocationEvent(label.mutexID)!!) +
+                    execution.filter { it.label.refine<UnlockLabel> { !isReentry && mutexID == label.mutexID } != null }
+                ).filter { it !in banned }
+
+            }
+
             // re-entry lock-request synchronizes only with initializing unlock
             (label is LockLabel && label.isReentry) ->
                 sequenceOf(allocationEvent(label.mutexID)!!)
