@@ -126,7 +126,7 @@ class AdaptiveLoopDetector(
         return Pair(started, decision)
     }
 
-    override fun onAwaitLoopPathIteration(
+    override fun onAwaitLoopPath(
         threadId: Int,
         codeLocation: Int,
         loopId: Int

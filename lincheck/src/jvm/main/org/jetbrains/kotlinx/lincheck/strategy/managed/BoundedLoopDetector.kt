@@ -55,7 +55,7 @@ class BoundedLoopDetector(
         return computeLoopDecision(loop)
     }
 
-    override fun onAwaitLoopPathIteration(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
+    override fun onAwaitLoopPath(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
         if (!awaitLoopsAnalysisEnabled) return LoopDetector.Decision.IDLE
         return LoopDetector.Decision.SWITCH_THREAD
     }
