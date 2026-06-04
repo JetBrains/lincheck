@@ -2231,7 +2231,6 @@ internal abstract class ManagedStrategy(
                             codeLocation = codeLocation
                         )
                     )
-                    traceCollector?.addStateRepresentation()
                 }
                 failDueToLivelock()
             }

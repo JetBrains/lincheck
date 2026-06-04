@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.objectweb.asm.Opcodes
 import org.jetbrains.lincheck.jvm.agent.*
-import org.jetbrains.lincheck.jvm.agent.analysis.ConditionSafetyChecker
+import org.jetbrains.lincheck.jvm.agent.analysis.isWhitelistedMethodCall
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
@@ -430,7 +430,7 @@ private fun isSideEffectGetMethod(insn: MethodInsnNode): Boolean =
 private fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
     isFunctionCallAwait(insn)
         || isSideEffectGetMethod(insn)
-        || ConditionSafetyChecker.isWhitelistedMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
+        || isWhitelistedMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
 
 /**
  * Classification object result used for await path analysis.
