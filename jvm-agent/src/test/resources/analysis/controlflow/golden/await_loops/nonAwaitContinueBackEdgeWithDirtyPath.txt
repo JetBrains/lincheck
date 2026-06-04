@@ -1,0 +1,17 @@
+=== Loop Information ===
+LOOP 1
+  HEADER: B1
+  BODY: B1, B2, B3, B4, B5, B6, B7
+  BACK EDGES:
+    B6 -> B1 : JUMP(opcode=GOTO)
+    B7 -> B1 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B1 -> B8 : JUMP(opcode=IF_ICMPLE)
+  EXCEPTION EXIT HANDLERS:
+    NONE
+  EXCLUSIVE EXITS:
+    B8
+
+
+=== Await Path Detection ===
+No await paths detected.

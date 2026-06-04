@@ -438,7 +438,28 @@ private fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
 private data class BlockClassification(
     val hasSharedRead: Boolean,
     val hasSideEffects: Boolean,
-)
+) {
+    fun merge(other: BlockClassification): BlockClassification =
+        BlockClassification(
+            hasSharedRead = hasSharedRead || other.hasSharedRead,
+            hasSideEffects = hasSideEffects || other.hasSideEffects,
+        )
+}
+
+private data class BfsEntry(val block: BasicBlockIndex, val classification: BlockClassification)
+
+private fun MutableMap<BasicBlockIndex, BlockClassification>.enqueueIfChanged(
+    block: BasicBlockIndex,
+    classification: BlockClassification,
+    queue: ArrayDeque<BfsEntry>,
+) {
+    val previousClassification = this[block]
+    val merged = previousClassification?.merge(classification) ?: classification
+    val hasChanged = merged != previousClassification
+    if (!hasChanged) return
+    this[block] = merged
+    queue.add(BfsEntry(block, merged))
+}
 
 /**
  * Computes the set of "clean" back-edge source blocks for each loop containing await paths.
@@ -465,13 +486,13 @@ internal fun BasicBlockControlFlowGraph.computeAwaitPathBackEdgeSources(
                 if (isReadOpcode(opcode)) hasSharedRead = true
                 if (isWriteOpcode(opcode) || isMonitorOpcode(opcode)) {
                     hasSideEffects = true
-                    break
+                    continue
                 }
                 when (insn) {
                     is MethodInsnNode -> {
                         if (!isSideEffectFreeCall(insn)) {
                             hasSideEffects = true
-                            break
+                            continue
                         }
                         if (isSideEffectGetMethod(insn)) {
                             hasSharedRead = true
@@ -479,7 +500,6 @@ internal fun BasicBlockControlFlowGraph.computeAwaitPathBackEdgeSources(
                     }
                     is InvokeDynamicInsnNode -> {
                         hasSideEffects = true
-                        break
                     }
                 }
             }
@@ -528,29 +548,13 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
         }
     }
 
-    // BFS visited state bitmask
-    // VISITED_NO_READ = visited without a read on the path,
-    // VISITED_WITH_READ = visited with at least one read on the path.
-    val VISITED_NO_READ = 1
-    val VISITED_WITH_READ = 2
-    val visitedState = IntArray(basicBlocks.size)
-
-    data class BfsEntry(val block: BasicBlockIndex, val hasRead: Boolean)
-
-    val initialHasRead = headerClassification.hasSharedRead
     val queue = ArrayDeque<BfsEntry>()
-    queue.add(BfsEntry(header, initialHasRead))
-    visitedState[header] = if (initialHasRead) VISITED_WITH_READ else VISITED_NO_READ
+    val pathClassifications = mutableMapOf<BasicBlockIndex, BlockClassification>()
 
-    val cleanBackEdges = mutableSetOf<BasicBlockIndex>()
+    pathClassifications.enqueueIfChanged(header, headerClassification, queue)
 
     while (queue.isNotEmpty()) {
-        val (currentBlock, pathHasRead) = queue.removeFirst()
-
-        // Add current block if it is a back-edge source reached through a path that has a shared read.
-        if (currentBlock in backEdgeSources && pathHasRead) {
-            cleanBackEdges.add(currentBlock)
-        }
+        val (currentBlock, pathClassification) = queue.removeFirst()
 
         // Explore successors
         val successorEdges = allSuccessors[currentBlock] ?: continue
@@ -560,21 +564,23 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
             if (edge.label is EdgeLabel.Exception || target !in bodyBlocks || target in loop.headers) continue
 
             val targetClassification = blockClassifications[target]
-            // Skip side effects
-            if (targetClassification.hasSideEffects) continue
-            if (headerGuard(target, localVariablesInHeader)) continue
-
-            val newHasRead = pathHasRead || targetClassification.hasSharedRead
-            val bfsBit = if (newHasRead) VISITED_WITH_READ else VISITED_NO_READ
-
-            // Skip if this block was already visited with the same read state
-            if ((visitedState[target] and bfsBit) == 0) {
-                visitedState[target] = visitedState[target] or bfsBit
-                queue.add(BfsEntry(target, newHasRead))
-            }
+            val targetPathClassification = BlockClassification(
+                hasSharedRead = pathClassification.hasSharedRead || targetClassification.hasSharedRead,
+                hasSideEffects = pathClassification.hasSideEffects ||
+                    targetClassification.hasSideEffects ||
+                    headerGuard(target, localVariablesInHeader),
+            )
+            pathClassifications.enqueueIfChanged(target, targetPathClassification, queue)
         }
     }
 
+    val cleanBackEdges = mutableSetOf<BasicBlockIndex>()
+    for (source in backEdgeSources) {
+        val classification = pathClassifications[source] ?: continue
+        if (classification.hasSharedRead && !classification.hasSideEffects) {
+            cleanBackEdges.add(source)
+        }
+    }
     return cleanBackEdges
 }
 

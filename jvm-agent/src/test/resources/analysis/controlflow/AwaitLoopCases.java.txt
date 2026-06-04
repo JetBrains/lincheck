@@ -227,9 +227,28 @@ public class AwaitLoopCases {
         }
     }
 
+    // --- Case 17: A continue back-edge reached by both clean and dirty paths ---
+    // The continue source is reached after Thread.onSpinWait() or after j++.
+    // Should NOT be detected as an await path because not all paths to the continue are clean.
+    public void nonAwaitContinueBackEdgeWithDirtyPath() {
+        int i = 12;
+        int j = 0;
+        while (i + j > 10) {
+            if (i % 2 == 0) {
+                Thread.onSpinWait();
+            } else {
+                j++;
+            }
+            if (j % 2 == 0) {
+                continue;
+            }
+            i++;
+        }
+    }
+
     // === Nested loop test cases ===
 
-    // --- Case 17: Nested loops with await paths in both loops ---
+    // --- Case 18: Nested loops with await paths in both loops ---
     public void nestedAwaitPaths() {
         while (!flag) {
             while (state == 0) {
@@ -238,7 +257,7 @@ public class AwaitLoopCases {
         }
     }
 
-    // --- Case 18: Nested loop with an inner-loop break ---
+    // --- Case 19: Nested loop with an inner-loop break ---
     public void nestedLoopWithInnerBreak() {
         while (!flag) {
             while (state == 0) {
@@ -250,7 +269,7 @@ public class AwaitLoopCases {
         }
     }
 
-    // --- Case 19: Nested loop with an inner-loop continue ---
+    // --- Case 20: Nested loop with an inner-loop continue ---
     public void nestedLoopWithInnerContinue() {
         while (!flag) {
             while (state == 0) {
@@ -262,7 +281,7 @@ public class AwaitLoopCases {
         }
     }
 
-    // --- Case 20: Nested loop with a continue from the inner loop to the outer loop ---
+    // --- Case 21: Nested loop with a continue from the inner loop to the outer loop ---
     public void nestedLoopWithContinueOuter() {
         outer:
         while (!flag) {
@@ -275,7 +294,7 @@ public class AwaitLoopCases {
         }
     }
 
-    // --- Case 21: Nested loop with a break from the inner loop out of the outer loop ---
+    // --- Case 22: Nested loop with a break from the inner loop out of the outer loop ---
     public void nestedLoopWithBreakOuter() {
         outer:
         while (!flag) {

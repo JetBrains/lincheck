@@ -141,23 +141,27 @@ class AwaitLoopDetectionTests {
     @Test
     fun awaitLoopOneCleanOneNot() = test("awaitLoopOneCleanOneNot", "()V")
 
-    // Case 17: Nested loops with await paths in both loops
+    // Case 17: Same continue back-edge reached by clean and dirty paths -> no await path
+    @Test
+    fun nonAwaitContinueBackEdgeWithDirtyPath() = test("nonAwaitContinueBackEdgeWithDirtyPath", "()V")
+
+    // Case 18: Nested loops with await paths in both loops
     @Test
     fun nestedAwaitPaths() = test("nestedAwaitPaths", "()V")
 
-    // Case 18: Nested loop with an inner-loop break
+    // Case 19: Nested loop with an inner-loop break
     @Test
     fun nestedLoopWithInnerBreak() = test("nestedLoopWithInnerBreak", "()V")
 
-    // Case 19: Nested loop with an inner-loop continue
+    // Case 20: Nested loop with an inner-loop continue
     @Test
     fun nestedLoopWithInnerContinue() = test("nestedLoopWithInnerContinue", "()V")
 
-    // Case 20: Nested loop with a continue from the inner loop to the outer loop
+    // Case 21: Nested loop with a continue from the inner loop to the outer loop
     @Test
     fun nestedLoopWithContinueOuter() = test("nestedLoopWithContinueOuter", "()V")
 
-    // Case 21: Nested loop with a break from the inner loop out of the outer loop
+    // Case 22: Nested loop with a break from the inner loop out of the outer loop
     @Test
     fun nestedLoopWithBreakOuter() = test("nestedLoopWithBreakOuter", "()V")
 }
