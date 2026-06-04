@@ -507,11 +507,13 @@ internal fun BasicBlockControlFlowGraph.computeAwaitPathBackEdgeSources(
         }
     }
 
+    val loopInitialClassifications = computeLoopInitialClassifications(loopInfo, blockClassifications)
+
     // for each loop, find if there exists clean back-edges.
     val result = mutableMapOf<LoopId, Set<BasicBlockIndex>>()
 
     for (loop in loopInfo.loops) {
-        val awaitPathBackEdges = findCleanBackEdge(loop, blockClassifications)
+        val awaitPathBackEdges = findCleanBackEdge(loop, blockClassifications, loopInitialClassifications.getValue(loop.id))
         if (awaitPathBackEdges.isNotEmpty()) {
             result[loop.id] = awaitPathBackEdges
         }
@@ -521,20 +523,78 @@ internal fun BasicBlockControlFlowGraph.computeAwaitPathBackEdgeSources(
 }
 
 /**
+ * Computes the initial classification for each loop header.
+ * Nested loops inherit side effects and reads accumulated on paths
+ * from the header of the outer loop.
+ */
+private fun BasicBlockControlFlowGraph.computeLoopInitialClassifications(
+    loopInfo: MethodLoopsInformation,
+    blockClassifications: Array<BlockClassification>,
+): Map<LoopId, BlockClassification> {
+    val initialClassifications = mutableMapOf<LoopId, BlockClassification>()
+    for (loop in loopInfo.loops) {
+        val parent = loopInfo.loops
+            .asSequence()
+            .filter { candidate -> candidate.id != loop.id && candidate.body.containsAll(loop.body) }
+            .minByOrNull { it.body.size }
+        initialClassifications[loop.id] = if (parent == null) {
+            blockClassifications[loop.header]
+        } else {
+            computeNestedLoopEntryClassification(
+                parentLoop = parent,
+                nestedLoop = loop,
+                parentInitialClassification = initialClassifications.getValue(parent.id),
+                blockClassifications = blockClassifications,
+            )
+        }
+    }
+    return initialClassifications
+}
+
+/**
+ * Computes the merged classification of all paths from a parent loop header to a nested loop header.
+ */
+private fun BasicBlockControlFlowGraph.computeNestedLoopEntryClassification(
+    parentLoop: LoopInformation,
+    nestedLoop: LoopInformation,
+    parentInitialClassification: BlockClassification,
+    blockClassifications: Array<BlockClassification>,
+): BlockClassification {
+    val queue = ArrayDeque<BfsEntry>()
+    val pathClassifications = mutableMapOf<BasicBlockIndex, BlockClassification>()
+    pathClassifications.enqueueIfChanged(parentLoop.header, parentInitialClassification, queue)
+
+    while (queue.isNotEmpty()) {
+        val (currentBlock, pathClassification) = queue.removeFirst()
+        if (currentBlock == nestedLoop.header) continue
+
+        val successorEdges = allSuccessors[currentBlock] ?: continue
+        for (edge in successorEdges) {
+            val target = edge.target
+            if (edge.label is EdgeLabel.Exception || target !in parentLoop.body || target in parentLoop.headers) continue
+
+            val targetPathClassification = pathClassification.merge(blockClassifications[target])
+            pathClassifications.enqueueIfChanged(target, targetPathClassification, queue)
+        }
+    }
+
+    return pathClassifications[nestedLoop.header] ?: blockClassifications[nestedLoop.header]
+}
+
+/**
  * Finds clean back-edge source blocks by performing a forward BFS from the loop header.
  */
 private fun BasicBlockControlFlowGraph.findCleanBackEdge(
     loop: LoopInformation,
     blockClassifications: Array<BlockClassification>,
+    initialClassification: BlockClassification,
 ): Set<BasicBlockIndex> {
     val header = loop.header
     val bodyBlocks = loop.body
     val backEdgeSources = loop.backEdges.map { it.source }.toSet()
 
-    val headerClassification = blockClassifications[header]
-
-    // If the header block itself has side effects, no await path can start from this header.
-    if (headerClassification.hasSideEffects) return emptySet()
+    // If the header or outer loop already have side effects, no await path can start from this header.
+    if (initialClassification.hasSideEffects) return emptySet()
 
     val localVariablesInHeader = mutableSetOf<Int>()
     // Check for side effects on the header block and for variables loaded in the header and written in the body.
@@ -551,7 +611,7 @@ private fun BasicBlockControlFlowGraph.findCleanBackEdge(
     val queue = ArrayDeque<BfsEntry>()
     val pathClassifications = mutableMapOf<BasicBlockIndex, BlockClassification>()
 
-    pathClassifications.enqueueIfChanged(header, headerClassification, queue)
+    pathClassifications.enqueueIfChanged(header, initialClassification, queue)
 
     while (queue.isNotEmpty()) {
         val (currentBlock, pathClassification) = queue.removeFirst()
