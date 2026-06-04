@@ -2126,7 +2126,7 @@ internal abstract class ManagedStrategy(
             }
         }
     }
-    override fun onAwaitLoopPathIteration(
+    override fun onAwaitLoopPath(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         loopId: Int
@@ -2134,7 +2134,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
 
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
-            val decision = loopDetector.onAwaitLoopPathIteration(threadId, codeLocation, loopId)
+            val decision = loopDetector.onAwaitLoopPath(threadId, codeLocation, loopId)
             processLoopDetectorDecision(decision, threadId, loopId, codeLocation)
         }
     }

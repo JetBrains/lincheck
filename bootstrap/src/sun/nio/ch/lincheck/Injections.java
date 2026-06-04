@@ -1110,7 +1110,7 @@ public class Injections {
     public static void onAwaitLoopPath(ThreadDescriptor descriptor, int codeLocation, int loopId) {
         EventTracker tracker = getEventTracker(descriptor);
         if (tracker == null || descriptor == null) return;
-        tracker.onAwaitLoopPathIteration(descriptor, codeLocation, loopId);
+        tracker.onAwaitLoopPath(descriptor, codeLocation, loopId);
     }
 
     // Used in the verification phase to store a suspended continuation.
