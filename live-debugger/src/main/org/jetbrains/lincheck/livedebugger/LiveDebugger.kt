@@ -20,10 +20,6 @@ import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingNotificationListener
-import org.jetbrains.lincheck.tracer.Tracer
-import org.jetbrains.lincheck.tracer.TraceOutputMode
-import org.jetbrains.lincheck.tracer.TracingSession
-import org.jetbrains.lincheck.tracer.isFileMode
 import org.jetbrains.lincheck.util.Logger
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.util.UUID
@@ -32,8 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 internal object LiveDebugger {
-
-    private val shutdownHookInstalled = AtomicBoolean(false)
 
     /**
      * Listener responsible for handling live debugging notifications.
@@ -47,43 +41,6 @@ internal object LiveDebugger {
      */
     private val notificationsExecutor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "LiveDebugger-Notifications-Handler").also { it.isDaemon = true }
-    }
-
-    fun startRecording(mode: TraceOutputMode, traceDumpFilePath: String? = null, packTrace: Boolean = true) {
-        try {
-            val session = Tracer.startTracing(
-                outputMode = mode,
-                startMode = TracingSession.StartMode.Static,
-            )
-            Logger.info { "Live debugging has been started" }
-
-            if (mode.isFileMode && traceDumpFilePath != null) {
-                session.installOnFinishHook {
-                    dumpTrace(traceDumpFilePath, packTrace)
-                }
-            }
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot start live debugging" }
-            return
-        }
-        registerShutdownHook()
-    }
-
-    fun stopRecording() {
-        try {
-            Tracer.stopTracing()
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot stop live debugging" }
-        }
-    }
-
-    private fun registerShutdownHook() {
-        if (!shutdownHookInstalled.compareAndSet(false, true)) return
-        try {
-            Runtime.getRuntime().addShutdownHook(Thread(::stopRecording))
-        } catch (e: Exception) {
-            Logger.error(e) { "Failed to register shutdown hook for live debugger" }
-        }
     }
 
     fun loadBreakpointsFromFile(breakpointsFilePath: String?) {

@@ -1100,7 +1100,7 @@ class TraceCollectingEventTracker(
 
         val currentThreadDescriptor = ThreadDescriptor.getCurrentThreadDescriptor()
         if (currentThreadDescriptor != null) {
-            // Close this thread call stack (it must be 1 element, complain about problems otherwise)
+            // Close this thread call stack
             completeCurrentThread(currentThread, currentThreadDescriptor)
         }
 

@@ -1,0 +1,160 @@
+# Thread 1 (Test worker)
+GradleWorkerMain.main(): <unfinished method> at :0
+  run(): <unfinished method> at :0
+    SystemApplicationClassLoaderWorker.call(): <unfinished method> at :0
+      call(): <unfinished method> at :0
+        ActionExecutionWorker.execute(): <unfinished method> at :0
+          TestWorker.execute(): <unfinished method> at :0
+            execute(): <unfinished method> at :0
+              executeAndMaintainThreadName(): <unfinished method> at :0
+                TestWorker$3.run(): <unfinished method> at :0
+                  $Proxy6.stop(): <unfinished method> at :0
+                    ProxyDispatchAdapter.DispatchingInvocationHandler.invoke(): <unfinished method> at :0
+                      ContextClassLoaderDispatch.dispatch(): <unfinished method> at :0
+                        ReflectionDispatch.dispatch(): <unfinished method> at :0
+                          dispatch(): <unfinished method> at :0
+                            Method.invoke(): <unfinished method> at :0
+                              DelegatingMethodAccessorImpl.invoke(): <unfinished method> at :0
+                                NativeMethodAccessorImpl.invoke(): <unfinished method> at :0
+                                  SuiteTestClassProcessor.stop(): <unfinished method> at :0
+                                    JUnitPlatformTestClassProcessor.stop(): <unfinished method> at :0
+                                      JUnitPlatformTestClassProcessor.CollectAllTestClassesExecutor.access$000(): <unfinished method> at :0
+                                        processAllTestClasses(): <unfinished method> at :0
+                                          DelegatingLauncher.execute(): <unfinished method> at :0
+                                            DefaultLauncher.execute(): <unfinished method> at :0
+                                              execute(): <unfinished method> at :0
+                                                EngineExecutionOrchestrator.execute(): <unfinished method> at :0
+                                                  withInterceptedStreams(): <unfinished method> at :0
+                                                    lambda$execute$0(): <unfinished method> at :0
+                                                      execute(): <unfinished method> at :0
+                                                        execute(): <unfinished method> at :0
+                                                          execute(): <unfinished method> at :0
+                                                            HierarchicalTestEngine.execute(): <unfinished method> at :0
+                                                              HierarchicalTestExecutor.execute(): <unfinished method> at :0
+                                                                SameThreadHierarchicalTestExecutorService.submit(): <unfinished method> at :0
+                                                                  NodeTestTask.execute(): <unfinished method> at :0
+                                                                    executeRecursively(): <unfinished method> at :0
+                                                                      ThrowableCollector.execute(): <unfinished method> at :0
+                                                                        NodeTestTask.lambda$executeRecursively$9(): <unfinished method> at :0
+                                                                          Node.around(): <unfinished method> at :0
+                                                                            NodeTestTask.lambda$executeRecursively$8(): <unfinished method> at :0
+                                                                              ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                NodeTestTask.lambda$executeRecursively$6(): <unfinished method> at :0
+                                                                                  SameThreadHierarchicalTestExecutorService.invokeAll(): <unfinished method> at :0
+                                                                                    NodeTestTask.execute(): <unfinished method> at :0
+                                                                                      executeRecursively(): <unfinished method> at :0
+                                                                                        ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                          NodeTestTask.lambda$executeRecursively$9(): <unfinished method> at :0
+                                                                                            Node.around(): <unfinished method> at :0
+                                                                                              NodeTestTask.lambda$executeRecursively$8(): <unfinished method> at :0
+                                                                                                ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                                  NodeTestTask.lambda$executeRecursively$6(): <unfinished method> at :0
+                                                                                                    SameThreadHierarchicalTestExecutorService.invokeAll(): <unfinished method> at :0
+                                                                                                      NodeTestTask.execute(): <unfinished method> at :0
+                                                                                                        prepare(): <unfinished method> at :0
+                                                                                                          ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                                            NodeTestTask.lambda$prepare$2(): <unfinished method> at :0
+                                                                                                              TestMethodTestDescriptor.prepare(): <unfinished method> at :0
+                                                                                                                prepare(): <unfinished method> at :0
+                                                                                                                  ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                                                    TestMethodTestDescriptor.lambda$prepare$0(): <unfinished method> at :0
+                                                                                                                      TestInstancesProvider.getTestInstances(): <unfinished method> at :0
+                                                                                                                        ClassBasedTestDescriptor.lambda$testInstancesProvider$5(): <unfinished method> at :0
+                                                                                                                          Optional.orElseGet(): <unfinished method> at :0
+                                                                                                                            ClassBasedTestDescriptor.lambda$testInstancesProvider$4(): <unfinished method> at :0
+                                                                                                                              instantiateAndPostProcessTestInstance(): <unfinished method> at :0
+                                                                                                                                ClassTestDescriptor.instantiateTestClass(): <unfinished method> at :0
+                                                                                                                                  ClassBasedTestDescriptor.instantiateTestClass(): <unfinished method> at :0
+                                                                                                                                    invokeTestClassConstructor(): <unfinished method> at :0
+                                                                                                                                      InterceptingExecutableInvoker.invoke(): <unfinished method> at :0
+                                                                                                                                        invoke(): <unfinished method> at :0
+                                                                                                                                          InvocationInterceptorChain.invoke(): <unfinished method> at :0
+                                                                                                                                            chainAndInvoke(): <unfinished method> at :0
+                                                                                                                                              proceed(): <unfinished method> at :0
+                                                                                                                                                InvocationInterceptorChain.InterceptedInvocation.proceed(): <unfinished method> at :0
+                                                                                                                                                  InterceptingExecutableInvoker.lambda$invoke$0(): <unfinished method> at :0
+                                                                                                                                                    InvocationInterceptor.interceptTestClassConstructor(): <unfinished method> at :0
+                                                                                                                                                      InvocationInterceptorChain.ValidatingInvocation.proceed(): <unfinished method> at :0
+                                                                                                                                                        ConstructorInvocation.proceed(): <unfinished method> at :0
+                                                                                                                                                          ReflectionUtils.newInstance(): <unfinished method> at :0
+                                                                                                                                                            Constructor.newInstance(): <unfinished method> at :0
+                                                                                                                                                              newInstanceWithCaller(): <unfinished method> at :0
+                                                                                                                                                                DelegatingConstructorAccessorImpl.newInstance(): <unfinished method> at :0
+                                                                                                                                                                  NativeConstructorAccessorImpl.newInstance(): <unfinished method> at :0
+                                                                                                                                                                    new ThreadsTest(): <unfinished method> at :0
+                                                                                                                                                                      super@Object(): ThreadsTest@1 at ThreadsTest.kt:13
+                                                                                                                                                                      new Object(): Object@1 at ThreadsTest.kt:14
+                                                                                                                                                                      field = Object@1 at ThreadsTest.kt:14
+                                                                                                                                                                      new AtomicInteger(0): AtomicInteger@1 at ThreadsTest.kt:18
+                                                                                                                                                                      inc = AtomicInteger@1 at ThreadsTest.kt:18
+                                                                                                                                                                      thread(true, false, null, null, -1, ThreadsTest$$Lambda@1): ThreadsKt$thread$thread$1@1 at ThreadsTest.kt:20
+                                                                                                                                                                        new ThreadsKt$thread$thread$1(block): ThreadsKt$thread$thread$1@1 at Thread.kt:28
+                                                                                                                                                                          block = ThreadsTest$$Lambda@1 at Thread.kt:0
+                                                                                                                                                                          super@Thread(): ThreadsKt$thread$thread$1@1 at Thread.kt:28
+                                                                                                                                                                        thread = ThreadsKt$thread$thread$1@1 at Thread.kt:28
+                                                                                                                                                                        thread.start() at Thread.kt:42
+                                                                                                                                                                      loop(2 iterations) at ThreadsTest.kt:31
+                                                                                                                                                                        <iteration 1> at ThreadsTest.kt:31
+                                                                                                                                                                          inc.get(): 0 at ThreadsTest.kt:31
+                                                                                                                                                                          Thread.sleep(100) at ThreadsTest.kt:34
+                                                                                                                                                                        <iteration 2> at ThreadsTest.kt:31
+                                                                                                                                                                          inc.get(): 10 at ThreadsTest.kt:31
+                                                                                                                                                                      field = "Complete Main thread" at ThreadsTest.kt:36
+# Thread 2 (Thread-4)
+ThreadsKt$thread$thread$1.run(): <unfinished method> at :0
+  block.invoke(): <unfinished method> at Thread.kt:30
+    loop(11 iterations) at ThreadsTest.kt:21
+      <iteration 1> at ThreadsTest.kt:21
+        it = 0 at ThreadsTest.kt:21
+        inc.get(): 0 at ThreadsTest.kt:22
+        field = "Finish iteration 0" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 1 at ThreadsTest.kt:27
+      <iteration 2> at ThreadsTest.kt:21
+        it = 1 at ThreadsTest.kt:21
+        inc.get(): 1 at ThreadsTest.kt:22
+        field = "Finish iteration 1" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 2 at ThreadsTest.kt:27
+      <iteration 3> at ThreadsTest.kt:21
+        it = 2 at ThreadsTest.kt:21
+        inc.get(): 2 at ThreadsTest.kt:22
+        field = "Finish iteration 2" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 3 at ThreadsTest.kt:27
+      <iteration 4> at ThreadsTest.kt:21
+        it = 3 at ThreadsTest.kt:21
+        inc.get(): 3 at ThreadsTest.kt:22
+        field = "Finish iteration 3" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 4 at ThreadsTest.kt:27
+      <iteration 5> at ThreadsTest.kt:21
+        it = 4 at ThreadsTest.kt:21
+        inc.get(): 4 at ThreadsTest.kt:22
+        field = "Finish iteration 4" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 5 at ThreadsTest.kt:27
+      <iteration 6> at ThreadsTest.kt:21
+        it = 5 at ThreadsTest.kt:21
+        inc.get(): 5 at ThreadsTest.kt:22
+        field = "Finish iteration 5" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 6 at ThreadsTest.kt:27
+      <iteration 7> at ThreadsTest.kt:21
+        it = 6 at ThreadsTest.kt:21
+        inc.get(): 6 at ThreadsTest.kt:22
+        field = "Finish iteration 6" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 7 at ThreadsTest.kt:27
+      <iteration 8> at ThreadsTest.kt:21
+        it = 7 at ThreadsTest.kt:21
+        inc.get(): 7 at ThreadsTest.kt:22
+        field = "Finish iteration 7" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 8 at ThreadsTest.kt:27
+      <iteration 9> at ThreadsTest.kt:21
+        it = 8 at ThreadsTest.kt:21
+        inc.get(): 8 at ThreadsTest.kt:22
+        field = "Finish iteration 8" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 9 at ThreadsTest.kt:27
+      <iteration 10> at ThreadsTest.kt:21
+        it = 9 at ThreadsTest.kt:21
+        inc.get(): 9 at ThreadsTest.kt:22
+        field = "Finish iteration 9" at ThreadsTest.kt:26
+        inc.incrementAndGet(): 10 at ThreadsTest.kt:27
+      <iteration 11> at ThreadsTest.kt:21
+        it = 10 at ThreadsTest.kt:21
+        inc.get(): 10 at ThreadsTest.kt:22
+        Thread.sleep(1000000000): <unfinished method> at ThreadsTest.kt:24

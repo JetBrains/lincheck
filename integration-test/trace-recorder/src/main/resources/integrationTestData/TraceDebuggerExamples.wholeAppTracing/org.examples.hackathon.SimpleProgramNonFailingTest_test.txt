@@ -1,0 +1,135 @@
+# Thread 1
+GradleWorkerMain.main(): <unfinished method> at :0
+  run(): <unfinished method> at :0
+    SystemApplicationClassLoaderWorker.call(): <unfinished method> at :0
+      call(): <unfinished method> at :0
+        ActionExecutionWorker.execute(): <unfinished method> at :0
+          TestWorker.execute(): <unfinished method> at :0
+            execute(): <unfinished method> at :0
+              executeAndMaintainThreadName(): <unfinished method> at :0
+                TestWorker$3.run(): <unfinished method> at :0
+                  $Proxy6.stop(): <unfinished method> at :0
+                    ProxyDispatchAdapter.DispatchingInvocationHandler.invoke(): <unfinished method> at :0
+                      ContextClassLoaderDispatch.dispatch(): <unfinished method> at :0
+                        ReflectionDispatch.dispatch(): <unfinished method> at :0
+                          dispatch(): <unfinished method> at :0
+                            Method.invoke(): <unfinished method> at :0
+                              DelegatingMethodAccessorImpl.invoke(): <unfinished method> at :0
+                                NativeMethodAccessorImpl.invoke(): <unfinished method> at :0
+                                  SuiteTestClassProcessor.stop(): <unfinished method> at :0
+                                    JUnitPlatformTestClassProcessor.stop(): <unfinished method> at :0
+                                      JUnitPlatformTestClassProcessor.CollectAllTestClassesExecutor.access$000(): <unfinished method> at :0
+                                        processAllTestClasses(): <unfinished method> at :0
+                                          DelegatingLauncher.execute(): <unfinished method> at :0
+                                            DefaultLauncher.execute(): <unfinished method> at :0
+                                              execute(): <unfinished method> at :0
+                                                EngineExecutionOrchestrator.execute(): <unfinished method> at :0
+                                                  withInterceptedStreams(): <unfinished method> at :0
+                                                    lambda$execute$0(): <unfinished method> at :0
+                                                      execute(): <unfinished method> at :0
+                                                        execute(): <unfinished method> at :0
+                                                          execute(): <unfinished method> at :0
+                                                            HierarchicalTestEngine.execute(): <unfinished method> at :0
+                                                              HierarchicalTestExecutor.execute(): <unfinished method> at :0
+                                                                SameThreadHierarchicalTestExecutorService.submit(): <unfinished method> at :0
+                                                                  NodeTestTask.execute(): <unfinished method> at :0
+                                                                    executeRecursively(): <unfinished method> at :0
+                                                                      ThrowableCollector.execute(): <unfinished method> at :0
+                                                                        NodeTestTask.lambda$executeRecursively$9(): <unfinished method> at :0
+                                                                          Node.around(): <unfinished method> at :0
+                                                                            NodeTestTask.lambda$executeRecursively$8(): <unfinished method> at :0
+                                                                              ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                NodeTestTask.lambda$executeRecursively$6(): <unfinished method> at :0
+                                                                                  SameThreadHierarchicalTestExecutorService.invokeAll(): <unfinished method> at :0
+                                                                                    NodeTestTask.execute(): <unfinished method> at :0
+                                                                                      executeRecursively(): <unfinished method> at :0
+                                                                                        ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                          NodeTestTask.lambda$executeRecursively$9(): <unfinished method> at :0
+                                                                                            Node.around(): <unfinished method> at :0
+                                                                                              NodeTestTask.lambda$executeRecursively$8(): <unfinished method> at :0
+                                                                                                ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                                  NodeTestTask.lambda$executeRecursively$6(): <unfinished method> at :0
+                                                                                                    SameThreadHierarchicalTestExecutorService.invokeAll(): <unfinished method> at :0
+                                                                                                      NodeTestTask.execute(): <unfinished method> at :0
+                                                                                                        prepare(): <unfinished method> at :0
+                                                                                                          ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                                            NodeTestTask.lambda$prepare$2(): <unfinished method> at :0
+                                                                                                              TestMethodTestDescriptor.prepare(): <unfinished method> at :0
+                                                                                                                prepare(): <unfinished method> at :0
+                                                                                                                  ThrowableCollector.execute(): <unfinished method> at :0
+                                                                                                                    TestMethodTestDescriptor.lambda$prepare$0(): <unfinished method> at :0
+                                                                                                                      TestInstancesProvider.getTestInstances(): <unfinished method> at :0
+                                                                                                                        ClassBasedTestDescriptor.lambda$testInstancesProvider$5(): <unfinished method> at :0
+                                                                                                                          Optional.orElseGet(): <unfinished method> at :0
+                                                                                                                            ClassBasedTestDescriptor.lambda$testInstancesProvider$4(): <unfinished method> at :0
+                                                                                                                              instantiateAndPostProcessTestInstance(): <unfinished method> at :0
+                                                                                                                                ClassTestDescriptor.instantiateTestClass(): <unfinished method> at :0
+                                                                                                                                  ClassBasedTestDescriptor.instantiateTestClass(): <unfinished method> at :0
+                                                                                                                                    invokeTestClassConstructor(): <unfinished method> at :0
+                                                                                                                                      InterceptingExecutableInvoker.invoke(): <unfinished method> at :0
+                                                                                                                                        invoke(): <unfinished method> at :0
+                                                                                                                                          InvocationInterceptorChain.invoke(): <unfinished method> at :0
+                                                                                                                                            chainAndInvoke(): <unfinished method> at :0
+                                                                                                                                              proceed(): <unfinished method> at :0
+                                                                                                                                                InvocationInterceptorChain.InterceptedInvocation.proceed(): <unfinished method> at :0
+                                                                                                                                                  InterceptingExecutableInvoker.lambda$invoke$0(): <unfinished method> at :0
+                                                                                                                                                    InvocationInterceptor.interceptTestClassConstructor(): <unfinished method> at :0
+                                                                                                                                                      InvocationInterceptorChain.ValidatingInvocation.proceed(): <unfinished method> at :0
+                                                                                                                                                        ConstructorInvocation.proceed(): <unfinished method> at :0
+                                                                                                                                                          ReflectionUtils.newInstance(): <unfinished method> at :0
+                                                                                                                                                            Constructor.newInstance(): <unfinished method> at :0
+                                                                                                                                                              newInstanceWithCaller(): <unfinished method> at :0
+                                                                                                                                                                DelegatingConstructorAccessorImpl.newInstance(): <unfinished method> at :0
+                                                                                                                                                                  NativeConstructorAccessorImpl.newInstance(): <unfinished method> at :0
+                                                                                                                                                                    new SimpleProgramNonFailingTest(): <unfinished method> at :0
+                                                                                                                                                                      super@Object(): SimpleProgramNonFailingTest@1 at SimpleProgramNonFailingTest.kt:6
+                                                                                                                                                                      Integer;@1[0] = 1 at SimpleProgramNonFailingTest.kt:9
+                                                                                                                                                                      Integer;@1[1] = 2 at SimpleProgramNonFailingTest.kt:9
+                                                                                                                                                                      Integer;@1[2] = 3 at SimpleProgramNonFailingTest.kt:9
+                                                                                                                                                                      listOf(Integer;@1): Arrays.ArrayList@1 at SimpleProgramNonFailingTest.kt:9
+                                                                                                                                                                      numbers = Arrays.ArrayList@1 at SimpleProgramNonFailingTest.kt:9
+                                                                                                                                                                      sum(numbers): 3 at SimpleProgramNonFailingTest.kt:10
+                                                                                                                                                                        sum = 0 at SimpleProgramNonFailingTest.kt:20
+                                                                                                                                                                        i = 0 at SimpleProgramNonFailingTest.kt:21
+                                                                                                                                                                        numbers.size(): 3 at SimpleProgramNonFailingTest.kt:21
+                                                                                                                                                                        loop(2 iterations) at SimpleProgramNonFailingTest.kt:21
+                                                                                                                                                                          <iteration 1> at SimpleProgramNonFailingTest.kt:21
+                                                                                                                                                                            numbers.get(i ➜ 0): 1 at SimpleProgramNonFailingTest.kt:22
+                                                                                                                                                                            sum = 1 at SimpleProgramNonFailingTest.kt:22
+                                                                                                                                                                            i = 1 at SimpleProgramNonFailingTest.kt:21
+                                                                                                                                                                          <iteration 2> at SimpleProgramNonFailingTest.kt:21
+                                                                                                                                                                            numbers.get(i ➜ 1): 2 at SimpleProgramNonFailingTest.kt:22
+                                                                                                                                                                            sum = 3 at SimpleProgramNonFailingTest.kt:22
+                                                                                                                                                                            i = 2 at SimpleProgramNonFailingTest.kt:21
+                                                                                                                                                                      sum = 3 at SimpleProgramNonFailingTest.kt:10
+                                                                                                                                                                      Assertions.assertEquals(6, sum ➜ 3): threw AssertionFailedError at SimpleProgramNonFailingTest.kt:12
+                                                                                                                                                                        ValueWrapper.create(expected ➜ 6): ValueWrapper@1 at AssertionFailedError.java:102
+                                                                                                                                                                          new ValueWrapper(value ➜ 6): ValueWrapper@1 at ValueWrapper.java:61
+                                                                                                                                                                            safeValueToString(value ➜ 6): "6" at ValueWrapper.java:112
+                                                                                                                                                                            super@ValueWrapper(value ➜ 6, "6"): ValueWrapper@1 at ValueWrapper.java:112
+                                                                                                                                                                              super@Object(): ValueWrapper@1 at ValueWrapper.java:103
+                                                                                                                                                                              ValueWrapper@1.value = 6 at ValueWrapper.java:104
+                                                                                                                                                                              value.getClass(): java.lang.Integer.class at ValueWrapper.java:105
+                                                                                                                                                                              ValueWrapper@1.type = java.lang.Integer.class at ValueWrapper.java:105
+                                                                                                                                                                              ValueWrapper@1.stringRepresentation = "6" at ValueWrapper.java:106
+                                                                                                                                                                              System.identityHashCode(value ➜ 6): 1 at ValueWrapper.java:107
+                                                                                                                                                                              identityHashCode = 1 at ValueWrapper.java:107
+                                                                                                                                                                              ephemeralValue = 6 at ValueWrapper.java:108
+                                                                                                                                                                        ValueWrapper.create(actual ➜ 3): ValueWrapper@1 at AssertionFailedError.java:102
+                                                                                                                                                                          new ValueWrapper(value ➜ 3): ValueWrapper@1 at ValueWrapper.java:61
+                                                                                                                                                                            safeValueToString(value ➜ 3): "3" at ValueWrapper.java:112
+                                                                                                                                                                            super@ValueWrapper(value ➜ 3, "3"): ValueWrapper@1 at ValueWrapper.java:112
+                                                                                                                                                                              super@Object(): ValueWrapper@1 at ValueWrapper.java:103
+                                                                                                                                                                              ValueWrapper@1.value = 3 at ValueWrapper.java:104
+                                                                                                                                                                              value.getClass(): java.lang.Integer.class at ValueWrapper.java:105
+                                                                                                                                                                              ValueWrapper@1.type = java.lang.Integer.class at ValueWrapper.java:105
+                                                                                                                                                                              ValueWrapper@1.stringRepresentation = "3" at ValueWrapper.java:106
+                                                                                                                                                                              System.identityHashCode(value ➜ 3): 1 at ValueWrapper.java:107
+                                                                                                                                                                              identityHashCode = 1 at ValueWrapper.java:107
+                                                                                                                                                                              ephemeralValue = 3 at ValueWrapper.java:108
+                                                                                                                                                                        super@AssertionFailedError(message ➜ "expected: <6> but was: <3>", ValueWrapper@1, ValueWrapper@1, cause): AssertionFailedError@1 at AssertionFailedError.java:102
+                                                                                                                                                                          super@AssertionError("expected: <6> but was: <3>"): AssertionFailedError@1 at AssertionFailedError.java:106
+                                                                                                                                                                          expected = ValueWrapper@1 at AssertionFailedError.java:107
+                                                                                                                                                                          actual = ValueWrapper@1 at AssertionFailedError.java:108
+                                                                                                                                                                          initCause(cause): AssertionFailedError@1 at AssertionFailedError.java:110
+                                                                                                                                                                      catch(AssertionFailedError@1) at SimpleProgramNonFailingTest.kt:12
