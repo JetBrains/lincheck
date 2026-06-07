@@ -200,6 +200,9 @@ internal class LoopInstanceState(
 
     // Number of consecutive iterations that went through the side effect free back-edges.
     var consecutiveAwaitBackEdgeHits: Int = 0
+
+    // Iteration number at which a loop instance last requested a thread switch.
+    var lastSwitchIterNumber: Int = 0
 }
 
 abstract class AbstractLoopDetector : LoopDetector {

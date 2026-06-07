@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.kotlinx.lincheck.util.mutableThreadMapOf
-//TODO: check for unused function parameters
+import java.util.IdentityHashMap
 
 /**
  * Loop detector that classifies loops based on observed shared-memory operations
@@ -47,8 +47,8 @@ class AdaptiveLoopDetector(
     override val recursiveCallsBound: Int = 50,
 ) : AbstractLoopDetector() {
 
-    // Per-loop adaptive state, keyed by (threadId, loopId, codeLocation)
-    private val loopInstances = mutableThreadMapOf<MutableMap<LoopKey, LoopInstanceState>>()
+    // Per-loop adaptive state, keyed by the active loop object.
+    private val loopInstances = mutableThreadMapOf<MutableMap<ActiveLoopInfo, LoopInstanceState>>()
 
     // Global write version counter for external-write tracking
     private var globalWriteVersion: Long = 0L
@@ -72,6 +72,17 @@ class AdaptiveLoopDetector(
         return null
     }
 
+    private fun findActiveLoop(threadId: Int, loopId: Int, codeLocation: Int): ActiveLoopInfo? {
+        val state = threadStates[threadId] ?: return null
+        for (frame in state.callStack.reversed()) {
+            val loop = frame.loops.lastOrNull {
+                it.key.loopId == loopId && it.key.codeLocation == codeLocation
+            }
+            if (loop != null) return loop
+        }
+        return null
+    }
+
     override fun resetAll() {
         super.resetAll()
         loopInstances.clear()
@@ -87,21 +98,24 @@ class AdaptiveLoopDetector(
         loopInstances.remove(threadId)
     }
 
-    private fun instances(threadId: Int): MutableMap<LoopKey, LoopInstanceState> =
-        loopInstances.getOrPut(threadId) { mutableMapOf() }
+    private fun instances(threadId: Int): MutableMap<ActiveLoopInfo, LoopInstanceState> =
+        loopInstances.getOrPut(threadId) { IdentityHashMap() }
 
     private fun getOrCreateInstance(threadId: Int, loopId: Int, codeLocation: Int): LoopInstanceState {
-        val key = LoopKey(loopId, codeLocation)
-        return instances(threadId).getOrPut(key) { LoopInstanceState(ownerThreadId = threadId) }
+        val loop = findActiveLoop(threadId, loopId, codeLocation)
+            ?: findActiveLoop(threadId)
+        return instances(threadId).getOrPut(loop!!) { LoopInstanceState(ownerThreadId = threadId) }
     }
 
     private fun currentInstance(threadId: Int): LoopInstanceState? {
         val loop = findActiveLoop(threadId) ?: return null
-        return instances(threadId)[loop.key]
+        return instances(threadId)[loop]
     }
 
     override fun getCurrentLoopKind(threadId: Int, loopId: Int, codeLocation: Int): LoopKind =
-        instances(threadId)[LoopKey(loopId, codeLocation)]?.kind ?: LoopKind.UNKNOWN
+        findActiveLoop(threadId, loopId, codeLocation)
+            ?.let { instances(threadId)[it]?.kind }
+            ?: LoopKind.UNKNOWN
 
     // --- LOOP LEVEL ---
     override fun onLoopIteration(
@@ -157,9 +171,10 @@ class AdaptiveLoopDetector(
         loopId: Int,
         isReachableFromOutsideLoop: Boolean
     ): Int? {
+        val loop = findExitLoop(threadId, loopId, codeLocation)?.second
         val enterCodeLocation = super.afterLoopExit(threadId, codeLocation, loopId, isReachableFromOutsideLoop)
-        if (enterCodeLocation != null) {
-            instances(threadId).remove(LoopKey(loopId, enterCodeLocation))
+        if (loop != null) {
+            instances(threadId).remove(loop)
         }
         return enterCodeLocation
     }
@@ -171,7 +186,10 @@ class AdaptiveLoopDetector(
         inst: LoopInstanceState,
         advanceIteration: Boolean = true
     ): LoopDetector.Decision {
-        if (inst.iterNumber > 0) {
+        val hasCompletedAnyIteration = inst.iterNumber > 0
+        if (advanceIteration) inst.iterNumber++
+
+        if (hasCompletedAnyIteration) {
             // Accumulate CAS failures across iterations for classification
             inst.totalCasFailures += inst.obs.casFailures
 
@@ -220,7 +238,7 @@ class AdaptiveLoopDetector(
 //                    println("hasRelevantWrite=$hasRelevantWrite for thread ${inst.ownerThreadId} at iteration ${inst.iterNumber} with waitSetCandidates ${inst.waitSetCandidates}")
                     val decision = makeDecision(inst, visits, hasRelevantWrite)
                     if (decision != LoopDetector.Decision.IDLE) {
-                        return finishAndClearIteration(inst, advanceIteration, decision)
+                        return finishAndClearIteration(inst, decision)
                     }
                 }
             } else {
@@ -228,26 +246,24 @@ class AdaptiveLoopDetector(
 
                 val upperThresholdDecision = makeUpperThresholdDecision(inst, hasRelevantWrite)
                 if (upperThresholdDecision != null) {
-                    return finishAndClearIteration(inst, advanceIteration, upperThresholdDecision)
+                    return finishAndClearIteration(inst, upperThresholdDecision)
                 }
 
                 // If there are no observations, there is no basis for signature decisions,
                 // we just switch after each [minIterationsBeforeSwitch] number of iterations to prevent infinite spinning
                 if (inst.iterNumber >= minIterationsBeforeSwitch && inst.iterNumber % minIterationsBeforeSwitch == 0) {
-                    return finishAndClearIteration(inst, advanceIteration, LoopDetector.Decision.SWITCH_THREAD)
+                    return finishAndClearIteration(inst, switchThread(inst))
                 }
             }
         }
 
-        return finishAndClearIteration(inst, advanceIteration, LoopDetector.Decision.IDLE)
+        return finishAndClearIteration(inst, LoopDetector.Decision.IDLE)
     }
 
     private fun finishAndClearIteration(
         inst: LoopInstanceState,
-        advanceIteration: Boolean,
         decision: LoopDetector.Decision
     ): LoopDetector.Decision {
-        if (advanceIteration) inst.iterNumber++
         for ((loc, valHash) in inst.obs.reads) {
             inst.lastSeenWSValues[loc] = valHash
         }
@@ -300,11 +316,19 @@ class AdaptiveLoopDetector(
 
         if (!inst.thresholdSwitchAttempted) {
             inst.thresholdSwitchAttempted = true
-            return LoopDetector.Decision.SWITCH_THREAD
+            return switchThread(inst)
         }
 
 //        println("Declaring STUCK on thread ${inst.ownerThreadId} at iteration ${inst.iterNumber} due to hard iteration bound")
         return LoopDetector.Decision.STUCK
+    }
+
+    private fun canSwitchThread(inst: LoopInstanceState): Boolean =
+        inst.iterNumber - inst.lastSwitchIterNumber >= minIterationsBeforeSwitch
+
+    private fun switchThread(inst: LoopInstanceState): LoopDetector.Decision {
+        inst.lastSwitchIterNumber = inst.iterNumber
+        return LoopDetector.Decision.SWITCH_THREAD
     }
 
     private fun updateExternalProgressRequirement(inst: LoopInstanceState) {
@@ -365,20 +389,25 @@ class AdaptiveLoopDetector(
         // Otherwise check the thresholds for each loop kind for switching threads
         when (inst.kind) {
             LoopKind.RELAXED_AWAIT -> {
-                if (inst.repeatCount >= awaitSwitchThreshold)
-                    return LoopDetector.Decision.SWITCH_THREAD
+                if (inst.repeatCount >= awaitSwitchThreshold && canSwitchThread(inst))
+                    return switchThread(inst)
             }
             LoopKind.CAS -> {
-                if (inst.repeatCount >= casSwitchThreshold && inst.totalCasFailures > casSwitchThreshold)
-                    return LoopDetector.Decision.SWITCH_THREAD
+                if (inst.repeatCount >= casSwitchThreshold &&
+                    inst.totalCasFailures > casSwitchThreshold &&
+                    canSwitchThread(inst)
+                )
+                    return switchThread(inst)
             }
             LoopKind.ZNE -> {
-                if (inst.staleWriteCount >= zneSwitchThreshold)
-                    return LoopDetector.Decision.SWITCH_THREAD
+                if (inst.staleWriteCount >= zneSwitchThreshold && canSwitchThread(inst))
+                    return switchThread(inst)
             }
             LoopKind.UNKNOWN -> {
-                if (hasCycle(inst.signatureHistory) || inst.repeatCount >= defaultSwitchThreshold)
-                    return LoopDetector.Decision.SWITCH_THREAD
+                if ((hasCycle(inst.signatureHistory) || inst.repeatCount >= defaultSwitchThreshold) &&
+                    canSwitchThread(inst)
+                )
+                    return switchThread(inst)
             }
         }
 
@@ -411,13 +440,13 @@ class AdaptiveLoopDetector(
 
     // --- IRREDUCIBLE LOOPS ---
     override fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
-        val inst = getOrCreateInstance(threadId, loopId, codeLocation)
-
         val state = threadStates[threadId]
-        val frame = state?.callStack?.lastOrNull()
-        val loop = frame?.loops?.lastOrNull { it.key.loopId == loopId && it.key.codeLocation == codeLocation }
-        loop?.iterationCount = (loop?.iterationCount ?: 0) + 1
+        val frame = state?.callStack?.lastOrNull() ?: getOrCreateFrame(threadId)
+        val loop = frame.loops.lastOrNull { it.key.loopId == loopId && it.key.codeLocation == codeLocation }
+            ?: ActiveLoopInfo(LoopKey(loopId, codeLocation)).also { frame.loops.addLast(it) }
+        loop.iterationCount = (loop.iterationCount ?: 0) + 1
 
+        val inst = getOrCreateInstance(threadId, loopId, codeLocation)
         return processIteration(inst)
     }
 
@@ -454,8 +483,8 @@ class AdaptiveLoopDetector(
         codeLocation: Int,
         enabledThreads: Set<Int>
     ) {
-        val key = LoopKey(loopId, codeLocation)
-        val inst = instances(threadId)[key] ?: return
+        val loop = findActiveLoop(threadId, loopId, codeLocation) ?: return
+        val inst = instances(threadId)[loop] ?: return
         val absHash = inst.abstractStateHash
 
         // Track the maximum number of enabled threads, we ignore the current thread.
