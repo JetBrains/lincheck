@@ -393,10 +393,16 @@ private val ATOMIC_SIDE_EFFECT_FREE_GET_METHODS = setOf(
     "java/util/concurrent/atomic/AtomicInteger.get",
     "java/util/concurrent/atomic/AtomicLong.get",
     "java/util/concurrent/atomic/AtomicReference.get",
+    "java/util/concurrent/atomic/AtomicLongArray.get",
+    "java/util/concurrent/atomic/AtomicReferenceArray.get",
     "java/lang/invoke/VarHandle.get",
     "java/lang/invoke/VarHandle.getVolatile",
     "java/lang/invoke/VarHandle.getAcquire",
     "java/lang/invoke/VarHandle.getOpaque",
+    "org/jctools/util/UnsafeLongArrayAccess.lvLongElement",
+    "org/jctools/util/UnsafeRefArrayAccess.lvRefElement",
+    "org/jctools/queues/LinkedQueueNode.lvNext",
+    "org/jctools/queues/atomic/LinkedQueueAtomicNode.lvNext",
 )
 
 private fun isWriteOpcode(opcode: Int): Boolean = when (opcode) {

@@ -135,6 +135,8 @@ public class AwaitLoopCases {
     volatile int tail;
     volatile int state;
     java.util.concurrent.atomic.AtomicInteger atomicState = new java.util.concurrent.atomic.AtomicInteger();
+    java.util.concurrent.atomic.AtomicLongArray atomicLongArray =
+        new java.util.concurrent.atomic.AtomicLongArray(1);
 
     public int awaitLoopWithCasOnAlternatePath() {
         while (true) {
@@ -371,6 +373,13 @@ public class AwaitLoopCases {
                     break;
                 }
             }
+        }
+    }
+
+    // --- Case 28: Await path through a whitelisted atomic-array getter ---
+    public void awaitAtomicLongArrayGet() {
+        while (atomicLongArray.get(0) == 0) {
+            Thread.onSpinWait();
         }
     }
 }

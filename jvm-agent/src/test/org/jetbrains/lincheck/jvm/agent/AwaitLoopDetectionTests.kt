@@ -186,4 +186,8 @@ class AwaitLoopDetectionTests {
     @Test
     fun nestedLoopsWithOuterSideEffectBeforeTwoCleanInnerLoops() =
         test("nestedLoopsWithOuterSideEffectBeforeTwoCleanInnerLoops", "()V")
+
+    // Case 28: AtomicLongArray.get is a side-effect-free shared read
+    @Test
+    fun awaitAtomicLongArrayGet() = test("awaitAtomicLongArrayGet", "()V")
 }
