@@ -1724,7 +1724,6 @@ class LocksTest {
         }
     }
 
-    @Ignore
     @Test
     fun testWaitNotify() {
         val writeAndNotify = SynchronizedVariable::writeAndNotify
@@ -1937,7 +1936,6 @@ class LocksTest {
         }
     }
 
-    @Ignore
     @Test
     fun testWaitNotifySwap() {
         val writeAndNotify = SynchronizedVariable::writeAndNotify

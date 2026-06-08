@@ -586,12 +586,10 @@ internal class EventStructure(
                     if (!pinnedEvents.contains(it)) return@mapNotNull null
                     it.syncFrom
                 }.toSet()
-
                 (
                     sequenceOf(allocationEvent(label.mutexID)!!) +
                     execution.filter { it.label.refine<UnlockLabel> { !isReentry && mutexID == label.mutexID } != null }
                 ).filter { it !in banned }
-
             }
 
             // re-entry lock-request synchronizes only with initializing unlock
