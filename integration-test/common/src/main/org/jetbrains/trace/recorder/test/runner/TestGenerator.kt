@@ -115,34 +115,52 @@ abstract class TestGenerator(
         timeoutMinutes: Long,
         outerClassNamesToIgnore: Int,
     ): String {
-        fun TestCase.classNameSuffix(): String {
-            val parts = className.split('$')
-            return parts.drop(outerClassNamesToIgnore).joinToString("$")
+        val (leafCases, subGroups) = groupTestCasesByNextClassName(testCases, outerClassNamesToIgnore)
+
+        val subGroupResults = subGroups.map { group ->
+            val subResult =
+                renderTestGroup(group.cases, abstractTestClass, timeoutMinutes, outerClassNamesToIgnore + 1)
+            val innerClassBody = subResult.prependIndent(" ".repeat(4))
+            "@Nested\ninner class ${makeClassName(listOf(group.classNameToUse))} {\n$innerClassBody\n}"
         }
+
+        val singleTestCases = leafCases.map {
+            renderSingleTestCode(it, abstractTestClass, timeoutMinutes, outerClassNamesToIgnore)
+        }
+
+        return (singleTestCases + subGroupResults).joinToString("\n\n")
+    }
+
+    /**
+     * Splits [testCases] by the next not-yet-consumed segment of their `$`-separated class name.
+     *
+     * Returns the leaf cases (whose class name is fully consumed at this level) plus one
+     * [TestSubGroup] per distinct next segment, with [TestSubGroup.classNameToUse] disambiguated to
+     * the fully qualified name when two packages share a simple class name.
+     */
+    private fun groupTestCasesByNextClassName(
+        testCases: Collection<TestCase>,
+        outerClassNamesToIgnore: Int,
+    ): Pair<List<TestCase>, List<TestSubGroup>> {
+        fun TestCase.classNameSuffix(): String =
+            className.split('$').drop(outerClassNamesToIgnore).joinToString("$")
 
         val subGroups = testCases
             .filter { it.classNameSuffix().isNotEmpty() }
             .groupBy { it.classNameSuffix().substringBefore('$') }
 
-        val testCases = testCases.filter { it.classNameSuffix().isEmpty() }
+        val leafCases = testCases.filter { it.classNameSuffix().isEmpty() }
 
         val clashedSimpleClassNames =
             subGroups.keys.map { it.toSimpleName() }.groupBy { it }.filter { it.value.size > 1 }.keys
 
-        val subGroupResults = subGroups.mapValues { (className, cases) ->
-            val subResult =
-                renderTestGroup(cases, abstractTestClass, timeoutMinutes, outerClassNamesToIgnore + 1)
-            val simpleClassName = className.substringAfterLast('.')
+        val groups = subGroups.map { (className, cases) ->
+            val simpleClassName = className.toSimpleName()
             val classNameToUse = if (simpleClassName in clashedSimpleClassNames) className else simpleClassName
-            val innerClassBody = subResult.prependIndent(" ".repeat(4))
-            "@Nested\ninner class ${makeClassName(listOf(classNameToUse))} {\n$innerClassBody\n}"
+            TestSubGroup(classNameToUse, cases)
         }
 
-        val singleTestCases = testCases.map {
-            renderSingleTestCode(it, abstractTestClass, timeoutMinutes, outerClassNamesToIgnore)
-        }
-
-        return (singleTestCases + subGroupResults.values).joinToString("\n\n")
+        return leafCases to groups
     }
 
     private fun renderAllTestsCode(
@@ -177,11 +195,33 @@ abstract class TestGenerator(
                 */
                 """.trimIndent()
 
-        val renderedTestCases = renderTestGroup(testCases, abstractTestClass, timeoutMinutes, 0)
-            .prependIndent(" ".repeat(4))
+        // Emit one top-level class per first-level source test class
+        // (rather than a single class with `@Nested` subclasses)
+        // so TeamCity's parallel-tests feature, which distributes work
+        // at test-class granularity, can spread the suite across batches.
+        val (leafCases, topLevelGroups) = groupTestCasesByNextClassName(testCases, 0)
 
-        return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\nclass ${groupName}${classNameSuffix} {\n$renderedTestCases\n}\n"
+        val topLevelClasses = buildList {
+            // No top-level test class lacks a package today; emit a fallback wrapper only if one appears.
+            if (leafCases.isNotEmpty()) {
+                val body = leafCases.joinToString("\n\n") {
+                    renderSingleTestCode(it, abstractTestClass, timeoutMinutes, 0)
+                }.prependIndent(" ".repeat(4))
+                add("class ${groupName}${classNameSuffix} {\n$body\n}")
+            }
+            topLevelGroups.forEach { group ->
+                val body = renderTestGroup(group.cases, abstractTestClass, timeoutMinutes, 1)
+                    .prependIndent(" ".repeat(4))
+                val className = makeClassName(listOf("${groupName}${classNameSuffix}", group.classNameToUse))
+                add("class $className {\n$body\n}")
+            }
+        }.joinToString("\n\n")
+
+        return "$beforeCustomImports${customImports.joinToString("\n")}\n\n$disclaimer\n\n$topLevelClasses\n"
     }
+
+    /** A set of test cases sharing the same class-name segment at the current nesting level. */
+    private class TestSubGroup(val classNameToUse: String, val cases: Collection<TestCase>)
 }
 
 /**

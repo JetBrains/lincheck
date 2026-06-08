@@ -14,37 +14,34 @@ import org.jetbrains.live.debugger.test.runner.*
   Please run `org.jetbrains.live.debugger.test.runner.GenerateTestsKt.main` to regenerate.
 */
 
-class KtorLiveDebuggerJsonIntegrationTests {
+class KtorLiveDebuggerJsonIntegrationTests_CharArrayBuilderTest {
     @Nested
-    inner class CharArrayBuilderTest {
-        @Nested
-        inner class TestAppendFewChars : KtorLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                testMethodName = "testAppendFewChars",
-                extraJvmArgs = listOf(),
-                commands = listOf(":ktor-http-cio:jvmTest"),
-                checkRepresentation = true,
-                traceShouldContain = listOf(),
-                breakpointsIni = "[Breakpoint 1]\nuuid = 00000000-0000-0000-0000-000000000001\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 62\n\n[Breakpoint 2]\nuuid = 00000000-0000-0000-0000-000000000002\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 60\n\n[Breakpoint 3]\nuuid = 00000000-0000-0000-0000-000000000003\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 72\n\n[Breakpoint 4]\nuuid = 00000000-0000-0000-0000-000000000004\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 39"
-            )
-        }
+    inner class TestAppendFewChars : KtorLiveDebuggerJsonTests() {
+        @Test
+        @Timeout(20 * 60)
+        fun test() = runTest(
+            testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+            testMethodName = "testAppendFewChars",
+            extraJvmArgs = listOf(),
+            commands = listOf(":ktor-http-cio:jvmTest"),
+            checkRepresentation = true,
+            traceShouldContain = listOf(),
+            breakpointsIni = "[Breakpoint 1]\nuuid = 00000000-0000-0000-0000-000000000001\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 62\n\n[Breakpoint 2]\nuuid = 00000000-0000-0000-0000-000000000002\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 60\n\n[Breakpoint 3]\nuuid = 00000000-0000-0000-0000-000000000003\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 72\n\n[Breakpoint 4]\nuuid = 00000000-0000-0000-0000-000000000004\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 39"
+        )
+    }
     
-        @Nested
-        inner class TestAppendSingleChar : KtorLiveDebuggerJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
-                testMethodName = "testAppendSingleChar",
-                extraJvmArgs = listOf(),
-                commands = listOf(":ktor-http-cio:jvmTest"),
-                checkRepresentation = true,
-                traceShouldContain = listOf(),
-                breakpointsIni = "[Breakpoint 1]\nuuid = 00000000-0000-0000-0000-000000000001\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 62\n\n[Breakpoint 2]\nuuid = 00000000-0000-0000-0000-000000000002\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 60\n\n[Breakpoint 3]\nuuid = 00000000-0000-0000-0000-000000000003\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 72\n\n[Breakpoint 4]\nuuid = 00000000-0000-0000-0000-000000000004\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 39"
-            )
-        }
+    @Nested
+    inner class TestAppendSingleChar : KtorLiveDebuggerJsonTests() {
+        @Test
+        @Timeout(20 * 60)
+        fun test() = runTest(
+            testClassName = "io.ktor.tests.http.cio.CharArrayBuilderTest",
+            testMethodName = "testAppendSingleChar",
+            extraJvmArgs = listOf(),
+            commands = listOf(":ktor-http-cio:jvmTest"),
+            checkRepresentation = true,
+            traceShouldContain = listOf(),
+            breakpointsIni = "[Breakpoint 1]\nuuid = 00000000-0000-0000-0000-000000000001\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 62\n\n[Breakpoint 2]\nuuid = 00000000-0000-0000-0000-000000000002\nclassName = io.ktor.http.cio.internals.CharArrayBuilder\nfileName = CharArrayBuilder.kt\nlineNumber = 60\n\n[Breakpoint 3]\nuuid = 00000000-0000-0000-0000-000000000003\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 72\n\n[Breakpoint 4]\nuuid = 00000000-0000-0000-0000-000000000004\nclassName = io.ktor.tests.http.cio.CharArrayBuilderTest\nfileName = CharArrayBuilderTest.kt\nlineNumber = 39"
+        )
     }
 }

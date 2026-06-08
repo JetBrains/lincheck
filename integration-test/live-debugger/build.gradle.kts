@@ -1,3 +1,6 @@
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
 repositories {
     mavenCentral()
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
@@ -69,5 +72,21 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyLiveDebuggerFatJar)
+    }
+
+    // Regenerates the `…/impl/generated/*GeneratedTests.kt` files from the `*Tests.json` data.
+    // The generated sources are committed and guarded by `LiveDebuggerTestGeneratedDataCorrectness`.
+    register<JavaExec>("regenerateIntegrationTests") {
+        group = "build"
+        description = "Regenerates the committed generated live-debugger integration test classes."
+        classpath = sourceSets["main"].runtimeClasspath
+        mainClass.set("org.jetbrains.live.debugger.test.runner.GenerateTestsKt")
+        workingDir = projectDir
+        javaLauncher.set(
+            project.extensions.getByType(JavaToolchainService::class.java).launcherFor {
+                val jdkToolchainVersion: String by project
+                languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion.toInt()))
+            }
+        )
     }
 }

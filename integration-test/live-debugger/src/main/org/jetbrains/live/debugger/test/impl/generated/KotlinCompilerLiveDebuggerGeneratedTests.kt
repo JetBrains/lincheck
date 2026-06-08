@@ -14,56 +14,20 @@ import org.jetbrains.live.debugger.test.runner.*
   Please run `org.jetbrains.live.debugger.test.runner.GenerateTestsKt.main` to regenerate.
 */
 
-class KotlinCompilerLiveDebuggerJsonIntegrationTests {
+class KotlinCompilerLiveDebuggerJsonIntegrationTests_FirLightTreeBlackBoxCodegenTestGenerated {
     @Nested
-    inner class FirLightTreeBlackBoxCodegenTestGenerated {
+    inner class CallableReference {
         @Nested
-        inner class CallableReference {
+        inner class Bound {
             @Nested
-            inner class Bound {
+            inner class Equals {
                 @Nested
-                inner class Equals {
-                    @Nested
-                    inner class TestReflectionReference : KotlinCompilerLiveDebuggerJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
-                            testMethodName = "testReflectionReference",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:fir2ir:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 968\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 62\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104"
-                        )
-                    }
-    
-                    @Nested
-                    inner class TestReceiverInEquals : KotlinCompilerLiveDebuggerJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
-                            testMethodName = "testReceiverInEquals",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:fir2ir:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 968\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 62\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104"
-                        )
-                    }
-                }
-            }
-    
-            @Nested
-            inner class Equality {
-                @Nested
-                inner class TestCapturedDefaults : KotlinCompilerLiveDebuggerJsonTests() {
+                inner class TestReflectionReference : KotlinCompilerLiveDebuggerJsonTests() {
                     @Test
                     @Timeout(20 * 60)
                     fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
-                        testMethodName = "testCapturedDefaults",
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
+                        testMethodName = "testReflectionReference",
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:fir2ir:test"),
                         checkRepresentation = false,
@@ -73,12 +37,12 @@ class KotlinCompilerLiveDebuggerJsonIntegrationTests {
                 }
     
                 @Nested
-                inner class TestExtensionReceiverVsDefault : KotlinCompilerLiveDebuggerJsonTests() {
+                inner class TestReceiverInEquals : KotlinCompilerLiveDebuggerJsonTests() {
                     @Test
                     @Timeout(20 * 60)
                     fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
-                        testMethodName = "testExtensionReceiverVsDefault",
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
+                        testMethodName = "testReceiverInEquals",
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:fir2ir:test"),
                         checkRepresentation = false,
@@ -90,113 +54,145 @@ class KotlinCompilerLiveDebuggerJsonIntegrationTests {
         }
     
         @Nested
-        inner class Initializers {
+        inner class Equality {
             @Nested
-            inner class Files {
-                @Nested
-                inner class TestSimple : KotlinCompilerLiveDebuggerJsonTests() {
-                    @Test
-                    @Timeout(20 * 60)
-                    fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
-                        testMethodName = "testSimple",
-                        extraJvmArgs = listOf(),
-                        commands = listOf(":compiler:fir:fir2ir:test"),
-                        checkRepresentation = false,
-                        traceShouldContain = listOf(),
-                        breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 466\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 193\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 57\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 579\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692"
-                    )
-                }
-    
-                @Nested
-                inner class TestSimpleMultiModule : KotlinCompilerLiveDebuggerJsonTests() {
-                    @Test
-                    @Timeout(20 * 60)
-                    fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
-                        testMethodName = "testSimpleMultiModule",
-                        extraJvmArgs = listOf(),
-                        commands = listOf(":compiler:fir:fir2ir:test"),
-                        checkRepresentation = false,
-                        traceShouldContain = listOf(),
-                        breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 466\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 193\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 57\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 579\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692"
-                    )
-                }
-            }
-        }
-    
-        @Nested
-        inner class Inline {
-            @Nested
-            inner class TestDefaultArgs : KotlinCompilerLiveDebuggerJsonTests() {
+            inner class TestCapturedDefaults : KotlinCompilerLiveDebuggerJsonTests() {
                 @Test
                 @Timeout(20 * 60)
                 fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
-                    testMethodName = "testDefaultArgs",
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
+                    testMethodName = "testCapturedDefaults",
                     extraJvmArgs = listOf(),
                     commands = listOf(":compiler:fir:fir2ir:test"),
                     checkRepresentation = false,
                     traceShouldContain = listOf(),
-                    breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 77\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.generators.AnnotationGenerator\nfileName = AnnotationGenerator.kt\nlineNumber = 35"
+                    breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 968\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 62\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104"
                 )
             }
     
             @Nested
-            inner class TestCrossModuleTypeOf : KotlinCompilerLiveDebuggerJsonTests() {
+            inner class TestExtensionReceiverVsDefault : KotlinCompilerLiveDebuggerJsonTests() {
                 @Test
                 @Timeout(20 * 60)
                 fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
-                    testMethodName = "testCrossModuleTypeOf",
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
+                    testMethodName = "testExtensionReceiverVsDefault",
                     extraJvmArgs = listOf(),
                     commands = listOf(":compiler:fir:fir2ir:test"),
                     checkRepresentation = false,
                     traceShouldContain = listOf(),
-                    breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 77\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.generators.AnnotationGenerator\nfileName = AnnotationGenerator.kt\nlineNumber = 35"
-                )
-            }
-        }
-    
-        @Nested
-        inner class Coroutines {
-            @Nested
-            inner class TestAsync : KotlinCompilerLiveDebuggerJsonTests() {
-                @Test
-                @Timeout(20 * 60)
-                fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Coroutines",
-                    testMethodName = "testAsync",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":compiler:fir:fir2ir:test"),
-                    checkRepresentation = false,
-                    traceShouldContain = listOf(),
-                    breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 504\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 193"
+                    breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 968\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 62\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104"
                 )
             }
         }
     }
     
     @Nested
-    inner class PhasedJvmDiagnosticLightTreeTestGenerated {
+    inner class Initializers {
         @Nested
-        inner class Tests {
+        inner class Files {
             @Nested
-            inner class ControlFlowAnalysis {
-                @Nested
-                inner class TestAssignedInFinally : KotlinCompilerLiveDebuggerJsonTests() {
-                    @Test
-                    @Timeout(20 * 60)
-                    fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$ControlFlowAnalysis",
-                        testMethodName = "testAssignedInFinally",
-                        extraJvmArgs = listOf(),
-                        commands = listOf(":compiler:fir:analysis-tests:test"),
-                        checkRepresentation = false,
-                        traceShouldContain = listOf(),
-                        breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.analysis.cfa.FirPropertyInitializationAnalyzer\nfileName = FirPropertyInitializationAnalyzer.kt\nlineNumber = 38\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 1654\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 579\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirAnnotationChecker\nfileName = FirAnnotationChecker.kt\nlineNumber = 55"
-                    )
-                }
+            inner class TestSimple : KotlinCompilerLiveDebuggerJsonTests() {
+                @Test
+                @Timeout(20 * 60)
+                fun test() = runTest(
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
+                    testMethodName = "testSimple",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":compiler:fir:fir2ir:test"),
+                    checkRepresentation = false,
+                    traceShouldContain = listOf(),
+                    breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 466\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 193\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 57\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 579\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692"
+                )
+            }
+    
+            @Nested
+            inner class TestSimpleMultiModule : KotlinCompilerLiveDebuggerJsonTests() {
+                @Test
+                @Timeout(20 * 60)
+                fun test() = runTest(
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
+                    testMethodName = "testSimpleMultiModule",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":compiler:fir:fir2ir:test"),
+                    checkRepresentation = false,
+                    traceShouldContain = listOf(),
+                    breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 466\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 193\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 57\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 579\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692"
+                )
+            }
+        }
+    }
+    
+    @Nested
+    inner class Inline {
+        @Nested
+        inner class TestDefaultArgs : KotlinCompilerLiveDebuggerJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
+                testMethodName = "testDefaultArgs",
+                extraJvmArgs = listOf(),
+                commands = listOf(":compiler:fir:fir2ir:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 77\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.generators.AnnotationGenerator\nfileName = AnnotationGenerator.kt\nlineNumber = 35"
+            )
+        }
+    
+        @Nested
+        inner class TestCrossModuleTypeOf : KotlinCompilerLiveDebuggerJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
+                testMethodName = "testCrossModuleTypeOf",
+                extraJvmArgs = listOf(),
+                commands = listOf(":compiler:fir:fir2ir:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 77\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.generators.AnnotationGenerator\nfileName = AnnotationGenerator.kt\nlineNumber = 35"
+            )
+        }
+    }
+    
+    @Nested
+    inner class Coroutines {
+        @Nested
+        inner class TestAsync : KotlinCompilerLiveDebuggerJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Coroutines",
+                testMethodName = "testAsync",
+                extraJvmArgs = listOf(),
+                commands = listOf(":compiler:fir:fir2ir:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 692\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 482\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 504\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.backend.generators.CallAndReferenceGenerator\nfileName = CallAndReferenceGenerator.kt\nlineNumber = 481\n\n[Breakpoint 5]\nclassName = org.jetbrains.kotlin.fir.backend.generators.ClassMemberGenerator\nfileName = ClassMemberGenerator.kt\nlineNumber = 104\n\n[Breakpoint 6]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrConverter\nfileName = Fir2IrConverter.kt\nlineNumber = 193"
+            )
+        }
+    }
+}
+
+class KotlinCompilerLiveDebuggerJsonIntegrationTests_PhasedJvmDiagnosticLightTreeTestGenerated {
+    @Nested
+    inner class Tests {
+        @Nested
+        inner class ControlFlowAnalysis {
+            @Nested
+            inner class TestAssignedInFinally : KotlinCompilerLiveDebuggerJsonTests() {
+                @Test
+                @Timeout(20 * 60)
+                fun test() = runTest(
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$ControlFlowAnalysis",
+                    testMethodName = "testAssignedInFinally",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":compiler:fir:analysis-tests:test"),
+                    checkRepresentation = false,
+                    traceShouldContain = listOf(),
+                    breakpointsIni = "[Breakpoint 1]\nclassName = org.jetbrains.kotlin.fir.analysis.cfa.FirPropertyInitializationAnalyzer\nfileName = FirPropertyInitializationAnalyzer.kt\nlineNumber = 38\n\n[Breakpoint 2]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 1654\n\n[Breakpoint 3]\nclassName = org.jetbrains.kotlin.fir.backend.Fir2IrVisitor\nfileName = Fir2IrVisitor.kt\nlineNumber = 579\n\n[Breakpoint 4]\nclassName = org.jetbrains.kotlin.fir.analysis.checkers.declaration.FirAnnotationChecker\nfileName = FirAnnotationChecker.kt\nlineNumber = 55"
+                )
             }
         }
     }

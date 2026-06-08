@@ -1,3 +1,6 @@
+import org.gradle.jvm.toolchain.JavaToolchainService
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
 repositories {
     mavenCentral()
     maven { url = uri("https://repo.gradle.org/gradle/libs-releases/") }
@@ -72,6 +75,22 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceRecorderFatJar)
+    }
+
+    // Regenerates the `…/impl/generated/*GeneratedTests.kt` files from the `*Tests.json` data.
+    // The generated sources are committed and guarded by `TestGeneratedDataCorrectness`.
+    register<JavaExec>("regenerateIntegrationTests") {
+        group = "build"
+        description = "Regenerates the committed generated trace-recorder integration test classes."
+        classpath = sourceSets["main"].runtimeClasspath
+        mainClass.set("org.jetbrains.trace.recorder.test.runner.GenerateTestsKt")
+        workingDir = projectDir
+        javaLauncher.set(
+            project.extensions.getByType(JavaToolchainService::class.java).launcherFor {
+                val jdkToolchainVersion: String by project
+                languageVersion.set(JavaLanguageVersion.of(jdkToolchainVersion.toInt()))
+            }
+        )
     }
 }
 
