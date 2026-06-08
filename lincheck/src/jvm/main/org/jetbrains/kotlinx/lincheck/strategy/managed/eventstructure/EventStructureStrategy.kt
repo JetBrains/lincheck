@@ -128,12 +128,7 @@ internal class EventStructureStrategy(
             }
         }
 
-        // println(eventStructure.execution)
-        // println("inconsistency: $inconsistency")
-        // println()
-
         stats.update(result, inconsistency)
-        // println(stats.totalInvocations)
         return (result to inconsistency)
     }
 

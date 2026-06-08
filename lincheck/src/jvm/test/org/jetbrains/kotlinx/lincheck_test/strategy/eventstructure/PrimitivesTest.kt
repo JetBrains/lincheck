@@ -1847,7 +1847,7 @@ class LocksTest {
             (1 to 0),
             (1 to 1),
         )
-        litmusTest(assertSame(expectedOutcomes)) {
+        litmusTest(assertSame(expectedOutcomes, UNKNOWN)) {
             val lock = Object()
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -1886,7 +1886,7 @@ class LocksTest {
             listOf(0,1,0,1),
             listOf(0,1,1,0),
             listOf(0,1,1,1),
-            // listOf(1,0,0,0), This outcome is missing because of completeness
+            listOf(1,0,0,0),
             listOf(1,0,0,1),
             // listOf(1,0,1,0), // This outcome should never happen
             listOf(1,0,1,1),
@@ -1895,7 +1895,7 @@ class LocksTest {
             listOf(1,1,1,0),
             listOf(1,1,1,1),
         )
-        litmusTest(assertSame(expectedOutcomes)) {
+        litmusTest(assertSame(expectedOutcomes, UNKNOWN)) {
             val lock = Object()
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)

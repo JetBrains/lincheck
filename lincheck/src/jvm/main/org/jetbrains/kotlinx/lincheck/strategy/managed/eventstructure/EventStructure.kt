@@ -324,23 +324,7 @@ internal class EventStructure(
 
         val blockedRequests = danglingRequests
             .filter {
-                // TODO: (it.label !is CoroutineSuspendLabel)
-                check(it.label.isRequest) // Dangling requests should probably be requests
-                if (!it.label.isBlocking) return@filter false
-                val nextEvent = execution[it.threadId, it.threadPosition + 1] ?: return@filter false
-                if (nextEvent.parent != it) return@filter false
-                // The parent of the event we are backtracking to should not be blocked :)
-                if (it == event.parent) return@filter false
-                // Maybe it would be nice to somehow keep track of conflicts as they are added in the event structure?
-                // We already compute the conflicting events when they are added.
-                // This way we do not have to compute them here every time
-                val conflicts = getConflictingEvents(
-                    it.threadId,
-                    nextEvent.label,
-                    it,
-                    it.dependencies
-                ).filter { it != nextEvent }
-                return@filter conflicts.isNotEmpty()
+                blockedEvents.values.any { blockedDesc -> blockedDesc.request == it && blockedDesc.response == null }
             }
 
         frontier.apply {
