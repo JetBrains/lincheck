@@ -20,11 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import java.util.concurrent.atomic.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.lincheck.datastructures.scenario
-import org.junit.Ignore
 
 import org.junit.Test
 import kotlin.concurrent.thread
@@ -68,6 +65,7 @@ class MemoryModelTest {
     /* ======== Store Buffering ======== */
 
 
+    // TODO: we need to also see the (0 to 0) outcome
     @Test
     fun testSB() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf(

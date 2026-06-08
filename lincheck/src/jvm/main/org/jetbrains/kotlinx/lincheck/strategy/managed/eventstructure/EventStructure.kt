@@ -329,6 +329,8 @@ internal class EventStructure(
                 if (!it.label.isBlocking) return@filter false
                 val nextEvent = execution[it.threadId, it.threadPosition + 1] ?: return@filter false
                 if (nextEvent.parent != it) return@filter false
+                // The parent of the event we are backtracking to should not be blocked :)
+                if (it == event.parent) return@filter false
                 // Maybe it would be nice to somehow keep track of conflicts as they are added in the event structure?
                 // We already compute the conflicting events when they are added.
                 // This way we do not have to compute them here every time
