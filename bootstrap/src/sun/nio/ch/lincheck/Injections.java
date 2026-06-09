@@ -752,6 +752,12 @@ public class Injections {
         eventTracker.afterWrite(descriptor);
     }
 
+    public static void onArrayCopy(Object srcArray, int srcPos, Object dstArray, int dstPos, int length, ThreadDescriptor descriptor) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return;
+        eventTracker.onArrayCopy(descriptor, srcArray, srcPos, dstArray, dstPos, length);
+    }
+
     /**
      * Called from the instrumented code before any method call.
      * <br>

@@ -1956,4 +1956,50 @@ class LocksTest {
         }
     }
 
+    @Test
+    fun testSerializableQueueArrayCopy() {
+
+        class SerializableQueue {
+            val list = ArrayList<Int>()
+            @Synchronized
+            fun put(x: Int) {
+                list += x
+            }
+
+            @Synchronized
+            fun poll() : Int? {
+                if(list.isEmpty()) return null
+                return list.removeAt(0)
+            }
+        }
+
+        val put = SerializableQueue::put
+        val poll = SerializableQueue::poll
+
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(put, 1)
+                    actor(put, -1)
+                }
+                thread {
+                    actor(poll)
+                    actor(poll)
+                }
+            }
+        }
+
+        val outcomes = setOf(
+            1 to null,
+            1 to -1,
+            null to null,
+            null to 1,
+        )
+
+        litmusTest(SerializableQueue::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { results ->
+            val r0 = getValue<Int?>(results.parallelResults[1][0]!!)
+            val r1 = getValue<Int?>(results.parallelResults[1][1]!!)
+            r0 to r1
+        }
+    }
 }

@@ -406,6 +406,10 @@ internal class EventStructureStrategy(
         super.onActorStart(iThread)
         // TODO: move ignored section to ManagedStrategyRunner
         runInsideIgnoredSection {
+            if (threadScheduler.isAborted(iThread)) {
+                disableAnalysis()
+                return
+            }
             if (currentExecutionPart == ExecutionPart.VALIDATION)
                 return@runInsideIgnoredSection
             val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
@@ -416,6 +420,11 @@ internal class EventStructureStrategy(
     override fun onActorFinish(iThread: Int) {
         // TODO: move ignored section to ManagedStrategyRunner
         runInsideIgnoredSection {
+            if (threadScheduler.isAborted(iThread)) {
+                disableAnalysis()
+                return
+            }
+            // Check if thread is aborted beofre running this. Also add at onActorStart.
             if (currentExecutionPart == ExecutionPart.VALIDATION)
                 return@runInsideIgnoredSection
             val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]

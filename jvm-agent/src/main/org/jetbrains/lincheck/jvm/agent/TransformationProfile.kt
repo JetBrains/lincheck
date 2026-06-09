@@ -34,6 +34,7 @@ class TransformationConfiguration(
     var trackStaticFieldWrites: Boolean = false,
     var trackArrayElementReads: Boolean = false,
     var trackArrayElementWrites: Boolean = false,
+    var trackArrayCopy: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
     var interceptMethodCallResults: Boolean = false,
@@ -191,6 +192,8 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
 
         ThrowTransformer::class.java -> trackThrows
         CatchBlockStartTransformer::class.java -> trackCatchBlocks
+
+        ReflectionTransformer::class.java -> trackArrayCopy
 
         // the configuration does not govern other types of transformers,
         // so they should be applied by default
@@ -588,6 +591,7 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
             trackLocalVariableWrites = true
             trackArrayElementReads = true
             trackArrayElementWrites = true
+            trackArrayCopy = true
 
             interceptReadResults = true
         }
