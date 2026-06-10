@@ -107,11 +107,14 @@ private data class LoopDetectorThreadState(
  *   exceeding this limit is treated as a livelock.
  * @param recursiveCallsBound the upper bound on recursive method call depth;
  *   exceeding this limit is treated as a livelock.
+ * @param awaitLoopsAnalysisEnabled whether await-loop handling is enabled;
+ *   when `false`, [onAwaitLoopPath] is a no-op and does not suggest a thread switch.
  */
 class BoundedLoopDetector(
     val iterationsBeforeThreadSwitch: Int,  // N limit for loop iterations before thread switch
     val iterationsBound: Int,               // M limit for loop iterations before stuck
     val recursiveCallsBound: Int,           // K limit for recursive calls before stuck
+    val awaitLoopsAnalysisEnabled: Boolean, // whether await-loop paths trigger a thread switch
 ) : LoopDetector {
     private val threadStates = mutableThreadMapOf<LoopDetectorThreadState>()
 
@@ -183,6 +186,7 @@ class BoundedLoopDetector(
     }
 
     override fun onAwaitLoopPath(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
+        if (!awaitLoopsAnalysisEnabled) return LoopDetector.Decision.IDLE
         return LoopDetector.Decision.SWITCH_THREAD
     }
 

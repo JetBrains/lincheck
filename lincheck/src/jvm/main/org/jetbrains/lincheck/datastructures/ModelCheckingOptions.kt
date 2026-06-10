@@ -56,6 +56,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             timeoutMs = timeoutMs,
             customScenarios = customScenarios,
             stdLibAnalysisEnabled = stdLibAnalysisEnabled,
+            awaitLoopsAnalysisEnabled = awaitLoopsAnalysisEnabled,
             experimentalModelChecking = experimentalModelChecking,
         )
     }
@@ -84,6 +85,7 @@ class ModelCheckingCTestConfiguration(
     timeoutMs: Long,
     customScenarios: List<ExecutionScenario>,
     stdLibAnalysisEnabled: Boolean,
+    awaitLoopsAnalysisEnabled: Boolean,
     experimentalModelChecking: Boolean,
 ) : ManagedCTestConfiguration(
     testClass = testClass,
@@ -105,6 +107,7 @@ class ModelCheckingCTestConfiguration(
     timeoutMs = timeoutMs,
     customScenarios = customScenarios,
     stdLibAnalysisEnabled = stdLibAnalysisEnabled,
+    awaitLoopsAnalysisEnabled = awaitLoopsAnalysisEnabled,
 ) {
 
     private val useExperimentalModelChecking =

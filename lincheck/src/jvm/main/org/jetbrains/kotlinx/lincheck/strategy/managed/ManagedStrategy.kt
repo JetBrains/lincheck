@@ -79,6 +79,7 @@ internal abstract class ManagedStrategy(
         iterationsBeforeThreadSwitch = settings.loopIterationsBeforeThreadSwitch,
         iterationsBound = settings.loopBound,
         recursiveCallsBound = settings.recursionBound,
+        awaitLoopsAnalysisEnabled = settings.awaitLoopsAnalysisEnabled,
     )
 
     // Current execution part, if defined by the runner, `PARALLEL` otherwise

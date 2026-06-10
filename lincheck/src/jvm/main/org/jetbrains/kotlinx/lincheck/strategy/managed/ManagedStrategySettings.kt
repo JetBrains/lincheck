@@ -51,6 +51,12 @@ internal data class ManagedStrategySettings(
     val analyzeStdLib: Boolean,
 
     /**
+     * @property awaitLoopsAnalysisEnabled Controls whether await-loop (busy-wait) paths are handled
+     *   at runtime by suggesting a thread switch. When `false`, await-loop hooks are no-ops.
+     */
+    val awaitLoopsAnalysisEnabled: Boolean,
+
+    /**
      * @property guarantees A list of methods' guarantees.
      *
      * @see org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee

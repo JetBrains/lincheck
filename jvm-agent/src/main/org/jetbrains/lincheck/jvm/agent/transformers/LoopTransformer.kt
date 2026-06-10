@@ -39,6 +39,7 @@ internal class LoopTransformer(
     adapter: GeneratorAdapter,
     methodVisitor: MethodVisitor,
     val shouldTrackIrreducibleLoops: Boolean,
+    val shouldTrackAwaitLoops: Boolean,
 ) : InstructionMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     // Retrieve loop sites planned from the precomputed basic-block CFG.
@@ -97,13 +98,18 @@ internal class LoopTransformer(
     private val codeLocationIdByLoopId = mutableMapOf<LoopId, Int>()
 
     // Map from loopId to the set of back-edge source blocks that have an await path from the header.
+    // Computed only when await-loop instrumentation is enabled (see [shouldTrackAwaitLoops]).
     private val awaitPathBackEdgeSources: Map<LoopId, Set<BasicBlockIndex>> =
-        methodInfo.basicControlFlowGraph!!.computeAwaitPathBackEdgeSources(loopInfo)
+        if (shouldTrackAwaitLoops)
+            methodInfo.basicControlFlowGraph!!.computeAwaitPathBackEdgeSources(loopInfo)
+        else emptyMap()
 
     // Map from a non-phony instruction index (the last opcode of a clean back-edge source block)
     // to the loopId. These are the sites where `onAwaitLoopPath` should be injected.
     private val awaitPathInjectionLocations: Map<InstructionIndex, List<LoopId>> =
-        methodInfo.basicControlFlowGraph!!.computeAwaitPathInjectionLocations(insnIndexRemapping, awaitPathBackEdgeSources)
+        if (shouldTrackAwaitLoops)
+            methodInfo.basicControlFlowGraph!!.computeAwaitPathInjectionLocations(insnIndexRemapping, awaitPathBackEdgeSources)
+        else emptyMap()
 
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
