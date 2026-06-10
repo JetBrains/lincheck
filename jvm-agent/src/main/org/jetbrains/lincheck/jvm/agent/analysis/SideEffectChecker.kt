@@ -359,7 +359,7 @@ object SideEffectChecker {
         //   allowed   = whitelist + user-supplied predicate
         //   forbidden = stdlib classes (filtered by allow-wins inside the visitor)
         val analyzerAllowedFunctionCalls: MethodInvocationPredicate = { info ->
-            isWhitelistedMethodCall(info.owner, info.name, info.descriptor, info.opcode) ||
+            isSafeMethodCall(info.owner, info.name, info.descriptor, info.opcode) ||
                 allowedFunctionCalls(info.owner, info.name, info.descriptor)
         }
         val analyzerForbiddenFunctionCalls: MethodInvocationPredicate = { info ->
@@ -685,7 +685,7 @@ internal class SideEffectMethodAnalyzer(
  * Returns true if the call target is in the same whitelist used by the side-effect checker.
  */
 @Suppress("UNUSED_PARAMETER")
-internal fun isWhitelistedMethodCall(
+internal fun isSafeMethodCall(
     internalClassName: String,
     methodName: String,
     methodDescriptor: String,

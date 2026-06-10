@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.objectweb.asm.Opcodes
 import org.jetbrains.lincheck.jvm.agent.*
-import org.jetbrains.lincheck.jvm.agent.analysis.isWhitelistedMethodCall
+import org.jetbrains.lincheck.jvm.agent.analysis.isSafeMethodCall
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
@@ -408,17 +408,17 @@ private val ATOMIC_SIDE_EFFECT_FREE_GET_METHODS = setOf(
 
 private fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
     insn.opcode == Opcodes.INVOKESTATIC &&
-        insn.owner == THREAD_TYPE.internalClassName &&
-        insn.name == ON_SPIN_WAIT_METHOD_NAME &&
-        insn.desc == ON_SPIN_WAIT_METHOD_DESCRIPTOR
+    insn.owner == THREAD_TYPE.internalClassName &&
+    insn.name == ON_SPIN_WAIT_METHOD_NAME &&
+    insn.desc == ON_SPIN_WAIT_METHOD_DESCRIPTOR
 
 private fun isSideEffectGetMethod(insn: MethodInsnNode): Boolean =
     "${insn.owner}.${insn.name}" in ATOMIC_SIDE_EFFECT_FREE_GET_METHODS
 
 private fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
-    isFunctionCallAwait(insn)
-        || isSideEffectGetMethod(insn)
-        || isWhitelistedMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
+    isFunctionCallAwait(insn) ||
+    isSideEffectGetMethod(insn) ||
+    isSafeMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
 
 /**
  * Classification object result used for await path analysis.
