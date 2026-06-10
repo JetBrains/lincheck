@@ -511,12 +511,38 @@ internal fun isPrimitive(type: Type): Boolean {
     }
 }
 
-/**
- * Checks if an opcode is an array store instruction.
- */
+internal fun isLoadOpcode(opcode: Int): Boolean =
+    opcode == ILOAD || opcode == LLOAD || opcode == FLOAD || opcode == DLOAD || opcode == ALOAD
+
+internal fun isStoreOpcode(opcode: Int): Boolean =
+    opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
+
+internal fun isArrayLoadOpcode(opcode: Int) =
+    opcode == IALOAD || opcode == LALOAD || opcode == FALOAD || opcode == DALOAD ||
+    opcode == AALOAD || opcode == BALOAD || opcode == CALOAD || opcode == SALOAD
+
 internal fun isArrayStoreOpcode(opcode: Int) =
     opcode == IASTORE || opcode == LASTORE || opcode == FASTORE || opcode == DASTORE ||
     opcode == AASTORE || opcode == BASTORE || opcode == CASTORE || opcode == SASTORE
+
+internal fun isReadOpcode(opcode: Int): Boolean = when (opcode) {
+    GETFIELD, GETSTATIC,
+    IALOAD, LALOAD, FALOAD, DALOAD,
+    AALOAD, BALOAD, CALOAD, SALOAD -> true
+    else -> false
+}
+
+internal fun isWriteOpcode(opcode: Int): Boolean = when (opcode) {
+    PUTFIELD, PUTSTATIC,
+    IASTORE, LASTORE, FASTORE, DASTORE,
+    AASTORE, BASTORE, CASTORE, SASTORE -> true
+    else -> false
+}
+
+internal fun isMonitorOpcode(opcode: Int): Boolean = when (opcode) {
+    MONITORENTER, MONITOREXIT -> true
+    else -> false
+}
 
 internal fun getLocalVarAccessOpcodeType(opcode: Int): Type = when (opcode) {
     ILOAD, ISTORE -> INT_TYPE
@@ -527,12 +553,6 @@ internal fun getLocalVarAccessOpcodeType(opcode: Int): Type = when (opcode) {
 
     else -> throw IllegalArgumentException("Invalid opcode: $opcode")
 }
-
-internal fun isLoadOpcode(opcode: Int): Boolean =
-    opcode == ILOAD || opcode == LLOAD || opcode == FLOAD || opcode == DLOAD || opcode == ALOAD
-
-internal fun isStoreOpcode(opcode: Int): Boolean =
-    opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
 
 internal fun getArrayAccessOpcodeType(opcode: Int): Type = when (opcode) {
     IALOAD, IASTORE -> INT_TYPE

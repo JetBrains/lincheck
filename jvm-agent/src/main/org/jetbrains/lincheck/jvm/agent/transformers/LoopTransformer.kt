@@ -405,24 +405,6 @@ private val ATOMIC_SIDE_EFFECT_FREE_GET_METHODS = setOf(
     "org/jctools/queues/atomic/LinkedQueueAtomicNode.lvNext",
 )
 
-private fun isWriteOpcode(opcode: Int): Boolean = when (opcode) {
-    Opcodes.PUTFIELD, Opcodes.PUTSTATIC,
-    Opcodes.IASTORE, Opcodes.LASTORE, Opcodes.FASTORE, Opcodes.DASTORE,
-    Opcodes.AASTORE, Opcodes.BASTORE, Opcodes.CASTORE, Opcodes.SASTORE -> true
-    else -> false
-}
-
-private fun isMonitorOpcode(opcode: Int): Boolean = when (opcode) {
-    Opcodes.MONITORENTER, Opcodes.MONITOREXIT -> true
-    else -> false
-}
-
-private fun isReadOpcode(opcode: Int): Boolean = when (opcode) {
-    Opcodes.GETFIELD, Opcodes.GETSTATIC,
-    Opcodes.IALOAD, Opcodes.LALOAD, Opcodes.FALOAD, Opcodes.DALOAD,
-    Opcodes.AALOAD, Opcodes.BALOAD, Opcodes.CALOAD, Opcodes.SALOAD -> true
-    else -> false
-}
 
 private fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
     insn.opcode == Opcodes.INVOKESTATIC &&
