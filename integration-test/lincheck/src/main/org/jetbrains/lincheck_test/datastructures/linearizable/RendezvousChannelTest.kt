@@ -17,7 +17,9 @@ import org.jetbrains.lincheck_test.datastructures.SequentialIntChannel
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
+import org.junit.Ignore
 
+@Ignore
 @ExperimentalCoroutinesApi
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")

@@ -18,6 +18,8 @@ import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
 import java.util.concurrent.ConcurrentHashMap
 
+// TODO: event structure strategy does fails here, because we find an impossible execution. See if it is a bug with
+//   the strategy or the hashmap itself.
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
 class ConcurrentHashMapTest : AbstractLincheckTest() {
     private val map = ConcurrentHashMap<Int, Int>()

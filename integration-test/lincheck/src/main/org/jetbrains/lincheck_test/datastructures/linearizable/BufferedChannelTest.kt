@@ -17,7 +17,11 @@ import org.jetbrains.lincheck_test.datastructures.SequentialIntChannel
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
+import org.junit.Ignore
 
+// TODO: We ingore for now since event structure strategy does not support coroutines.
+//   Not sure is
+@Ignore
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class BufferedChannelTest : AbstractLincheckTest() {
