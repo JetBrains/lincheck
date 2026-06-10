@@ -654,8 +654,4 @@ private val ATOMIC_SIDE_EFFECT_FREE_GET_METHODS = setOf(
     "java/lang/invoke/VarHandle.getVolatile",
     "java/lang/invoke/VarHandle.getAcquire",
     "java/lang/invoke/VarHandle.getOpaque",
-    "org/jctools/util/UnsafeLongArrayAccess.lvLongElement",
-    "org/jctools/util/UnsafeRefArrayAccess.lvRefElement",
-    "org/jctools/queues/LinkedQueueNode.lvNext",
-    "org/jctools/queues/atomic/LinkedQueueAtomicNode.lvNext",
 )
