@@ -89,10 +89,6 @@ internal class LoopTransformer(
     private val opcodesReachableFromOutsideLoops: Map<InstructionIndex, Set<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeReachabilityFromOutsideLoops(insnIndexRemapping, loopInfo)
 
-    // Map from loopId to the set of back-edge source blocks that have an await path from the header.
-    private val awaitPathBackEdgeSources: Map<LoopId, Set<BasicBlockIndex>> =
-        methodInfo.basicControlFlowGraph!!.computeAwaitPathBackEdgeSources(loopInfo)
-
     // Map from the first loop header non-phony instruction index to the list of loopIds having this header.
     private val loopIdsByHeaderNonPhonyIndex: Map<InstructionIndex, List<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeLoopIdsByHeaderNonPhonyIndex(insnIndexRemapping, loopInfo)
@@ -100,10 +96,15 @@ internal class LoopTransformer(
     // Map from loopId to the code location of its header.
     private val codeLocationIdByLoopId = mutableMapOf<LoopId, Int>()
 
+    // Map from loopId to the set of back-edge source blocks that have an await path from the header.
+    private val awaitPathBackEdgeSources: Map<LoopId, Set<BasicBlockIndex>> =
+        methodInfo.basicControlFlowGraph!!.computeAwaitPathBackEdgeSources(loopInfo)
+
     // Map from a non-phony instruction index (the last opcode of a clean back-edge source block)
     // to the loopId. These are the sites where `onAwaitLoopPath` should be injected.
     private val awaitPathInjectionLocations: Map<InstructionIndex, List<LoopId>> =
         methodInfo.basicControlFlowGraph!!.computeAwaitPathInjectionLocations(insnIndexRemapping, awaitPathBackEdgeSources)
+
 
     override fun beforeInsn(index: Int, opcode: Int): Unit = adapter.run {
         val nonPhonyIndex = currentNonPhonyInsnIndex
@@ -299,32 +300,6 @@ private fun BasicBlockControlFlowGraph.computeReachabilityFromOutsideLoops(
     return result.mapValues { it.value.toSet() }
 }
 
-/**
- * Compute injection locations for await paths
- * This should happen at the back edges of the source blocks on a path that can be considered an await path.
- * by back edge we mean the jump instruction that goes back to the loop header.
- *
- * Returns a map from non-phony instruction index to the loop id.
- */
-private fun BasicBlockControlFlowGraph.computeAwaitPathInjectionLocations(
-    insnIndexRemapping: IntArray,
-    awaitPathBackEdges: Map<LoopId, Set<BasicBlockIndex>>,
-): Map<InstructionIndex, List<LoopId>> {
-    if (awaitPathBackEdges.isEmpty()) return emptyMap()
-    val result = mutableMapOf<InstructionIndex, MutableSet<LoopId>>()
-    for ((loopId, sourceBlocks) in awaitPathBackEdges) {
-        for (block in sourceBlocks) {
-            // Inject at the last opcode of the source block
-            val idx = lastOpcodeIndexOf(block) ?: continue
-            val nonPhonyIndex = insnIndexRemapping[idx]
-            if (nonPhonyIndex >= 0) {
-                result.getOrPut(nonPhonyIndex) { mutableSetOf() }.add(loopId)
-            }
-        }
-    }
-    return result.mapValues { (_, loopIds) -> loopIds.sortedDescending() }
-}
-
 private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
     insnIndexRemapping: IntArray,
     loopInfo: MethodLoopsInformation,
@@ -341,7 +316,9 @@ private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
     return result
 }
 
-/**
+// ======== Await Loop Paths ========
+
+/*
  * An await path is a path from a loop header to a back edge source such that:
  *   - no shared writes (field/array writes), monitor operations, or side-effecting calls (except `Thread.onSpinWait`) are present on that path
  *   - at least one shared read (field/array read) is present on that path
@@ -384,41 +361,31 @@ private fun BasicBlockControlFlowGraph.computeLoopIdsByHeaderNonPhonyIndex(
  * ```
  */
 
-private const val ON_SPIN_WAIT_METHOD_NAME = "onSpinWait"
-private const val ON_SPIN_WAIT_METHOD_DESCRIPTOR = "()V"
-
-//TODO: Consider moving this whitelist to `ConditionSafetyChecker`
-private val ATOMIC_SIDE_EFFECT_FREE_GET_METHODS = setOf(
-    "java/util/concurrent/atomic/AtomicBoolean.get",
-    "java/util/concurrent/atomic/AtomicInteger.get",
-    "java/util/concurrent/atomic/AtomicLong.get",
-    "java/util/concurrent/atomic/AtomicReference.get",
-    "java/util/concurrent/atomic/AtomicLongArray.get",
-    "java/util/concurrent/atomic/AtomicReferenceArray.get",
-    "java/lang/invoke/VarHandle.get",
-    "java/lang/invoke/VarHandle.getVolatile",
-    "java/lang/invoke/VarHandle.getAcquire",
-    "java/lang/invoke/VarHandle.getOpaque",
-    "org/jctools/util/UnsafeLongArrayAccess.lvLongElement",
-    "org/jctools/util/UnsafeRefArrayAccess.lvRefElement",
-    "org/jctools/queues/LinkedQueueNode.lvNext",
-    "org/jctools/queues/atomic/LinkedQueueAtomicNode.lvNext",
-)
-
-
-private fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
-    insn.opcode == Opcodes.INVOKESTATIC &&
-    insn.owner == THREAD_TYPE.internalClassName &&
-    insn.name == ON_SPIN_WAIT_METHOD_NAME &&
-    insn.desc == ON_SPIN_WAIT_METHOD_DESCRIPTOR
-
-private fun isSideEffectGetMethod(insn: MethodInsnNode): Boolean =
-    "${insn.owner}.${insn.name}" in ATOMIC_SIDE_EFFECT_FREE_GET_METHODS
-
-private fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
-    isFunctionCallAwait(insn) ||
-    isSideEffectGetMethod(insn) ||
-    isSafeMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
+/**
+ * Compute injection locations for await paths
+ * This should happen at the back edges of the source blocks on a path that can be considered an await path.
+ * by back edge we mean the jump instruction that goes back to the loop header.
+ *
+ * Returns a map from a non-phony instruction index to the loop id.
+ */
+private fun BasicBlockControlFlowGraph.computeAwaitPathInjectionLocations(
+    insnIndexRemapping: IntArray,
+    awaitPathBackEdges: Map<LoopId, Set<BasicBlockIndex>>,
+): Map<InstructionIndex, List<LoopId>> {
+    if (awaitPathBackEdges.isEmpty()) return emptyMap()
+    val result = mutableMapOf<InstructionIndex, MutableSet<LoopId>>()
+    for ((loopId, sourceBlocks) in awaitPathBackEdges) {
+        for (block in sourceBlocks) {
+            // Inject at the last opcode of the source block
+            val idx = lastOpcodeIndexOf(block) ?: continue
+            val nonPhonyIndex = insnIndexRemapping[idx]
+            if (nonPhonyIndex >= 0) {
+                result.getOrPut(nonPhonyIndex) { mutableSetOf() }.add(loopId)
+            }
+        }
+    }
+    return result.mapValues { (_, loopIds) -> loopIds.sortedDescending() }
+}
 
 /**
  * Classification object result used for await path analysis.
@@ -655,3 +622,40 @@ private fun BasicBlockControlFlowGraph.headerGuard(
     }
     return false
 }
+
+// ======== Utils ========
+
+private fun isFunctionCallAwait(insn: MethodInsnNode): Boolean =
+    insn.opcode == Opcodes.INVOKESTATIC &&
+    insn.owner == THREAD_TYPE.internalClassName &&
+    insn.name == ON_SPIN_WAIT_METHOD_NAME &&
+    insn.desc == ON_SPIN_WAIT_METHOD_DESCRIPTOR
+
+private fun isSideEffectGetMethod(insn: MethodInsnNode): Boolean =
+    "${insn.owner}.${insn.name}" in ATOMIC_SIDE_EFFECT_FREE_GET_METHODS
+
+private fun isSideEffectFreeCall(insn: MethodInsnNode): Boolean =
+    isFunctionCallAwait(insn) ||
+    isSideEffectGetMethod(insn) ||
+    isSafeMethodCall(insn.owner, insn.name, insn.desc, insn.opcode)
+
+private const val ON_SPIN_WAIT_METHOD_NAME = "onSpinWait"
+private const val ON_SPIN_WAIT_METHOD_DESCRIPTOR = "()V"
+
+//TODO: Consider moving this whitelist to `SideEffectChecker`
+private val ATOMIC_SIDE_EFFECT_FREE_GET_METHODS = setOf(
+    "java/util/concurrent/atomic/AtomicBoolean.get",
+    "java/util/concurrent/atomic/AtomicInteger.get",
+    "java/util/concurrent/atomic/AtomicLong.get",
+    "java/util/concurrent/atomic/AtomicReference.get",
+    "java/util/concurrent/atomic/AtomicLongArray.get",
+    "java/util/concurrent/atomic/AtomicReferenceArray.get",
+    "java/lang/invoke/VarHandle.get",
+    "java/lang/invoke/VarHandle.getVolatile",
+    "java/lang/invoke/VarHandle.getAcquire",
+    "java/lang/invoke/VarHandle.getOpaque",
+    "org/jctools/util/UnsafeLongArrayAccess.lvLongElement",
+    "org/jctools/util/UnsafeRefArrayAccess.lvRefElement",
+    "org/jctools/queues/LinkedQueueNode.lvNext",
+    "org/jctools/queues/atomic/LinkedQueueAtomicNode.lvNext",
+)
