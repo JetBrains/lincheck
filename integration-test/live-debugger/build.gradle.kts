@@ -41,15 +41,15 @@ tasks {
 
     val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar")
 
-    val liveDebuggerSuite: String? by project
-    val integrationTestSuiteType = when (liveDebuggerSuite?.lowercase()) {
+    val integrationTestSuite: String? by project
+    val integrationTestSuiteType: LiveDebuggerIntegrationTestSuite? = when (integrationTestSuite?.lowercase()) {
         "ktor" -> LiveDebuggerIntegrationTestSuite.Ktor
         "kotlinximmutablecollections" -> LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections
         "kotlinximmutablecollectionsmultiplebreakpointsonsameline" ->
             LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollectionsMultipleBreakpointsOnSameLine
         "kotlincompiler" -> LiveDebuggerIntegrationTestSuite.KotlinCompiler
         "all", null -> LiveDebuggerIntegrationTestSuite.All
-        else -> error("Unknown live-debugger suite: $liveDebuggerSuite")
+        else -> null
     }
 
     register<Test>("liveDebuggerIntegrationTest") {
@@ -67,6 +67,13 @@ tasks {
                 include("**/*KotlinxImmutableCollectionsMultipleBreakpointsOnSameLineLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.All -> {}
+            // Unrecognized suite (e.g. a value meant for another integration-test module): run nothing.
+            null -> {
+                exclude("**/*")
+                doFirst {
+                    logger.warn("Unrecognized integration test suite '$integrationTestSuite'; running no live-debugger integration tests")
+                }
+            }
         }
 
         outputs.upToDateWhen { false } // Always run tests when called

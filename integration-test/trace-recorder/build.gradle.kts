@@ -37,15 +37,21 @@ tasks {
 
     val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
 
-    val traceRecorderSuite: String? by project
-    val integrationTestSuiteType = when (traceRecorderSuite?.lowercase()) {
+    val integrationTestSuite: String? by project
+    val integrationTestSuiteType: TraceAgentIntegrationTestSuite? = when (integrationTestSuite?.lowercase()) {
         "basic" -> TraceAgentIntegrationTestSuite.Basic
         "kotlincompiler" -> TraceAgentIntegrationTestSuite.KotlinCompiler
         "ktor" -> TraceAgentIntegrationTestSuite.Ktor
         "ij" -> TraceAgentIntegrationTestSuite.IJ
         "all", null -> TraceAgentIntegrationTestSuite.All
-        else -> error("Unknown trace-recorder suite: $traceRecorderSuite")
+        else -> null
     }
+
+    // Optional deterministic sharding, e.g. `-PintegrationTestShard=2/4`,
+    // used to parallelize the (large) suite across separate CI build configurations.
+    // Sharding is done here, by us, rather than via TeamCity's statistics-based "parallel tests" feature,
+    // which cannot split a suite whose tests are all JUnit `@Nested` classes with a uniform `test()` method.
+    val integrationTestShard: String? by project
 
     register<Test>("traceRecorderIntegrationTest") {
         useJUnitPlatform()
@@ -70,6 +76,40 @@ tasks {
                 "**/*KtorTraceRecorderJsonIntegrationTests*",
                 "**/*IJTraceRecorderJsonIntegrationTests*",
             )
+            // Unrecognized suite (e.g. a value meant for another integration-test module): run nothing.
+            null -> {
+                exclude("**/*")
+                doFirst {
+                    logger.warn("Unrecognized integration test suite '$integrationTestSuite'; running no trace-recorder integration tests")
+                }
+            }
+        }
+
+        // Assign each top-level generated test class to exactly one shard via a stable hash of its
+        // name. Because the mapping is total and deterministic, the shards form a disjoint, complete
+        // partition of the suite — every test runs in exactly one shard and none are silently dropped.
+        if (integrationTestShard != null) {
+            require(integrationTestSuiteType == TraceAgentIntegrationTestSuite.Ktor) {
+                "-PintegrationTestShard is only supported together with -PintegrationTestSuite=ktor"
+            }
+            val parts = integrationTestShard!!.split("/")
+            require(parts.size == 2) {
+                "Invalid -PintegrationTestShard '$integrationTestShard', expected '<index>/<total>' (1-based), e.g. '2/4'"
+            }
+            val shardIndex = parts[0].toInt() // 1-based
+            val totalShards = parts[1].toInt()
+            require(totalShards >= 1 && shardIndex in 1..totalShards) {
+                "Invalid -PintegrationTestShard '$integrationTestShard': index must be in 1..total"
+            }
+            logger.lifecycle("Running ktor integration tests shard $shardIndex of $totalShards")
+            exclude { element ->
+                val fileName = element.name
+                if (!fileName.endsWith(".class")) return@exclude false
+                // Group by the top-level class (drop any nested `$...` and the `.class` suffix) so a
+                // class and all of its `@Nested` children always land in the same shard.
+                val topLevelClass = fileName.removeSuffix(".class").substringBefore('$')
+                Math.floorMod(topLevelClass.hashCode(), totalShards) != shardIndex - 1
+            }
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
