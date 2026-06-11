@@ -239,6 +239,14 @@ class TracePointCloner(
             val cd = context.createAndRegisterClassDescriptor(className)
             TRCharSequence(cd, identityHashCode, content)
         }
+        is TRException -> {
+            val cd = context.createAndRegisterClassDescriptor(className)
+            TRException(cd, identityHashCode)
+        }
+        is TRExceptionSnapshot -> {
+            val cd = context.createAndRegisterClassDescriptor(className)
+            TRExceptionSnapshot(cd, identityHashCode, message, stackTrace)
+        }
         is TRJavaClass -> TRJavaClass(referencedClassName)
         is TRKotlinClass -> TRKotlinClass(referencedClassName)
         is TRUnfinishedMethodResult -> this

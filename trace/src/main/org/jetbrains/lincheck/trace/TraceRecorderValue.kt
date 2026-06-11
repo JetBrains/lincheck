@@ -35,7 +35,9 @@ import kotlin.reflect.KClass
  * │   ├── TRObjectSnapshot             generic object — class descriptor + identity hash code + captured fields
  * │   ├── TRArray                      generic array — class descriptor + identity hash code + size
  * │   ├── TRArraySnapshot              generic array — class descriptor + identity hash code + size + captured elements
- * │   └── TRCharSequence               CharSequence — identity hash code + textual snapshot
+ * │   ├── TRCharSequence               CharSequence — identity hash code + textual snapshot
+ * │   ├── TRException                  Throwable — class descriptor + identity hash code
+ * │   └── TRExceptionSnapshot          Throwable — class descriptor + identity hash code + detail message + stack trace frames
  * │
  * ├── TRClassReference                 references to a JVM class object, captured by name
  * │   ├── TRJavaClass                  java.lang.Class
@@ -131,6 +133,9 @@ fun TRValue(context: TraceContext, value: Any?): TRValue = when (value) {
     // strings and char sequences
     is String       -> TRString(value, truncate = true)
     is CharSequence -> TRCharSequence(context, value, truncate = true)
+
+    // exceptions
+    is Throwable -> TRException(context, value)
 
     // non-primitive numeric types
     is BigInteger -> TRBigInteger(value)
@@ -515,6 +520,83 @@ fun TRArraySnapshot(context: TraceContext, array: Any, size: Int, elements: List
     val classDescriptor = context.createAndRegisterClassDescriptor(array.javaClass.name)
     val elementsAsTRValues = elements.map { value -> TRValue(context, value) }
     return TRArraySnapshot(classDescriptor, System.identityHashCode(array), size, elementsAsTRValues)
+}
+
+
+// ======== TRException ========
+
+/**
+ * Represents a traced exception object, identified by its reference identity.
+ *
+ * @see TRReferenceLike
+ * @see TRExceptionSnapshot
+ */
+@ConsistentCopyVisibility
+data class TRException internal constructor(
+    override val classDescriptor: ClassDescriptor,
+    override val identityHashCode: Int,
+) : TRReferenceLike() {
+
+    override fun toString(): String =
+        className.adornedClassNameRepresentation() + "@" + identityHashCode
+}
+
+/**
+ * Creates a [TRException] capturing the class and identity of the given [throwable].
+ *
+ * If the [ClassDescriptor] of the given [throwable] is not already registered in the given
+ * trace [context], performs the registration.
+ *
+ * @param context The tracing context that provides access to metadata pools and class descriptors.
+ * @param throwable The [Throwable] to be captured.
+ * @return A [TRException] capturing the given [throwable].
+ */
+fun TRException(context: TraceContext, throwable: Throwable): TRException {
+    val classDescriptor = context.createAndRegisterClassDescriptor(throwable.javaClass.name)
+    return TRException(classDescriptor, System.identityHashCode(throwable))
+}
+
+
+// ======== TRExceptionSnapshot ========
+
+/**
+ * Represents a snapshot of a traced exception captured at runtime.
+ * Unlike [TRException] captures not only the class and identity hash code of the exception object itself,
+ * but also its message and its full stack trace.
+ * Stack trace elements are stored as plain `String`s.
+ */
+@ConsistentCopyVisibility
+data class TRExceptionSnapshot internal constructor(
+    override val classDescriptor: ClassDescriptor,
+    override val identityHashCode: Int,
+    val message: String?,
+    val stackTrace: List<String>,
+) : TRReferenceLike() {
+
+    override fun toString(): String =
+        className.adornedClassNameRepresentation() + "@" + identityHashCode +
+                (message?.let { "(\"" + it.escape() + "\")" } ?: "")
+}
+
+/**
+ * Creates a [TRExceptionSnapshot] capturing the class, identity, message,
+ * and full stack trace of the given [throwable].
+ *
+ * As a side-effect, calling [Throwable.getStackTrace] materialises the lazy native `backtrace` on first call;
+ * subsequent calls return the cached array.
+ * Should be invoked from an ignored section.
+ *
+ * @param context The tracing context that provides access to metadata pools and class descriptors.
+ * @param throwable The [Throwable] to be captured.
+ * @return A [TRExceptionSnapshot] capturing the given [throwable].
+ */
+fun TRExceptionSnapshot(context: TraceContext, throwable: Throwable): TRExceptionSnapshot {
+    val classDescriptor = context.createAndRegisterClassDescriptor(throwable.javaClass.name)
+    val message = runCatching { throwable.message }.getOrNull()
+    val stackTrace = runCatching {
+        throwable.stackTrace?.map { it.toString() } ?: emptyList()
+    }.getOrElse { emptyList() }
+    return TRExceptionSnapshot(classDescriptor, System.identityHashCode(throwable), message, stackTrace)
 }
 
 

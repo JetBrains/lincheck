@@ -756,6 +756,7 @@ class TraceCollectingEventTracker(
         value == null -> TRNull
 
         value is Enum<*> -> TRValue(context, value)
+        value is Throwable -> TRExceptionSnapshot(context, value)
 
         value::class.java.isArray -> {
             val arraySize = findArrayLength(value)

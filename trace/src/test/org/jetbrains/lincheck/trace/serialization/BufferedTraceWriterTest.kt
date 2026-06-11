@@ -1,23 +1,20 @@
-/*
- * Lincheck
- *
- * Copyright (C) 2019 - 2026 JetBrains s.r.o.
- *
- * This Source Code Form is subject to the terms of the
- * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
- * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
-
-package org.jetbrains.lincheck.trace.util
+package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.descriptors.AccessCodeLocation
 import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.TRContainerTracePoint
+import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
+import org.jetbrains.lincheck.trace.TRNull
+import org.jetbrains.lincheck.trace.TRPrimitive
+import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.TRWriteLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
+import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
 import org.jetbrains.lincheck.trace.printing.printRecorderTrace
-import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.util.Logger
 import org.junit.Test
 import java.io.DataInputStream
@@ -297,7 +294,11 @@ class BufferedTraceWriterTest {
         val methodType = Types.MethodType(Types.OBJECT_TYPE)
         val md = context.createAndRegisterMethodDescriptor(className, methodName, methodType)
         val codeLocationId = context.codeLocationsPool.register(
-            MethodCallCodeLocation(StackTraceElement(md.className, md.methodName, "Example.java", 10), accessPath = null, argumentNames = null)
+            MethodCallCodeLocation(
+                StackTraceElement(md.className, md.methodName, "Example.java", 10),
+                accessPath = null,
+                argumentNames = null
+            )
         )
         val tracepoint = TRMethodCallTracePoint(
             context,
@@ -321,7 +322,10 @@ class BufferedTraceWriterTest {
         val accessPath = AccessPath(listOf(LocalVariableAccessLocation(vd)))
 
         val codeLocationId = context.codeLocationsPool.register(
-            AccessCodeLocation(StackTraceElement("com.example.SomeClass", "someMethod", "Example.java", 20), accessPath = accessPath)
+            AccessCodeLocation(
+                StackTraceElement("com.example.SomeClass", "someMethod", "Example.java", 20),
+                accessPath = accessPath
+            )
         )
         return TRWriteLocalVariableTracePoint(
             context,
@@ -465,4 +469,3 @@ class BufferedTraceWriterTest {
         val accessPaths: MutableSet<Int> = mutableSetOf()
     )
 }
-

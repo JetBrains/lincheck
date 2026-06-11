@@ -42,6 +42,8 @@ import org.jetbrains.lincheck.trace.TRNull
 import org.jetbrains.lincheck.trace.TRString
 import org.jetbrains.lincheck.trace.TRBigDecimal
 import org.jetbrains.lincheck.trace.TRBigInteger
+import org.jetbrains.lincheck.trace.TRException
+import org.jetbrains.lincheck.trace.TRExceptionSnapshot
 import org.jetbrains.lincheck.trace.TRReadLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TRReadFieldTracePoint
 import org.jetbrains.lincheck.trace.TRSnapshotLineBreakpointTracePoint
@@ -803,6 +805,44 @@ class TraceBinarySerializationTest {
             TRCharSequence(sbCd, 0xCAFE, "builder contents"),
             TRCharSequence(sbCd, 0, ""),
             TRCharSequence(cbCd, 0xBEEF, "buffer text"),
+        )
+        for (value in cases) {
+            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        }
+    }
+
+    @Test
+    fun trValueException() {
+        val context = TraceContext()
+        val cd = context.createAndRegisterClassDescriptor("java.lang.IllegalStateException")
+        val cases: List<TRValue> = listOf(
+            // Plain TRException — the trace-recorder shape: class descriptor + identity only.
+            TRException(cd, 0),
+            TRException(cd, 0xCAFE),
+        )
+        for (value in cases) {
+            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        }
+    }
+
+    @Test
+    fun trValueExceptionSnapshot() {
+        val context = TraceContext()
+        val cd = context.createAndRegisterClassDescriptor("java.lang.IllegalStateException")
+        val cases: List<TRValue> = listOf(
+            // No message, no frames — minimum-shape snapshot.
+            TRExceptionSnapshot(cd, 0, message = null, stackTrace = emptyList()),
+            // Typical shape — message present, a couple of rendered frames.
+            TRExceptionSnapshot(
+                cd, 0xCAFE,
+                message = "boom",
+                stackTrace = listOf(
+                    "com.example.Foo.bar(Foo.java:42)",
+                    "com.example.Foo.main(Foo.java:7)",
+                ),
+            ),
+            // Empty-string message and one frame — exercises non-null empty path.
+            TRExceptionSnapshot(cd, 1234, message = "", stackTrace = listOf("com.example.Foo.tail(Foo.java:1)")),
         )
         for (value in cases) {
             assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })

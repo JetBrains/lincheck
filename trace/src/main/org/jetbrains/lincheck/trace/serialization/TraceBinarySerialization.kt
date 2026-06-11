@@ -26,7 +26,7 @@ import java.util.UUID
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 26
+internal const val TRACE_VERSION : Long = 27
 
 // Buffer for saving trace in one piece
 internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -487,6 +487,11 @@ internal enum class TRValueKind {
     // char sequence
     CHAR_SEQUENCE,
 
+    // exception (Throwable) — class descriptor + identity
+    EXCEPTION,
+    // exception snapshot (Throwable) — class descriptor + identity + message + rendered stack-trace frames
+    EXCEPTION_SNAPSHOT,
+
     // reflection class types
     JAVA_CLASS,
     KOTLIN_CLASS,
@@ -587,6 +592,23 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
             writeString(value.content)
         }
 
+        // exception
+        is TRException -> {
+            writeTRValueKind(TRValueKind.EXCEPTION)
+            writeInt(value.classDescriptor.id)
+            writeInt(value.identityHashCode)
+        }
+
+        // exception snapshot
+        is TRExceptionSnapshot -> {
+            writeTRValueKind(TRValueKind.EXCEPTION_SNAPSHOT)
+            writeInt(value.classDescriptor.id)
+            writeInt(value.identityHashCode)
+            writeNullableString(value.message)
+            writeInt(value.stackTrace.size)
+            value.stackTrace.forEach { writeString(it) }
+        }
+
         // reflection class types
         is TRJavaClass -> {
             writeTRValueKind(TRValueKind.JAVA_CLASS)
@@ -665,6 +687,23 @@ internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readT
         val hash = readInt()
         val content = readString()
         TRCharSequence(cd, hash, content)
+    }
+
+    // exception
+    TRValueKind.EXCEPTION -> {
+        val cd = context.classPool[readInt()]
+        val hash = readInt()
+        TRException(cd, hash)
+    }
+
+    // exception snapshot
+    TRValueKind.EXCEPTION_SNAPSHOT -> {
+        val cd = context.classPool[readInt()]
+        val hash = readInt()
+        val message = readNullableString()
+        val framesSize = readInt()
+        val stackTrace = buildList { repeat(framesSize) { add(readString()) } }
+        TRExceptionSnapshot(cd, hash, message, stackTrace)
     }
 
     // reflection class types
