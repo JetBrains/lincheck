@@ -51,6 +51,7 @@ class TransformationConfiguration(
 
     var trackLoops: Boolean = false,
     var trackIrreducibleLoops: Boolean = false,
+    var trackAwaitLoops: Boolean = false,
 
     var interceptIdentityHashCodes: Boolean = false,
 
@@ -458,6 +459,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             interceptCoroutineDelays = true
             trackLoops = true
             trackIrreducibleLoops = true
+            trackAwaitLoops = true
         }
     }
 }

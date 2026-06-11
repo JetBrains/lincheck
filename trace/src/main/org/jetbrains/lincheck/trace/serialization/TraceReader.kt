@@ -401,6 +401,8 @@ internal fun loadCodeLocation(
         nActiveLocalsNames == 0 -> null
         else -> List(nActiveLocalsNames) { input.readInt() }
     }
+    val nLoopIds = input.readInt()
+    val loopIds = List(nLoopIds) { input.readInt() }
 
     if (restore) {
         val stringPool = context.stringPool
@@ -420,6 +422,7 @@ internal fun loadCodeLocation(
             CodeLocationKind.LINE -> LineCodeLocation(stackTraceElement, activeLocals)
             CodeLocationKind.ACCESS -> AccessCodeLocation(stackTraceElement, accessPath, activeLocals)
             CodeLocationKind.METHOD_CALL -> MethodCallCodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
+            CodeLocationKind.LOOP -> LoopHeaderCodeLocation(stackTraceElement, loopIds, activeLocals)
         }
         context.codeLocationsPool.restore(id, codeLocation)
     }

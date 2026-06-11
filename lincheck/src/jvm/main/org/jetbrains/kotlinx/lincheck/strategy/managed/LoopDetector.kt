@@ -33,6 +33,7 @@ interface LoopDetector {
     fun beforeLoopEnter(threadId: Int, codeLocation: Int, loopId: Int)
     fun onLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Pair<Boolean, Decision>
     fun onIrreducibleLoopIteration(threadId: Int, codeLocation: Int, loopId: Int): Decision
+    fun onAwaitLoopPath(threadId: Int, codeLocation: Int, loopId: Int): Decision
     fun afterLoopExit(threadId: Int, codeLocation: Int, loopId: Int, isReachableFromOutsideLoop: Boolean): Int?
 
     // TODO: at the moment, method params are only passed, but not used
@@ -106,11 +107,14 @@ private data class LoopDetectorThreadState(
  *   exceeding this limit is treated as a livelock.
  * @param recursiveCallsBound the upper bound on recursive method call depth;
  *   exceeding this limit is treated as a livelock.
+ * @param awaitLoopsAnalysisEnabled whether await-loop handling is enabled;
+ *   when `false`, [onAwaitLoopPath] is a no-op and does not suggest a thread switch.
  */
 class BoundedLoopDetector(
     val iterationsBeforeThreadSwitch: Int,  // N limit for loop iterations before thread switch
     val iterationsBound: Int,               // M limit for loop iterations before stuck
     val recursiveCallsBound: Int,           // K limit for recursive calls before stuck
+    val awaitLoopsAnalysisEnabled: Boolean, // whether await-loop paths trigger a thread switch
 ) : LoopDetector {
     private val threadStates = mutableThreadMapOf<LoopDetectorThreadState>()
 
@@ -179,6 +183,11 @@ class BoundedLoopDetector(
             ?: ActiveLoopInfo(LoopKey(loopId, codeLocation)).also { frame.loops.addLast(it) }
 
         return computeLoopDecision(loop)
+    }
+
+    override fun onAwaitLoopPath(threadId: Int, codeLocation: Int, loopId: Int): LoopDetector.Decision {
+        if (!awaitLoopsAnalysisEnabled) return LoopDetector.Decision.IDLE
+        return LoopDetector.Decision.SWITCH_THREAD
     }
 
     override fun afterLoopExit(

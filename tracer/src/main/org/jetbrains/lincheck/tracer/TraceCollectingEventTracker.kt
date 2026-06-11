@@ -837,6 +837,10 @@ class TraceCollectingEventTracker(
         }
     }
 
+    override fun onAwaitLoopPath(descriptor: ThreadDescriptor?, codeLocation: Int, loopId: Int) {
+        Logger.error { "Trace Recorder mode doesn't support await loop path instrumentation" }
+    }
+
     override fun onThrow(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,

@@ -151,12 +151,6 @@ internal class LocalVariablesAccessTransformer(
         return methodInfo.locals.activeVariables.find { it.index == varIndex }
     }
 
-    private fun isLoadOpcode(opcode: Int) =
-        opcode == ILOAD || opcode == LLOAD || opcode == FLOAD || opcode == DLOAD || opcode == ALOAD
-
-    private fun isStoreOpcode(opcode: Int) =
-        opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
-
     private fun Type.getVarInsnOpcode() =
         getOpcode(ILOAD)
 

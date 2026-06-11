@@ -1,0 +1,129 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+// Await-path detection test cases that call `Thread.onSpinWait()`.
+//
+// `Thread.onSpinWait()` was introduced in JDK 9, so this file cannot be
+// compiled under JDK 8. The corresponding tests in `AwaitLoopDetectionTests`
+// are therefore muted on JDK 8. All other (JDK-8-compatible) cases live in
+// `AwaitLoopCases.java.txt`.
+//
+// `Thread.onSpinWait()` is explicitly allowed on an await path (it is a spin
+// hint with no observable side effects).
+
+public class AwaitLoopCasesOnSpinWait {
+
+    // Shared fields used in test cases
+    volatile boolean flag;
+    volatile int counter;
+    volatile int state;
+    java.util.concurrent.atomic.AtomicLongArray atomicLongArray =
+        new java.util.concurrent.atomic.AtomicLongArray(1);
+
+    // --- Loop with only reads and Thread.onSpinWait on spin path ---
+    // Thread.onSpinWait is explicitly allowed.
+    // Should be detected as an await path.
+    public void awaitLoopWithOnSpinWait() {
+        while (true) {
+            int s = state;
+            if (s != 0) {
+                return;
+            }
+            Thread.onSpinWait();
+        }
+    }
+
+    // --- A continue back-edge reached by both clean and dirty paths ---
+    // The continue source is reached after Thread.onSpinWait() or after j++.
+    // Should NOT be detected as an await path because not all paths to the continue are clean.
+    public void nonAwaitContinueBackEdgeWithDirtyPath() {
+        int i = 12;
+        int j = 0;
+        while (i + j > 10) {
+            if (i % 2 == 0) {
+                Thread.onSpinWait();
+            } else {
+                j++;
+            }
+            if (j % 2 == 0) {
+                continue;
+            }
+            i++;
+        }
+    }
+
+    // === Nested loop test cases ===
+
+    // --- Nested loops with await paths in both loops ---
+    public void nestedAwaitPaths() {
+        while (!flag) {
+            while (state == 0) {
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Nested loop with an inner-loop break ---
+    public void nestedLoopWithInnerBreak() {
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 1) {
+                    break;
+                }
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Nested loop with an inner-loop continue ---
+    public void nestedLoopWithInnerContinue() {
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 0) {
+                    continue;
+                }
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Nested loop with a continue from the inner loop to the outer loop ---
+    public void nestedLoopWithContinueOuter() {
+        outer:
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 0) {
+                    continue outer;
+                }
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Nested loop with a break from the inner loop out of the outer loop ---
+    public void nestedLoopWithBreakOuter() {
+        outer:
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 0) {
+                    break outer;
+                }
+                Thread.onSpinWait();
+            }
+        }
+    }
+
+    // --- Await path through a whitelisted atomic-array getter ---
+    public void awaitAtomicLongArrayGet() {
+        while (atomicLongArray.get(0) == 0) {
+            Thread.onSpinWait();
+        }
+    }
+}

@@ -36,6 +36,9 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     internal var stdLibAnalysisEnabled: Boolean =
         ManagedCTestConfiguration.DEFAULT_STDLIB_ANALYSIS_ENABLED
 
+    protected var awaitLoopsAnalysisEnabled: Boolean =
+        ManagedCTestConfiguration.DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED
+
     protected val guarantees: MutableList<ManagedStrategyGuarantee> =
         ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
@@ -66,6 +69,18 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      */
     fun recursionBound(recursionBound: Int): OPT = applyAndCast {
         this.recursionBound = recursionBound
+    }
+
+    /**
+     * Enables or disables await-loop analysis.
+     *
+     * Await loops are busy-wait (spin) loops whose body only reads shared memory until some
+     * condition changes (for example, spinning on a `volatile` flag).
+     * When enabled (default), Lincheck instruments such loops and suggests
+     * a thread switch once an await path is taken, which helps to resolve active locks more efficiently.
+     */
+    fun enableAwaitLoopsAnalysis(enabled: Boolean = true): OPT = applyAndCast {
+        this.awaitLoopsAnalysisEnabled = enabled
     }
 
     /**
@@ -127,6 +142,7 @@ abstract class ManagedCTestConfiguration(
     timeoutMs: Long,
     customScenarios: List<ExecutionScenario>,
     internal val stdLibAnalysisEnabled: Boolean,
+    internal val awaitLoopsAnalysisEnabled: Boolean,
 ) : CTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -151,6 +167,7 @@ abstract class ManagedCTestConfiguration(
             recursionBound = this.recursionBound,
             checkObstructionFreedom = this.checkObstructionFreedom,
             analyzeStdLib = this.stdLibAnalysisEnabled,
+            awaitLoopsAnalysisEnabled = this.awaitLoopsAnalysisEnabled,
             guarantees = this.guarantees.ifEmpty { null },
         )
 
@@ -172,6 +189,8 @@ abstract class ManagedCTestConfiguration(
         const val DEFAULT_LIVELOCK_EVENTS_THRESHOLD = 10001
 
         val DEFAULT_STDLIB_ANALYSIS_ENABLED = AnalysisProfile.DEFAULT.analyzeStdLib
+
+        const val DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED = true
 
         val DEFAULT_GUARANTEES = listOf<ManagedStrategyGuarantee>()
     }
