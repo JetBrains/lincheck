@@ -2,6 +2,12 @@
 [//]: # (description: Lincheck is a framework for testing concurrent code on the JVM. Lincheck explores the potential) 
 [//]: # (thread interleavings in your code to find the ones that lead to incorrect behavior.)
 
+THIS IS A TEST
+
+```kotlin
+```
+{ src="MinimizationTests.kt" include-symbol="MinimizationTest"}
+
 Lincheck is a framework for testing concurrent code on the JVM. When running tests, Lincheck explores the potential 
 thread interleavings of the program and reports the ones that lead to incorrect behavior.
 
