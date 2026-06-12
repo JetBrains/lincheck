@@ -324,21 +324,7 @@ internal class EventStructure(
 
         val blockedRequests = danglingRequests
             .filter {
-                // TODO: (it.label !is CoroutineSuspendLabel)
-                check(it.label.isRequest) // Dangling requests should probably be requests
-                if (!it.label.isBlocking) return@filter false
-                val nextEvent = execution[it.threadId, it.threadPosition + 1] ?: return@filter false
-                if (nextEvent.parent != it) return@filter false
-                // Maybe it would be nice to somehow keep track of conflicts as they are added in the event structure?
-                // We already compute the conflicting events when they are added.
-                // This way we do not have to compute them here every time
-                val conflicts = getConflictingEvents(
-                    it.threadId,
-                    nextEvent.label,
-                    it,
-                    it.dependencies
-                ).filter { it != nextEvent }
-                return@filter conflicts.isNotEmpty()
+                blockedEvents.values.any { blockedDesc -> blockedDesc.request == it && blockedDesc.response == null }
             }
 
         frontier.apply {
@@ -590,6 +576,23 @@ internal class EventStructure(
             // read-response cannot synchronize with anything
             label is ReadAccessLabel && label.isResponse ->
                 sequenceOf()
+
+            // Non-re-entrant lock-request synchronizes only with non-reentrant unlock event or allocation event that are not pinned
+            (label is LockLabel && !label.isReentry) -> {
+                //TODO: We can compute this incrementally
+                val banned = execution.mapNotNull {
+                    val nonReentryLockResponse = it.label.refine<LockLabel> { isResponse && !isReentry && mutexID == label.mutexID }
+                    if (nonReentryLockResponse == null) return@mapNotNull null
+                    if (!pinnedEvents.contains(it)) return@mapNotNull null
+                    it.syncFrom
+                }.toSet()
+
+                (
+                    sequenceOf(allocationEvent(label.mutexID)!!) +
+                    execution.filter { it.label.refine<UnlockLabel> { !isReentry && mutexID == label.mutexID } != null }
+                ).filter { it !in banned }
+
+            }
 
             // re-entry lock-request synchronizes only with initializing unlock
             (label is LockLabel && label.isReentry) ->
