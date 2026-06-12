@@ -831,7 +831,7 @@ private class EventStructureMonitorTracker(
             ?: return false
         val mutexID = (blockingRequest.label as MutexLabel).mutexID
         return !(eventStructure.isPendingUnblockedRequest(blockingRequest) &&
-                canAcquireMonitor(threadId, mutexID.toLong()))
+                canAcquireMonitor(threadId, mutexID))
     }
 
     override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
@@ -858,7 +858,7 @@ private class EventStructureMonitorTracker(
         // finally, check that the thread can acquire the lock back,
         // and try to complete the lock-request by lock-response
         check(lockRequest != null)
-        if (!canAcquireMonitor(threadId, mutexID.toLong()))
+        if (!canAcquireMonitor(threadId, mutexID))
             return true
         val lockResponse = tryCompleteWaitLockResponse(lockRequest)
         // exit waiting if the lock response was added successfully
