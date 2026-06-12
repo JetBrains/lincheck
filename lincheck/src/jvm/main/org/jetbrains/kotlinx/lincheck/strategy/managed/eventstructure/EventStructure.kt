@@ -579,19 +579,22 @@ internal class EventStructure(
 
             // Non-re-entrant lock-request synchronizes only with non-reentrant unlock event or allocation event that are not pinned
             (label is LockLabel && !label.isReentry) -> {
-                //TODO: We can compute this incrementally
-                val banned = execution.mapNotNull {
-                    val nonReentryLockResponse = it.label.refine<LockLabel> { isResponse && !isReentry && mutexID == label.mutexID }
-                    if (nonReentryLockResponse == null) return@mapNotNull null
+                // We can either sync with the allocation event of the mutex or with one of the unlock events
+                val unlockEventCandidates = sequenceOf(allocationEvent(label.mutexID)!!) +
+                        execution.filter { it.label.refine<UnlockLabel> { !isReentry && mutexID == label.mutexID } != null }
+
+                //But we cannot synch with unlock events that are already being read by a pinned lock response
+                val unlockEventsWithPinnedResponses = execution.mapNotNull {
+                    val nonReentryLockResponseLabel = it.label.refine<LockLabel> { isResponse && !isReentry && mutexID == label.mutexID }
+                    if (nonReentryLockResponseLabel == null) return@mapNotNull null
+                    // Make sure that the corresponding event is pinned
                     if (!pinnedEvents.contains(it)) return@mapNotNull null
+                    // Get the unlock event this response reads from
                     it.syncFrom
                 }.toSet()
 
-                (
-                    sequenceOf(allocationEvent(label.mutexID)!!) +
-                    execution.filter { it.label.refine<UnlockLabel> { !isReentry && mutexID == label.mutexID } != null }
-                ).filter { it !in banned }
-
+                // So we need to filter them out
+                unlockEventCandidates.filter { it !in unlockEventsWithPinnedResponses }
             }
 
             // re-entry lock-request synchronizes only with initializing unlock
@@ -818,7 +821,7 @@ internal class EventStructure(
 
     private fun addEvent(iThread: Int, label: EventLabel, dependencies: List<AtomicThreadEvent>): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
-            check(event.label == label)
+            check(event.label == label) { "Expected to replay event with label ${event} but got ${label}" }
             addEventToCurrentExecution(event)
             return event
         }
