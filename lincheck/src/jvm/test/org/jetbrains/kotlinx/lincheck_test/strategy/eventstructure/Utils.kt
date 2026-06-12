@@ -194,6 +194,8 @@ internal inline fun<reified Outcome> litmusTest(
         createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, block).use { strategy ->
             val failure = strategy.runIteration(INVOCATIONS, verifier)
             assert(failure == null) { failure.toString() }
+            // NOTE: Nice to see stats even if the test is passing, to see how many redudndant executions we are exploring
+            println("Stats: ${strategy.stats}")
             outcomeVerifier.verify(outcomes)
         }
     }
