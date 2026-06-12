@@ -6,7 +6,7 @@ THIS IS A TEST
 
 ```kotlin
 ```
-{ src="MinimizationTests.kt" include-symbol="MinimizationTest"}
+{ src="../../lincheck/src/jvm/test/org/jetbrains/kotlinx/lincheck_test/MinimizationTests.kt" include-symbol="MinimizationTest"}
 
 Lincheck is a framework for testing concurrent code on the JVM. When running tests, Lincheck explores the potential 
 thread interleavings of the program and reports the ones that lead to incorrect behavior.
