@@ -27,6 +27,7 @@ import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.Tracer
+import org.jetbrains.lincheck.tracer.TracingEntryPoint
 import org.jetbrains.lincheck.tracer.TracerAgent
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.Logger
@@ -65,29 +66,28 @@ internal object TraceRecorderAgent {
             TraceAgentParameters.validateMode()
 
             if (attachType == JavaAgentAttachType.STATIC) {
-                TraceAgentParameters.validateClassAndMethodArgumentsAreProvided()
+                TraceAgentParameters.validateClassAndMethodArgumentsAreBothProvidedOrBlank()
             }
         }
 
-        override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider
-            get() = ::TraceRecorderMethodTransformer
+        override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider?
+            get() = if (tracingEntryPoint is TracingEntryPoint.MethodCall) ::TraceRecorderMethodTransformer else null
 
         override fun createTracingServer(): TracingServer? {
             try {
                 val port = TraceAgentParameters.serverPort
                 val server = object : TracingWebSocketServer(InetSocketAddress(port)) {
                     override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
-                        val session = Tracer.startTracing(
+                        Tracer.launchTracingSession(
+                            TracingSession.StartMode.ExternalRequest,
                             TraceOutputMode.BinaryFileStream(traceDumpFilePath),
-                            TracingSession.StartMode.Dynamic,
+                            traceDumpFilePath,
+                            packTrace,
                         )
-                        session.installOnFinishHook {
-                            dumpTrace(traceDumpFilePath, packTrace)
-                        }
                     }
 
                     override fun startNetworkTracing() {
-                        Tracer.startTracing(TraceOutputMode.BinaryNetworkStream(this), TracingSession.StartMode.Dynamic)
+                        Tracer.startTracing(TraceOutputMode.BinaryNetworkStream(this), TracingSession.StartMode.ExternalRequest)
                     }
 
                     override fun stopTracing() {

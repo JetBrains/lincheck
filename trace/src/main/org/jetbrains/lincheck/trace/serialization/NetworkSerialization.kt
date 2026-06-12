@@ -242,8 +242,7 @@ class NetworkTracePointSender(
         // Send header on first write
         if (!headerSent) {
             byteStream.reset()
-            outputStream.writeLong(TRACE_MAGIC)
-            outputStream.writeLong(TRACE_VERSION)
+            outputStream.writeTraceHeader()
             outputStream.flush()
             callbacks.binaryTraceData(byteStream.toByteArray())
             headerSent = true
@@ -262,8 +261,7 @@ class NetworkTracePointSender(
 
         // Write thread name
         outputStream.writeKind(ObjectKind.THREAD_NAME)
-        outputStream.writeInt(tracePoint.threadId)
-        outputStream.writeUTF(tracePoint.threadName)
+        outputStream.writeThreadName(tracePoint.threadId, tracePoint.threadName)
 
         // Write trace point
         tracePoint.save(writer)
@@ -403,16 +401,7 @@ class NetworkTraceReader : Closeable {
 
         // First message should be the header
         if (!headerValidated) {
-            val magic = dataInput.readLong()
-            check(magic == TRACE_MAGIC) {
-                "Wrong WebSocket trace magic 0x${magic.toString(16)}, expected 0x${TRACE_MAGIC.toString(16)}"
-            }
-
-            val version = dataInput.readLong()
-            check(version == TRACE_VERSION) {
-                "Wrong WebSocket trace version $version, expected $TRACE_VERSION"
-            }
-
+            dataInput.checkTraceHeader()
             headerValidated = true
             Logger.info { "WebSocket trace header validated successfully" }
             return
@@ -424,7 +413,7 @@ class NetworkTraceReader : Closeable {
         // Process the binary message containing trace point data
         try {
             while (dataInput.available() > 0) {
-                val kind = readObjectKind(dataInput)
+                val kind = dataInput.readKind()
 
                 when (kind) {
                     ObjectKind.EOF -> {
@@ -475,7 +464,7 @@ class NetworkTraceReader : Closeable {
                     }
 
                     ObjectKind.TRACEPOINT -> {
-                        val tracePoint = loadTRTracePoint(context, dataInput)
+                        val tracePoint = dataInput.readTRTracePoint(context)
                         check(tracePoint is TRSnapshotLineBreakpointTracePoint) {
                             "WebSocket trace reader only supports TRSnapshotLineBreakpointTracePoint, got ${tracePoint::class.simpleName}"
                         }
@@ -512,11 +501,6 @@ class NetworkTraceReader : Closeable {
     }
 
     fun isFinished(): Boolean = state is State.Eof || state is State.Stopped
-
-    private fun readObjectKind(dataInput: DataInputStream): ObjectKind {
-        val ordinal = dataInput.readByte().toInt()
-        return ObjectKind.entries[ordinal]
-    }
 }
 
 private const val MESSAGE_BUFFER_SIZE = 128

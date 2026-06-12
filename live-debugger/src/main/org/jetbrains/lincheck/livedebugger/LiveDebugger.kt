@@ -13,16 +13,13 @@ package org.jetbrains.lincheck.livedebugger
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
+import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingNotificationListener
-import org.jetbrains.lincheck.tracer.Tracer
-import org.jetbrains.lincheck.tracer.TraceOutputMode
-import org.jetbrains.lincheck.tracer.TracingSession
-import org.jetbrains.lincheck.tracer.isFileMode
 import org.jetbrains.lincheck.util.Logger
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.util.UUID
@@ -31,8 +28,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 internal object LiveDebugger {
-
-    private val shutdownHookInstalled = AtomicBoolean(false)
 
     /**
      * Listener responsible for handling live debugging notifications.
@@ -46,43 +41,6 @@ internal object LiveDebugger {
      */
     private val notificationsExecutor = Executors.newSingleThreadExecutor { r ->
         Thread(r, "LiveDebugger-Notifications-Handler").also { it.isDaemon = true }
-    }
-
-    fun startRecording(mode: TraceOutputMode, traceDumpFilePath: String? = null, packTrace: Boolean = true) {
-        try {
-            val session = Tracer.startTracing(
-                outputMode = mode,
-                startMode = TracingSession.StartMode.Static,
-            )
-            Logger.info { "Live debugging has been started" }
-
-            if (mode.isFileMode && traceDumpFilePath != null) {
-                session.installOnFinishHook {
-                    dumpTrace(traceDumpFilePath, packTrace)
-                }
-            }
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot start live debugging" }
-            return
-        }
-        registerShutdownHook()
-    }
-
-    fun stopRecording() {
-        try {
-            Tracer.stopTracing()
-        } catch (t: Throwable) {
-            Logger.error(t) { "Cannot stop live debugging" }
-        }
-    }
-
-    private fun registerShutdownHook() {
-        if (!shutdownHookInstalled.compareAndSet(false, true)) return
-        try {
-            Runtime.getRuntime().addShutdownHook(Thread(::stopRecording))
-        } catch (e: Exception) {
-            Logger.error(e) { "Failed to register shutdown hook for live debugger" }
-        }
     }
 
     fun loadBreakpointsFromFile(breakpointsFilePath: String?) {
@@ -208,43 +166,54 @@ internal object LiveDebugger {
         }
     }
 
-    /** Guard ensuring the condition-unsafety callback is registered exactly once. */
-    private val conditionUnsafetyCallbackInstalled = AtomicBoolean(false)
+    /** Guard ensuring the breakpoint-expression-unsafety callback is registered exactly once. */
+    private val breakpointExpressionUnsafetyCallbackInstalled = AtomicBoolean(false)
 
     /**
-     * Registers the condition-unsafety callback on [BreakpointStorage], if not yet installed.
+     * Registers the breakpoint-expression-unsafety callback on [BreakpointStorage], if not yet installed.
      *
      * The callback is fired at class-transformation time when a breakpoint's condition
-     * is detected to have side effects.
+     * or watch expression is detected to have side effects.
      *
      * Must be called before any class transformation can occur so that no
-     * condition-unsafety event can fire before the callback is in place.
+     * unsafety event can fire before the callback is in place.
      */
-    fun ensureConditionUnsafetyCallbackInstalled() {
-        if (!conditionUnsafetyCallbackInstalled.compareAndSet(false, true)) return
+    fun ensureBreakpointExpressionUnsafetyCallbackInstalled() {
+        if (!breakpointExpressionUnsafetyCallbackInstalled.compareAndSet(false, true)) return
 
-        BreakpointStorage.setOnConditionUnsafetyDetected { id, userData, safetyViolation ->
-            onConditionUnsafetyDetected(id, userData as SnapshotBreakpoint, safetyViolation as SafetyViolation)
+        BreakpointStorage.setOnBreakpointExpressionUnsafetyDetected { id, userData, slot, safetyViolation ->
+            onBreakpointExpressionUnsafetyDetected(
+                id,
+                userData as SnapshotBreakpoint,
+                slot as BreakpointExpressionSlot,
+                safetyViolation as SafetyViolation,
+            )
         }
-        Logger.debug { "Condition unsafety callback installed" }
+        Logger.debug { "Breakpoint expression unsafety callback installed" }
     }
 
     /**
-     * Called when a breakpoint's condition is detected to be unsafe (has side effects).
-     * Sends a JMX notification, then removes the breakpoint, and retransforms the class.
+     * Called when a breakpoint's condition or watch expression is detected to be unsafe
+     * (has side effects). Sends a notification, then removes the breakpoint, and
+     * retransforms the class.
      */
-    private fun onConditionUnsafetyDetected(id: BreakpointId, breakpoint: SnapshotBreakpoint, safetyViolation: SafetyViolation) {
+    private fun onBreakpointExpressionUnsafetyDetected(
+        id: BreakpointId,
+        breakpoint: SnapshotBreakpoint,
+        slot: BreakpointExpressionSlot,
+        safetyViolation: SafetyViolation,
+    ) {
         val timestamp = System.currentTimeMillis()
         Logger.info {
             with (breakpoint) {
-                "Unsafe condition detected for breakpoint in $className at $fileName:$lineNumber"
+                "Unsafe $slot expression detected for breakpoint in $className at $fileName:$lineNumber"
             }
         }
 
         notificationsExecutor.submit {
             disableBreakpoint(id)
 
-            val notification = LiveDebuggerNotification.BreakpointConditionUnsafetyDetected(
+            val notification = LiveDebuggerNotification.BreakpointExpressionUnsafetyDetected(
                 timestamp = timestamp,
                 breakpointData = LiveDebuggerNotification.BreakpointData(
                     breakpointUuid = breakpoint.uuid,
@@ -252,6 +221,7 @@ internal object LiveDebugger {
                     fileName = breakpoint.fileName,
                     lineNumber = breakpoint.lineNumber,
                 ),
+                slot = slot,
                 safetyViolationMessage = safetyViolation.toString(),
             )
             notificationListener.get()?.invoke(notification)

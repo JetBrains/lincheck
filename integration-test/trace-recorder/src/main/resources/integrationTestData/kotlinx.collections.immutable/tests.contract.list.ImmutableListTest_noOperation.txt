@@ -14,14 +14,34 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+        super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+        rootShift = 0 at PersistentVectorBuilder.kt:17
+        builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+        ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        root = null at PersistentVectorBuilder.kt:22
+        tail = Object;@1 at PersistentVectorBuilder.kt:30
+        vector.size(): 0 at PersistentVectorBuilder.kt:38
+        size = 0 at PersistentVectorBuilder.kt:38
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       testNoOperation.clear() at ImmutableListTest.kt:197
         size(): 0 at PersistentVectorBuilder.kt:987
         ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 0) at PersistentVectorBuilder.kt:987
         new PersistentVectorMutableIterator(, index ➜ 0): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
-          builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
-          root = null at PersistentVectorMutableIterator.kt:82
-          trieIterator = null at PersistentVectorMutableIterator.kt:84
+          builder.size(): 0 at PersistentVectorMutableIterator.kt:18
+          super@AbstractListIterator(index ➜ 0, 0): PersistentVectorMutableIterator@1 at PersistentVectorMutableIterator.kt:18
+            super@Object(): PersistentVectorMutableIterator@1 at AbstractListIterator.kt:8
+            index = 0 at AbstractListIterator.kt:8
+            size = 0 at AbstractListIterator.kt:8
+          builder = PersistentVectorBuilder@1 at PersistentVectorMutableIterator.kt:16
+          builder.getModCount$kotlinx_collections_immutable(): 0 at PersistentVectorMutableIterator.kt:24
+          expectedModCount = 0 at PersistentVectorMutableIterator.kt:24
+          lastIteratedIndex = -1 at PersistentVectorMutableIterator.kt:35
+          setupTrieIterator() at PersistentVectorMutableIterator.kt:38
+            builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+            root = null at PersistentVectorMutableIterator.kt:82
+            trieIterator = null at PersistentVectorMutableIterator.kt:84
     PersistentVectorBuilder@1.build(): SmallPersistentVector@1 at extensions.kt:41
     buildResult = SmallPersistentVector@1 at ImmutableListTest.kt:212
     assertTrue(true, null, 2, null) at ImmutableListTest.kt:214
@@ -34,6 +54,16 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
     mutate = SmallPersistentVector@1 at extensions.kt:623
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+        super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+        rootShift = 0 at PersistentVectorBuilder.kt:17
+        builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+        ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        root = null at PersistentVectorBuilder.kt:22
+        tail = Object;@1 at PersistentVectorBuilder.kt:30
+        vector.size(): 0 at PersistentVectorBuilder.kt:38
+        size = 0 at PersistentVectorBuilder.kt:38
     it = PersistentVectorBuilder@1 at extensions.kt:41
     toCollection(toPersistentList ➜ "abcxaxyz12", it): PersistentVectorBuilder@1 at extensions.kt:623
       modCount = 1 at PersistentVectorBuilder.kt:118
@@ -168,10 +198,15 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
       root = null at PersistentVectorBuilder.kt:45
       tail = Object;@1 at PersistentVectorBuilder.kt:46
       new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+        super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
       build$lambda$0.ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
       build$lambda$0.size(): 10 at PersistentVectorBuilder.kt:52
       Arrays.copyOf(tail, 10): Object;@1 at PersistentVectorBuilder.kt:52
       new SmallPersistentVector(Object;@1): SmallPersistentVector@1 at PersistentVectorBuilder.kt:52
+        super@AbstractPersistentList(): SmallPersistentVector@1 at SmallPersistentVector.kt:15
+          super@AbstractList(): SmallPersistentVector@1 at AbstractPersistentList.kt:13
+        buffer = Object;@1 at SmallPersistentVector.kt:15
+        assert(true) at SmallPersistentVector.kt:18
       newlyBuiltVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:48
       build$lambda$0.builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:57
   list = SmallPersistentVector@1 at ImmutableListTest.kt:199
@@ -186,6 +221,16 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+        super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+        rootShift = 0 at PersistentVectorBuilder.kt:17
+        builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+        ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        root = null at PersistentVectorBuilder.kt:22
+        tail = Object;@1 at PersistentVectorBuilder.kt:30
+        vector.size(): 10 at PersistentVectorBuilder.kt:38
+        size = 10 at PersistentVectorBuilder.kt:38
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       testNoOperation.remove('d'): false at ImmutableListTest.kt:201
         listIterator(): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:979
@@ -193,9 +238,19 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
             size(): 10 at PersistentVectorBuilder.kt:987
             ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at PersistentVectorBuilder.kt:987
             new PersistentVectorMutableIterator(, index ➜ 0): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
-              builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
-              root = null at PersistentVectorMutableIterator.kt:82
-              trieIterator = null at PersistentVectorMutableIterator.kt:84
+              builder.size(): 10 at PersistentVectorMutableIterator.kt:18
+              super@AbstractListIterator(index ➜ 0, 10): PersistentVectorMutableIterator@1 at PersistentVectorMutableIterator.kt:18
+                super@Object(): PersistentVectorMutableIterator@1 at AbstractListIterator.kt:8
+                index = 0 at AbstractListIterator.kt:8
+                size = 10 at AbstractListIterator.kt:8
+              builder = PersistentVectorBuilder@1 at PersistentVectorMutableIterator.kt:16
+              builder.getModCount$kotlinx_collections_immutable(): 0 at PersistentVectorMutableIterator.kt:24
+              expectedModCount = 0 at PersistentVectorMutableIterator.kt:24
+              lastIteratedIndex = -1 at PersistentVectorMutableIterator.kt:35
+              setupTrieIterator() at PersistentVectorMutableIterator.kt:38
+                builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+                root = null at PersistentVectorMutableIterator.kt:82
+                trieIterator = null at PersistentVectorMutableIterator.kt:84
         checkForComodification() at PersistentVectorMutableIterator.kt:58
           builder.getModCount$kotlinx_collections_immutable(): 0 at PersistentVectorMutableIterator.kt:126
         checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
@@ -369,6 +424,16 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+        super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+        rootShift = 0 at PersistentVectorBuilder.kt:17
+        builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+        ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        root = null at PersistentVectorBuilder.kt:22
+        tail = Object;@1 at PersistentVectorBuilder.kt:30
+        vector.size(): 10 at PersistentVectorBuilder.kt:38
+        size = 10 at PersistentVectorBuilder.kt:38
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       Character;@1[0] = 'd' at ImmutableListTest.kt:202
       Character;@1[1] = 'e' at ImmutableListTest.kt:202
@@ -382,6 +447,8 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
               tailSize(10): 10 at PersistentVectorBuilder.kt:77
             tailSize = 10 at PersistentVectorBuilder.kt:699
             new ObjectRef(null): ObjectRef@1 at PersistentVectorBuilder.kt:700
+              super@Object(): ObjectRef@1 at Utils.kt:15
+              value = null at Utils.kt:15
             bufferRef = ObjectRef@1 at PersistentVectorBuilder.kt:700
             removeAllFromTail(predicate, tailSize ➜ 10, bufferRef): 10 at PersistentVectorBuilder.kt:703
               removeAll(predicate, tail, tailSize ➜ 10, bufferRef): 10 at PersistentVectorBuilder.kt:820
@@ -514,6 +581,16 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+        super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+        rootShift = 0 at PersistentVectorBuilder.kt:17
+        builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+        ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        root = null at PersistentVectorBuilder.kt:22
+        tail = Object;@1 at PersistentVectorBuilder.kt:30
+        vector.size(): 10 at PersistentVectorBuilder.kt:38
+        size = 10 at PersistentVectorBuilder.kt:38
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       removeAll(testNoOperation, ImmutableListTest$$Lambda@1): false at ImmutableListTest.kt:203
         listIterator(): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:979
@@ -521,9 +598,19 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
             size(): 10 at PersistentVectorBuilder.kt:987
             ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 10) at PersistentVectorBuilder.kt:987
             new PersistentVectorMutableIterator(, index ➜ 0): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
-              builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
-              root = null at PersistentVectorMutableIterator.kt:82
-              trieIterator = null at PersistentVectorMutableIterator.kt:84
+              builder.size(): 10 at PersistentVectorMutableIterator.kt:18
+              super@AbstractListIterator(index ➜ 0, 10): PersistentVectorMutableIterator@1 at PersistentVectorMutableIterator.kt:18
+                super@Object(): PersistentVectorMutableIterator@1 at AbstractListIterator.kt:8
+                index = 0 at AbstractListIterator.kt:8
+                size = 10 at AbstractListIterator.kt:8
+              builder = PersistentVectorBuilder@1 at PersistentVectorMutableIterator.kt:16
+              builder.getModCount$kotlinx_collections_immutable(): 0 at PersistentVectorMutableIterator.kt:24
+              expectedModCount = 0 at PersistentVectorMutableIterator.kt:24
+              lastIteratedIndex = -1 at PersistentVectorMutableIterator.kt:35
+              setupTrieIterator() at PersistentVectorMutableIterator.kt:38
+                builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+                root = null at PersistentVectorMutableIterator.kt:82
+                trieIterator = null at PersistentVectorMutableIterator.kt:84
         checkForComodification() at PersistentVectorMutableIterator.kt:58
           builder.getModCount$kotlinx_collections_immutable(): 0 at PersistentVectorMutableIterator.kt:126
         checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
@@ -647,6 +734,16 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+        super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+        rootShift = 0 at PersistentVectorBuilder.kt:17
+        builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+        ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        root = null at PersistentVectorBuilder.kt:22
+        tail = Object;@1 at PersistentVectorBuilder.kt:30
+        vector.size(): 10 at PersistentVectorBuilder.kt:38
+        size = 10 at PersistentVectorBuilder.kt:38
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       emptyList(): EmptyList@1 at ImmutableListTest.kt:204
       testNoOperation.removeAll(EmptyList@1): false at ImmutableListTest.kt:204
@@ -664,6 +761,16 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+        super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+        rootShift = 0 at PersistentVectorBuilder.kt:17
+        builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+        ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        root = null at PersistentVectorBuilder.kt:22
+        tail = Object;@1 at PersistentVectorBuilder.kt:30
+        vector.size(): 10 at PersistentVectorBuilder.kt:38
+        size = 10 at PersistentVectorBuilder.kt:38
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       emptyList(): EmptyList@1 at ImmutableListTest.kt:205
       testNoOperation.addAll(EmptyList@1): false at ImmutableListTest.kt:205
@@ -683,6 +790,16 @@ ImmutableListTest.noOperation() at ImmutableListTest.kt:197
     mutate = SmallPersistentVector@1 at ImmutableListTest.kt:212
     mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
       new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+        super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+        rootShift = 0 at PersistentVectorBuilder.kt:17
+        builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+        new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+        ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        root = null at PersistentVectorBuilder.kt:22
+        tail = Object;@1 at PersistentVectorBuilder.kt:30
+        vector.size(): 10 at PersistentVectorBuilder.kt:38
+        size = 10 at PersistentVectorBuilder.kt:38
     mutating.invoke(PersistentVectorBuilder@1): Unit at extensions.kt:41
       emptyList(): EmptyList@1 at ImmutableListTest.kt:206
       testNoOperation.addAll(2, EmptyList@1): false at ImmutableListTest.kt:206

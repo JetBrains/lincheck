@@ -272,15 +272,7 @@ class LazyTraceReader private constructor(
         index.use { index ->
             try {
                 // Check format
-                val magic = index.readLong()
-                check(magic == INDEX_MAGIC) {
-                    "Wrong index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}"
-                }
-
-                val version = index.readLong()
-                check(version == TRACE_VERSION) {
-                    "Wrong index version $version, expected $TRACE_VERSION"
-                }
+                index.checkTraceIndexHeader()
 
                 var objNum = 0
                 var tps = 0
@@ -333,7 +325,7 @@ class LazyTraceReader private constructor(
                 callTracepointChildren.finishIndex()
                 val magicEnd = index.readLong()
                 if (magicEnd != INDEX_MAGIC) {
-                    error("Wrong final index magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}")
+                    error("Wrong final index magic 0x${magicEnd.toString(16)}, expected 0x${INDEX_MAGIC.toString(16)}")
                 }
             } catch (t: IOException) {
                 Logger.error(t) { "TraceRecorder: Error reading index for $traceFileName: ${t.message}" }
@@ -388,7 +380,7 @@ class LazyTraceReader private constructor(
 
     private fun readTracePointShallow(): TRTracePoint {
         // Load tracepoint itself
-        val tracePoint = loadTRTracePoint(context, data)
+        val tracePoint = data.readTRTracePoint(context)
         if (tracePoint !is TRContainerTracePoint) {
             return tracePoint
         }
@@ -416,7 +408,7 @@ class LazyTraceReader private constructor(
 
     private fun readTracePointWithChildAddresses(): TRTracePoint {
         // Load tracepoint itself
-        val tracePoint = loadTRTracePoint(context, data)
+        val tracePoint = data.readTRTracePoint(context)
         if (tracePoint !is TRContainerTracePoint) {
             return tracePoint
         }

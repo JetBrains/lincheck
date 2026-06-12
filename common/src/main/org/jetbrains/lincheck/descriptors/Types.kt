@@ -127,6 +127,16 @@ object Types {
 
     val OBJECT_TYPE: ObjectType = ObjectType(Object::class.java.name)
 
+    val INT_ARRAY_TYPE: ArrayType = ArrayType(INT_TYPE)
+    val LONG_ARRAY_TYPE: ArrayType = ArrayType(LONG_TYPE)
+    val DOUBLE_ARRAY_TYPE: ArrayType = ArrayType(DOUBLE_TYPE)
+    val FLOAT_ARRAY_TYPE: ArrayType = ArrayType(FLOAT_TYPE)
+    val BOOLEAN_ARRAY_TYPE: ArrayType = ArrayType(BOOLEAN_TYPE)
+    val BYTE_ARRAY_TYPE: ArrayType = ArrayType(BYTE_TYPE)
+    val SHORT_ARRAY_TYPE: ArrayType = ArrayType(SHORT_TYPE)
+    val CHAR_ARRAY_TYPE: ArrayType = ArrayType(CHAR_TYPE)
+    val OBJECT_ARRAY_TYPE: ArrayType = ArrayType(OBJECT_TYPE)
+
     sealed class Type
 
     class ObjectType(val className: String) : Type() {
@@ -217,22 +227,20 @@ object Types {
         }
     }
 
-    class MethodType(val argumentTypes: MutableList<Type>, val returnType: Type) {
+    class MethodType(val argumentTypes: List<Type>, val returnType: Type) {
         constructor(returnType: Type, vararg argumentTypes: Type) : this(
-            mutableListOf<Type>(*argumentTypes),
+            listOf(*argumentTypes),
             returnType
         )
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is MethodType) return false
-
-            return (returnType == other.returnType &&
-                    argumentTypes == other.argumentTypes)
+            return returnType == other.returnType && argumentTypes == other.argumentTypes
         }
 
         override fun hashCode(): Int {
-            return Objects.hash(returnType, argumentTypes)
+            return 31 * returnType.hashCode() + argumentTypes.hashCode()
         }
 
         override fun toString(): String {
@@ -308,6 +316,15 @@ fun KClass<*>.getArrayElementType(): Type = when {
     this == DoubleArray::class  -> DOUBLE_TYPE
     this == CharArray::class    -> CHAR_TYPE
     this == BooleanArray::class -> BOOLEAN_TYPE
+    this.java.componentType == Int::class.javaObjectType     -> INT_TYPE_BOXED
+    this.java.componentType == Long::class.javaObjectType    -> LONG_TYPE_BOXED
+    this.java.componentType == Double::class.javaObjectType  -> DOUBLE_TYPE_BOXED
+    this.java.componentType == Float::class.javaObjectType   -> FLOAT_TYPE_BOXED
+    this.java.componentType == Boolean::class.javaObjectType -> BOOLEAN_TYPE_BOXED
+    this.java.componentType == Byte::class.javaObjectType    -> BYTE_TYPE_BOXED
+    this.java.componentType == Short::class.javaObjectType   -> SHORT_TYPE_BOXED
+    this.java.componentType == Char::class.javaObjectType    -> CHAR_TYPE_BOXED
+
     this.java.isArray           -> OBJECT_TYPE // We cannot
     // TODO: should we handle atomic arrays?
     else                -> throw IllegalArgumentException("Argument is not array")

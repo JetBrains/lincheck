@@ -123,9 +123,14 @@ internal class LocalVariablesAccessTransformer(
             Types.convertAsmTypeName(variableInfo.type)
         ).id
         push(variableId)
-        // VerifyError with `loadLocal(..)`, here is a workaround
-        visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
-        box(variableInfo.type)
+        // uninitializedThis cannot be assigned to java/lang/Object — push sentinel instead.
+        if (typeAnalyzer?.locals?.getOrNull(variableInfo.index) == UNINITIALIZED_THIS) {
+            pushUninitializedThisSubstitute()
+        } else {
+            // VerifyError with `loadLocal(..)`, here is a workaround
+            visitVarInsn(variableInfo.type.getVarInsnOpcode(), variableInfo.index)
+            box(variableInfo.type)
+        }
         // STACK: descriptor, codeLocation, variableId, boxedValue
         when (accessType) {
             AccessType.READ -> {
@@ -145,12 +150,6 @@ internal class LocalVariablesAccessTransformer(
     private fun getVariableInfo(varIndex: Int): LocalVariableInfo? {
         return methodInfo.locals.activeVariables.find { it.index == varIndex }
     }
-
-    private fun isLoadOpcode(opcode: Int) =
-        opcode == ILOAD || opcode == LLOAD || opcode == FLOAD || opcode == DLOAD || opcode == ALOAD
-
-    private fun isStoreOpcode(opcode: Int) =
-        opcode == ISTORE || opcode == LSTORE || opcode == FSTORE || opcode == DSTORE || opcode == ASTORE
 
     private fun Type.getVarInsnOpcode() =
         getOpcode(ILOAD)

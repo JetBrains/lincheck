@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.trace.network
 
+import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
+
 /**
  * Notifications sent by the live debugger to the connected client.
  */
@@ -45,9 +47,12 @@ open class LiveDebuggerNotification(timestamp: Long) : TracingNotification(times
         }
     }
 
-    /** Notification that a breakpoint condition was detected as unsafe. */
-    data class BreakpointConditionUnsafetyDetected(
+    /**
+     * Notification that a breakpoint expression — a condition or a watch ([slot]) — was detected as unsafe.
+     */
+    data class BreakpointExpressionUnsafetyDetected(
         val breakpointData: BreakpointData,
+        val slot: BreakpointExpressionSlot,
         val safetyViolationMessage: String,
         override val timestamp: Long = System.currentTimeMillis(),
     ) : LiveDebuggerNotification(timestamp)

@@ -86,6 +86,30 @@ class MethodCallCodeLocation(
 }
 
 /**
+ * Code location used for loop header tracepoints.
+ */
+class LoopHeaderCodeLocation(
+    stackTraceElement: StackTraceElement,
+    val loopIds: List<Int>,
+    activeLocals: List<ActiveLocal>? = null
+) : CodeLocation(stackTraceElement, activeLocals) {
+    override fun hashCode(): Int {
+        var result = stackTraceElement.hashCode()
+        result = 31 * result + loopIds.hashCode()
+        result = 31 * result + (activeLocals?.hashCode() ?: 0)
+        return result
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is LoopHeaderCodeLocation) return false
+        return stackTraceElement == other.stackTraceElement &&
+                loopIds           == other.loopIds           &&
+                activeLocals      == other.activeLocals
+    }
+}
+
+/**
  * Code location used in any other type of tracepoints which do not
  * require any special information to be stored in their code location.
  */

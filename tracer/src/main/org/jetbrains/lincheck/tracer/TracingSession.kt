@@ -35,22 +35,22 @@ class TracingSession(
     }
 
     /**
-     * This class hierarchy denotes various modes of trace recorder session.
+     * This class hierarchy denotes various modes of tracing session.
      *
-     * - [FromMethod] means that the tracing was started from a specific method.
-     * - [Static] means that the tracing was started from the application startup.
-     * - [Dynamic] means that the tracing was started dynamically by external request during application run.
+     * - [MethodCall] means that the tracing was started from a specific method.
+     * - [ApplicationStart] means that the tracing was started from the application startup.
+     * - [ExternalRequest] means that the tracing was started dynamically by external request during application run.
      */
     sealed class StartMode {
-        data class FromMethod(
+        data class MethodCall(
             val thread: Thread,
             val className: String,
             val methodName: String,
             val startingCodeLocationId: Int,
         ) : StartMode()
 
-        object Static : StartMode()
-        object Dynamic : StartMode()
+        data object ApplicationStart : StartMode()
+        data object ExternalRequest : StartMode()
     }
 
     @Volatile
@@ -133,7 +133,7 @@ class TracingSession(
         var className: String? = null
         var methodName: String? = null
         when (val mode = startMode) {
-            is StartMode.FromMethod -> {
+            is StartMode.MethodCall -> {
                 className = mode.className
                 methodName = mode.methodName
             }
@@ -178,7 +178,7 @@ class TracingSession(
             }
             Logger.info { "Trace was saved to $traceDumpFilePath" }
         } catch (t: Throwable) {
-            Logger.error { "TraceRecorder: Cannot write output file $traceDumpFilePath: ${t.message} at ${t.stackTraceToString()}" }
+            Logger.error { "Cannot dump trace output file $traceDumpFilePath: ${t.message} at ${t.stackTraceToString()}" }
             return
         } finally {
             if (mode != TraceOutputMode.Null) {

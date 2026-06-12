@@ -1,0 +1,29 @@
+=== Loop Information ===
+LOOP 1
+  HEADER: B0
+  BODY: B0, B1, B2, B3, B4
+  BACK EDGES:
+    B2 -> B0 : JUMP(opcode=IFNE)
+    B4 -> B0 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B0 -> B5 : JUMP(opcode=IFNE)
+  EXCEPTION EXIT HANDLERS:
+    NONE
+  EXCLUSIVE EXITS:
+    B5
+LOOP 2
+  HEADER: B2
+  BODY: B2, B3
+  BACK EDGES:
+    B3 -> B2 : JUMP(opcode=IFNE)
+  NORMAL EXITS:
+    B2 -> B0 : JUMP(opcode=IFNE)
+    B3 -> B4
+  EXCEPTION EXIT HANDLERS:
+    NONE
+  EXCLUSIVE EXITS:
+    B4
+
+
+=== Await Path Detection ===
+No await paths detected.

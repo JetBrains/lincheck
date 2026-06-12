@@ -1,0 +1,289 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+// Test cases for await-path detection in control-flow graph analysis.
+// An await path is a path from a loop header to a back-edge source that:
+//   - contains at least one shared read (field/array read)
+//   - contains NO shared writes, monitor operations, or side-effecting calls
+//     (except Thread.onSpinWait)
+//
+// NOTE: cases that call `Thread.onSpinWait()` live in a separate file
+// `AwaitLoopCasesOnSpinWait.java.txt`, because that method is only available
+// since JDK 9 and the corresponding tests are muted on JDK 8.
+
+public class AwaitLoopCases {
+
+    // Shared fields used in test cases
+    volatile boolean flag;
+    volatile int counter;
+    int[] array = new int[10];
+
+    // --- Pure await path (only field reads) ---
+    // Should be detected as an await path.
+    public void awaitFieldRead() {
+        while (!flag) {
+            // busy-wait: only reads a volatile field
+        }
+    }
+
+    // --- No await path because of a field write ---
+    // Should NOT be detected as an await path.
+    public void nonAwaitFieldWrite() {
+        while (!flag) {
+            counter = 42;
+        }
+    }
+
+    // --- No await path because of a method call ---
+    // Should NOT be detected as an await path (method call is a side-effect).
+    public void nonAwaitWithMethodCall() {
+        while (!flag) {
+            doSomething();
+        }
+    }
+
+    private void doSomething() {
+        counter++;
+    }
+
+    // --- No await path because of monitor enter ---
+    // Should NOT be detected as an await path.
+    public void nonAwaitWithMonitor() {
+        while (!flag) {
+            synchronized (this) {
+                counter++;
+            }
+        }
+    }
+
+    // --- Array read with loop-header local update ---
+    // Should NOT be detected as an await path: the path writes to `sum`, which is used in the loop header.
+    public int awaitArrayRead() {
+        int sum = 0;
+        while (sum < 100) {
+            sum = array[0];
+        }
+        return sum;
+    }
+
+    // --- Array read from a different element on each iteration ---
+    // Should NOT be detected as an await path: the path writes to `sum`, which is used in the loop header.
+    public int awaitArrayReadChangingIndex() {
+        int sum = 0;
+        int i = 0;
+        while (sum < 100) {
+            sum = array[i++];
+        }
+        return sum;
+    }
+
+    // --- No await path because of array write ---
+    // Should NOT be detected as an await path.
+    public void nonAwaitArrayWrite() {
+        while (!flag) {
+            array[0] = 1;
+        }
+    }
+
+    // --- No loops at all (straight-line code) ---
+    // No loops, so no await paths either.
+    public int noLoop() {
+        return counter + 1;
+    }
+
+    // --- Multiple loops, one await and one not ---
+    // First loop has an await path (only reads), second does not (has a write).
+    public void mixedLoops() {
+        while (!flag) {
+            // await: only reads
+            int x = counter;
+        }
+        while (!flag) {
+            counter = 0; // write => not await
+        }
+    }
+
+    // --- Await path with both field and array reads ---
+    // Should be detected as an await path.
+    public void awaitMixedReads() {
+        while (!flag) {
+            int x = counter;
+            int y = array[0];
+        }
+    }
+
+    // --- No await path because of reads and writes (counter++) ---
+    // This loop reads and writes, so it's not await.
+    public void nonAwaitReadAndWrite() {
+        while (counter < 10) {
+            counter++;
+        }
+    }
+
+    // === Path-sensitive test cases ===
+    // These test loops where SOME paths through the loop body are read-only
+    // (spin-retry paths) while other paths have writes or calls.
+    // The new algorithm should detect the read-only back-edge path.
+
+    // --- Loop with CAS on one path, read-only spin on another ---
+    // Simulates: check element, if null -> spin (return@loop), else CAS + return
+    // Should be detected as an await path (the null-check spin path is read-only).
+    volatile int head;
+    volatile int tail;
+    volatile int state;
+    java.util.concurrent.atomic.AtomicInteger atomicState = new java.util.concurrent.atomic.AtomicInteger();
+
+    public int awaitLoopWithCasOnAlternatePath() {
+        while (true) {
+            int element = array[head];
+            if (element == 0) {
+                // spin-retry: read-only path back to loop header
+                continue;
+            }
+            // non-spinning path: CAS + write (side effects)
+            if (atomicState.compareAndSet(0, 1)) {
+                array[head] = 0;
+                return element;
+            }
+        }
+    }
+
+    // --- Loop with write on one branch, read-only spin on another ---
+    // Simulates: read flag, if condition A -> spin, if condition B -> write + exit
+    // Should be detected as an await path.
+    public void awaitLoopWithWriteOnAlternatePath() {
+        while (true) {
+            int s = state;
+            if (s == 0) {
+                // spin-retry path: no writes, just continue
+                continue;
+            }
+            // exit path with a write
+            counter = s;
+            return;
+        }
+    }
+
+    // --- Loop where ALL paths have side effects ---
+    // No read-only spin path exists.
+    // Should NOT be detected as an await path.
+    public void nonAwaitAllPathsDirty() {
+        while (true) {
+            int s = state;
+            if (s == 0) {
+                counter = 42; // write on this path too
+                continue;
+            }
+            counter = s;
+            return;
+        }
+    }
+
+    // --- Loop with method call on spin path ---
+    // The spin path has a method call (side effect).
+    // Should NOT be detected as an await path.
+    public void nonAwaitCallOnSpinPath() {
+        while (true) {
+            int s = state;
+            if (s == 0) {
+                doSomething(); // method call on the spin path
+                continue;
+            }
+            return;
+        }
+    }
+
+    // --- Multi-path loop where one spin path has reads, another spin path has writes ---
+    // Two back-edge paths: one is clean (read-only), one is dirty (has writes).
+    // Should be detected as an await path because at least one clean path exists.
+    public void awaitLoopOneCleanOneNot() {
+        while (true) {
+            int s = state;
+            if (s == 0) {
+                // clean spin path
+                continue;
+            }
+            if (s == 1) {
+                counter = s; // dirty spin path
+                continue;
+            }
+            return;
+        }
+    }
+
+    // === Nested loop test cases ===
+
+    // --- Nested loop where the outer loop has a side effect after the inner loop ---
+    public void nestedLoopWithOuterSideEffectAfterInnerLoop() {
+        while (!flag) {
+            while (state == 0) {
+                if (counter == 0) {
+                    break;
+                }
+            }
+            counter++;
+        }
+    }
+
+    // --- Nested loop where the outer loop has a side effect before the inner loop ---
+    public void nestedLoopWithOuterSideEffectBeforeInnerLoop() {
+        while (!flag) {
+            counter++;
+            while (state == 0) {
+                if (counter == 0) {
+                    break;
+                }
+            }
+        }
+    }
+
+    // --- Nested loop where the inner loop has a side effect ---
+    public void nestedLoopWithInnerSideEffect() {
+        while (!flag) {
+            while (state == 0) {
+                counter++;
+            }
+            if (counter < 10) {
+                continue;
+            }
+            flag = true;
+        }
+    }
+
+    // --- Await path before a side-effecting inner loop ---
+    public void nestedLoopWithAwaitPathBeforeSideEffectingInnerLoop() {
+        while (!flag) {
+            if (counter < 10) {
+                continue;
+            }
+            while (state == 0) {
+                counter++;
+            }
+            flag = true;
+        }
+    }
+
+    // --- Three nested loops inherit an outer side effect ---
+    public void nestedLoopsWithOuterSideEffectBeforeTwoCleanInnerLoops() {
+        while (!flag) {
+            counter++;
+            while (state == 0) {
+                while (tail == 0) {
+                    if (counter == 0) {
+                        break;
+                    }
+                }
+                if (counter == 1) {
+                    break;
+                }
+            }
+        }
+    }
+}

@@ -304,10 +304,9 @@ class BufferedTraceWriterTest {
             threadId,
             codeLocationId,
             methodId = md.id,
-            obj = null,
+            obj = TRNull,
             parameters = listOf()
         )
-        tracepoint.result = null
         return tracepoint
     }
 
@@ -329,7 +328,7 @@ class BufferedTraceWriterTest {
             threadId,
             codeLocationId,
             localVariableId = vd.id,
-            value = TRPrimitive(TR_OBJECT_P_INT, 0, 42)
+            value = TRPrimitive(42)
         )
     }
 
@@ -421,7 +420,7 @@ class BufferedTraceWriterTest {
                     }
 
                     ObjectKind.TRACEPOINT -> {
-                        val tr = loadTRTracePoint(loadedContext, dataInput)
+                        val tr = dataInput.readTRTracePoint(loadedContext)
                         Logger.info { "  Tracepoint: ${tr.toText(verbose = true)}" }
 
                         if (tr is TRContainerTracePoint) {

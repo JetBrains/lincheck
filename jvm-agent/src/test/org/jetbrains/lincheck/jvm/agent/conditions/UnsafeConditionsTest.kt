@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.conditions
 
-import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.*
 import org.jetbrains.lincheck.jvm.agent.conditions.ConditionTestUtils.MethodInfo
 import org.junit.*
@@ -38,12 +38,14 @@ class UnsafeConditionsTest(
     @Test
     fun test() {
         val className = UnsafeConditions::class.java.name
+        val classLoader = this::class.java.classLoader
 
-        val violation = ConditionSafetyChecker.checkMethodForSideEffects(
-            className,
-            methodInfo.name,
-            methodInfo.descriptor,
-            this::class.java.classLoader
+        val violation = SideEffectChecker.checkMethodForSideEffects(
+            className = className,
+            methodName = methodInfo.name,
+            methodDescriptor = methodInfo.descriptor,
+            bytecodeProvider = classLoader::findClassBytecode,
+            isClassLoaded = { true },
         )
         assertNotNull(
             "Method ${methodInfo.name} should be unsafe but no violations found",

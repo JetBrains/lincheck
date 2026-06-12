@@ -1,0 +1,12 @@
+# Thread 1
+ConstructorInheritanceWithExceptionTest.operation() at ConstructorInheritanceWithExceptionTest.kt:33
+  new ConstructorInheritanceWithExceptionFoo(): ConstructorInheritanceWithExceptionFoo@1 at ConstructorInheritanceWithExceptionTest.kt:34
+  ConstructorInheritanceWithExceptionFoo@1.foo(): threw Exception at ConstructorInheritanceWithExceptionTest.kt:34
+    super@ConstructorInheritanceWithExceptionBase(): threw Exception at ConstructorInheritanceWithExceptionTest.kt:14
+      super@Object(): ConstructorInheritanceWithExceptionDerived@1 at ConstructorInheritanceWithExceptionTest.kt:7
+      x = 1 at ConstructorInheritanceWithExceptionTest.kt:8
+      new Exception("Base class initialization exception"): Exception@1 at ConstructorInheritanceWithExceptionTest.kt:10
+      throw Exception@1 at ConstructorInheritanceWithExceptionTest.kt:10
+  catch(Exception@1) at ConstructorInheritanceWithExceptionTest.kt:34
+  e = Exception@1 at ConstructorInheritanceWithExceptionTest.kt:35
+  e.getMessage(): "Base class initialization exception" at ConstructorInheritanceWithExceptionTest.kt:36

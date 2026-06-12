@@ -213,6 +213,28 @@ object TraceAgentParameters {
         }
     }
 
+    /**
+     * `true` when the agent should trace the entire application lifetime
+     * (i.e., no specific entry point method was supplied).
+     *
+     * Owns the "both class name and method name blank" invariant
+     * established by [validateClassAndMethodArgumentsAreBothProvidedOrBlank];
+     * downstream code should ask via this helper rather than
+     * checking [classUnderTracing] or [methodUnderTracing] manually.
+     */
+    @JvmStatic
+    fun isApplicationStartTracingRequested(): Boolean =
+        classUnderTracing.isBlank() && methodUnderTracing.isBlank()
+
+    @JvmStatic
+    fun validateClassAndMethodArgumentsAreBothProvidedOrBlank() {
+        val bothBlank = isApplicationStartTracingRequested()
+        val bothProvided = classUnderTracing.isNotBlank() && methodUnderTracing.isNotBlank()
+        if (!bothBlank && !bothProvided) {
+            error("Class and method names must be both provided or both blank: classUnderTracing='$classUnderTracing', methodUnderTracing='$methodUnderTracing'")
+        }
+    }
+
     @JvmStatic
     fun validateMode() {
         // Check if one of the required parameters is set.

@@ -67,8 +67,10 @@ class BreakpointsFileParserTests {
         assertEquals(42, bp.lineNumber)
         assertNull(bp.conditionClassName)
         assertNull(bp.conditionFactoryMethodName)
-        assertNull(bp.conditionCapturedVars)
         assertNull(bp.conditionCodeFragment)
+        assertNull(bp.watchClassName)
+        assertNull(bp.watchFactoryMethodName)
+        assertNull(bp.watchCodeFragment)
     }
 
     // --- One breakpoint, all fields ---
@@ -85,8 +87,10 @@ class BreakpointsFileParserTests {
             lineNumber = 101
             conditionClassName = org.example.MyCondition
             conditionFactoryMethodName = create
-            conditionCapturedVars = x,y,z
             conditionCodeFragment = $encodedBytecode
+            watchClassName = org.example.MyWatches
+            watchFactoryMethodName = createWatches
+            watchCodeFragment = $encodedBytecode
         """.trimIndent())
 
         val result = BreakpointsFileParser.parseBreakpointsFile(path)
@@ -98,8 +102,10 @@ class BreakpointsFileParserTests {
         assertEquals(101, bp.lineNumber)
         assertEquals("org.example.MyCondition", bp.conditionClassName)
         assertEquals("create", bp.conditionFactoryMethodName)
-        assertEquals(listOf("x", "y", "z"), bp.conditionCapturedVars)
         assertArrayEquals(bytecode, bp.conditionCodeFragment)
+        assertEquals("org.example.MyWatches", bp.watchClassName)
+        assertEquals("createWatches", bp.watchFactoryMethodName)
+        assertArrayEquals(bytecode, bp.watchCodeFragment)
     }
 
     // --- Several breakpoints, different subsets of fields ---
@@ -127,7 +133,6 @@ class BreakpointsFileParserTests {
             lineNumber = 30
             conditionClassName = org.example.Cond2
             conditionFactoryMethodName = make
-            conditionCapturedVars = a, b
             conditionCodeFragment = $encodedBytecode
         """.trimIndent())
 
@@ -141,7 +146,6 @@ class BreakpointsFileParserTests {
         assertEquals(10, bp1.lineNumber)
         assertNull(bp1.conditionClassName)
         assertNull(bp1.conditionFactoryMethodName)
-        assertNull(bp1.conditionCapturedVars)
         assertNull(bp1.conditionCodeFragment)
 
         // second: required + conditionClassName only
@@ -151,7 +155,6 @@ class BreakpointsFileParserTests {
         assertEquals(20, bp2.lineNumber)
         assertEquals("org.example.Cond", bp2.conditionClassName)
         assertNull(bp2.conditionFactoryMethodName)
-        assertNull(bp2.conditionCapturedVars)
         assertNull(bp2.conditionCodeFragment)
 
         // third: all fields
@@ -161,7 +164,6 @@ class BreakpointsFileParserTests {
         assertEquals(30, bp3.lineNumber)
         assertEquals("org.example.Cond2", bp3.conditionClassName)
         assertEquals("make", bp3.conditionFactoryMethodName)
-        assertEquals(listOf("a", "b"), bp3.conditionCapturedVars)
         assertArrayEquals(bytecode, bp3.conditionCodeFragment)
     }
 

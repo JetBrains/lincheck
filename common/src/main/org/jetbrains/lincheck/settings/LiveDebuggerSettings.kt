@@ -165,14 +165,25 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
  * Same-line breakpoints with different UUIDs are deliberately distinct;
  * so multiple clients can each install their own breakpoint on the same source code line.
  *
+ * **Content-identity contract.**
+ * The [uuid] identifies the breakpoint's *content*, not a stable "slot" that survives breakpoint properties' edits:
+ * any change to the breakpoint's content (condition, watches, hit limit, …) MUST produce a fresh [uuid],
+ * and a [uuid] is never reused across content changes.
+ * Any atomic breakpoint update API must respect this contract and not use breakpoint UUID
+ * as a breakpoint's identity persisting breakpoint property changes.
+ *
  * @property uuid The client-assigned globally unique identifier for this breakpoint.
  * @property className The fully qualified name of the class where the breakpoint is set.
  * @property fileName The name of the file containing the breakpoint.
  * @property lineNumber The specific line number in the file where the breakpoint is set.
- * @property conditionClassName The class name that provides the conditional logic for the breakpoint, if any.
+ * @property conditionClassName The class name that provides the conditional logic for the breakpoint if any.
+ *   Should be unique withing one JVM instance.
  * @property conditionFactoryMethodName The factory method name in the [conditionClassName] that generates the condition logic, if any.
- * @property conditionCapturedVars A list of variable names captured as part of the condition, if any.
  * @property conditionCodeFragment A serialized byte array of code fragments used for evaluating the condition, if any.
+ * @property watchClassName The class name that provides watch logic, if any.
+ *   Should be unique withing one JVM instance.
+ * @property watchFactoryMethodName The factory method name in [watchClassName] that generates the watch logic, if any.
+ * @property watchCodeFragment A serialized byte array of code fragments used for evaluating watches, if any.
  * @property hitLimit The maximum number of times the breakpoint can be hit before it is automatically disabled.
  */
 class SnapshotBreakpoint(
@@ -180,10 +191,12 @@ class SnapshotBreakpoint(
     val className: String,
     val fileName: String,
     val lineNumber: Int,
-    val conditionClassName: String?,
-    val conditionFactoryMethodName: String?,
-    val conditionCapturedVars: List<String>?,
-    val conditionCodeFragment: ByteArray?,
+    val conditionClassName: String? = null,
+    val conditionFactoryMethodName: String? = null,
+    val conditionCodeFragment: ByteArray? = null,
+    val watchClassName: String? = null,
+    val watchFactoryMethodName: String? = null,
+    val watchCodeFragment: ByteArray? = null,
     val hitLimit: Int = DEFAULT_HIT_LIMIT,
 ) {
     companion object {
@@ -195,19 +208,23 @@ class SnapshotBreakpoint(
         fun decodeFromString(string: String): SnapshotBreakpoint {
             val parts = string.split(":")
 
+            // Index order mirrors the SnapshotBreakpoint constructor.
             val uuid = UUID.fromString(parts[0])
             val className = parts[1]
             val fileName = parts[2]
             val lineNumber = parts[3].toInt()
 
-            // Condition format: "$className:$factoryMethodName:$capturedVarsStr:$encodedBytecode"
             val conditionClassName = parts.getOrNull(4)?.let { if (it == "null") null else it }
             val conditionFactoryMethodName = parts.getOrNull(5)?.let { if (it == "null") null else it }
-            val conditionCapturedVars = parts.getOrNull(6)?.let { if (it == "null") null else it.split(",") }
-            val conditionCodeFragment = parts.getOrNull(7)?.let {
+            val conditionCodeFragment = parts.getOrNull(6)?.let {
                 if (it == "null") null else Base64.getDecoder().decode(it)
             }
-            val hitLimit = parts.getOrNull(8)?.toIntOrNull() ?: DEFAULT_HIT_LIMIT
+            val watchClassName = parts.getOrNull(7)?.let { if (it == "null") null else it }
+            val watchFactoryMethodName = parts.getOrNull(8)?.let { if (it == "null") null else it }
+            val watchCodeFragment = parts.getOrNull(9)?.let {
+                if (it == "null") null else Base64.getDecoder().decode(it)
+            }
+            val hitLimit = parts.getOrNull(10)?.toIntOrNull() ?: DEFAULT_HIT_LIMIT
 
             return SnapshotBreakpoint(
                 uuid = uuid,
@@ -216,8 +233,10 @@ class SnapshotBreakpoint(
                 lineNumber = lineNumber,
                 conditionClassName = conditionClassName,
                 conditionFactoryMethodName = conditionFactoryMethodName,
-                conditionCapturedVars = conditionCapturedVars,
                 conditionCodeFragment = conditionCodeFragment,
+                watchClassName = watchClassName,
+                watchFactoryMethodName = watchFactoryMethodName,
+                watchCodeFragment = watchCodeFragment,
                 hitLimit = hitLimit,
             )
         }
@@ -233,10 +252,10 @@ class SnapshotBreakpoint(
     /**
      * Encodes this breakpoint as a colon-separated string accepted by [decodeListFromString].
      *
-     * Format:
-     *   `uuid:className:fileName:lineNumber:conditionClassName:conditionFactoryMethodName:conditionCapturedVars:conditionCodeFragment:hitLimit`.
+     * Field order mirrors the [SnapshotBreakpoint] constructor:
+     *   `uuid:className:fileName:lineNumber:conditionClassName:conditionFactoryMethodName:conditionCodeFragment:watchClassName:watchFactoryMethodName:watchCodeFragment:hitLimit`.
      *
-     * Missing condition fields are encoded as the literal `"null"`.
+     * Missing condition and watch fields are encoded as the literal `"null"`.
      */
     fun encodeToString(): String {
         val parts = listOf(
@@ -246,8 +265,10 @@ class SnapshotBreakpoint(
             lineNumber.toString(),
             conditionClassName ?: "null",
             conditionFactoryMethodName ?: "null",
-            conditionCapturedVars?.joinToString(",") ?: "null",
             conditionCodeFragment?.let { Base64.getEncoder().encodeToString(it) } ?: "null",
+            watchClassName ?: "null",
+            watchFactoryMethodName ?: "null",
+            watchCodeFragment?.let { Base64.getEncoder().encodeToString(it) } ?: "null",
             hitLimit.toString(),
         )
         return parts.joinToString(":")
@@ -274,17 +295,28 @@ class SnapshotBreakpoint(
             if (conditionFactoryMethodName != null) {
                 append("factory=$conditionFactoryMethodName,")
             }
-            if (conditionCapturedVars != null) {
-                append("captured=(${conditionCapturedVars.joinToString(", ")}),")
-            }
             if (conditionCodeFragment != null) {
                 append("code=${conditionCodeFragment.toHexPreview(8)},")
+            }
+            if (watchClassName != null) {
+                append("watch=$watchClassName,")
+            }
+            if (watchFactoryMethodName != null) {
+                append("watchFactory=$watchFactoryMethodName,")
+            }
+            if (watchCodeFragment != null) {
+                append("watchCode=${watchCodeFragment.toHexPreview(8)},")
             }
             append("hitLimit=$hitLimit")
             append("]")
         }
     }
 }
+
+/**
+ * Kind of breakpoint expression an unsafety notification refers to.
+ */
+enum class BreakpointExpressionSlot { Condition, Watch }
 
 fun List<SnapshotBreakpoint>.encodeToString(): String =
     joinToString(",") { it.encodeToString() }
@@ -354,8 +386,10 @@ fun Iterable<SnapshotBreakpoint>.applicableTo(className: String, sourceFileName:
  *   hitLimit = 50
  *   conditionClassName = org.example.MyCondition
  *   conditionFactoryMethodName = create
- *   conditionCapturedVars = var1,var2
  *   conditionCodeFragment = <base64-encoded bytecode>
+ *   watchClassName = org.example.MyWatches
+ *   watchFactoryMethodName = createFactory
+ *   watchCodeFragment = <base64-encoded bytecode>
  * ```
  *
  * The `uuid` field is optional; if omitted, a random UUID is assigned at parse time.
@@ -371,8 +405,10 @@ object BreakpointsFileParser {
     private const val KEY_HIT_LIMIT = "hitLimit"
     private const val KEY_CONDITION_CLASS_NAME = "conditionClassName"
     private const val KEY_CONDITION_FACTORY_METHOD_NAME = "conditionFactoryMethodName"
-    private const val KEY_CONDITION_CAPTURED_VARS = "conditionCapturedVars"
     private const val KEY_CONDITION_CODE_FRAGMENT = "conditionCodeFragment"
+    private const val KEY_WATCH_CLASS_NAME = "watchClassName"
+    private const val KEY_WATCH_FACTORY_METHOD_NAME = "watchFactoryMethodName"
+    private const val KEY_WATCH_CODE_FRAGMENT = "watchCodeFragment"
 
     /**
      * Parses breakpoints from an INI file.
@@ -459,16 +495,26 @@ object BreakpointsFileParser {
         val conditionClassName = properties[KEY_CONDITION_CLASS_NAME]
         val conditionFactoryMethodName = properties[KEY_CONDITION_FACTORY_METHOD_NAME]
 
-        val conditionCapturedVars = properties[KEY_CONDITION_CAPTURED_VARS]
-            ?.split(",")
-            ?.map { it.trim() }
-
         val conditionCodeFragment = properties[KEY_CONDITION_CODE_FRAGMENT]?.let {
             try {
                 Base64.getDecoder().decode(it)
             } catch (e: IllegalArgumentException) {
                 throw IllegalArgumentException(
                     "Invalid Base64 bytecode for condition class '$conditionClassName'",
+                    e
+                )
+            }
+        }
+
+        val watchClassName = properties[KEY_WATCH_CLASS_NAME]
+        val watchFactoryMethodName = properties[KEY_WATCH_FACTORY_METHOD_NAME]
+
+        val watchCodeFragment = properties[KEY_WATCH_CODE_FRAGMENT]?.let {
+            try {
+                Base64.getDecoder().decode(it)
+            } catch (e: IllegalArgumentException) {
+                throw IllegalArgumentException(
+                    "Invalid Base64 bytecode for watch class '$watchClassName'",
                     e
                 )
             }
@@ -492,8 +538,10 @@ object BreakpointsFileParser {
             lineNumber = lineNumber,
             conditionClassName = conditionClassName,
             conditionFactoryMethodName = conditionFactoryMethodName,
-            conditionCapturedVars = conditionCapturedVars,
             conditionCodeFragment = conditionCodeFragment,
+            watchClassName = watchClassName,
+            watchFactoryMethodName = watchFactoryMethodName,
+            watchCodeFragment = watchCodeFragment,
             hitLimit = hitLimit,
         )
     }

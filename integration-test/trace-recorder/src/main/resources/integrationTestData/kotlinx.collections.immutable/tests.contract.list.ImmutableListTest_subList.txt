@@ -9,6 +9,16 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
       mutate = SmallPersistentVector@1 at extensions.kt:623
       mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
         new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+          super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+          rootShift = 0 at PersistentVectorBuilder.kt:17
+          builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+          new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+            super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+          ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          root = null at PersistentVectorBuilder.kt:22
+          tail = Object;@1 at PersistentVectorBuilder.kt:30
+          vector.size(): 0 at PersistentVectorBuilder.kt:38
+          size = 0 at PersistentVectorBuilder.kt:38
       it = PersistentVectorBuilder@1 at extensions.kt:41
       toCollection(toPersistentList ➜ "abcxaxyz12", it): PersistentVectorBuilder@1 at extensions.kt:623
         modCount = 1 at PersistentVectorBuilder.kt:118
@@ -143,10 +153,15 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
         root = null at PersistentVectorBuilder.kt:45
         tail = Object;@1 at PersistentVectorBuilder.kt:46
         new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
         build$lambda$0.ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
         build$lambda$0.size(): 10 at PersistentVectorBuilder.kt:52
         Arrays.copyOf(tail, 10): Object;@1 at PersistentVectorBuilder.kt:52
         new SmallPersistentVector(Object;@1): SmallPersistentVector@1 at PersistentVectorBuilder.kt:52
+          super@AbstractPersistentList(): SmallPersistentVector@1 at SmallPersistentVector.kt:15
+            super@AbstractList(): SmallPersistentVector@1 at AbstractPersistentList.kt:13
+          buffer = Object;@1 at SmallPersistentVector.kt:15
+          assert(true) at SmallPersistentVector.kt:18
         newlyBuiltVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:48
         build$lambda$0.builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:57
   list = SmallPersistentVector@1 at ImmutableListTest.kt:128
@@ -154,6 +169,13 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
     PersistentList.DefaultImpls.subList(, fromIndex ➜ 2, toIndex ➜ 5): ImmutableList.SubList@1 at AbstractPersistentList.kt:15
       ImmutableList.DefaultImpls.subList(, fromIndex ➜ 2, toIndex ➜ 5): ImmutableList.SubList@1 at ImmutableList.kt:62
         new ImmutableList.SubList(, fromIndex ➜ 2, toIndex ➜ 5): ImmutableList.SubList@1 at ImmutableList.kt:30
+          super@AbstractList(): ImmutableList.SubList@1 at ImmutableList.kt:32
+          source = SmallPersistentVector@1 at ImmutableList.kt:32
+          fromIndex = 2 at ImmutableList.kt:32
+          toIndex = 5 at ImmutableList.kt:32
+          source.size(): 10 at ImmutableList.kt:36
+          ListImplementation.checkRangeIndexes$kotlinx_collections_immutable(fromIndex ➜ 2, toIndex ➜ 5, 10) at ImmutableList.kt:36
+          _size = 3 at ImmutableList.kt:37
   subList = ImmutableList.SubList@1 at ImmutableListTest.kt:129
   Character;@1[0] = 'c' at ImmutableListTest.kt:130
   Character;@1[1] = 'x' at ImmutableListTest.kt:130
@@ -162,6 +184,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
   compareLists(Arrays.ArrayList@1, subList) at ImmutableListTest.kt:130
     compare(expected, actual, ImmutableListTest$$Lambda@1) at ImmutableListTest.kt:16
       new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+        super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+        expected = Arrays.ArrayList@1 at ComparisonDSL.kt:15
+        actual = ImmutableList.SubList@1 at ComparisonDSL.kt:15
       block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
         listBehavior(compare) at ImmutableListTest.kt:16
           equalityBehavior(CompareContext@1, "", true) at CollectionBehaviors.kt:9
@@ -255,6 +280,7 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                 propertyEquals.isEmpty(): false at CollectionBehaviors.kt:107
               assertEquals(false, false, message ➜ "isEmpty") at ComparisonDSL.kt:21
             new CollectionBehaviorsKt$collectionBehavior$3(): CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
+              super@Object(): CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
             it = CollectionBehaviorsKt$collectionBehavior$3@1 at CollectionBehaviors.kt:109
             CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:109
               getter.invoke(expected): false at ComparisonDSL.kt:21
@@ -339,6 +365,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                 compareProperty.iterator(): AbstractList.IteratorImpl@1 at CollectionBehaviors.kt:113
               compare(Arrays.ArrayItr@1, AbstractList.IteratorImpl@1, block) at ComparisonDSL.kt:27
                 new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+                  super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+                  expected = Arrays.ArrayItr@1 at ComparisonDSL.kt:15
+                  actual = AbstractList.IteratorImpl@1 at ComparisonDSL.kt:15
                 block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                   iteratorBehavior(compareProperty) at CollectionBehaviors.kt:113
                     CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:55
@@ -427,9 +456,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                         checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                         actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                         assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                          expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                          actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                          assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                          expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                          actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                          assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:11
             getter.invoke(expected): AbstractList.ListItr@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(): AbstractList.ListItr@1 at CollectionBehaviors.kt:11
@@ -437,6 +466,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               compareProperty.listIterator(): AbstractList.ListIteratorImpl@1 at CollectionBehaviors.kt:11
             compare(AbstractList.ListItr@1, AbstractList.ListIteratorImpl@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+                super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+                expected = AbstractList.ListItr@1 at ComparisonDSL.kt:15
+                actual = AbstractList.ListIteratorImpl@1 at ComparisonDSL.kt:15
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:11
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
@@ -601,9 +633,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
                   loop(4 iterations) at CollectionBehaviors.kt:40
                     <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): AbstractList.ListItr@1 at CollectionBehaviors.kt:40
@@ -741,9 +773,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:12
             getter.invoke(expected): AbstractList.ListItr@1 at ComparisonDSL.kt:27
               compareProperty.listIterator(0): AbstractList.ListItr@1 at CollectionBehaviors.kt:12
@@ -751,6 +783,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               compareProperty.listIterator(0): AbstractList.ListIteratorImpl@1 at CollectionBehaviors.kt:12
             compare(AbstractList.ListItr@1, AbstractList.ListIteratorImpl@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+                super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+                expected = AbstractList.ListItr@1 at ComparisonDSL.kt:15
+                actual = AbstractList.ListIteratorImpl@1 at ComparisonDSL.kt:15
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:12
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
@@ -915,9 +950,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
                   loop(4 iterations) at CollectionBehaviors.kt:40
                     <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): AbstractList.ListItr@1 at CollectionBehaviors.kt:40
@@ -1055,9 +1090,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.compareProperty(CollectionBehaviorsKt$$Lambda@1, CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:13
             getter.invoke(expected): AbstractList.ListItr@1 at ComparisonDSL.kt:27
               compareProperty.size(): 3 at CollectionBehaviors.kt:13
@@ -1067,6 +1102,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               compareProperty.listIterator(1): AbstractList.ListIteratorImpl@1 at CollectionBehaviors.kt:13
             compare(AbstractList.ListItr@1, AbstractList.ListIteratorImpl@1, block) at ComparisonDSL.kt:27
               new CompareContext(expected, actual): CompareContext@1 at ComparisonDSL.kt:12
+                super@Object(): CompareContext@1 at ComparisonDSL.kt:15
+                expected = AbstractList.ListItr@1 at ComparisonDSL.kt:15
+                actual = AbstractList.ListIteratorImpl@1 at ComparisonDSL.kt:15
               block.invoke(CompareContext@1): Unit at ComparisonDSL.kt:12
                 listIteratorBehavior(compareProperty) at CollectionBehaviors.kt:13
                   listIteratorProperties(listIteratorBehavior) at CollectionBehaviors.kt:32
@@ -1193,9 +1231,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
                   loop(4 iterations) at CollectionBehaviors.kt:40
                     <iteration 1> at CollectionBehaviors.kt:40
                       listIteratorBehavior.getExpected(): AbstractList.ListItr@1 at CollectionBehaviors.kt:40
@@ -1333,9 +1371,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                       checkResultIsFailure(null, Result.Failure@1): NoSuchElementException@1 at ComparisonDSL.kt:32
                       actualFail = NoSuchElementException@1 at ComparisonDSL.kt:32
                       assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                        expected.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        actual.getClass(): NoSuchElementException.class at testUtilsJvm.kt:11
-                        assertEquals(NoSuchElementException.class, NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
+                        expected.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        actual.getClass(): java.util.NoSuchElementException.class at testUtilsJvm.kt:11
+                        assertEquals(java.util.NoSuchElementException.class, java.util.NoSuchElementException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:15
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
@@ -1355,9 +1393,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                expected.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                actual.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                assertEquals(IndexOutOfBoundsException.class, IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
+                expected.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                actual.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                assertEquals(java.lang.IndexOutOfBoundsException.class, java.lang.IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:16
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
@@ -1379,9 +1417,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                expected.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                actual.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                assertEquals(IndexOutOfBoundsException.class, IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
+                expected.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                actual.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                assertEquals(java.lang.IndexOutOfBoundsException.class, java.lang.IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
           index = 0 at CollectionBehaviors.kt:18
           listBehavior.getExpected(): Arrays.ArrayList@1 at CollectionBehaviors.kt:18
           Arrays.ArrayList@1.size(): 3 at CollectionBehaviors.kt:18
@@ -1532,9 +1570,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                expected.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                actual.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                assertEquals(IndexOutOfBoundsException.class, IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
+                expected.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                actual.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                assertEquals(java.lang.IndexOutOfBoundsException.class, java.lang.IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
           listBehavior.propertyFails(CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:27
             assertFailEquals(CompareContext$$Lambda@1, CompareContext$$Lambda@1, null) at ComparisonDSL.kt:23
               expected.invoke(): threw IndexOutOfBoundsException at ComparisonDSL.kt:31
@@ -1566,9 +1604,9 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
               checkResultIsFailure(null, Result.Failure@1): IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               actualFail = IndexOutOfBoundsException@1 at ComparisonDSL.kt:32
               assertTypeEquals(expectedFail, actualFail) at ComparisonDSL.kt:39
-                expected.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                actual.getClass(): IndexOutOfBoundsException.class at testUtilsJvm.kt:11
-                assertEquals(IndexOutOfBoundsException.class, IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
+                expected.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                actual.getClass(): java.lang.IndexOutOfBoundsException.class at testUtilsJvm.kt:11
+                assertEquals(java.lang.IndexOutOfBoundsException.class, java.lang.IndexOutOfBoundsException.class, null, 4, null) at testUtilsJvm.kt:11
           CompareContext@1.propertyEquals("", CollectionBehaviorsKt$$Lambda@1) at CollectionBehaviors.kt:28
             getter.invoke(expected): AbstractList.RandomAccessSubList@1 at ComparisonDSL.kt:21
               propertyEquals.size(): 3 at CollectionBehaviors.kt:28
@@ -1579,6 +1617,13 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
                 subList(fromIndex ➜ 0, toIndex ➜ 3): ImmutableList.SubList@1 at ImmutableList.kt:32
                   ListImplementation.checkRangeIndexes$kotlinx_collections_immutable(fromIndex ➜ 0, toIndex ➜ 3, _size ➜ 3) at ImmutableList.kt:49
                   new ImmutableList.SubList(source, 2, 5): ImmutableList.SubList@1 at ImmutableList.kt:50
+                    super@AbstractList(): ImmutableList.SubList@1 at ImmutableList.kt:32
+                    source = SmallPersistentVector@1 at ImmutableList.kt:32
+                    fromIndex = 2 at ImmutableList.kt:32
+                    toIndex = 5 at ImmutableList.kt:32
+                    source.size(): 10 at ImmutableList.kt:36
+                    ListImplementation.checkRangeIndexes$kotlinx_collections_immutable(fromIndex ➜ 2, toIndex ➜ 5, 10) at ImmutableList.kt:36
+                    _size = 3 at ImmutableList.kt:37
             assertEquals(AbstractList.RandomAccessSubList@1, ImmutableList.SubList@1, message ➜ "") at ComparisonDSL.kt:21
               ListImplementation.checkElementIndex$kotlinx_collections_immutable(index ➜ 0, _size ➜ 3) at ImmutableList.kt:41
               source.get(2): 'c' at ImmutableList.kt:43
@@ -1596,36 +1641,48 @@ ImmutableListTest.subList() at ImmutableListTest.kt:128
     PersistentList.DefaultImpls.subList(, fromIndex ➜ -1, toIndex ➜ 2): threw IndexOutOfBoundsException at AbstractPersistentList.kt:15
       ImmutableList.DefaultImpls.subList(, fromIndex ➜ -1, toIndex ➜ 2): threw IndexOutOfBoundsException at ImmutableList.kt:62
         new ImmutableList.SubList(, fromIndex ➜ -1, toIndex ➜ 2): threw IndexOutOfBoundsException at ImmutableList.kt:30
-          new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
-          StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: ").append(fromIndex ➜ -1): StringBuilder@1("fromIndex: -1") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: -1").append(", toIndex: "): StringBuilder@1("fromIndex: -1, toIndex: ") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: -1, toIndex: ").append(toIndex ➜ 2): StringBuilder@1("fromIndex: -1, toIndex: 2") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: -1, toIndex: 2").append(", size: "): StringBuilder@1("fromIndex: -1, toIndex: 2, size: ") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: -1, toIndex: 2, size: ").append(size ➜ 10): StringBuilder@1("fromIndex: -1, toIndex: 2, size: 10") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: -1, toIndex: 2, size: 10").toString(): "fromIndex: -1, toIndex: 2, size: 10" at ListImplementation.kt:29
-          new IndexOutOfBoundsException("fromIndex: -1, toIndex: 2, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
-          throw IndexOutOfBoundsException@1 at ListImplementation.kt:29
+          super@AbstractList(): ImmutableList.SubList@1 at ImmutableList.kt:32
+          source = SmallPersistentVector@1 at ImmutableList.kt:32
+          fromIndex = -1 at ImmutableList.kt:32
+          toIndex = 2 at ImmutableList.kt:32
+          source.size(): 10 at ImmutableList.kt:36
+          ListImplementation.checkRangeIndexes$kotlinx_collections_immutable(fromIndex ➜ -1, toIndex ➜ 2, 10): threw IndexOutOfBoundsException at ImmutableList.kt:36
+            new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+            StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: ").append(fromIndex ➜ -1): StringBuilder@1("fromIndex: -1") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: -1").append(", toIndex: "): StringBuilder@1("fromIndex: -1, toIndex: ") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: -1, toIndex: ").append(toIndex ➜ 2): StringBuilder@1("fromIndex: -1, toIndex: 2") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: -1, toIndex: 2").append(", size: "): StringBuilder@1("fromIndex: -1, toIndex: 2, size: ") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: -1, toIndex: 2, size: ").append(size ➜ 10): StringBuilder@1("fromIndex: -1, toIndex: 2, size: 10") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: -1, toIndex: 2, size: 10").toString(): "fromIndex: -1, toIndex: 2, size: 10" at ListImplementation.kt:29
+            new IndexOutOfBoundsException("fromIndex: -1, toIndex: 2, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
+            throw IndexOutOfBoundsException@1 at ListImplementation.kt:29
   catch(IndexOutOfBoundsException@1) at ImmutableListTest.kt:132
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:132
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:132
-  checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:132
+  checkResultIsFailure(java.lang.IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:132
   list.size(): 10 at ImmutableListTest.kt:133
   list.subList(0, 11): threw IndexOutOfBoundsException at ImmutableListTest.kt:133
     PersistentList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at AbstractPersistentList.kt:15
       ImmutableList.DefaultImpls.subList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at ImmutableList.kt:62
         new ImmutableList.SubList(, fromIndex ➜ 0, toIndex ➜ 11): threw IndexOutOfBoundsException at ImmutableList.kt:30
-          new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
-          StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: ").append(fromIndex ➜ 0): StringBuilder@1("fromIndex: 0") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: 0").append(", toIndex: "): StringBuilder@1("fromIndex: 0, toIndex: ") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: 0, toIndex: ").append(toIndex ➜ 11): StringBuilder@1("fromIndex: 0, toIndex: 11") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: 0, toIndex: 11").append(", size: "): StringBuilder@1("fromIndex: 0, toIndex: 11, size: ") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: 0, toIndex: 11, size: ").append(size ➜ 10): StringBuilder@1("fromIndex: 0, toIndex: 11, size: 10") at ListImplementation.kt:29
-          StringBuilder@1("fromIndex: 0, toIndex: 11, size: 10").toString(): "fromIndex: 0, toIndex: 11, size: 10" at ListImplementation.kt:29
-          new IndexOutOfBoundsException("fromIndex: 0, toIndex: 11, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
-          throw IndexOutOfBoundsException@1 at ListImplementation.kt:29
+          super@AbstractList(): ImmutableList.SubList@1 at ImmutableList.kt:32
+          source = SmallPersistentVector@1 at ImmutableList.kt:32
+          fromIndex = 0 at ImmutableList.kt:32
+          toIndex = 11 at ImmutableList.kt:32
+          source.size(): 10 at ImmutableList.kt:36
+          ListImplementation.checkRangeIndexes$kotlinx_collections_immutable(fromIndex ➜ 0, toIndex ➜ 11, 10): threw IndexOutOfBoundsException at ImmutableList.kt:36
+            new StringBuilder(): StringBuilder@1("") at ListImplementation.kt:29
+            StringBuilder@1("").append("fromIndex: "): StringBuilder@1("fromIndex: ") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: ").append(fromIndex ➜ 0): StringBuilder@1("fromIndex: 0") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: 0").append(", toIndex: "): StringBuilder@1("fromIndex: 0, toIndex: ") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: 0, toIndex: ").append(toIndex ➜ 11): StringBuilder@1("fromIndex: 0, toIndex: 11") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: 0, toIndex: 11").append(", size: "): StringBuilder@1("fromIndex: 0, toIndex: 11, size: ") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: 0, toIndex: 11, size: ").append(size ➜ 10): StringBuilder@1("fromIndex: 0, toIndex: 11, size: 10") at ListImplementation.kt:29
+            StringBuilder@1("fromIndex: 0, toIndex: 11, size: 10").toString(): "fromIndex: 0, toIndex: 11, size: 10" at ListImplementation.kt:29
+            new IndexOutOfBoundsException("fromIndex: 0, toIndex: 11, size: 10"): IndexOutOfBoundsException@1 at ListImplementation.kt:29
+            throw IndexOutOfBoundsException@1 at ListImplementation.kt:29
   catch(IndexOutOfBoundsException@1) at ImmutableListTest.kt:133
   createFailure(IndexOutOfBoundsException@1): Result.Failure@1 at ImmutableListTest.kt:133
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:133
-  checkResultIsFailure(IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:133
+  checkResultIsFailure(java.lang.IndexOutOfBoundsException.kclass, null, Result.Failure@1): IndexOutOfBoundsException@1 at ImmutableListTest.kt:133

@@ -17,19 +17,19 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINTS_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_HEARTBEAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.traceDumpFilePath
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
+import org.jetbrains.lincheck.tracer.Tracer
+import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.LIVE_DEBUGGER_MODE_PROPERTY
 import org.jetbrains.lincheck.util.Logger
 import sun.nio.ch.lincheck.BreakpointStorage
@@ -73,6 +73,22 @@ internal object LiveDebuggerAgent {
             }
         }
 
+        override fun postInstallInstrumentationSetup() {
+            super.postInstallInstrumentationSetup()
+
+            LiveDebugger.ensureHitLimitCallbackInstalled()
+            LiveDebugger.ensureBreakpointExpressionUnsafetyCallbackInstalled()
+        }
+
+        override fun setupTracingFromApplicationStartIfRequested() {
+            // When a server or heartbeat is enabled, the session lifecycle is driven externally
+            // (start/stop via WebSocket commands), so don't auto-start anything here.
+            // Otherwise (plain static attach with `output=`), start whole-application file-dump
+            // tracing just like the base agent does.
+            if (TraceAgentParameters.serverEnabled || TraceAgentParameters.heartBeatEnabled) return
+            super.setupTracingFromApplicationStartIfRequested()
+        }
+
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider? = null
 
         override fun createTracingServer(): TracingServer? {
@@ -91,6 +107,9 @@ internal object LiveDebuggerAgent {
                 server = wsServer
                 Runtime.getRuntime().addShutdownHook(Thread { wsServer.close() })
             }
+            if (TraceAgentParameters.heartBeatEnabled) {
+                PhoneHomeHeartbeat.start(::connectToControlPlane)
+            }
         }
 
     }
@@ -99,42 +118,20 @@ internal object LiveDebuggerAgent {
     @JvmStatic
     fun premain(agentArgs: String?, inst: Instrumentation) {
         agent.premain(agentArgs, inst)
-        postInstallSetup()
     }
 
     // entry point for a dynamically attached java agent
     @JvmStatic
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         agent.agentmain(agentArgs, inst)
-        postInstallSetup()
-    }
-
-    private fun postInstallSetup() {
-        installCallbacks()
-
-        if (TraceAgentParameters.heartBeatEnabled) {
-            PhoneHomeHeartbeat.start(::connectToControlPlane)
-        }
-        
-        if (traceDumpFilePath != null) {
-            
-            val mode = TraceOutputMode.parse(
-                outputMode = TraceAgentParameters.getArg(ARGUMENT_FORMAT),
-                outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
-                outputFilePath = traceDumpFilePath,
-            )
-            val packTrace = (TraceAgentParameters.getArg(ARGUMENT_PACK) ?: "true").toBoolean()
-
-            LiveDebugger.startRecording(mode, traceDumpFilePath, packTrace)
-        }
-
     }
 
     private fun startServer(address: InetSocketAddress?): TracingWebSocketServer? {
         return try {
              val server = object : TracingWebSocketServer(address) {
                 override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
-                    LiveDebugger.startRecording(
+                    Tracer.launchTracingSession(
+                        TracingSession.StartMode.ExternalRequest,
                         TraceOutputMode.BinaryFileStream(traceDumpFilePath),
                         traceDumpFilePath,
                         packTrace,
@@ -142,14 +139,23 @@ internal object LiveDebuggerAgent {
                 }
 
                 override fun startNetworkTracing() {
-                    LiveDebugger.startRecording(TraceOutputMode.BinaryNetworkStream(this))
+                    Tracer.launchTracingSession(
+                        TracingSession.StartMode.ExternalRequest,
+                        TraceOutputMode.BinaryNetworkStream(this),
+                    )
                 }
 
-                override fun stopTracing() = LiveDebugger.stopRecording()
+                override fun stopTracing() {
+                    Tracer.stopTracing()
+                }
 
-                override fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>) = LiveDebugger.addBreakpoints(breakpoints)
+                override fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>) {
+                    LiveDebugger.addBreakpoints(breakpoints)
+                }
 
-                override fun removeBreakpoints(uuids: List<UUID>) = LiveDebugger.removeBreakpoints(uuids)
+                override fun removeBreakpoints(uuids: List<UUID>) {
+                    LiveDebugger.removeBreakpoints(uuids)
+                }
 
                 override fun onConnectionReady() {
                     PhoneHomeHeartbeat.setConnectTriggered()
@@ -174,9 +180,10 @@ internal object LiveDebuggerAgent {
                             notification.timestamp
                         )
 
-                    is LiveDebuggerNotification.BreakpointConditionUnsafetyDetected ->
-                        server.connection.conditionUnsafe(
+                    is LiveDebuggerNotification.BreakpointExpressionUnsafetyDetected ->
+                        server.connection.breakpointExpressionUnsafe(
                             notification.breakpointData,
+                            notification.slot,
                             notification.safetyViolationMessage,
                             notification.timestamp
                         )
@@ -209,11 +216,5 @@ internal object LiveDebuggerAgent {
             Logger.error(e) { "Failed to open reversed WS connection to control plane" }
             PhoneHomeHeartbeat.resetConnectTriggered()
         }
-    }
-
-    @JvmStatic
-    private fun installCallbacks() {
-        LiveDebugger.ensureHitLimitCallbackInstalled()
-        LiveDebugger.ensureConditionUnsafetyCallbackInstalled()
     }
 }

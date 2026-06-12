@@ -20,6 +20,33 @@ SimpleProgramNonFailingTest.test() at SimpleProgramNonFailingTest.kt:9
         i = 2 at SimpleProgramNonFailingTest.kt:21
   sum = 3 at SimpleProgramNonFailingTest.kt:10
   Assertions.assertEquals(6, sum ➜ 3): threw AssertionFailedError at SimpleProgramNonFailingTest.kt:12
-    new ValueWrapper(value ➜ 6): ValueWrapper@1 at ValueWrapper.java:61
-    new ValueWrapper(value ➜ 3): ValueWrapper@1 at ValueWrapper.java:61
+    ValueWrapper.create(expected ➜ 6): ValueWrapper@1 at AssertionFailedError.java:102
+      new ValueWrapper(value ➜ 6): ValueWrapper@1 at ValueWrapper.java:61
+        safeValueToString(value ➜ 6): "6" at ValueWrapper.java:112
+        super@ValueWrapper(value ➜ 6, "6"): ValueWrapper@1 at ValueWrapper.java:112
+          super@Object(): ValueWrapper@1 at ValueWrapper.java:103
+          ValueWrapper@1.value = 6 at ValueWrapper.java:104
+          value.getClass(): java.lang.Integer.class at ValueWrapper.java:105
+          ValueWrapper@1.type = java.lang.Integer.class at ValueWrapper.java:105
+          ValueWrapper@1.stringRepresentation = "6" at ValueWrapper.java:106
+          System.identityHashCode(value ➜ 6): 1 at ValueWrapper.java:107
+          identityHashCode = 1 at ValueWrapper.java:107
+          ephemeralValue = 6 at ValueWrapper.java:108
+    ValueWrapper.create(actual ➜ 3): ValueWrapper@1 at AssertionFailedError.java:102
+      new ValueWrapper(value ➜ 3): ValueWrapper@1 at ValueWrapper.java:61
+        safeValueToString(value ➜ 3): "3" at ValueWrapper.java:112
+        super@ValueWrapper(value ➜ 3, "3"): ValueWrapper@1 at ValueWrapper.java:112
+          super@Object(): ValueWrapper@1 at ValueWrapper.java:103
+          ValueWrapper@1.value = 3 at ValueWrapper.java:104
+          value.getClass(): java.lang.Integer.class at ValueWrapper.java:105
+          ValueWrapper@1.type = java.lang.Integer.class at ValueWrapper.java:105
+          ValueWrapper@1.stringRepresentation = "3" at ValueWrapper.java:106
+          System.identityHashCode(value ➜ 3): 1 at ValueWrapper.java:107
+          identityHashCode = 1 at ValueWrapper.java:107
+          ephemeralValue = 3 at ValueWrapper.java:108
+    super@AssertionFailedError(message ➜ "expected: <6> but was: <3>", ValueWrapper@1, ValueWrapper@1, cause): AssertionFailedError@1 at AssertionFailedError.java:102
+      super@AssertionError("expected: <6> but was: <3>"): AssertionFailedError@1 at AssertionFailedError.java:106
+      expected = ValueWrapper@1 at AssertionFailedError.java:107
+      actual = ValueWrapper@1 at AssertionFailedError.java:108
+      initCause(cause): AssertionFailedError@1 at AssertionFailedError.java:110
   catch(AssertionFailedError@1) at SimpleProgramNonFailingTest.kt:12

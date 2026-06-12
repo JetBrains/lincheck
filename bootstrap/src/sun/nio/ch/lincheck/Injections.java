@@ -14,6 +14,7 @@ import java.lang.invoke.CallSite;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Constructor;
 import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
 
 /**
  * Methods of this object are called from the instrumented code.
@@ -335,6 +336,19 @@ public class Injections {
      */
     public static BooleanSupplier createConditionInstance(int breakpointId, Object[] args) {
         return BreakpointStorage.createConditionInstance(breakpointId, args);
+    }
+
+    /**
+     * Creates a Supplier instance for breakpoint watches.
+     * Delegates to {@link BreakpointStorage}.
+     *
+     * @param breakpointId the unique integer id of the breakpoint
+     * @param args         the captured local variable values to pass to the watches
+     * @return a Supplier instance that evaluates watches
+     * @throws IllegalStateException if no state or factory is registered for the given id
+     */
+    public static Supplier<?> createWatchInstance(int breakpointId, Object[] args) {
+        return BreakpointStorage.createWatchInstance(breakpointId, args);
     }
 
     /**
@@ -829,13 +843,14 @@ public class Injections {
      * @param codeLocation The location of the breakpoint in the source code. Holds local variable names.
      * @param locals       An array containing the current values of local variables at the breakpoint location.
      *                     This includes: this, function parameters, and local variables.
+     * @param watches      An array containing values evaluated from user-configured watches.
      * @param traceId      ID to correlate snapshot breakpoints. Can be provided by frameworks like OpenTelemetry.
      * @param breakpointId The unique integer id of the breakpoint that was hit.
      */
-    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, String traceId, int breakpointId) {
+    public static void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, Object[] watches, String traceId, int breakpointId) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
-        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, locals, traceId, breakpointId);
+        eventTracker.onSnapshotLineBreakpoint(descriptor, codeLocation, locals, watches, traceId, breakpointId);
     }
 
     /**
@@ -1092,6 +1107,12 @@ public class Injections {
         );
     }
 
+    public static void onAwaitLoopPath(ThreadDescriptor descriptor, int codeLocation, int loopId) {
+        EventTracker tracker = getEventTracker(descriptor);
+        if (tracker == null || descriptor == null) return;
+        tracker.onAwaitLoopPath(descriptor, codeLocation, loopId);
+    }
+
     // Used in the verification phase to store a suspended continuation.
     public static Object lastSuspendedCancellableContinuationDuringVerification = null;
 
@@ -1231,4 +1252,15 @@ public class Injections {
 
     // Special object to represent void method call result.
     public static final Object VOID_RESULT = new Object();
+
+    /**
+     * Sentinel value passed as the receiver when a {@code super()}/{@code this()} constructor call
+     * is instrumented and the actual receiver is the uninitialized {@code this} reference
+     * (i.e., {@code UNINITIALIZED_THIS} in the JVM verification type system).
+     * <p>
+     * Passing the uninitialized {@code this} to instrumentation methods would cause a
+     * {@code VerifyError}, so this constant is used as a safe substitute that event trackers
+     * can recognise to mean "the constructor was called on the not-yet-initialised object".
+     */
+    public static final Object UNINITIALIZED_THIS = new Object();
 }

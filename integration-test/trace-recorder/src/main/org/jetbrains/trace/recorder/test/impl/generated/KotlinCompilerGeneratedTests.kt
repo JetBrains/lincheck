@@ -13,71 +13,35 @@ import org.junit.jupiter.api.Timeout
   Please run `org.jetbrains.trace.recorder.test.runner.GenerateTestsKt.main` to regenerate.
 */
 
-class KotlinCompilerTraceRecorderJsonIntegrationTests {
+class KotlinCompilerTraceRecorderJsonIntegrationTests_FirLightTreeBlackBoxCodegenTestGenerated {
     @Nested
-    inner class FirLightTreeBlackBoxCodegenTestGenerated {
+    inner class TestAllFilesPresentInBox : KotlinCompilerTraceRecorderJsonTests() {
+        @Test
+        @Timeout(20 * 60)
+        fun test() = runTest(
+            testClassName = "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated",
+            testMethodName = "testAllFilesPresentInBox",
+            extraJvmArgs = listOf(),
+            commands = listOf(":compiler:fir:fir2ir:test"),
+            checkRepresentation = false,
+            traceShouldContain = listOf(),
+            breakpointsIni = null
+        )
+    }
+    
+    @Nested
+    inner class CallableReference {
         @Nested
-        inner class TestAllFilesPresentInBox : KotlinCompilerTraceRecorderJsonTests() {
-            @Test
-            @Timeout(20 * 60)
-            fun test() = runTest(
-                testClassName = "org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated",
-                testMethodName = "testAllFilesPresentInBox",
-                extraJvmArgs = listOf(),
-                commands = listOf(":compiler:fir:fir2ir:test"),
-                checkRepresentation = false,
-                traceShouldContain = listOf(),
-                breakpointsIni = null
-            )
-        }
-    
-        @Nested
-        inner class CallableReference {
+        inner class Bound {
             @Nested
-            inner class Bound {
+            inner class Equals {
                 @Nested
-                inner class Equals {
-                    @Nested
-                    inner class TestReflectionReference : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
-                            testMethodName = "testReflectionReference",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:fir2ir:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-    
-                    @Nested
-                    inner class TestReceiverInEquals : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
-                            testMethodName = "testReceiverInEquals",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:fir2ir:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-                }
-            }
-    
-            @Nested
-            inner class Equality {
-                @Nested
-                inner class TestCapturedDefaults : KotlinCompilerTraceRecorderJsonTests() {
+                inner class TestReflectionReference : KotlinCompilerTraceRecorderJsonTests() {
                     @Test
                     @Timeout(20 * 60)
                     fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
-                        testMethodName = "testCapturedDefaults",
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
+                        testMethodName = "testReflectionReference",
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:fir2ir:test"),
                         checkRepresentation = false,
@@ -87,12 +51,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 }
     
                 @Nested
-                inner class TestExtensionReceiverVsDefault : KotlinCompilerTraceRecorderJsonTests() {
+                inner class TestReceiverInEquals : KotlinCompilerTraceRecorderJsonTests() {
                     @Test
                     @Timeout(20 * 60)
                     fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
-                        testMethodName = "testExtensionReceiverVsDefault",
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Bound$Equals",
+                        testMethodName = "testReceiverInEquals",
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:fir2ir:test"),
                         checkRepresentation = false,
@@ -104,50 +68,14 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
         }
     
         @Nested
-        inner class Initializers {
+        inner class Equality {
             @Nested
-            inner class Files {
-                @Nested
-                inner class TestSimple : KotlinCompilerTraceRecorderJsonTests() {
-                    @Test
-                    @Timeout(20 * 60)
-                    fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
-                        testMethodName = "testSimple",
-                        extraJvmArgs = listOf(),
-                        commands = listOf(":compiler:fir:fir2ir:test"),
-                        checkRepresentation = false,
-                        traceShouldContain = listOf(),
-                        breakpointsIni = null
-                    )
-                }
-    
-                @Nested
-                inner class TestSimpleMultiModule : KotlinCompilerTraceRecorderJsonTests() {
-                    @Test
-                    @Timeout(20 * 60)
-                    fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
-                        testMethodName = "testSimpleMultiModule",
-                        extraJvmArgs = listOf(),
-                        commands = listOf(":compiler:fir:fir2ir:test"),
-                        checkRepresentation = false,
-                        traceShouldContain = listOf(),
-                        breakpointsIni = null
-                    )
-                }
-            }
-        }
-    
-        @Nested
-        inner class Inline {
-            @Nested
-            inner class TestDefaultArgs : KotlinCompilerTraceRecorderJsonTests() {
+            inner class TestCapturedDefaults : KotlinCompilerTraceRecorderJsonTests() {
                 @Test
                 @Timeout(20 * 60)
                 fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
-                    testMethodName = "testDefaultArgs",
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
+                    testMethodName = "testCapturedDefaults",
                     extraJvmArgs = listOf(),
                     commands = listOf(":compiler:fir:fir2ir:test"),
                     checkRepresentation = false,
@@ -157,30 +85,12 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
             }
     
             @Nested
-            inner class TestCrossModuleTypeOf : KotlinCompilerTraceRecorderJsonTests() {
+            inner class TestExtensionReceiverVsDefault : KotlinCompilerTraceRecorderJsonTests() {
                 @Test
                 @Timeout(20 * 60)
                 fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
-                    testMethodName = "testCrossModuleTypeOf",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":compiler:fir:fir2ir:test"),
-                    checkRepresentation = false,
-                    traceShouldContain = listOf(),
-                    breakpointsIni = null
-                )
-            }
-        }
-    
-        @Nested
-        inner class Coroutines {
-            @Nested
-            inner class TestAsync : KotlinCompilerTraceRecorderJsonTests() {
-                @Test
-                @Timeout(20 * 60)
-                fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Coroutines",
-                    testMethodName = "testAsync",
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$CallableReference$Equality",
+                    testMethodName = "testExtensionReceiverVsDefault",
                     extraJvmArgs = listOf(),
                     commands = listOf(":compiler:fir:fir2ir:test"),
                     checkRepresentation = false,
@@ -192,16 +102,52 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
     }
     
     @Nested
-    inner class FirJsCodegenBoxTestGenerated {
+    inner class Initializers {
         @Nested
-        inner class TestAllFilesPresentInBox : KotlinCompilerTraceRecorderJsonTests() {
+        inner class Files {
+            @Nested
+            inner class TestSimple : KotlinCompilerTraceRecorderJsonTests() {
+                @Test
+                @Timeout(20 * 60)
+                fun test() = runTest(
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
+                    testMethodName = "testSimple",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":compiler:fir:fir2ir:test"),
+                    checkRepresentation = false,
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
+                )
+            }
+    
+            @Nested
+            inner class TestSimpleMultiModule : KotlinCompilerTraceRecorderJsonTests() {
+                @Test
+                @Timeout(20 * 60)
+                fun test() = runTest(
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Initializers$Files",
+                    testMethodName = "testSimpleMultiModule",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":compiler:fir:fir2ir:test"),
+                    checkRepresentation = false,
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
+                )
+            }
+        }
+    }
+    
+    @Nested
+    inner class Inline {
+        @Nested
+        inner class TestDefaultArgs : KotlinCompilerTraceRecorderJsonTests() {
             @Test
             @Timeout(20 * 60)
             fun test() = runTest(
-                testClassName = "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated",
-                testMethodName = "testAllFilesPresentInBox",
+                testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
+                testMethodName = "testDefaultArgs",
                 extraJvmArgs = listOf(),
-                commands = listOf(":js:js.tests:test"),
+                commands = listOf(":compiler:fir:fir2ir:test"),
                 checkRepresentation = false,
                 traceShouldContain = listOf(),
                 breakpointsIni = null
@@ -209,154 +155,117 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
         }
     
         @Nested
-        inner class Multiplatform {
-            @Nested
-            inner class K2 {
-                @Nested
-                inner class Basic {
-                    @Nested
-                    inner class TestAnyMethodInExpect : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
-                            testMethodName = "testAnyMethodInExpect",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":js:js.tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-    
-                    @Nested
-                    inner class TestContextOnExpect : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
-                            testMethodName = "testContextOnExpect",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":js:js.tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-                }
-    
-                @Nested
-                inner class Annotations {
-                    @Nested
-                    inner class TestOptionalExpectation : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
-                            testMethodName = "testOptionalExpectation",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":js:js.tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-    
-                    @Nested
-                    inner class TestExpectAnnotationCallInLibrary : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
-                            testMethodName = "testExpectAnnotationCallInLibrary",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":js:js.tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-                }
-            }
+        inner class TestCrossModuleTypeOf : KotlinCompilerTraceRecorderJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Inline",
+                testMethodName = "testCrossModuleTypeOf",
+                extraJvmArgs = listOf(),
+                commands = listOf(":compiler:fir:fir2ir:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = null
+            )
         }
+    }
     
+    @Nested
+    inner class Coroutines {
         @Nested
-        inner class Controlflow {
-            @Nested
-            inner class TestBreak : KotlinCompilerTraceRecorderJsonTests() {
-                @Test
-                @Timeout(20 * 60)
-                fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
-                    testMethodName = "testBreak",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":js:js.tests:test"),
-                    checkRepresentation = false,
-                    traceShouldContain = listOf(),
-                    breakpointsIni = null
-                )
-            }
-    
-            @Nested
-            inner class TestFor_loops : KotlinCompilerTraceRecorderJsonTests() {
-                @Test
-                @Timeout(20 * 60)
-                fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
-                    testMethodName = "testFor_loops",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":js:js.tests:test"),
-                    checkRepresentation = false,
-                    traceShouldContain = listOf(),
-                    breakpointsIni = null
-                )
-            }
+        inner class TestAsync : KotlinCompilerTraceRecorderJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.test.runners.codegen.FirLightTreeBlackBoxCodegenTestGenerated$Coroutines",
+                testMethodName = "testAsync",
+                extraJvmArgs = listOf(),
+                commands = listOf(":compiler:fir:fir2ir:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = null
+            )
         }
+    }
+}
+
+class KotlinCompilerTraceRecorderJsonIntegrationTests_FirJsCodegenBoxTestGenerated {
+    @Nested
+    inner class TestAllFilesPresentInBox : KotlinCompilerTraceRecorderJsonTests() {
+        @Test
+        @Timeout(20 * 60)
+        fun test() = runTest(
+            testClassName = "org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated",
+            testMethodName = "testAllFilesPresentInBox",
+            extraJvmArgs = listOf(),
+            commands = listOf(":js:js.tests:test"),
+            checkRepresentation = false,
+            traceShouldContain = listOf(),
+            breakpointsIni = null
+        )
+    }
     
+    @Nested
+    inner class Multiplatform {
         @Nested
-        inner class Coroutines {
+        inner class K2 {
             @Nested
-            inner class TestAsync : KotlinCompilerTraceRecorderJsonTests() {
-                @Test
-                @Timeout(20 * 60)
-                fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
-                    testMethodName = "testAsync",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":js:js.tests:test"),
-                    checkRepresentation = false,
-                    traceShouldContain = listOf(),
-                    breakpointsIni = null
-                )
-            }
-    
-            @Nested
-            inner class TestAwait : KotlinCompilerTraceRecorderJsonTests() {
-                @Test
-                @Timeout(20 * 60)
-                fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
-                    testMethodName = "testAwait",
-                    extraJvmArgs = listOf(),
-                    commands = listOf(":js:js.tests:test"),
-                    checkRepresentation = false,
-                    traceShouldContain = listOf(),
-                    breakpointsIni = null
-                )
-            }
-        }
-    
-        @Nested
-        inner class ControlStructures {
-            @Nested
-            inner class TryCatchInExpressions {
+            inner class Basic {
                 @Nested
-                inner class TestTryInsideTry : KotlinCompilerTraceRecorderJsonTests() {
+                inner class TestAnyMethodInExpect : KotlinCompilerTraceRecorderJsonTests() {
                     @Test
                     @Timeout(20 * 60)
                     fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$ControlStructures$TryCatchInExpressions",
-                        testMethodName = "testTryInsideTry",
+                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
+                        testMethodName = "testAnyMethodInExpect",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":js:js.tests:test"),
+                        checkRepresentation = false,
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
+                    )
+                }
+    
+                @Nested
+                inner class TestContextOnExpect : KotlinCompilerTraceRecorderJsonTests() {
+                    @Test
+                    @Timeout(20 * 60)
+                    fun test() = runTest(
+                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Basic",
+                        testMethodName = "testContextOnExpect",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":js:js.tests:test"),
+                        checkRepresentation = false,
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
+                    )
+                }
+            }
+    
+            @Nested
+            inner class Annotations {
+                @Nested
+                inner class TestOptionalExpectation : KotlinCompilerTraceRecorderJsonTests() {
+                    @Test
+                    @Timeout(20 * 60)
+                    fun test() = runTest(
+                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
+                        testMethodName = "testOptionalExpectation",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":js:js.tests:test"),
+                        checkRepresentation = false,
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
+                    )
+                }
+    
+                @Nested
+                inner class TestExpectAnnotationCallInLibrary : KotlinCompilerTraceRecorderJsonTests() {
+                    @Test
+                    @Timeout(20 * 60)
+                    fun test() = runTest(
+                        testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Multiplatform$K2$Annotations",
+                        testMethodName = "testExpectAnnotationCallInLibrary",
                         extraJvmArgs = listOf(),
                         commands = listOf(":js:js.tests:test"),
                         checkRepresentation = false,
@@ -369,18 +278,137 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
     }
     
     @Nested
-    inner class PhasedJvmDiagnosticLightTreeTestGenerated {
+    inner class Controlflow {
         @Nested
-        inner class Tests {
+        inner class TestBreak : KotlinCompilerTraceRecorderJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
+                testMethodName = "testBreak",
+                extraJvmArgs = listOf(),
+                commands = listOf(":js:js.tests:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = null
+            )
+        }
+    
+        @Nested
+        inner class TestFor_loops : KotlinCompilerTraceRecorderJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Controlflow",
+                testMethodName = "testFor_loops",
+                extraJvmArgs = listOf(),
+                commands = listOf(":js:js.tests:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = null
+            )
+        }
+    }
+    
+    @Nested
+    inner class Coroutines {
+        @Nested
+        inner class TestAsync : KotlinCompilerTraceRecorderJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
+                testMethodName = "testAsync",
+                extraJvmArgs = listOf(),
+                commands = listOf(":js:js.tests:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = null
+            )
+        }
+    
+        @Nested
+        inner class TestAwait : KotlinCompilerTraceRecorderJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$Coroutines",
+                testMethodName = "testAwait",
+                extraJvmArgs = listOf(),
+                commands = listOf(":js:js.tests:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = null
+            )
+        }
+    }
+    
+    @Nested
+    inner class ControlStructures {
+        @Nested
+        inner class TryCatchInExpressions {
             @Nested
-            inner class Annotations {
+            inner class TestTryInsideTry : KotlinCompilerTraceRecorderJsonTests() {
+                @Test
+                @Timeout(20 * 60)
+                fun test() = runTest(
+                    testClassName = $$"org.jetbrains.kotlin.js.test.fir.FirJsCodegenBoxTestGenerated$ControlStructures$TryCatchInExpressions",
+                    testMethodName = "testTryInsideTry",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":js:js.tests:test"),
+                    checkRepresentation = false,
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
+                )
+            }
+        }
+    }
+}
+
+class KotlinCompilerTraceRecorderJsonIntegrationTests_PhasedJvmDiagnosticLightTreeTestGenerated {
+    @Nested
+    inner class Tests {
+        @Nested
+        inner class Annotations {
+            @Nested
+            inner class TestWrongAnnotationTarget : KotlinCompilerTraceRecorderJsonTests() {
+                @Test
+                @Timeout(20 * 60)
+                fun test() = runTest(
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
+                    testMethodName = "testWrongAnnotationTarget",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":compiler:fir:analysis-tests:test"),
+                    checkRepresentation = false,
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
+                )
+            }
+    
+            @Nested
+            inner class TestWrongAnnotationTargetAnnotationOrder : KotlinCompilerTraceRecorderJsonTests() {
+                @Test
+                @Timeout(20 * 60)
+                fun test() = runTest(
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
+                    testMethodName = "testWrongAnnotationTargetAnnotationOrder",
+                    extraJvmArgs = listOf(),
+                    commands = listOf(":compiler:fir:analysis-tests:test"),
+                    checkRepresentation = false,
+                    traceShouldContain = listOf(),
+                    breakpointsIni = null
+                )
+            }
+    
+            @Nested
+            inner class FunctionalTypes {
                 @Nested
-                inner class TestWrongAnnotationTarget : KotlinCompilerTraceRecorderJsonTests() {
+                inner class TestParameterName : KotlinCompilerTraceRecorderJsonTests() {
                     @Test
                     @Timeout(20 * 60)
                     fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
-                        testMethodName = "testWrongAnnotationTarget",
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
+                        testMethodName = "testParameterName",
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:analysis-tests:test"),
                         checkRepresentation = false,
@@ -390,129 +418,78 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 }
     
                 @Nested
-                inner class TestWrongAnnotationTargetAnnotationOrder : KotlinCompilerTraceRecorderJsonTests() {
+                inner class TestParenthesizedAnnotations : KotlinCompilerTraceRecorderJsonTests() {
                     @Test
                     @Timeout(20 * 60)
                     fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations",
-                        testMethodName = "testWrongAnnotationTargetAnnotationOrder",
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
+                        testMethodName = "testParenthesizedAnnotations",
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:analysis-tests:test"),
                         checkRepresentation = false,
                         traceShouldContain = listOf(),
                         breakpointsIni = null
                     )
-                }
-    
-                @Nested
-                inner class FunctionalTypes {
-                    @Nested
-                    inner class TestParameterName : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
-                            testMethodName = "testParameterName",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:analysis-tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-    
-                    @Nested
-                    inner class TestParenthesizedAnnotations : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$FunctionalTypes",
-                            testMethodName = "testParenthesizedAnnotations",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:analysis-tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-                }
-    
-                @Nested
-                inner class Options {
-                    @Nested
-                    inner class TestAnnotationAsArg : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
-                            testMethodName = "testAnnotationAsArg",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:analysis-tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-    
-                    @Nested
-                    inner class TestAnnotationAsArgComplex : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
-                            testMethodName = "testAnnotationAsArgComplex",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:analysis-tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-                }
-    
-                @Nested
-                inner class AnnotationParameterMustBeConstant {
-                    @Nested
-                    inner class TestCompareAndEquals : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
-                            testMethodName = "testCompareAndEquals",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:analysis-tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
-    
-                    @Nested
-                    inner class TestStrings : KotlinCompilerTraceRecorderJsonTests() {
-                        @Test
-                        @Timeout(20 * 60)
-                        fun test() = runTest(
-                            testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
-                            testMethodName = "testStrings",
-                            extraJvmArgs = listOf(),
-                            commands = listOf(":compiler:fir:analysis-tests:test"),
-                            checkRepresentation = false,
-                            traceShouldContain = listOf(),
-                            breakpointsIni = null
-                        )
-                    }
                 }
             }
     
             @Nested
-            inner class ControlFlowAnalysis {
+            inner class Options {
                 @Nested
-                inner class TestAssignedInFinally : KotlinCompilerTraceRecorderJsonTests() {
+                inner class TestAnnotationAsArg : KotlinCompilerTraceRecorderJsonTests() {
                     @Test
                     @Timeout(20 * 60)
                     fun test() = runTest(
-                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$ControlFlowAnalysis",
-                        testMethodName = "testAssignedInFinally",
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
+                        testMethodName = "testAnnotationAsArg",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":compiler:fir:analysis-tests:test"),
+                        checkRepresentation = false,
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
+                    )
+                }
+    
+                @Nested
+                inner class TestAnnotationAsArgComplex : KotlinCompilerTraceRecorderJsonTests() {
+                    @Test
+                    @Timeout(20 * 60)
+                    fun test() = runTest(
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$Options",
+                        testMethodName = "testAnnotationAsArgComplex",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":compiler:fir:analysis-tests:test"),
+                        checkRepresentation = false,
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
+                    )
+                }
+            }
+    
+            @Nested
+            inner class AnnotationParameterMustBeConstant {
+                @Nested
+                inner class TestCompareAndEquals : KotlinCompilerTraceRecorderJsonTests() {
+                    @Test
+                    @Timeout(20 * 60)
+                    fun test() = runTest(
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
+                        testMethodName = "testCompareAndEquals",
+                        extraJvmArgs = listOf(),
+                        commands = listOf(":compiler:fir:analysis-tests:test"),
+                        checkRepresentation = false,
+                        traceShouldContain = listOf(),
+                        breakpointsIni = null
+                    )
+                }
+    
+                @Nested
+                inner class TestStrings : KotlinCompilerTraceRecorderJsonTests() {
+                    @Test
+                    @Timeout(20 * 60)
+                    fun test() = runTest(
+                        testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$Annotations$AnnotationParameterMustBeConstant",
+                        testMethodName = "testStrings",
                         extraJvmArgs = listOf(),
                         commands = listOf(":compiler:fir:analysis-tests:test"),
                         checkRepresentation = false,
@@ -522,26 +499,43 @@ class KotlinCompilerTraceRecorderJsonIntegrationTests {
                 }
             }
         }
-    }
     
-    @Nested
-    inner class FirWasmJsCodegenBoxTestGenerated {
         @Nested
-        inner class Annotations {
+        inner class ControlFlowAnalysis {
             @Nested
-            inner class TestAnnotations0 : KotlinCompilerTraceRecorderJsonTests() {
+            inner class TestAssignedInFinally : KotlinCompilerTraceRecorderJsonTests() {
                 @Test
                 @Timeout(20 * 60)
                 fun test() = runTest(
-                    testClassName = $$"org.jetbrains.kotlin.wasm.test.FirWasmJsCodegenBoxTestGenerated$Annotations",
-                    testMethodName = "testAnnotations0",
+                    testClassName = $$"org.jetbrains.kotlin.test.runners.PhasedJvmDiagnosticLightTreeTestGenerated$Tests$ControlFlowAnalysis",
+                    testMethodName = "testAssignedInFinally",
                     extraJvmArgs = listOf(),
-                    commands = listOf(":wasm:wasm.tests:test"),
+                    commands = listOf(":compiler:fir:analysis-tests:test"),
                     checkRepresentation = false,
                     traceShouldContain = listOf(),
                     breakpointsIni = null
                 )
             }
+        }
+    }
+}
+
+class KotlinCompilerTraceRecorderJsonIntegrationTests_FirWasmJsCodegenBoxTestGenerated {
+    @Nested
+    inner class Annotations {
+        @Nested
+        inner class TestAnnotations0 : KotlinCompilerTraceRecorderJsonTests() {
+            @Test
+            @Timeout(20 * 60)
+            fun test() = runTest(
+                testClassName = $$"org.jetbrains.kotlin.wasm.test.FirWasmJsCodegenBoxTestGenerated$Annotations",
+                testMethodName = "testAnnotations0",
+                extraJvmArgs = listOf(),
+                commands = listOf(":wasm:wasm.tests:test"),
+                checkRepresentation = false,
+                traceShouldContain = listOf(),
+                breakpointsIni = null
+            )
         }
     }
 }

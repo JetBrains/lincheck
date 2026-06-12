@@ -67,7 +67,7 @@ internal object TraceRecorderInjections {
                     outputOption = TraceAgentParameters.getArg(ARGUMENT_FOPTION),
                     outputFilePath = TraceAgentParameters.traceDumpFilePath,
                 ),
-                TracingSession.StartMode.FromMethod(thread, className, methodName, startingCodeLocationId),
+                TracingSession.StartMode.MethodCall(thread, className, methodName, startingCodeLocationId),
             )
             .ensureNotNull()
         } catch (t: Throwable) {

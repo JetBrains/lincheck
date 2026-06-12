@@ -224,7 +224,7 @@ internal fun loadTracePointDeep(
     consumer: TracepointConsumer
 ): Boolean {
     // Load tracepoint itself
-    val tracePoint = loadTRTracePoint(context, input)
+    val tracePoint = input.readTRTracePoint(context)
     consumer.tracePointRead(tree.lastOrNull(), tracePoint)
     if (tracePoint !is TRContainerTracePoint) {
         return true
@@ -285,8 +285,7 @@ internal fun loadThreadName(
     context: TraceContext,
     restore: Boolean
 ): Int {
-    val id = input.readInt()
-    val name = input.readUTF()
+    val (id, name) = input.readThreadName()
     if (restore) {
         context.setThreadName(id, name)
     }
@@ -350,7 +349,7 @@ internal fun loadString(
     restore: Boolean
 ): Int {
     val id = input.readInt()
-    val string = input.readUTF()
+    val string = input.readString()
     if (restore) {
         context.stringPool.restore(id, string)
     }
@@ -402,6 +401,8 @@ internal fun loadCodeLocation(
         nActiveLocalsNames == 0 -> null
         else -> List(nActiveLocalsNames) { input.readInt() }
     }
+    val nLoopIds = input.readInt()
+    val loopIds = List(nLoopIds) { input.readInt() }
 
     if (restore) {
         val stringPool = context.stringPool
@@ -421,6 +422,7 @@ internal fun loadCodeLocation(
             CodeLocationKind.LINE -> LineCodeLocation(stackTraceElement, activeLocals)
             CodeLocationKind.ACCESS -> AccessCodeLocation(stackTraceElement, accessPath, activeLocals)
             CodeLocationKind.METHOD_CALL -> MethodCallCodeLocation(stackTraceElement, accessPath, argumentNames, activeLocals)
+            CodeLocationKind.LOOP -> LoopHeaderCodeLocation(stackTraceElement, loopIds, activeLocals)
         }
         context.codeLocationsPool.restore(id, codeLocation)
     }
@@ -428,15 +430,7 @@ internal fun loadCodeLocation(
 }
 
 internal fun checkDataHeader(input: DataInput) {
-    val magic = input.readLong()
-    check(magic == TRACE_MAGIC) {
-        "Wrong magic 0x${(magic.toString(16))}, expected ${TRACE_MAGIC.toString(16)}"
-    }
-
-    val version = input.readLong()
-    check(version == TRACE_VERSION) {
-        "Wrong version $version (expected $TRACE_VERSION)"
-    }
+    input.checkTraceHeader()
 }
 
 const val FALLBACK_STRING = "<unknown>"

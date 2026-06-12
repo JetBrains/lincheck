@@ -11,7 +11,6 @@
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ProjectConnection
 import java.io.File
-import java.nio.file.Paths
 
 abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest() {
 
@@ -34,6 +33,19 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
         extraAgentArgs: Map<String, String>,
         commands: List<String>,
         outputFile: File
+    ) = runGradleTest(
+        testClassName, testMethodName, "$testClassName.$testMethodName",
+        extraJvmArgs, extraAgentArgs, commands, outputFile
+    )
+
+    protected fun runGradleTest(
+        agentClassName: String,
+        agentMethodName: String,
+        testFilter: String,
+        extraJvmArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
+        commands: List<String>,
+        outputFile: File
     ) {
         createGradleConnection().use { connection ->
             connection
@@ -44,13 +56,13 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
                     "--init-script",
                     createInitScriptAsTempFile(
                         buildGradleInitScriptToDumpTrace(
-                            commands, testClassName, testMethodName, outputFile, extraJvmArgs, extraAgentArgs
+                            commands, agentClassName, agentMethodName, outputFile, extraJvmArgs, extraAgentArgs
                         )
                     ).absolutePath,
                 ).forTasks(
                     *commands.toTypedArray(),
                     "--tests",
-                    "$testClassName.$testMethodName",
+                    testFilter,
                 ).run()
         }
     }
@@ -70,7 +82,7 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
         return tempFile
     }
 
-    private fun buildGradleInitScriptToDumpTrace(
+    protected fun buildGradleInitScriptToDumpTrace(
         gradleCommands: List<String>,
         testClassName: String,
         testMethodName: String,
@@ -100,4 +112,20 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
             }
         """.trimIndent()
     }
+}
+
+abstract class AbstractWholeApplicationTraceIntegrationTest: AbstractGradleTraceIntegrationTest() {
+
+    override fun runTestImpl(
+        testClassName: String,
+        testMethodName: String,
+        extraJvmArgs: List<String>,
+        extraAgentArgs: Map<String, String>,
+        commands: List<String>,
+        outputFile: File
+    ) = runGradleTest(
+        // class & method names are empty strings to run TR in whole-application mode
+        agentClassName = "", agentMethodName = "", testFilter = "$testClassName.$testMethodName",
+        extraJvmArgs, extraAgentArgs, commands, outputFile
+    )
 }

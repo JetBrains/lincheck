@@ -1,0 +1,17 @@
+=== Loop Information ===
+LOOP 1
+  HEADER: B0
+  BODY: B0, B1, B2, B4
+  BACK EDGES:
+    B1 -> B0 : JUMP(opcode=GOTO)
+    B4 -> B0 : JUMP(opcode=GOTO)
+  NORMAL EXITS:
+    B2 -> B3
+  EXCEPTION EXIT HANDLERS:
+    NONE
+  EXCLUSIVE EXITS:
+    B3
+
+
+=== Await Path Detection ===
+Await loop 1: header=B0, body=[B0, B1, B2, B4], cleanBackEdgeSources=[B1]

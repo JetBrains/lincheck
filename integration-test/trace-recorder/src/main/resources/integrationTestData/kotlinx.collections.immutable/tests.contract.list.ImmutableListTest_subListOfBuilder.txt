@@ -9,6 +9,16 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
       mutate = SmallPersistentVector@1 at extensions.kt:623
       mutate.builder(): PersistentVectorBuilder@1 at extensions.kt:41
         new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+          super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+          rootShift = 0 at PersistentVectorBuilder.kt:17
+          builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+          new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+            super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+          ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+          root = null at PersistentVectorBuilder.kt:22
+          tail = Object;@1 at PersistentVectorBuilder.kt:30
+          vector.size(): 0 at PersistentVectorBuilder.kt:38
+          size = 0 at PersistentVectorBuilder.kt:38
       it = PersistentVectorBuilder@1 at extensions.kt:41
       toCollection(toPersistentList ➜ "abcxaxyz12", it): PersistentVectorBuilder@1 at extensions.kt:623
         modCount = 1 at PersistentVectorBuilder.kt:118
@@ -143,16 +153,31 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
         root = null at PersistentVectorBuilder.kt:45
         tail = Object;@1 at PersistentVectorBuilder.kt:46
         new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
+          super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
         build$lambda$0.ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:47
         build$lambda$0.size(): 10 at PersistentVectorBuilder.kt:52
         Arrays.copyOf(tail, 10): Object;@1 at PersistentVectorBuilder.kt:52
         new SmallPersistentVector(Object;@1): SmallPersistentVector@1 at PersistentVectorBuilder.kt:52
+          super@AbstractPersistentList(): SmallPersistentVector@1 at SmallPersistentVector.kt:15
+            super@AbstractList(): SmallPersistentVector@1 at AbstractPersistentList.kt:13
+          buffer = Object;@1 at SmallPersistentVector.kt:15
+          assert(true) at SmallPersistentVector.kt:18
         newlyBuiltVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:48
         build$lambda$0.builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:57
   toPersistentList(SmallPersistentVector@1): SmallPersistentVector@1 at ImmutableListTest.kt:163
   list = SmallPersistentVector@1 at ImmutableListTest.kt:163
   list.builder(): PersistentVectorBuilder@1 at ImmutableListTest.kt:164
     new PersistentVectorBuilder(, null, buffer, 0): PersistentVectorBuilder@1 at SmallPersistentVector.kt:131
+      super@AbstractMutableList(): PersistentVectorBuilder@1 at PersistentVectorBuilder.kt:17
+      rootShift = 0 at PersistentVectorBuilder.kt:17
+      builtVector = SmallPersistentVector@1 at PersistentVectorBuilder.kt:19
+      new MutabilityOwnership(): MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+        super@Object(): MutabilityOwnership@1 at MutabilityOwnership.kt:13
+      ownership = MutabilityOwnership@1 at PersistentVectorBuilder.kt:20
+      root = null at PersistentVectorBuilder.kt:22
+      tail = Object;@1 at PersistentVectorBuilder.kt:30
+      vector.size(): 10 at PersistentVectorBuilder.kt:38
+      size = 10 at PersistentVectorBuilder.kt:38
   builder = PersistentVectorBuilder@1 at ImmutableListTest.kt:164
   subList = null at ImmutableListTest.kt:168
   builder.subList(2, 5): AbstractList.SubList@1 at ImmutableListTest.kt:168
@@ -183,16 +208,26 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
   catch(ConcurrentModificationException@1) at ImmutableListTest.kt:171
   createFailure(ConcurrentModificationException@1): Result.Failure@1 at ImmutableListTest.kt:171
   Result.constructor-impl(Result.Failure@1): Result.Failure@1 at ImmutableListTest.kt:171
-  checkResultIsFailure(ConcurrentModificationException.kclass, null, Result.Failure@1): ConcurrentModificationException@1 at ImmutableListTest.kt:171
+  checkResultIsFailure(java.util.ConcurrentModificationException.kclass, null, Result.Failure@1): ConcurrentModificationException@1 at ImmutableListTest.kt:171
   builder.subList(2, 5): AbstractList.SubList@1 at ImmutableListTest.kt:176
   subList = AbstractList.SubList@1 at ImmutableListTest.kt:176
   joinToString(subList, "", null, null, 0, null, null, 62, null): "cxx" at ImmutableListTest.kt:177
     size(): 10 at PersistentVectorBuilder.kt:987
     ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 2, 10) at PersistentVectorBuilder.kt:987
     new PersistentVectorMutableIterator(, index ➜ 2): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
-      builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
-      root = null at PersistentVectorMutableIterator.kt:82
-      trieIterator = null at PersistentVectorMutableIterator.kt:84
+      builder.size(): 10 at PersistentVectorMutableIterator.kt:18
+      super@AbstractListIterator(index ➜ 2, 10): PersistentVectorMutableIterator@1 at PersistentVectorMutableIterator.kt:18
+        super@Object(): PersistentVectorMutableIterator@1 at AbstractListIterator.kt:8
+        index = 2 at AbstractListIterator.kt:8
+        size = 10 at AbstractListIterator.kt:8
+      builder = PersistentVectorBuilder@1 at PersistentVectorMutableIterator.kt:16
+      builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:24
+      expectedModCount = 1 at PersistentVectorMutableIterator.kt:24
+      lastIteratedIndex = -1 at PersistentVectorMutableIterator.kt:35
+      setupTrieIterator() at PersistentVectorMutableIterator.kt:38
+        builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+        root = null at PersistentVectorMutableIterator.kt:82
+        trieIterator = null at PersistentVectorMutableIterator.kt:84
     checkForComodification() at PersistentVectorMutableIterator.kt:58
       builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:126
     checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
@@ -240,9 +275,19 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
     size(): 10 at PersistentVectorBuilder.kt:987
     ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 2, 10) at PersistentVectorBuilder.kt:987
     new PersistentVectorMutableIterator(, index ➜ 2): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
-      builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
-      root = null at PersistentVectorMutableIterator.kt:82
-      trieIterator = null at PersistentVectorMutableIterator.kt:84
+      builder.size(): 10 at PersistentVectorMutableIterator.kt:18
+      super@AbstractListIterator(index ➜ 2, 10): PersistentVectorMutableIterator@1 at PersistentVectorMutableIterator.kt:18
+        super@Object(): PersistentVectorMutableIterator@1 at AbstractListIterator.kt:8
+        index = 2 at AbstractListIterator.kt:8
+        size = 10 at AbstractListIterator.kt:8
+      builder = PersistentVectorBuilder@1 at PersistentVectorMutableIterator.kt:16
+      builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:24
+      expectedModCount = 1 at PersistentVectorMutableIterator.kt:24
+      lastIteratedIndex = -1 at PersistentVectorMutableIterator.kt:35
+      setupTrieIterator() at PersistentVectorMutableIterator.kt:38
+        builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+        root = null at PersistentVectorMutableIterator.kt:82
+        trieIterator = null at PersistentVectorMutableIterator.kt:84
     checkForComodification() at PersistentVectorMutableIterator.kt:58
       builder.getModCount$kotlinx_collections_immutable(): 1 at PersistentVectorMutableIterator.kt:126
     checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
@@ -300,9 +345,19 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
     size(): 9 at PersistentVectorBuilder.kt:987
     ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 2, 9) at PersistentVectorBuilder.kt:987
     new PersistentVectorMutableIterator(, index ➜ 2): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
-      builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
-      root = null at PersistentVectorMutableIterator.kt:82
-      trieIterator = null at PersistentVectorMutableIterator.kt:84
+      builder.size(): 9 at PersistentVectorMutableIterator.kt:18
+      super@AbstractListIterator(index ➜ 2, 9): PersistentVectorMutableIterator@1 at PersistentVectorMutableIterator.kt:18
+        super@Object(): PersistentVectorMutableIterator@1 at AbstractListIterator.kt:8
+        index = 2 at AbstractListIterator.kt:8
+        size = 9 at AbstractListIterator.kt:8
+      builder = PersistentVectorBuilder@1 at PersistentVectorMutableIterator.kt:16
+      builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:24
+      expectedModCount = 2 at PersistentVectorMutableIterator.kt:24
+      lastIteratedIndex = -1 at PersistentVectorMutableIterator.kt:35
+      setupTrieIterator() at PersistentVectorMutableIterator.kt:38
+        builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+        root = null at PersistentVectorMutableIterator.kt:82
+        trieIterator = null at PersistentVectorMutableIterator.kt:84
     checkForComodification() at PersistentVectorMutableIterator.kt:58
       builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
     checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59
@@ -330,9 +385,19 @@ ImmutableListTest.subListOfBuilder() at ImmutableListTest.kt:163
         size(): 9 at PersistentVectorBuilder.kt:987
         ListImplementation.checkPositionIndex$kotlinx_collections_immutable(index ➜ 0, 9) at PersistentVectorBuilder.kt:987
         new PersistentVectorMutableIterator(, index ➜ 0): PersistentVectorMutableIterator@1 at PersistentVectorBuilder.kt:988
-          builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
-          root = null at PersistentVectorMutableIterator.kt:82
-          trieIterator = null at PersistentVectorMutableIterator.kt:84
+          builder.size(): 9 at PersistentVectorMutableIterator.kt:18
+          super@AbstractListIterator(index ➜ 0, 9): PersistentVectorMutableIterator@1 at PersistentVectorMutableIterator.kt:18
+            super@Object(): PersistentVectorMutableIterator@1 at AbstractListIterator.kt:8
+            index = 0 at AbstractListIterator.kt:8
+            size = 9 at AbstractListIterator.kt:8
+          builder = PersistentVectorBuilder@1 at PersistentVectorMutableIterator.kt:16
+          builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:24
+          expectedModCount = 2 at PersistentVectorMutableIterator.kt:24
+          lastIteratedIndex = -1 at PersistentVectorMutableIterator.kt:35
+          setupTrieIterator() at PersistentVectorMutableIterator.kt:38
+            builder.getRoot$kotlinx_collections_immutable(): null at PersistentVectorMutableIterator.kt:82
+            root = null at PersistentVectorMutableIterator.kt:82
+            trieIterator = null at PersistentVectorMutableIterator.kt:84
     checkForComodification() at PersistentVectorMutableIterator.kt:58
       builder.getModCount$kotlinx_collections_immutable(): 2 at PersistentVectorMutableIterator.kt:126
     checkHasNext$kotlinx_collections_immutable() at PersistentVectorMutableIterator.kt:59

@@ -21,6 +21,7 @@ import org.jetbrains.lincheck.util.isInLincheckPackage
 import org.jetbrains.lincheck.util.isIntellijInstrumentationCoverageAgentClass
 import org.jetbrains.lincheck.util.isRecognizedLoggingLibraryClass
 import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Opcodes.INVOKESTATIC
 import org.objectweb.asm.Type
 import org.objectweb.asm.Type.*
@@ -45,6 +46,7 @@ internal class MethodCallTransformer(
     val configuration: TransformationConfiguration,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
+    override val requiresTypeAnalyzer: Boolean = true
     override val requiresOwnerNameAnalyzer: Boolean = true
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
@@ -65,6 +67,9 @@ internal class MethodCallTransformer(
 
     private fun GeneratorAdapter.processMethodCall(desc: String, opcode: Int, owner: String, name: String, itf: Boolean) {
         val isConstructorCall = (name == "<init>")
+        // A super()/this() call has UNINITIALIZED_THIS as the receiver on the operand stack.
+        // We detect this via the AnalyzerAdapter before emitting any instrumentation.
+        val isUninitThisCall = isConstructorCall && isReceiverUninitializedThis(desc)
         val receiverType = getType("L$owner;")
         val argumentNames = getArgumentNames(desc, opcode)
         val ownerName = when {
@@ -81,9 +86,9 @@ internal class MethodCallTransformer(
         // `NEW Clazz; DUP; push args; INVOKESPECIAL Clazz.<init>`.
         //
         // Before invoking the `<init>` method, the stack has the following shape:
-        //   `STACK: this (uninitialized), this (uninitialized), args`
+        //   `STACK: uninitializedThis, uninitializedThis, args`
         // and after its invocation:
-        //    `STACK: this (initialized)`.
+        //    `STACK: this (initialized)`
         val returnType = if (isConstructorCall) receiverType else getReturnType(desc)
 
         // STACK: receiver?, arguments
@@ -126,44 +131,70 @@ internal class MethodCallTransformer(
             argumentNames,
             threadDescriptorLocal,
             resultInterceptorLocal,
+            isUninitThisCall,
         )
         // STACK: <empty>
+        if (isUninitThisCall) {
+            // Cannot wrap super()/this() in try-catch: an exception handler frame cannot carry
+            // flagThisUninit, so ASM would generate a frame the JVM verifier rejects.
+            // Skipping exception tracking is safe — if super()/this() throws, construction
+            // is already aborted and the partially-constructed receiver is unreachable.
+            processMethodCallAndReturn(opcode, owner, name, desc, itf,
+                methodId,
+                returnType,
+                receiverLocal,
+                argumentLocals,
+                argumentsArrayLocal,
+                threadDescriptorLocal,
+                resultInterceptorLocal,
+                isUninitThisCall = true
+            )
+            // STACK: result?
+        } else {
+            tryCatchFinally(
+                tryBlock = {
+                    processMethodCallAndReturn(opcode, owner, name, desc, itf,
+                        methodId,
+                        returnType,
+                        receiverLocal,
+                        argumentLocals,
+                        argumentsArrayLocal,
+                        threadDescriptorLocal,
+                        resultInterceptorLocal,
+                        isUninitThisCall = false
+                    )
+                    // STACK: result?
+                },
+                catchBlock = {
+                    // STACK: exception
+                    dup()
+                    // STACK: exception, exception
+                    processMethodCallException(
+                        methodId,
+                        receiverLocal,
+                        argumentsArrayLocal,
+                        threadDescriptorLocal,
+                        resultInterceptorLocal,
+                    )
+                    // STACK: exception
+                    throwException()
+                }
+            )
+        }
+    }
 
-        tryCatchFinally(
-            tryBlock = {
-                // Stack <empty>
-                processMethodCall(opcode, owner, name, desc, itf,
-                    returnType,
-                    receiverLocal,
-                    argumentLocals,
-                    resultInterceptorLocal,
-                )
-                // STACK: result?
-                processMethodCallReturn(
-                    returnType,
-                    methodId,
-                    receiverLocal,
-                    argumentsArrayLocal,
-                    threadDescriptorLocal,
-                    resultInterceptorLocal,
-                )
-                // STACK: result?
-            },
-            catchBlock = {
-                // STACK: exception
-                dup()
-                // STACK: exception, exception
-                processMethodCallException(
-                    methodId,
-                    receiverLocal,
-                    argumentsArrayLocal,
-                    threadDescriptorLocal,
-                    resultInterceptorLocal,
-                )
-                // STACK: exception
-                throwException()
-            }
-        )
+    /**
+     * Returns true when the receiver of the constructor call being visited has
+     * [Opcodes.UNINITIALIZED_THIS] as its verification type in the operand stack — i.e., this
+     * is a `super()` or `this()` delegation call inside the current constructor body.
+     *
+     * The check reads [typeAnalyzer]'s stack state which reflects the original bytecode frame
+     * before any instrumentation bytecode is emitted.
+     */
+    private fun isReceiverUninitializedThis(desc: String): Boolean {
+        val stack = typeAnalyzer?.stack ?: return false
+        val argSlots = getArgumentTypes(desc).sumOf { it.size }
+        return stack.getStackElementAt(argSlots) == Opcodes.UNINITIALIZED_THIS
     }
 
     private fun GeneratorAdapter.processMethodCallEnter(
@@ -174,6 +205,7 @@ internal class MethodCallTransformer(
         argumentNames: List<AccessPath?>?,
         threadDescriptorLocal: Int,
         resultInterceptorLocal: Int,
+        isUninitThisCall: Boolean = false,
     ) {
         // STACK: <empty>
         loadLocal(threadDescriptorLocal)
@@ -181,13 +213,12 @@ internal class MethodCallTransformer(
         loadNewCodeLocationId(createCurrentMethodCallCodeLocation(accessPath = ownerName, argumentNames = argumentNames))
         // STACK: descriptor, codeLocation
         push(methodId)
-        pushReceiver(receiverLocal)
+        pushReceiver(receiverLocal, isUninitThisCall)
         loadLocal(argumentsArrayLocal)
         loadLocal(resultInterceptorLocal)
-
         // STACK: descriptor, codeLocation, methodId, receiver?, argumentsArray, interceptor?
         invokeStatic(Injections::onMethodCall)
-        // STACK: deterministicCallDescriptor (NOTE: Isn't the stack empty here?)
+        // STACK: <empty>
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}")
     }
 
@@ -200,9 +231,12 @@ internal class MethodCallTransformer(
         returnType: Type,
         receiverLocal: Int?,
         argumentLocals: IntArray,
-        resultInterceptorLocal: Int
+        resultInterceptorLocal: Int,
+        isUninitThisCall: Boolean = false,
     ) {
-        if (!configuration.interceptMethodCallResults) {
+        // Result interception is not applicable to super()/this() calls: INVOKESPECIAL leaves the
+        // stack empty, so there is no slot to place an intercepted value into.
+        if (!configuration.interceptMethodCallResults || isUninitThisCall) {
             runMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
             return
         }
@@ -227,15 +261,23 @@ internal class MethodCallTransformer(
         argumentsArrayLocal: Int,
         threadDescriptorLocal: Int,
         resultInterceptorLocal: Int,
+        isUninitThisCall: Boolean = false,
     ) {
         // STACK: result?
         val resultLocal = when {
             (returnType == VOID_TYPE) -> null
+            isUninitThisCall -> newLocal(returnType).also {
+                // For super()/this() calls the INVOKESPECIAL leaves the stack empty and initialises
+                // `this` in-place. We load local 0 (now a fully initialised reference) to use as the
+                // reported result.
+                visitVarInsn(Opcodes.ALOAD, 0)
+                storeLocal(it)
+            }
             else -> newLocal(returnType).also { storeLocal(it) }
         }
         loadLocal(threadDescriptorLocal)
         push(methodId)
-        pushReceiver(receiverLocal)
+        pushReceiver(receiverLocal, isUninitThisCall)
         loadLocal(argumentsArrayLocal)
         resultLocal?.let {
             loadLocal(it)
@@ -245,8 +287,15 @@ internal class MethodCallTransformer(
 
         // STACK: descriptor, methodId, receiver, arguments, result?, interceptor?
         when {
+            isUninitThisCall -> {
+                // Report `this` as the result but do NOT push it onto the stack — the original
+                // super()/this() call is void from the caller's perspective.
+                invokeStatic(Injections::onMethodCallReturn)
+                // STACK: <empty>
+            }
             returnType == VOID_TYPE -> {
                 invokeStatic(Injections::onMethodCallReturnVoid)
+                // STACK: <empty>
             }
             else -> {
                 invokeStatic(Injections::onMethodCallReturn)
@@ -255,6 +304,38 @@ internal class MethodCallTransformer(
                 // STACK: result
             }
         }
+        // STACK: result?
+    }
+
+    private fun GeneratorAdapter.processMethodCallAndReturn(
+        opcode: Int, owner: String, name: String, desc: String, itf: Boolean,
+        methodId: Int,
+        returnType: Type,
+        receiverLocal: Int?,
+        argumentLocals: IntArray,
+        argumentsArrayLocal: Int,
+        threadDescriptorLocal: Int,
+        resultInterceptorLocal: Int,
+        isUninitThisCall: Boolean
+    ) {
+        // Stack <empty>
+        processMethodCall(opcode, owner, name, desc, itf,
+            returnType,
+            receiverLocal,
+            argumentLocals,
+            resultInterceptorLocal,
+            isUninitThisCall,
+        )
+        // STACK: result?
+        processMethodCallReturn(
+            returnType,
+            methodId,
+            receiverLocal,
+            argumentsArrayLocal,
+            threadDescriptorLocal,
+            resultInterceptorLocal,
+            isUninitThisCall,
+        )
         // STACK: result?
     }
 
@@ -271,7 +352,7 @@ internal class MethodCallTransformer(
         // STACK: <empty>
         loadLocal(threadDescriptorLocal)
         push(methodId)
-        pushReceiver(receiverLocal)
+        pushReceiver(receiverLocal, isUninitThisCall = false /* exception handling is not applicable for the super(...) calls */)
         loadLocal(argumentsArrayLocal)
         loadLocal(exceptionLocal)
         loadLocal(resultInterceptorLocal)
@@ -316,12 +397,18 @@ internal class MethodCallTransformer(
         }.reversed()
     }
 
-    private fun GeneratorAdapter.pushReceiver(receiverLocal: Int?) {
+    private fun GeneratorAdapter.pushReceiver(receiverLocal: Int?, isUninitThisCall: Boolean) {
         // STACK: <empty>
-        if (receiverLocal != null) {
-            loadLocal(receiverLocal)
+        if (isUninitThisCall) {
+            // For super()/this() calls the receiver slot holds UNINITIALIZED_THIS which cannot be
+            // passed to instrumentation methods (causes VerifyError). Push the UNINITIALIZED_THIS sentinel instead.
+            pushUninitializedThisSubstitute()
         } else {
-            pushNull()
+            if (receiverLocal != null) {
+                loadLocal(receiverLocal)
+            } else {
+                pushNull()
+            }
         }
         // STACK: receiver?
     }
