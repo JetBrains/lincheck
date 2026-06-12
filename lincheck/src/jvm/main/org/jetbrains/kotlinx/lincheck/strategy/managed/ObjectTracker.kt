@@ -232,8 +232,11 @@ fun ObjectID.getObjectHashCode(): Int =
  * @return the unique object number if the object is registered in the tracker,
  *   or -1 if no entry is associated with the given object.
  */
-fun ObjectTracker.getObjectNumber(obj: Any): Int =
+fun ObjectTracker.getObjectNumberOrDefault(obj: Any): Int =
     get(obj)?.objectNumber ?: -1
+
+fun ObjectTracker.getObjectNumber(obj: Any): Int =
+    get(obj)!!.objectNumber
 
 /**
  * Retrieves the display number of a given object.
