@@ -1072,12 +1072,12 @@ internal class EventStructure(
         return responseEvent
     }
 
-    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue,
+    fun addLockRequestEvent(iThread: Int, mutex: Any,
                             isReentry: Boolean = false, reentrancyDepth: Int = 1,
                             isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
-            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerObjectIfAbsent(mutex).objectNumber,
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1090,11 +1090,11 @@ internal class EventStructure(
         return addResponseEvents(lockRequest).first
     }
 
-    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue,
+    fun addUnlockEvent(iThread: Int, mutex: Any,
                        isReentry: Boolean = false, reentrancyDepth: Int = 1,
                        isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = UnlockLabel(
-            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerObjectIfAbsent(mutex).objectNumber,
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1102,10 +1102,10 @@ internal class EventStructure(
         return addSendEvent(iThread, label)
     }
 
-    fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): AtomicThreadEvent {
+    fun addWaitRequestEvent(iThread: Int, mutex: Any): AtomicThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
-            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerObjectIfAbsent(mutex).objectNumber,
         )
         return addRequestEvent(iThread, label)
 
@@ -1116,14 +1116,14 @@ internal class EventStructure(
         return addResponseEvents(waitRequest).first
     }
 
-    fun addNotifyEvent(iThread: Int, mutex: OpaqueValue, isBroadcast: Boolean): AtomicThreadEvent {
+    fun addNotifyEvent(iThread: Int, mutex: Any, isBroadcast: Boolean): AtomicThreadEvent {
         // TODO: we currently ignore isBroadcast flag and handle `notify` similarly as `notifyAll`.
         //   It is correct wrt. Java's semantics, since `wait` can wake-up spuriously according to the spec.
         //   Thus multiple wake-ups due to single notify can be interpreted as spurious.
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
         val label = NotifyLabel(
-            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerObjectIfAbsent(mutex).objectNumber,
             isBroadcast = isBroadcast,
         )
         return addSendEvent(iThread, label)

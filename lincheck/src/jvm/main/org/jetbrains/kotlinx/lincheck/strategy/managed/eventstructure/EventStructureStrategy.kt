@@ -786,7 +786,7 @@ private class EventStructureMonitorTracker(
             ?.takeIf { it.last().threadId == iThread }
         val depth = lockStack?.size ?: 0
         // finally, add the new lock-request
-        return eventStructure.addLockRequestEvent(iThread, monitor.opaque(),
+        return eventStructure.addLockRequestEvent(iThread, monitor,
             isReentry = depth > 0,
             reentrancyDepth = 1 + depth,
         )
@@ -812,7 +812,7 @@ private class EventStructureMonitorTracker(
             .ensure { it.isNotEmpty() && (it.last().threadId == iThread) }
         val depth = lockStack.size
         // add unlock event to the event structure
-        eventStructure.addUnlockEvent(iThread, monitor.opaque(),
+        eventStructure.addUnlockEvent(iThread, monitor,
             isReentry = (depth > 1),
             reentrancyDepth = depth,
         )
@@ -866,7 +866,7 @@ private class EventStructureMonitorTracker(
     }
 
     override fun notify(threadId: Int, monitor: Any, notifyAll: Boolean) {
-        issueNotify(threadId, monitor.opaque(), notifyAll)
+        issueNotify(threadId, monitor, notifyAll)
     }
 
     private fun issueWaitRequest(iThread: Int, monitor: Any): AtomicThreadEvent {
@@ -877,7 +877,7 @@ private class EventStructureMonitorTracker(
             .ensure { it.isNotEmpty() && (it.last().threadId == iThread) }
         val depth = lockStack.size
         // add synthetic unlock event to release the mutex
-        eventStructure.addUnlockEvent(iThread, monitor.opaque(),
+        eventStructure.addUnlockEvent(iThread, monitor,
             isSynthetic = true,
             isReentry = false,
             reentrancyDepth = depth,
@@ -886,7 +886,7 @@ private class EventStructureMonitorTracker(
         waitLockStack[iThread] = LockWaitData(mutexID, lockStack)
         lockStacks.remove(mutexID)
         // add the new wait-request
-        return eventStructure.addWaitRequestEvent(iThread, monitor.opaque())
+        return eventStructure.addWaitRequestEvent(iThread, monitor)
     }
 
     private fun tryCompleteWaitResponse(monitor: Any, waitRequest: AtomicThreadEvent): Pair<AtomicThreadEvent, AtomicThreadEvent>? {
@@ -903,7 +903,7 @@ private class EventStructureMonitorTracker(
         // issue synthetic lock-request to acquire the mutex back
         val iThread = waitRequest.threadId
         val depth = (unlockEvent.label as UnlockLabel).reentrancyDepth
-        val lockRequest = eventStructure.addLockRequestEvent(iThread, monitor.opaque(),
+        val lockRequest = eventStructure.addLockRequestEvent(iThread, monitor,
             isSynthetic = true,
             isReentry = false,
             reentrancyDepth = depth,
@@ -924,7 +924,7 @@ private class EventStructureMonitorTracker(
         }
     }
 
-    private fun issueNotify(iThread: Int, monitor: OpaqueValue, notifyAll: Boolean) {
+    private fun issueNotify(iThread: Int, monitor: Any, notifyAll: Boolean) {
         eventStructure.addNotifyEvent(iThread, monitor, notifyAll)
     }
 
