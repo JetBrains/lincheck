@@ -128,12 +128,7 @@ internal class EventStructureStrategy(
             }
         }
 
-        // println(eventStructure.execution)
-        // println("inconsistency: $inconsistency")
-        // println()
-
         stats.update(result, inconsistency)
-        // println(stats.totalInvocations)
         return (result to inconsistency)
     }
 
@@ -709,11 +704,12 @@ private class EventStructureMemoryTracker(
 
 }
 
-// NOTE: Some issues here as well , there are some missing members
 private class EventStructureMonitorTracker(
     private val eventStructure: EventStructure,
     private val eventStructureObjectTracker: EventStructureObjectTracker,
 ) : MonitorTracker {
+
+    data class LockWaitData(val mutexID: ValueID, val lockStack: MutableList<AtomicThreadEvent>)
 
     // for each mutex object acquired by some thread,
     // this map stores a mapping from the mutex object to the lock-response event;
@@ -722,14 +718,14 @@ private class EventStructureMonitorTracker(
 
     // for threads waiting on the mutex,
     // stores the lock stack of the current thread for the awaited mutex
-    private val waitLockStack = mutableThreadMapOf<MutableList<AtomicThreadEvent>>()
+    private val waitLockStack = mutableThreadMapOf<LockWaitData?>()
 
     private fun canAcquireMonitor(iThread: Int, mutexID: ValueID): Boolean {
         val lockStack = lockStacks[mutexID]
         return (lockStack == null) || (lockStack.last().threadId == iThread)
     }
 
-    private fun canAcquireMonitor(iThread: Int, monitor: OpaqueValue): Boolean {
+    private fun canAcquireMonitor(iThread: Int, monitor: Any): Boolean {
         val mutexID = eventStructureObjectTracker[monitor]!!.objectNumber
         return canAcquireMonitor(iThread, mutexID.toLong())
     }
@@ -738,33 +734,42 @@ private class EventStructureMonitorTracker(
     override fun registerThread(threadId: Int) {}
 
     override fun acquiringThreads(monitor: Any): List<Int> {
-        TODO("Not yet implemented")
+        val mutexID = eventStructureObjectTracker[monitor]!!.objectNumber.toLong()
+        return waitLockStack.mapNotNull { if (it.value?.mutexID == mutexID) it.key else null }
     }
 
     override fun interruptWait(threadId: Int) {
         TODO("Not yet implemented")
     }
 
-
     override fun acquireMonitor(threadId: Int, monitor: Any): Boolean {
+        val mutexID = eventStructureObjectTracker[monitor]!!.objectNumber.toLong()
         // issue lock-request event
-        val lockRequest = issueLockRequest(threadId, monitor.opaque())
+        val lockRequest = issueLockRequest(threadId, monitor)
         // if lock is acquired by another thread then postpone addition of lock-response event
-        if (!canAcquireMonitor(threadId, monitor.opaque()))
+        if (!canAcquireMonitor(threadId, monitor)) {
+            waitLockStack[threadId] = LockWaitData(mutexID, mutableListOf())
             return false
+        }
         // try to add lock-response event
         val lockResponse = tryCompleteLockResponse(lockRequest)
         // return true if the lock-response event was created successfully
-        return (lockResponse != null)
+        if (lockResponse == null) {
+            waitLockStack[threadId] = LockWaitData(mutexID, mutableListOf())
+            return false
+        }
+
+        waitLockStack[threadId] = null
+        return true
     }
 
     // NOTE: This should be a bool?
     override fun releaseMonitor(threadId: Int, monitor: Any): Boolean {
-        return issueUnlock(threadId, monitor.opaque())
+        return issueUnlock(threadId, monitor)
     }
 
 
-    private fun issueLockRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
+    private fun issueLockRequest(iThread: Int, monitor: Any): AtomicThreadEvent {
         val mutexID = eventStructureObjectTracker[monitor]!!.objectNumber
         // check if the thread is already blocked on the lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
@@ -777,7 +782,7 @@ private class EventStructureMonitorTracker(
             ?.takeIf { it.last().threadId == iThread }
         val depth = lockStack?.size ?: 0
         // finally, add the new lock-request
-        return eventStructure.addLockRequestEvent(iThread, monitor,
+        return eventStructure.addLockRequestEvent(iThread, monitor.opaque(),
             isReentry = depth > 0,
             reentrancyDepth = 1 + depth,
         )
@@ -795,7 +800,7 @@ private class EventStructureMonitorTracker(
         }
     }
 
-    private fun issueUnlock(iThread: Int, monitor: OpaqueValue): Boolean {
+    private fun issueUnlock(iThread: Int, monitor: Any): Boolean {
         val mutexID = eventStructureObjectTracker[monitor]!!.objectNumber
         // obtain current lock-responses stack, and ensure that
         // the lock is indeed acquired by the releasing thread
@@ -803,7 +808,7 @@ private class EventStructureMonitorTracker(
             .ensure { it.isNotEmpty() && (it.last().threadId == iThread) }
         val depth = lockStack.size
         // add unlock event to the event structure
-        eventStructure.addUnlockEvent(iThread, monitor,
+        eventStructure.addUnlockEvent(iThread, monitor.opaque(),
             isReentry = (depth > 1),
             reentrancyDepth = depth,
         )
@@ -813,9 +818,7 @@ private class EventStructureMonitorTracker(
         if (lockStack.isEmpty()) {
             lockStacks.remove(mutexID.toLong())
         }
-
-        // Returns true the thread no longer held (TODO: Is this really the correct thing?)
-        return lockStack.isEmpty()
+        return lockStacks.isEmpty()
     }
 
     override fun isWaiting(threadId: Int): Boolean {
@@ -828,7 +831,7 @@ private class EventStructureMonitorTracker(
     }
 
     override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
-        val mutexID = eventStructureObjectTracker[monitor.opaque()]!!.objectNumber
+        val mutexID = eventStructureObjectTracker[monitor]!!.objectNumber
         // check if the thread is already blocked on wait-request or (synthetic) lock-request
         val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.ensure { it.label.satisfies<MutexLabel> { this.mutexID == mutexID } }
@@ -839,12 +842,12 @@ private class EventStructureMonitorTracker(
         // this procedure will also add synthetic unlock event
         if (blockingRequest == null) {
             check(waitLockStack[threadId] == null)
-            waitRequest = issueWaitRequest(threadId, monitor.opaque())
+            waitRequest = issueWaitRequest(threadId, monitor)
         }
         // if the wait-request was already issued, try to complete it by wait-response;
         // this procedure will also add synthetic lock-request event
         if (waitRequest != null) {
-            val (_, _lockRequest) = tryCompleteWaitResponse(monitor.opaque(), waitRequest)
+            val (_, _lockRequest) = tryCompleteWaitResponse(monitor, waitRequest)
                 ?: return true
             lockRequest = _lockRequest
         }
@@ -862,7 +865,7 @@ private class EventStructureMonitorTracker(
         issueNotify(threadId, monitor.opaque(), notifyAll)
     }
 
-    private fun issueWaitRequest(iThread: Int, monitor: OpaqueValue): AtomicThreadEvent {
+    private fun issueWaitRequest(iThread: Int, monitor: Any): AtomicThreadEvent {
         val mutexID = eventStructureObjectTracker[monitor]!!.objectNumber
         // obtain the current lock-responses stack, and ensure that
         // the lock is indeed acquired by the waiting thread
@@ -870,19 +873,19 @@ private class EventStructureMonitorTracker(
             .ensure { it.isNotEmpty() && (it.last().threadId == iThread) }
         val depth = lockStack.size
         // add synthetic unlock event to release the mutex
-        eventStructure.addUnlockEvent(iThread, monitor,
+        eventStructure.addUnlockEvent(iThread, monitor.opaque(),
             isSynthetic = true,
             isReentry = false,
             reentrancyDepth = depth,
         )
         // save the lock-responses stack to restore it later
-        waitLockStack[iThread] = lockStack
+        waitLockStack[iThread] = LockWaitData(mutexID.toLong(), lockStack)
         lockStacks.remove(mutexID.toLong())
         // add the new wait-request
-        return eventStructure.addWaitRequestEvent(iThread, monitor)
+        return eventStructure.addWaitRequestEvent(iThread, monitor.opaque())
     }
 
-    private fun tryCompleteWaitResponse(monitor: OpaqueValue, waitRequest: AtomicThreadEvent): Pair<AtomicThreadEvent, AtomicThreadEvent>? {
+    private fun tryCompleteWaitResponse(monitor: Any, waitRequest: AtomicThreadEvent): Pair<AtomicThreadEvent, AtomicThreadEvent>? {
         require(waitRequest.label.isRequest)
         require(waitRequest.label is WaitLabel)
         val mutexID = (waitRequest.label as WaitLabel).mutexID
@@ -896,7 +899,7 @@ private class EventStructureMonitorTracker(
         // issue synthetic lock-request to acquire the mutex back
         val iThread = waitRequest.threadId
         val depth = (unlockEvent.label as UnlockLabel).reentrancyDepth
-        val lockRequest = eventStructure.addLockRequestEvent(iThread, monitor,
+        val lockRequest = eventStructure.addLockRequestEvent(iThread, monitor.opaque(),
             isSynthetic = true,
             isReentry = false,
             reentrancyDepth = depth,
@@ -911,7 +914,7 @@ private class EventStructureMonitorTracker(
         return eventStructure.addLockResponseEvent(lockRequest)?.also {
             // if lock-response was added successfully, then restore
             // the lock stack of the acquiring thread
-            val lockStack = waitLockStack[iThread]!!
+            val lockStack = waitLockStack[iThread]!!.lockStack
             lockStacks.put(mutexID.toLong(), lockStack).ensureNull()
             waitLockStack.remove(iThread)
         }
