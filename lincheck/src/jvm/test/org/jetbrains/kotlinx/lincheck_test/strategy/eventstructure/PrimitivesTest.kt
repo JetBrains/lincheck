@@ -27,17 +27,16 @@ import java.util.concurrent.locks.LockSupport.*
 import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.util.CancelledResult
 import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.PrimitivesTest.SynchronizedVariable
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.scenario
-import org.jetbrains.lincheck.util.JdkVersion
-import org.jetbrains.lincheck.util.jdkVersion
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.Rule
-import org.junit.Assume
 import org.junit.rules.TestName
 import kotlin.reflect.jvm.javaMethod
 import org.jetbrains.lincheck.util.UnsafeHolder
+import kotlin.concurrent.thread
 
 class PrimitivesTest {
 
@@ -770,59 +769,7 @@ class PrimitivesTest {
 
     }
 
-    //TODO: Ignored for now need to fix monitor tracker in Managed strategy.
-    @Ignore
-    @Test
-    fun testSynchronized() {
-        val read = SynchronizedVariable::read
-        val addAndGet = SynchronizedVariable::addAndGet
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(addAndGet, 1)
-                }
-                thread {
-                    actor(addAndGet, 1)
-                }
-            }
-            post {
-                actor(read)
-            }
-        }
-        val outcomes: Set<Triple<Int, Int, Int>> = setOf(
-            Triple(1, 2, 2),
-            Triple(2, 1, 2)
-        )
-        // TODO: investigate why `executionCount = 3`
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
-            val r1 = getValue<Int>(results.parallelResults[0][0]!!)
-            val r2 = getValue<Int>(results.parallelResults[1][0]!!)
-            val r3 = getValue<Int>(results.postResults[0]!!)
-            Triple(r1, r2, r3)
-        }
-    }
 
-    //TODO: Ignored for now need to fix monitor tracker in Managed strategy.
-    @Ignore
-    @Test
-    fun testWaitNotify() {
-        val writeAndNotify = SynchronizedVariable::writeAndNotify
-        val waitAndRead = SynchronizedVariable::waitAndRead
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(writeAndNotify, 1)
-                }
-                thread {
-                    actor(waitAndRead)
-                }
-            }
-        }
-        val outcomes = setOf(1)
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
-            getValue<Int>(results.parallelResults[1][0]!!)
-        }
-    }
 
     class ParkLatchedVariable {
 
@@ -1522,4 +1469,342 @@ class PrimitivesTest {
             return@litmusTest b1
         }
     }
+}
+
+
+class LocksTest {
+
+    @Test
+    fun testSynchronizedIncrement2() {
+        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(
+            Triple(0,1,2),
+            Triple(1,0,2),
+        )
+        litmusTest(assertSame(expectedOutcomes)) {
+            var x = 0
+            val monitor = Any()
+            var r1 = -1;
+            var r2 = -1;
+
+            val t1 = thread {
+                synchronized(monitor) {
+                    r1 = x++
+                }
+            }
+            val t2 = thread {
+                synchronized(monitor) {
+                    r2 = x++
+                }
+            }
+
+            t1.join()
+            t2.join()
+
+            Triple(r1, r2, x)
+        }
+    }
+
+    @Test
+    fun testSynchronizedIncrement3() {
+        val expectedOutcomes: Set<List<Int>> = setOf(
+            listOf(0,1,2,3),
+            listOf(0,2,1,3),
+            listOf(1,0,2,3),
+            listOf(2,0,1,3),
+            listOf(1,2,0,3),
+            listOf(2,1,0,3),
+        )
+        litmusTest(assertSame(expectedOutcomes)) {
+            var x = 0
+            val monitor = Any()
+            var r1 = -1;
+            var r2 = -1;
+            var r3 = -1;
+
+            val t1 = thread {
+                synchronized(monitor) {
+                    r1 = x++
+                }
+            }
+            val t2 = thread {
+                synchronized(monitor) {
+                    r2 = x++
+                }
+            }
+            val t3 = thread {
+                synchronized(monitor) {
+                    r3 = x++
+                }
+            }
+
+            t1.join()
+            t2.join()
+            t3.join()
+
+            listOf(r1, r2, r3, x)
+        }
+    }
+
+    @Test
+    fun testSynchronized() {
+        val read = SynchronizedVariable::read
+        val addAndGet = SynchronizedVariable::addAndGet
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(addAndGet, 1)
+                }
+                thread {
+                    actor(addAndGet, 1)
+                }
+            }
+            post {
+                actor(read)
+            }
+        }
+        val outcomes: Set<Triple<Int, Int, Int>> = setOf(
+            Triple(1, 2, 2),
+            Triple(2, 1, 2)
+        )
+        // TODO: investigate why `executionCount = 3`
+        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
+            val r1 = getValue<Int>(results.parallelResults[0][0]!!)
+            val r2 = getValue<Int>(results.parallelResults[1][0]!!)
+            val r3 = getValue<Int>(results.postResults[0]!!)
+            Triple(r1, r2, r3)
+        }
+    }
+
+    @Test
+    fun testWaitNotify() {
+        val writeAndNotify = SynchronizedVariable::writeAndNotify
+        val waitAndRead = SynchronizedVariable::waitAndRead
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(writeAndNotify, 1)
+                }
+                thread {
+                    actor(waitAndRead)
+                }
+            }
+        }
+        val outcomes = setOf(1)
+        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
+            getValue<Int>(results.parallelResults[1][0]!!)
+        }
+    }
+
+    @Test
+    fun testReentrantLocks() {
+        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(
+            Triple(0,1,2),
+            Triple(1,0,2),
+        )
+        litmusTest(assertSame(expectedOutcomes)) {
+            var x = 0
+            val monitor = Any()
+            var r1 = -1;
+            var r2 = -1;
+
+            val t1 = thread {
+                synchronized(monitor) {
+                    synchronized(monitor) {
+                        r1 = x++
+                    }
+                }
+            }
+            val t2 = thread {
+                synchronized(monitor) {
+                    synchronized(monitor) {
+                        r2 = x++
+                    }
+                }
+            }
+
+            t1.join()
+            t2.join()
+
+            Triple(r1, r2, x)
+        }
+    }
+
+    // Some static objects for the test below
+    companion object {
+        val LOCK1 = Object()
+        val LOCK2 = Object()
+    }
+
+    @Test
+    fun testSeperateStaticLocks() {
+        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(
+            Triple(0,1,2),
+            Triple(1,0,2),
+            Triple(0,0,1), // Locks are different so we can have a race
+        )
+        // NOTE: we get 4 outcomes instead of 3, this is because there are 2 options.
+        litmusTest(assertSame(expectedOutcomes, UNKNOWN)) {
+            var x = 0
+            var r1 = -1;
+            var r2 = -1;
+
+            val t1 = thread {
+                synchronized(LOCK1) {
+                    r1 = x++
+                }
+            }
+            val t2 = thread {
+                synchronized(LOCK2) {
+                    r2 = x++
+                }
+            }
+
+            t1.join()
+            t2.join()
+
+            Triple(r1, r2, x)
+        }
+    }
+
+
+    @Test
+    fun testFooLock() {
+        val expectedOutcomes: Set<Int> = setOf(
+            1,
+        )
+        litmusTest(assertSame(expectedOutcomes)) {
+            val lock = Object()
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            var r1 = 0;
+            val t1 = thread {
+                synchronized(lock) {
+                    x.set(1)
+                }
+                synchronized(lock) {
+                    r1 = x.get()
+                }
+            }
+            t1.join()
+            r1
+        }
+    }
+
+    @Test
+    fun testSBLock() {
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf(
+            (0 to 1),
+            (1 to 0),
+            (1 to 1),
+        )
+        litmusTest(assertSame(expectedOutcomes, UNKNOWN)) {
+            val lock = Object()
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            var r1 = 0;
+            var r2 = 0;
+            val t1 = thread {
+                synchronized(lock) {
+                    x.set(1)
+                }
+                synchronized(lock) {
+                    r1 = y.get()
+                }
+            }
+            val t2 = thread {
+                synchronized(lock) {
+                    y.set(1)
+                }
+                synchronized(lock) {
+                    r2 = x.get()
+                }
+            }
+            t1.join()
+            t2.join()
+            (r1 to r2)
+        }
+    }
+
+    @Test
+    fun testIRIWLock() {
+        val expectedOutcomes: Set<List<Int>> = setOf(
+            listOf(0,0,0,0),
+            listOf(0,0,1,0),
+            listOf(0,0,0,1),
+            listOf(0,0,1,1),
+            listOf(0,1,0,0),
+            listOf(0,1,0,1),
+            listOf(0,1,1,0),
+            listOf(0,1,1,1),
+            listOf(1,0,0,0),
+            listOf(1,0,0,1),
+            // listOf(1,0,1,0), // This outcome should never happen
+            listOf(1,0,1,1),
+            listOf(1,1,0,0),
+            listOf(1,1,0,1),
+            listOf(1,1,1,0),
+            listOf(1,1,1,1),
+        )
+        litmusTest(assertSame(expectedOutcomes, UNKNOWN)) {
+            val lock = Object()
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            var r1 = -1;
+            var r2 = -1;
+            var r3 = -1;
+            var r4 = -1;
+            val t1 = thread {
+                synchronized(lock) {
+                    x.set(1)
+                }
+            }
+            val t2 = thread {
+                synchronized(lock) {
+                    y.set(1)
+                }
+            }
+            val t3 = thread {
+                synchronized(lock) {
+                    r1 = x.get()
+                }
+                synchronized(lock) {
+                    r2 = y.get()
+                }
+            }
+            val t4 = thread {
+                synchronized(lock) {
+                    r3 = y.get()
+                }
+                synchronized(lock) {
+                    r4 = x.get()
+                }
+            }
+            t1.join()
+            t2.join()
+            t3.join()
+            t4.join()
+            listOf(r1,r2,r3,r4)
+        }
+    }
+
+    @Test
+    fun testWaitNotifySwap() {
+        val writeAndNotify = SynchronizedVariable::writeAndNotify
+        val waitAndRead = SynchronizedVariable::waitAndRead
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(waitAndRead)
+                }
+                thread {
+                    actor(writeAndNotify, 1)
+                }
+            }
+        }
+        val outcomes = setOf(1)
+        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
+            getValue<Int>(results.parallelResults[0][0]!!)
+        }
+    }
+
 }
