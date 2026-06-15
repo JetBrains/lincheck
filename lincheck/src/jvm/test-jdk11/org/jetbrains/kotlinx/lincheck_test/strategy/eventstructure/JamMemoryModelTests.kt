@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import java.util.concurrent.atomic.*
 import org.junit.Test
 import org.junit.Ignore
@@ -147,7 +148,7 @@ class JamMemoryModelTests {
     fun testArfna() {
         // x=1 /\ y=1, should never happen. TODO: support getting final values?
         val forbiddentOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertNever(forbiddentOutcomes)) {
+        litmusTest(assertNever(forbiddentOutcomes), MemoryModel.ReleaseAcquire) {
             val a = AtomicInteger(0)
             val b = AtomicInteger(0)
             val x = AtomicInteger(0)
@@ -183,7 +184,7 @@ class JamMemoryModelTests {
     fun testArfnaTransformed() {
         // x=1 /\ y=1, should never happen. TODO: support getting final values?
         val forbiddentOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertNever(forbiddentOutcomes)) {
+        litmusTest(assertNever(forbiddentOutcomes), MemoryModel.ReleaseAcquire) {
             val a = AtomicInteger(0)
             val b = AtomicInteger(0)
             val x = AtomicInteger(0)
@@ -219,7 +220,7 @@ class JamMemoryModelTests {
     fun testB() {
         //NOTE: This is just load buffering, I am not sure why the name is like that.
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertNever(forbiddenOutcomes)) {
+        litmusTest(assertNever(forbiddenOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -241,7 +242,7 @@ class JamMemoryModelTests {
     @Test
     fun testBReorder() {
         val allowedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertSometimes(allowedOutcomes)) {
+        litmusTest(assertSometimes(allowedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -264,7 +265,7 @@ class JamMemoryModelTests {
     @Test
     fun testC() {
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertNever(forbiddenOutcomes)) {
+        litmusTest(assertNever(forbiddenOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val p = AtomicInteger(0)
@@ -301,7 +302,7 @@ class JamMemoryModelTests {
     @Test
     fun testCReorder() {
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertNever(forbiddenOutcomes)) {
+        litmusTest(assertNever(forbiddenOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val p = AtomicInteger(0)
@@ -337,7 +338,7 @@ class JamMemoryModelTests {
     @Test
     fun testCoRWR() {
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 0))
-        litmusTest(assertNever(forbiddenOutcomes)) {
+        litmusTest(assertNever(forbiddenOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val eax = x.getOpaque()
             x.setOpaque(1)
@@ -350,7 +351,7 @@ class JamMemoryModelTests {
     @Test
     fun testCyc() {
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertNever(forbiddenOutcomes)) {
+        litmusTest(assertNever(forbiddenOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -397,7 +398,7 @@ class JamMemoryModelTests {
     @Test
     fun testFig1() {
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1,1,1))
-        litmusTest(assertSame(expectedOutcomes, UNKNOWN)) {
+        litmusTest(assertSame(expectedOutcomes, UNKNOWN), MemoryModel.ReleaseAcquire) {
             val a = AtomicInteger(0)
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -422,7 +423,7 @@ class JamMemoryModelTests {
     @Test
     fun testIriwInternal() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var t0a = 0;
@@ -449,7 +450,7 @@ class JamMemoryModelTests {
     @Test
     fun testIRIW() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var t0a = 0;
@@ -569,7 +570,7 @@ class JamMemoryModelTests {
     @Test
     fun testWRR() {
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 0))
-        litmusTest(assertNever(forbiddenOutcomes)) {
+        litmusTest(assertNever(forbiddenOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             var x2 = 0;
             var x3 = 0;
@@ -617,7 +618,7 @@ class JamMemoryModelTests {
     @Test
     fun testX003() {
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(2,2,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var eax = 0;
@@ -641,7 +642,7 @@ class JamMemoryModelTests {
     @Test
     fun testX006() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((2 to 0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -663,7 +664,7 @@ class JamMemoryModelTests {
     @Test
     fun testX86_2plus2W() {
         val expectedOutcomes: Set<Pair<Int,Int>> = setOf((2 to 2))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val t0 = thread {
@@ -685,7 +686,7 @@ class JamMemoryModelTests {
     @Test
     fun testA1() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -709,7 +710,7 @@ class JamMemoryModelTests {
     @Test
     fun testA1Reorder() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -732,7 +733,7 @@ class JamMemoryModelTests {
     @Test
     fun testA3() {
         val expectedOutcomes: Set<Int> = setOf(1)
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0
@@ -755,7 +756,7 @@ class JamMemoryModelTests {
     @Test
     fun testA3Reorder() {
         val expectedOutcomes: Set<Int> = setOf(1)
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0
@@ -846,7 +847,7 @@ class JamMemoryModelTests {
     @Test
     fun testLinearisation() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2,1,1,1,1))
-        litmusTest(assertNever(expectedOutcomes)) {
+        litmusTest(assertNever(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val w = AtomicInteger(0)
@@ -884,7 +885,7 @@ class JamMemoryModelTests {
     @Test
     fun testLinearisation2() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2,1,1,1,1))
-        litmusTest(assertNever(expectedOutcomes)) {
+        litmusTest(assertNever(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val w = AtomicInteger(0)
@@ -921,7 +922,7 @@ class JamMemoryModelTests {
     @Test
     fun testMpRelacq() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 0))
-        litmusTest(assertNever(expectedOutcomes)) {
+        litmusTest(assertNever(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -971,7 +972,7 @@ class JamMemoryModelTests {
     @Test
     fun testRoachmotel() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,1,1,1))
-        litmusTest(assertNever(expectedOutcomes)) {
+        litmusTest(assertNever(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val a = AtomicInteger(0)
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -1010,7 +1011,7 @@ class JamMemoryModelTests {
     @Test
     fun testRoachmotel2() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,1,1,1))
-        litmusTest(assertNever(expectedOutcomes)) {
+        litmusTest(assertNever(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val a = AtomicInteger(0)
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -1049,7 +1050,7 @@ class JamMemoryModelTests {
     @Test
     fun testRseqWeak() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((3 to 1))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -1078,7 +1079,7 @@ class JamMemoryModelTests {
     @Test
     fun testRseqWeak2() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((3 to 1))
-        litmusTest(assertSame(expectedOutcomes, UNKNOWN)) {
+        litmusTest(assertSame(expectedOutcomes, UNKNOWN), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -1102,7 +1103,7 @@ class JamMemoryModelTests {
     @Test
     fun testTotalco() {
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1,1,1))
-        litmusTest(assertNever(expectedOutcomes)) {
+        litmusTest(assertNever(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var t0r = 0;
@@ -1131,7 +1132,7 @@ class JamMemoryModelTests {
     @Test
     fun testWWRRWWRRWsilpPoaaWsilpPoaa() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(2,2,2,0,2,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var t1a = 0;

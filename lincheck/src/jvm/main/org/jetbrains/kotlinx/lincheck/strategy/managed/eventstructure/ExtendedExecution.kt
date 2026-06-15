@@ -130,19 +130,39 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
     fun checkConsistency(): Inconsistency?
 }
 
-fun ExtendedExecution(): ExtendedExecution =
-    MutableExtendedExecution()
+fun ExtendedExecution(memoryModel: MemoryModel): ExtendedExecution =
+    MutableExtendedExecution(memoryModel)
 
-fun MutableExtendedExecution(): MutableExtendedExecution =
-    ExtendedExecutionImpl(ResettableExecution())
+fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution =
+    ExtendedExecutionImpl(ResettableExecution(), memoryModel)
 
 
 /* private */ class ExtendedExecutionImpl(
-    val execution: ResettableExecution
+    val execution: ResettableExecution,
+    val memoryModel: MemoryModel,
 ) : MutableExtendedExecution, MutableExecution<AtomicThreadEvent> by execution {
 
+    val causalOrder :  Relation<AtomicThreadEvent>
+        get() {
+            return when (memoryModel) {
+                MemoryModel.SequentialConsistency -> causalityOrder
+                MemoryModel.ReleaseAcquire -> happensBeforeOrder
+                MemoryModel.JAM21 -> TODO()
+            }
+        }
+
+    val coherenceCausalOrder :  Relation<AtomicThreadEvent>
+        get() {
+            println("MEMROY MODEL $memoryModel")
+            return when (memoryModel) {
+                MemoryModel.SequentialConsistency -> causalityOrder
+                MemoryModel.ReleaseAcquire -> happensBeforeLocOrder
+                MemoryModel.JAM21 -> TODO()
+            }
+        }
+
     override val memoryAccessEventIndex =
-        MutableAtomicMemoryAccessEventIndex().apply { index(execution) }
+        MutableAtomicMemoryAccessEventIndex(causalOrder).apply { index(execution) }
 
     override val readModifyWriteOrderComputable = computable { ReadModifyWriteOrder(execution) }
 
@@ -153,7 +173,7 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
             execution,
             memoryAccessEventIndex,
             readModifyWriteOrderComputable.value,
-            happensBeforeOrder // TODO: maybe have a variable for "the order" instead of changing it everywhere
+            causalOrder // TODO: maybe have a variable for "the order" instead of changing it everywhere
         )
     }
         .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
@@ -165,7 +185,8 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
             execution,
             memoryAccessEventIndex,
             readModifyWriteOrderComputable.value,
-            happensBeforeOrder union writesBeforeOrderComputable.value, // TODO: add eco or sc?
+            causalOrder union writesBeforeOrderComputable.value, // TODO: add eco or sc?
+            coherenceCausalOrder,
         )
     }
         .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
@@ -177,7 +198,7 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
         ExtendedCoherenceOrder(
             execution,
             memoryAccessEventIndex,
-            happensBeforeOrder union writesBeforeOrderComputable.value // TODO: add coherence
+            causalOrder union writesBeforeOrderComputable.value // TODO: add coherence
         )
     }
         .dependsOn(writesBeforeOrderComputable, soft = true, invalidating = true)
@@ -193,7 +214,7 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
         SequentialConsistencyOrder(
             execution,
             memoryAccessEventIndex,
-            happensBeforeOrder union extendedCoherenceComputable.value,
+            causalOrder union extendedCoherenceComputable.value,
             // TODO: refine eco order after sc order computation (?)
         )
     }
@@ -205,7 +226,7 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
         ExecutionOrder(
             execution,
             memoryAccessEventIndex,
-            happensBeforeOrder union extendedCoherence, // TODO: add sc order
+            causalOrder union extendedCoherence, // TODO: add sc order
         )
     }
         .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
@@ -225,8 +246,9 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
 
             IncrementalSequentialConsistencyChecker(
                 execution = this,
+                memoryModel,
                 checkReleaseAcquireConsistency = true,
-                approximateSequentialConsistency = false
+                approximateSequentialConsistency = false,
             )
         ),
         listOf(),

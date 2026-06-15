@@ -76,7 +76,7 @@ internal class EventStructure(
     /**
      * The mutable execution currently being explored.
      */
-    private var _execution = MutableExtendedExecution()
+    private var _execution = MutableExtendedExecution(memoryModel)
 
     /**
      * The execution currently being explored.

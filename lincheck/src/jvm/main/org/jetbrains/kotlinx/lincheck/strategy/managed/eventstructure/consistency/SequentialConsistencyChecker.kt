@@ -33,6 +33,7 @@ import kotlin.collections.*
 abstract class SequentialConsistencyViolation : Inconsistency()
 
 class SequentialConsistencyChecker(
+    val memoryModel: MemoryModel,
     val checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistency: Boolean = true,
     val checkCoherence: Boolean = true,
@@ -53,10 +54,13 @@ class SequentialConsistencyChecker(
         check(execution.executionOrderComputable.computed)
         val executionOrder = execution.executionOrderComputable.value
             .ensure { it.isConsistent() }
+
         // TODO: The current coherence checker is just for RA, we need to seperate the SC coherence from RA coherence
-//        SequentialConsistencyReplayer().ensure {
-//            it.replay(executionOrder.ordering) != null
-//        }
+        if(memoryModel == MemoryModel.SequentialConsistency) {
+            SequentialConsistencyReplayer().ensure {
+                it.replay(executionOrder.ordering) != null
+            }
+        }
         return null
     }
 
@@ -142,11 +146,13 @@ class CoherenceViolation : SequentialConsistencyViolation() {
 
 class IncrementalSequentialConsistencyChecker(
     execution: MutableExtendedExecution,
+    memoryModel: MemoryModel,
     checkReleaseAcquireConsistency: Boolean = true,
-    approximateSequentialConsistency: Boolean = true
+    approximateSequentialConsistency: Boolean = true,
 ) : AbstractPartialIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(
     execution = execution,
     checker = SequentialConsistencyChecker(
+        memoryModel,
         checkReleaseAcquireConsistency,
         approximateSequentialConsistency,
     )

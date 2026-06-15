@@ -307,6 +307,7 @@ abstract class AbstractThreadEvent(
         }
     }
 
+    // TODO: In the future we need also resolve release-acquire fences
     final override val happensBeforeClock: VectorClock = run {
         dependencies.fold(parent?.happensBeforeClock?.copy() ?: MutableVectorClock()) { clock, event ->
             if(this.label.isAcquire() && event.label.isRelease() ) {
@@ -452,6 +453,11 @@ val programOrder = Relation<ThreadEvent> { x, y ->
     else (x == y.predNth(y.threadPosition - x.threadPosition))
 }
 
+val initRelation = Relation<AtomicThreadEvent> { x, _ -> x.label is InitializationLabel }
+
+val sameLocation = Relation<AtomicThreadEvent> { x, y -> getLocationForSameLocationAccesses(x,y) != null }
+
+
 val causalityOrder = Relation<ThreadEvent> { x, y ->
     (x != y) && y.causalityClock.observes(x.threadId, x.threadPosition)
 }
@@ -459,6 +465,8 @@ val causalityOrder = Relation<ThreadEvent> { x, y ->
 val happensBeforeOrder = Relation<ThreadEvent> { x, y ->
     (x != y) && y.happensBeforeClock.observes(x.threadId, x.threadPosition)
 }
+
+val happensBeforeLocOrder = (happensBeforeOrder intersection sameLocation) union initRelation
 
 val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }
 
