@@ -364,7 +364,7 @@ class ExecutionOrder(
         //  - events accessing race-free locations
         //  - what else?
         //  and then insert them back into the topologically sorted list
-        val graph = aggregatedExecution.buildGraphAlt(aggregatedRelation)
+        val graph = aggregatedExecution.buildGraph(aggregatedRelation)
         val ordering = topologicalSorting(graph)
         if (ordering == null) {
             consistent = false

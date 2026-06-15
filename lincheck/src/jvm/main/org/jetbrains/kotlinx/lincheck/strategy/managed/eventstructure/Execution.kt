@@ -420,31 +420,6 @@ fun<E : ThreadEvent> Execution<E>.buildGraph(
 
 }
 
-// NOTE: I am not sure exactly about the assumptions needed in the orgininal buildGraph
-// But it seems that it is not correct for arbitary relations
-// TODO: figure them out and get rid of this alt version
-fun<E : ThreadEvent> Execution<E>.buildGraphAlt(
-    relation: Relation<E>,
-) = object : Graph<E> {
-    private val execution = this@buildGraphAlt
-
-    override val nodes: Collection<E>
-        get() = execution
-
-    private val enumerator = execution.buildEnumerator()
-
-    private val adjacencyList = Array(nodes.size) { i ->
-        val event = enumerator[i]
-        execution.filter { relation(event, it) }.toList()
-    }
-
-    override fun adjacent(node: E): List<E> {
-        val idx = enumerator[node]
-        return adjacencyList[idx]
-    }
-
-}
-
 
 // TODO: include parent event in covering (?) and remove `External`
 fun<E : ThreadEvent> Execution<E>.buildExternalCovering(
