@@ -2671,14 +2671,15 @@ internal abstract class ManagedStrategy(
 
     // == IDEA PLUGIN INTEGRATION METHODS ==
 
-    override fun shouldInvokeBeforeEvent(): Boolean {
-        // We do not check `inIgnoredSection` here because this method is called from instrumented code
-        // that should be invoked only outside the ignored section.
-        // However, we cannot add `!inIgnoredSection` check here
-        // as the instrumented code might call `enterIgnoredSection` just before this call.
+    override fun shouldInvokeBeforeEvent(): Boolean = runInsideIgnoredSection {
+        // We do not need to check `inIgnoredSection` here because of two reasons:
+        // - this method is invoked from `Injections::shouldInvokeBeforeEvent` that already checked
+        //   whether we are inside analyzed code (i.e., not inside an ignored section);
+        // - we wrap this method body itself into the ignored section,
+        //   so an ignored section check would always return true.
         return inIdeaPluginReplayMode &&
                collectTrace &&
-               suddenInvocationResult == null &&
+               suddenInvocationResult === null &&
                isRegisteredThread()
     }
 

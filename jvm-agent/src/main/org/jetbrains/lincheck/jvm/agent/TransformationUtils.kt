@@ -368,27 +368,29 @@ internal fun GeneratorAdapter.getOrThrowInterceptedResult(resultInterceptorLocal
  * The injected method **must** be called from the user code due to the contract
  * between the IDEA plugin and Lincheck.
  */
-internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String) = invokeInsideIgnoredSection {
+internal fun GeneratorAdapter.invokeBeforeEvent(debugMessage: String) {
     ifStatement(
         condition = {
             invokeStatic(Injections::shouldInvokeBeforeEvent)
         },
         thenClause = {
-            push(debugMessage)
-            invokeStatic(Injections::getCurrentEventId)
-            dup()
-            ifStatement(
-                condition = {
-                    invokeStatic(Injections::isBeforeEventRequested)
-                },
-                thenClause = {
-                    push(debugMessage)
-                    invokeStatic(Injections::beforeEvent)
-                },
-                elseClause = {
-                    pop()
-                }
-            )
+            invokeInsideIgnoredSection {
+                push(debugMessage)
+                invokeStatic(Injections::getCurrentEventId)
+                dup()
+                ifStatement(
+                    condition = {
+                        invokeStatic(Injections::isBeforeEventRequested)
+                    },
+                    thenClause = {
+                        push(debugMessage)
+                        invokeStatic(Injections::beforeEvent)
+                    },
+                    elseClause = {
+                        pop()
+                    }
+                )
+            }
         }
     )
 }
