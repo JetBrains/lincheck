@@ -691,7 +691,9 @@ internal fun isSafeMethodCall(
     methodDescriptor: String,
     opcode: Int,
 ): Boolean {
-    val methodKey = "$internalClassName.$methodName"
+    // Kotlin emits a synthetic `<name>$default` dispatcher for calls omitting default
+    // arguments; match the whitelist against the real method name.
+    val methodKey = "$internalClassName.$methodName".removeSuffix("\$default")
     if (opcode == INVOKESTATIC && methodKey in SAFE_STATIC_METHODS) return true
     if (methodKey in SAFE_FINAL_CLASS_METHODS) return true
     return false
@@ -725,6 +727,12 @@ internal val SAFE_STATIC_METHODS = setOf(
     "java/lang/Double.parseDouble",
     "java/lang/Float.valueOf",
     "java/lang/Float.parseFloat",
+
+    // Kotlin intrinsics — structural equality, type checks, comparisons
+    "kotlin/jvm/internal/Intrinsics.areEqual",
+    "kotlin/jvm/internal/Intrinsics.compare",
+    "kotlin/jvm/internal/Intrinsics.checkNotNull",
+    "kotlin/jvm/internal/Intrinsics.checkNotNullParameter",
 )
 
 // Whitelist of safe instance methods on final classes (cannot be overridden, no side effects)

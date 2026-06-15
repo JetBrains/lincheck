@@ -688,24 +688,49 @@ fun ClassLoader.findClassBytecode(internalClassName: String): ByteArray? =
 fun isClassAlreadyLoaded(internalClassName: String, classLoader: ClassLoader): Boolean =
     LincheckInstrumentation.isClassLoaded(internalClassName.toCanonicalClassName(), classLoader)
 
-internal fun loadClassFromBytes(userCodeClassLoader: ClassLoader, className: String, classBytes: ByteArray): Class<*> {
+/**
+ * Defines the given [classes] (fully qualified name → bytecode) and returns the loaded [className].
+ *
+ * A child of [userCodeClassLoader] is created to hold them. Only [className] — the entry point and
+ * return value — is loaded eagerly; the rest are defined lazily, on first reference while the JVM links
+ * [className] (so the map's iteration order is irrelevant, and an entry that nothing references is never
+ * defined). The custom loader resolves each name in this order: already-defined classes, then [classes],
+ * then the parent [userCodeClassLoader] — so bytecode supplied here shadows any same-named class on the
+ * parent's path. This lets mutually-referencing classes (e.g. a generated condition class and its
+ * `$Companion`) link against these bytes; `getResourceAsStream` serves them too.
+ *
+ * Each class file is downgraded to the running JVM's class-file version if the IDE compiled it with a
+ * newer one. Names are normalized to canonical (dotted) form before `defineClass`.
+ */
+internal fun loadClassesFromBytes(
+    userCodeClassLoader: ClassLoader,
+    className: String,
+    classes: Map<String, ByteArray>,
+): Class<*> {
     // defineClass expects canonical class name (with dots, not slashes)
     val canonicalClassName = className.toCanonicalClassName()
     // Downgrade the class file version if needed to match the current JVM version.
     // This is necessary because the IDE may compile condition classes with a newer Java version
-    // than the target application's JVM.
-    val adjustedClassBytes = downgradeClassVersionIfNeeded(classBytes)
+    // than the target application's JVM. 
+    val adjustedClasses = classes.entries.associate { (name, bytes) ->
+        name.toCanonicalClassName() to downgradeClassVersionIfNeeded(bytes)
+    }
+    val definedClasses = mutableMapOf<String, Class<*>>()
     val customClassLoader = object : ClassLoader(userCodeClassLoader) {
         override fun loadClass(name: String?): Class<*>? {
-            if (name == canonicalClassName) {
-                return defineClass(name, adjustedClassBytes, 0, adjustedClassBytes.size)
-            }
-            return super.loadClass(name)
+            val defined = definedClasses[name]
+            if (defined != null) return defined
+            val bytes = adjustedClasses[name] ?: return super.loadClass(name)
+            val cls = defineClass(name, bytes, 0, bytes.size)
+            definedClasses[name!!] = cls
+            return cls
         }
 
         override fun getResourceAsStream(name: String?): InputStream? {
-            if (name == canonicalClassName.toInternalClassName() + ".class") {
-                return adjustedClassBytes.inputStream()
+            for ((cn, bytes) in adjustedClasses) {
+                if (name == cn.toInternalClassName() + ".class") {
+                    return bytes.inputStream()
+                }
             }
             return super.getResourceAsStream(name)
         }

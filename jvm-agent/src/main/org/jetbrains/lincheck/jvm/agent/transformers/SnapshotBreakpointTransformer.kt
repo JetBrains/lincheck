@@ -173,10 +173,10 @@ internal class SnapshotBreakpointTransformer(
         // === STEP 1: Load the condition class from bytecode (transformation time) ===
         // The condition code is provided as raw bytecode in conditionCodeFragment.
         // We dynamically load it into a Class object so we can access its factory method.
-        val conditionClass = loadClassFromBytes(
+        val conditionClass = loadClassesFromBytes(
             userCodeClassLoader = classLoader,
             className = breakpoint.conditionClassName!!,
-            classBytes = breakpoint.conditionCodeFragment!!
+            classes = breakpoint.conditionClasses!!,
         )
 
         // Condition safety has already been validated in visitLineNumber before bytecode emission.
@@ -228,10 +228,10 @@ internal class SnapshotBreakpointTransformer(
 
 
     private fun GeneratorAdapter.injectWatchCall(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint) {
-        val watchesClass = loadClassFromBytes(
+        val watchesClass = loadClassesFromBytes(
             userCodeClassLoader = classLoader,
             className = breakpoint.watchClassName!!,
-            classBytes = breakpoint.watchCodeFragment!!
+            classes = breakpoint.watchClasses!!,
         )
 
         val factoryMethodName = breakpoint.watchFactoryMethodName ?: "createFactory"
@@ -433,10 +433,10 @@ internal class SnapshotBreakpointTransformer(
         classBytes: ByteArray,
         allowedFunctionCalls: FunctionCallPredicate = { _, _, _ -> false },
     ): SafetyViolation? {
-        val clazz = loadClassFromBytes(
+        val clazz = loadClassesFromBytes(
             userCodeClassLoader = classLoader,
             className = className,
-            classBytes = classBytes,
+            classes = mapOf(className to classBytes),
         )
         return SideEffectChecker.checkMethodForSideEffects(
             className = className,
@@ -536,9 +536,11 @@ private fun extractCapturedVarNamesFromBytecode(bytecode: ByteArray): List<Strin
             signature: String?,
             value: Any?,
         ): FieldVisitor? {
-            if (!name.startsWith("this\$")) {
-                names.add(if (name == "__instance") "this" else name)
-            }
+            // Skip static fields (e.g. Kotlin's `Companion`) and outer-this references —
+            // only instance fields correspond to captured variables.
+            if (access and Opcodes.ACC_STATIC != 0) return null
+            if (name.startsWith("this\$")) return null
+            names.add(if (name == "__instance") "this" else name)
             return null
         }
     }, ClassReader.SKIP_CODE or ClassReader.SKIP_DEBUG)

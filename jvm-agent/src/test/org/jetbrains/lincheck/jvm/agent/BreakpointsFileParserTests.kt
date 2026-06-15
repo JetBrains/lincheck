@@ -79,6 +79,8 @@ class BreakpointsFileParserTests {
     fun testOneBreakpointAllFields() {
         val bytecode = byteArrayOf(0xCA.toByte(), 0xFE.toByte(), 0xBA.toByte(), 0xBE.toByte())
         val encodedBytecode = Base64.getEncoder().encodeToString(bytecode)
+        val conditionClasses = "org.example.MyCondition|$encodedBytecode"
+        val watchClasses = "org.example.MyWatches|$encodedBytecode"
 
         val path = writeBreakpointsFile("""
             [Breakpoint 1]
@@ -87,10 +89,10 @@ class BreakpointsFileParserTests {
             lineNumber = 101
             conditionClassName = org.example.MyCondition
             conditionFactoryMethodName = create
-            conditionCodeFragment = $encodedBytecode
+            conditionClasses = $conditionClasses
             watchClassName = org.example.MyWatches
             watchFactoryMethodName = createWatches
-            watchCodeFragment = $encodedBytecode
+            watchClasses = $watchClasses
         """.trimIndent())
 
         val result = BreakpointsFileParser.parseBreakpointsFile(path)
@@ -133,7 +135,7 @@ class BreakpointsFileParserTests {
             lineNumber = 30
             conditionClassName = org.example.Cond2
             conditionFactoryMethodName = make
-            conditionCodeFragment = $encodedBytecode
+            conditionClasses = org.example.Cond2|$encodedBytecode
         """.trimIndent())
 
         val result = BreakpointsFileParser.parseBreakpointsFile(path)
@@ -289,6 +291,45 @@ class BreakpointsFileParserTests {
         """.trimIndent())
 
         BreakpointsFileParser.parseBreakpointsFile(path)
+    }
+
+    // --- New format: conditionClasses / watchClasses (class map) ---
+
+    @Test
+    fun testOneBreakpointAllFieldsNewFormat() {
+        val condBytecode = byteArrayOf(0xCA.toByte(), 0xFE.toByte())
+        val condCompanionBytecode = byteArrayOf(0xDE.toByte(), 0xAD.toByte())
+        val watchBytecode = byteArrayOf(0x01, 0x02)
+
+        val condClasses = "org.example.MyCondition|${Base64.getEncoder().encodeToString(condBytecode)}" +
+                ";org.example.MyCondition\$Companion|${Base64.getEncoder().encodeToString(condCompanionBytecode)}"
+        val watchClasses = "org.example.MyWatches|${Base64.getEncoder().encodeToString(watchBytecode)}"
+
+        val path = writeBreakpointsFile("""
+            [Breakpoint 1]
+            className = org.example.MyClass
+            fileName = MyClass.java
+            lineNumber = 101
+            conditionClassName = org.example.MyCondition
+            conditionFactoryMethodName = create
+            conditionClasses = $condClasses
+            watchClassName = org.example.MyWatches
+            watchFactoryMethodName = createWatches
+            watchClasses = $watchClasses
+        """.trimIndent())
+
+        val result = BreakpointsFileParser.parseBreakpointsFile(path)
+        assertEquals(1, result.size)
+
+        val bp = result[0]
+        assertEquals("org.example.MyCondition", bp.conditionClassName)
+        assertEquals("create", bp.conditionFactoryMethodName)
+        assertArrayEquals(condBytecode, bp.conditionCodeFragment)
+        assertEquals(2, bp.conditionClasses!!.size)
+        assertArrayEquals(condCompanionBytecode, bp.conditionClasses!!["org.example.MyCondition\$Companion"])
+        assertEquals("org.example.MyWatches", bp.watchClassName)
+        assertEquals("createWatches", bp.watchFactoryMethodName)
+        assertArrayEquals(watchBytecode, bp.watchCodeFragment)
     }
 
     // --- Additional edge cases for required field validation ---
