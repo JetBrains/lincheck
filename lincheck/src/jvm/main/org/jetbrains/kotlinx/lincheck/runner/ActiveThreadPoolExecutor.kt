@@ -78,6 +78,11 @@ internal class ActiveThreadPoolExecutor(private val testName: String, private va
         }
     }
 
+    fun setSpinBound(spinBound: Int) {
+        taskSpinners.forEach { it.spinBound = spinBound }
+        resultSpinner.spinBound = spinBound
+    }
+
     /**
      * Submits a collection of tasks to specific threads for execution
      * and waits for their completion within the specified timeout period.

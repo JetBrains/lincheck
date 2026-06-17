@@ -52,11 +52,16 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
      */
     protected abstract val executor : ActiveThreadPoolExecutor
 
+    protected open fun setSpinBound(spinBound: Int) {
+        executor.setSpinBound(spinBound)
+    }
+
     /**
      * Initializes the strategy to be used in the runner.
      */
     fun initializeStrategy(strategy: Strategy) {
         this.strategy = strategy
+        setSpinBound(strategy.spinLoopBound)
     }
 
     /**

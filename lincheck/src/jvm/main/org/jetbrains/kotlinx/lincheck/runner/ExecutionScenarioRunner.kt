@@ -96,6 +96,11 @@ internal class ExecutionScenarioRunner(
         resetState()
     }
 
+    override fun setSpinBound(spinBound: Int) {
+        super.setSpinBound(spinBound)
+        spinners.forEach { it.spinBound = spinBound }
+    }
+
     /**
      * Passed as continuation to invoke the suspendable actor from [iThread].
      *

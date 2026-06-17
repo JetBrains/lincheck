@@ -27,6 +27,8 @@ import java.io.Closeable
  */
 abstract class Strategy : Closeable {
 
+    open val spinLoopBound: Int = 1_048_576
+
     /**
      * Runner used for executing the test scenario.
      */
