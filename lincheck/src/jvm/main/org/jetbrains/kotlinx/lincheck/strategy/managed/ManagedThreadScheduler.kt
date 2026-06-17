@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.LincheckAnalysisAbortedError
+import java.util.concurrent.locks.LockSupport
 
 
 /**
@@ -57,6 +58,8 @@ class ManagedThreadScheduler : ThreadScheduler() {
      */
     fun scheduleThread(threadId: Int) {
         scheduledThreadId = threadId
+        val thread = getThread(threadId)
+        LockSupport.unpark(thread)
     }
 
     /**
@@ -88,7 +91,13 @@ class ManagedThreadScheduler : ThreadScheduler() {
             if (threadData.state == ThreadState.ABORTED) {
                 raiseThreadAbortError()
             }
-            scheduledThreadId == threadId
+
+            if(scheduledThreadId == threadId) {
+                return@spinWaitUntil true
+            }
+
+            LockSupport.park()
+            false
         }
     }
 

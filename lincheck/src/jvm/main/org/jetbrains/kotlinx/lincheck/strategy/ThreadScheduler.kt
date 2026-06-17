@@ -15,6 +15,7 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.Spinner
 import java.util.Collections
+import java.util.concurrent.locks.LockSupport
 
 /**
  * Enumeration representing the various states of a thread.
@@ -335,6 +336,8 @@ open class ThreadScheduler {
     fun abortThread(threadId: ThreadId) {
         threads[threadId].apply {
             state = ThreadState.ABORTED
+            val thread = descriptor.thread
+            LockSupport.unpark(thread)
         }
     }
 
@@ -348,6 +351,7 @@ open class ThreadScheduler {
             if (thread.state == ThreadState.FINISHED)
                 continue
             thread.state = ThreadState.ABORTED
+            LockSupport.unpark(thread.descriptor.thread)
         }
     }
 
@@ -362,6 +366,7 @@ open class ThreadScheduler {
             if (thread.state == ThreadState.FINISHED || thread.id == currentThreadId)
                 continue
             thread.state = ThreadState.ABORTED
+            LockSupport.unpark(thread.descriptor.thread)
         }
     }
 
