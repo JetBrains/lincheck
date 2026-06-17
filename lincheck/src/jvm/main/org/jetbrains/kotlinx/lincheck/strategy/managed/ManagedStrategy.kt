@@ -1539,13 +1539,6 @@ internal abstract class ManagedStrategy(
         LincheckInstrumentation.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
-        threadDescriptor.runInsideIgnoredSection {
-            if (objectTracker.shouldTrackObject(obj)) {
-                objectTracker.registerNewObject(obj)
-            }
-        }
-
     override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String): Unit =
         threadDescriptor.runInsideIgnoredSection {
             if (objectTracker.shouldTrackObject(obj) && objectTracker[obj] == null) {
@@ -1677,7 +1670,13 @@ internal abstract class ManagedStrategy(
             intrinsicDescriptor.isArraysCopyOfIntrinsic() ||
             intrinsicDescriptor.isArraysCopyOfRangeIntrinsic()
         ) {
-            result?.let { afterNewObjectCreation(threadDescriptor, it) }
+            // `Arrays.copyOf`/`copyOfRange` allocate a fresh array as their return value;
+            // route it through the same path as a regular array allocation. `canonicalName`
+            // mirrors what `ObjectCreationTransformer` pushes for static array allocations
+            // (e.g. `int[]`, `java.lang.String[]`); fall back to `name` if it is `null`.
+            result?.let {
+                afterObjectConstructor(threadDescriptor, it, it.javaClass.canonicalName ?: it.javaClass.name)
+            }
         }
     }
 

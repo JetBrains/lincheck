@@ -43,24 +43,24 @@ Detailed trace:
 | $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50)                                   |
 |   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:107)                                                                         |
 |     ArrayBlockingQueue.<init>(1): ArrayBlockingQueue#1 at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:111) [recursive call x 2 times] |
-|       <init>(): ArrayBlockingQueue#1 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:270)                                                                                       |
-|         <init>(): ArrayBlockingQueue#1 at AbstractQueue.<init>(AbstractQueue.java:71)                                                                                                |
-|           <init>(): ArrayBlockingQueue#1 at AbstractCollection.<init>(AbstractCollection.java:68)                                                                                    |
+|       AbstractQueue.<init>(): ArrayBlockingQueue#1 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:270)                                                                         |
+|         AbstractCollection.<init>(): ArrayBlockingQueue#1 at AbstractQueue.<init>(AbstractQueue.java:71)                                                                             |
+|           Object.<init>(): ArrayBlockingQueue#1 at AbstractCollection.<init>(AbstractCollection.java:68)                                                                             |
 |       ReentrantLock.<init>(false): ReentrantLock#1 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:274)                                                                         |
-|         <init>(): ReentrantLock#1 at ReentrantLock.<init>(ReentrantLock.java:303)                                                                                                    |
+|         Object.<init>(): ReentrantLock#1 at ReentrantLock.<init>(ReentrantLock.java:303)                                                                                             |
 |         ReentrantLock.NonfairSync.<init>(): NonfairSync#1 at ReentrantLock.<init>(ReentrantLock.java:304)                                                                            |
-|           <init>(): NonfairSync#1 at ReentrantLock.NonfairSync.<init>(ReentrantLock.java:220)                                                                                        |
-|             <init>(): NonfairSync#1 at ReentrantLock.Sync.<init>(ReentrantLock.java:118)                                                                                             |
-|               <init>(): NonfairSync#1 at AbstractQueuedSynchronizer.<init>(AbstractQueuedSynchronizer.java:314)                                                                      |
-|                 <init>(): NonfairSync#1 at AbstractOwnableSynchronizer.<init>(AbstractOwnableSynchronizer.java:59)                                                                   |
+|           ReentrantLock$Sync.<init>(): NonfairSync#1 at ReentrantLock.NonfairSync.<init>(ReentrantLock.java:220)                                                                     |
+|             AbstractQueuedSynchronizer.<init>(): NonfairSync#1 at ReentrantLock.Sync.<init>(ReentrantLock.java:118)                                                                  |
+|               AbstractOwnableSynchronizer.<init>(): NonfairSync#1 at AbstractQueuedSynchronizer.<init>(AbstractQueuedSynchronizer.java:314)                                          |
+|                 Object.<init>(): NonfairSync#1 at AbstractOwnableSynchronizer.<init>(AbstractOwnableSynchronizer.java:59)                                                            |
 |       lock.newCondition(): ConditionObject#1 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:275)                                                                               |
 |         sync.newCondition(): ConditionObject#1 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                                                 |
 |           AbstractQueuedSynchronizer.ConditionObject.<init>(NonfairSync#1): ConditionObject#1 at ReentrantLock.Sync.newCondition(ReentrantLock.java:190)                             |
-|             <init>(): ConditionObject#1 at AbstractQueuedSynchronizer.ConditionObject.<init>(AbstractQueuedSynchronizer.java:1441)                                                   |
+|             Object.<init>(): ConditionObject#1 at AbstractQueuedSynchronizer.ConditionObject.<init>(AbstractQueuedSynchronizer.java:1441)                                            |
 |       lock.newCondition(): ConditionObject#2 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:276)                                                                               |
 |         sync.newCondition(): ConditionObject#2 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                                                 |
 |           AbstractQueuedSynchronizer.ConditionObject.<init>(NonfairSync#1): ConditionObject#2 at ReentrantLock.Sync.newCondition(ReentrantLock.java:190)                             |
-|             <init>(): ConditionObject#2 at AbstractQueuedSynchronizer.ConditionObject.<init>(AbstractQueuedSynchronizer.java:1441)                                                   |
+|             Object.<init>(): ConditionObject#2 at AbstractQueuedSynchronizer.ConditionObject.<init>(AbstractQueuedSynchronizer.java:1441)                                            |
 |     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:112)                                                                      |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                                               |
 |         sync.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                                                          |
@@ -75,8 +75,8 @@ Detailed trace:
 |           notEmpty.await() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:420)                                                                                                   |
 |             Thread.interrupted(): false at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1615)                                                    |
 |             AbstractQueuedSynchronizer.ConditionNode.<init>(): ConditionNode#1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1617)             |
-|               <init>(): ConditionNode#1 at AbstractQueuedSynchronizer.ConditionNode.<init>(AbstractQueuedSynchronizer.java:492)                                                      |
-|                 <init>(): ConditionNode#1 at AbstractQueuedSynchronizer.Node.<init>(AbstractQueuedSynchronizer.java:454)                                                             |
+|               AbstractQueuedSynchronizer$Node.<init>(): ConditionNode#1 at AbstractQueuedSynchronizer.ConditionNode.<init>(AbstractQueuedSynchronizer.java:492)                      |
+|                 Object.<init>(): ConditionNode#1 at AbstractQueuedSynchronizer.Node.<init>(AbstractQueuedSynchronizer.java:454)                                                      |
 |             enableWait(ConditionNode#1): 1 at AbstractQueuedSynchronizer.ConditionObject.await(AbstractQueuedSynchronizer.java:1618)                                                 |
 |               isHeldExclusively(): true at AbstractQueuedSynchronizer.ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1507)                                               |
 |                 getExclusiveOwnerThread(): Thread#0 at ReentrantLock.Sync.isHeldExclusively(ReentrantLock.java:186)                                                                  |

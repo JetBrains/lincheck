@@ -21,12 +21,12 @@ Detailed trace:
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
 |     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
 |       ConcurrentHashMap.<init>(): ConcurrentHashMap#1 at BaseMethodHandleLookupRepresentationTest.ensureConcurrentHashMapIsInstrumented(MethodHandlesLookupTests.kt:64)         |
-|         <init>(): ConcurrentHashMap#1 at ConcurrentHashMap.<init>(ConcurrentHashMap.java:828)                                                                                   |
-|           <init>(): ConcurrentHashMap#1 at AbstractMap.<init>(AbstractMap.java:73)                                                                                              |
+|         AbstractMap.<init>(): ConcurrentHashMap#1 at ConcurrentHashMap.<init>(ConcurrentHashMap.java:828)                                                                       |
+|           Object.<init>(): ConcurrentHashMap#1 at AbstractMap.<init>(AbstractMap.java:73)                                                                                       |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:116)                                                  |
 |         Counter.<init>(): Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                      |
-|           <init>(): Counter#1 at Counter.<init>(MethodHandlesLookupTests.kt:143)                                                                                                |
+|           Object.<init>(): Counter#1 at Counter.<init>(MethodHandlesLookupTests.kt:143)                                                                                         |
 |         Counter.shared = Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                       |
 |       setterHandle.invoke(Counter#1, 42) at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:121)                                             |
 |       getterHandle.invoke(Counter#1): 42 at MethodHandlesFindGetterSetterRepresentationTest.doTest(MethodHandlesLookupTests.kt:122)                                             |

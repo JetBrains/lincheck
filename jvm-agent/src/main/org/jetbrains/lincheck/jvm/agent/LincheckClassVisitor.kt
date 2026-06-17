@@ -129,6 +129,17 @@ internal class LincheckClassVisitor(
         }
 
         // ======== Object Creation ========
+        // `ObjectCreationTransformer` is registered BEFORE `MethodCallTransformer` so that it
+        // sits DEEPER in the transformer chain. The last transformer added becomes the outermost
+        // wrapper and receives original bytecode first, so for an INVOKESPECIAL `<init>` the
+        // emitted order at runtime is:
+        //   onMethodCall(<init>)          <-- MethodCallTransformer (outer) preamble
+        //   <init>(...)                   <-- original instruction
+        //   afterObjectConstructor(obj)   <-- ObjectCreationTransformer (inner) postamble
+        //   onMethodCallReturn(<init>)    <-- MethodCallTransformer (outer) postamble
+        // i.e. the object-creation event reaches the strategy BEFORE the `<init>` method-return
+        // event. Swapping the order would register the constructed object only AFTER the
+        // surrounding `<init>` return, breaking strategies that look up the object on return.
         chain.addTransformer { adapter, mv ->
             ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
@@ -166,7 +177,7 @@ internal class LincheckClassVisitor(
 
         // ======== Field, Array, and Local Variables accesses ========
         chain.addTransformer { adapter, mv ->
-            applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
+            SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config)
         }
         chain.addTransformer { adapter, mv ->
             LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config)
@@ -233,17 +244,5 @@ internal class LincheckClassVisitor(
         }
 
         return mv
-    }
-
-    private fun applySharedMemoryAccessTransformer(
-        methodName: String,
-        desc: String,
-        access: Int,
-        methodInfo: MethodInformation,
-        configuration: TransformationConfiguration,
-        adapter: GeneratorAdapter,
-        methodVisitor: MethodVisitor,
-    ): SharedMemoryAccessTransformer {
-        return SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, methodVisitor, configuration)
     }
 }

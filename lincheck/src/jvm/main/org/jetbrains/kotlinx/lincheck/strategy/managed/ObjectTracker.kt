@@ -651,4 +651,9 @@ private typealias IdentityHashCode = Int
  */
 private const val IDENTITY_HASHCODE_OFFSET = 1L
 
+// We use `1` rather than `0` because HotSpot interprets a zero hashcode slot in the object header
+// as "hashCode has not been computed yet" and is then free to overwrite it on the next
+// `Object.hashCode()` / `System.identityHashCode()` call, destroying determinism.
+// Any non-zero value works; `1` is the smallest such value and is also the default placeholder
+// used by other "deterministic hash" patches.
 private const val DETERMINISTIC_IDENTITY_HASHCODE = 1

@@ -21,8 +21,8 @@ Detailed trace:
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
 |     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
 |       ConcurrentHashMap.<init>(): ConcurrentHashMap#1 at BaseMethodHandleLookupRepresentationTest.ensureConcurrentHashMapIsInstrumented(MethodHandlesLookupTests.kt:64)         |
-|         <init>(): ConcurrentHashMap#1 at ConcurrentHashMap.<init>(ConcurrentHashMap.java:828)                                                                                   |
-|           <init>(): ConcurrentHashMap#1 at AbstractMap.<init>(AbstractMap.java:73)                                                                                              |
+|         AbstractMap.<init>(): ConcurrentHashMap#1 at ConcurrentHashMap.<init>(ConcurrentHashMap.java:828)                                                                       |
+|           Object.<init>(): ConcurrentHashMap#1 at AbstractMap.<init>(AbstractMap.java:73)                                                                                       |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       constructorHandle.invoke(42): Counter#1 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:76)                                          |
 |       counter.value ➜ 42 at MethodHandlesFindConstructorRepresentationTest.doTest(MethodHandlesLookupTests.kt:77)                                                               |

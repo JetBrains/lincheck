@@ -19,10 +19,10 @@ Detailed trace:
 | operation()                                                                                                                                                    |
 |   node ➜ IntWrapper#1 at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:72)                                  |
 |   IntWrapper.<init>(4): IntWrapper#2 at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:72)                   |
-|     <init>(): IntWrapper#2 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                                          |
+|     Object.<init>(): IntWrapper#2 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                                   |
 |   node.compareAndSet(IntWrapper#1, IntWrapper#2): true at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:72) |
 |   IntWrapper.<init>(5): IntWrapper#3 at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:73)                   |
-|     <init>(): IntWrapper#3 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                                          |
+|     Object.<init>(): IntWrapper#3 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                                   |
 |   node.set(IntWrapper#3) at AtomicUpdaterTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:73)                               |
 |   result: void                                                                                                                                                 |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |

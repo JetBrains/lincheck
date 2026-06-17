@@ -20,11 +20,11 @@ Detailed trace:
 | $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50)    |
 |   block(): threw IllegalStateException at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:246)                                            |
 |     AnonymousObjectRunConcurrentRepresentationTest$block$1.<init>(): block$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:265)      |
-|       <init>(): block$1 at AnonymousObjectRunConcurrentRepresentationTest$block$1.<init>(RunConcurrentRepresentationTests.kt:265)                                                  |
+|       Object.<init>(): block$1 at AnonymousObjectRunConcurrentRepresentationTest$block$1.<init>(RunConcurrentRepresentationTests.kt:265)                                           |
 |     block$1.test(): test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:265)                                                        |
 |       test(): test$1 at AnonymousObjectRunConcurrentRepresentationTest$block$1.test(RunConcurrentRepresentationTests.kt:265)                                                       |
 |         AnonymousObjectRunConcurrentRepresentationTest.I$test$1.<init>(): test$1 at AnonymousObjectRunConcurrentRepresentationTest.I.test(RunConcurrentRepresentationTests.kt:256) |
-|           <init>(): test$1 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.<init>(RunConcurrentRepresentationTests.kt:256)                                              |
+|           Object.<init>(): test$1 at AnonymousObjectRunConcurrentRepresentationTest.I$test$1.<init>(RunConcurrentRepresentationTests.kt:256)                                       |
 |     runnable = test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:265)                                                             |
 |     runnable ➜ test$1 at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:266)                                                             |
 |     runnable.run() at AnonymousObjectRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:266)                                                                |

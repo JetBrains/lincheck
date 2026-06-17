@@ -332,7 +332,6 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeNewObjectCreation(threadDescriptor: ThreadDescriptor, className: String) {}
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
     override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String) {}
     override fun afterInvokeDynamicObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
 

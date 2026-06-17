@@ -38,9 +38,10 @@ internal class ObjectCreationTransformer(
 
     override val requiresTypeAnalyzer: Boolean = true
 
-    /* To track object creation, this transformer inserts:
-     *  - `Injections::afterNewObjectCreation` after an array is allocated;
-     *  - `Injections::afterObjectConstructor` after each object constructor invocation.
+    /* To track object creation, this transformer inserts `Injections::afterObjectConstructor`
+     * after each object constructor invocation, and right after array allocation
+     * (where the array is already in initialized state and can be treated as a
+     * one-shot "constructed object" — see `afterArrayCreation` below).
      *
      * The created object is passed into the injected function as an argument.
      *
@@ -104,21 +105,39 @@ internal class ObjectCreationTransformer(
         desc: String,
         itf: Boolean
     ) {
+        val constructorType = Type.getType(desc)
+        // Fast-path: zero-argument constructor. Covers `java/lang/Object.<init>` (always no-arg)
+        // and every other no-arg `<init>` call. We can keep the uninitialized receiver on the
+        // operand stack with a single `dup` instead of allocating a local and threading
+        // constructor arguments through `storeLocals`/`loadLocal`.
+        val isZeroArg = constructorType.argumentTypes.isEmpty()
         invokeIfInAnalyzedCode(
             original = {
                 super.visitMethodInsn(opcode, owner, name, desc, itf)
             },
             instrumented = {
-                val objectLocal = newLocal(OBJECT_TYPE)
-                val constructorType = Type.getType(desc)
-                val params = storeLocals(constructorType.argumentTypes)
-                copyLocal(objectLocal)
-                params.forEach { loadLocal(it) }
-                super.visitMethodInsn(opcode, owner, name, desc, itf)
-                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                loadLocal(objectLocal)
-                push(owner.toCanonicalClassName())
-                invokeStatic(Injections::afterObjectConstructor)
+                if (isZeroArg) {
+                    // Stack before: ..., uninitObj, uninitObj  (from user's NEW + DUP)
+                    dup()                                     // ..., uninitObj, uninitObj, uninitObj
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
+                                                              // ..., obj, obj   (all uninit refs promoted)
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                                                              // ..., obj, obj, descriptor
+                    swap()                                    // ..., obj, descriptor, obj
+                    push(owner.toCanonicalClassName())        // ..., obj, descriptor, obj, className
+                    invokeStatic(Injections::afterObjectConstructor)
+                                                              // ..., obj
+                } else {
+                    val objectLocal = newLocal(OBJECT_TYPE)
+                    val params = storeLocals(constructorType.argumentTypes)
+                    copyLocal(objectLocal)
+                    params.forEach { loadLocal(it) }
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                    loadLocal(objectLocal)
+                    push(owner.toCanonicalClassName())
+                    invokeStatic(Injections::afterObjectConstructor)
+                }
             }
         )
     }
@@ -160,16 +179,7 @@ internal class ObjectCreationTransformer(
     override fun visitIntInsn(opcode: Int, operand: Int) = adapter.run {
         super.visitIntInsn(opcode, operand)
         if (opcode == NEWARRAY) {
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    dup()
-                    val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
-                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(arrayLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
+            afterArrayCreation(newArrayDescriptor(operand))
         }
     }
 
@@ -193,21 +203,27 @@ internal class ObjectCreationTransformer(
         }
         super.visitTypeInsn(opcode, type)
         if (opcode == ANEWARRAY) {
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    dup()
-                    val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
-                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(arrayLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
+            // `type` is either an internal object name (e.g. `java/lang/String`) or, when the
+            // element is itself an array, an array descriptor (e.g. `[I`).
+            val elementDescriptor = if (type.startsWith("[")) type else "L$type;"
+            afterArrayCreation("[$elementDescriptor")
         }
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String?, numDimensions: Int) = adapter.run {
         super.visitMultiANewArrayInsn(descriptor, numDimensions)
+        afterArrayCreation(descriptor!!)
+    }
+
+    /**
+     * Injects an `afterObjectConstructor` call right after an array allocation
+     * (NEWARRAY/ANEWARRAY/MULTIANEWARRAY). Unlike `NEW`, the array is already in
+     * a fully-initialized state on top of the stack, so we just `dup` it and feed
+     * the duplicate into the injection. The `arrayTypeDescriptor` is the JVM array
+     * descriptor (e.g. `[I`, `[Ljava/lang/String;`), converted to a canonical Java
+     * name (`int[]`, `java.lang.String[]`) for the `className` argument.
+     */
+    private fun GeneratorAdapter.afterArrayCreation(arrayTypeDescriptor: String) {
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
@@ -215,9 +231,23 @@ internal class ObjectCreationTransformer(
                 val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                 invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                 loadLocal(arrayLocal)
-                invokeStatic(Injections::afterNewObjectCreation)
+                push(Type.getType(arrayTypeDescriptor).className)
+                invokeStatic(Injections::afterObjectConstructor)
             }
         )
+    }
+
+    /** JVM array descriptor for the primitive type encoded by a NEWARRAY operand. */
+    private fun newArrayDescriptor(operand: Int): String = when (operand) {
+        T_BOOLEAN -> "[Z"
+        T_CHAR    -> "[C"
+        T_FLOAT   -> "[F"
+        T_DOUBLE  -> "[D"
+        T_BYTE    -> "[B"
+        T_SHORT   -> "[S"
+        T_INT     -> "[I"
+        T_LONG    -> "[J"
+        else -> error("Unknown NEWARRAY operand: $operand")
     }
 
     /*
@@ -243,17 +273,19 @@ internal class ObjectCreationTransformer(
      * The cleanest place to hook this allocation is the `invokedynamic` call site itself:
      * the freshly allocated object is left on the operand stack
      * as the instruction's result, so we can `dup` it and feed it to
-     * `afterNewObjectCreation` similarly to arrays.
+     * `afterInvokeDynamicObjectCreation` similarly to arrays' `afterObjectConstructor`.
      *
      * One subtlety: a non-capturing lambda's call site target returns a JVM-cached singleton,
      * so the same instance shows up on the stack each time the `invokedynamic` is executed.
      * To avoid registering it more than once,
      * we route this site through the dedicated `afterInvokeDynamicObjectCreation` hook
-     * rather than the regular `afterNewObjectCreation`.
+     * rather than the regular `afterObjectConstructor`.
      * The other, "normal" allocation sites (`NEW`/`NEWARRAY`/`ANEWARRAY`/`MULTIANEWARRAY`)
-     * are guaranteed to produce a fresh instance per execution and use the plain `afterNewObjectCreation`.
+     * are guaranteed to produce a fresh instance per execution and use the plain `afterObjectConstructor`.
      * As such, at runtime, the implementation of `afterInvokeDynamicObjectCreation` injection should be idempotent,
-     * while implementation of `afterNewObjectCreation` is not obligatory idempotent.
+     * while implementation of `afterObjectConstructor` for arrays is not obligatory idempotent
+     * (it is, however, idempotent for objects, since multiple `<init>` calls may be made on
+     * the same instance through inheritance chains).
      *
      * References:
      *  - JVMS §6.5 invokedynamic — describes how the bootstrap method's
