@@ -336,8 +336,7 @@ open class ThreadScheduler {
     fun abortThread(threadId: ThreadId) {
         threads[threadId].apply {
             state = ThreadState.ABORTED
-            val thread = descriptor.thread
-            LockSupport.unpark(thread)
+            LockSupport.unpark(descriptor.thread)
         }
     }
 
