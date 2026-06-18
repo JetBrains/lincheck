@@ -583,7 +583,7 @@ internal class EventStructure(
                 val unlockEventCandidates = sequenceOf(allocationEvent(label.mutexID)!!) +
                         execution.filter { it.label.refine<UnlockLabel> { !isReentry && mutexID == label.mutexID } != null }
 
-                //But we cannot synch with unlock events that are already being read by a pinned lock response
+                // But we cannot synch with unlock events that are already being read by a pinned lock response
                 val unlockEventsWithPinnedResponses = execution.mapNotNull {
                     val nonReentryLockResponseLabel = it.label.refine<LockLabel> { isResponse && !isReentry && mutexID == label.mutexID }
                     if (nonReentryLockResponseLabel == null) return@mapNotNull null
