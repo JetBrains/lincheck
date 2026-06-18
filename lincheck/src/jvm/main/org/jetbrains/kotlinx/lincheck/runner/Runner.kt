@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.lincheck.util.ensure
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.TestThread
@@ -52,8 +53,8 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
      */
     protected abstract val executor : ActiveThreadPoolExecutor
 
-    protected open fun setSpinBound(spinBound: Int) {
-        executor.setSpinBound(spinBound)
+    protected open fun setSpinLimit(spinBound: Int) {
+        executor.setSpinLimit(spinBound)
     }
 
     /**
@@ -61,7 +62,7 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
      */
     fun initializeStrategy(strategy: Strategy) {
         this.strategy = strategy
-        setSpinBound(strategy.spinLoopBound)
+        setSpinLimit(strategy.spinLimit())
     }
 
     /**
@@ -107,4 +108,13 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
         super.close()
         executor.close()
     }
+}
+
+/**
+ * Determines the spin loop iteration limit for the current strategy.
+ * See: https://github.com/JetBrains/lincheck/issues/1008
+ */
+fun Strategy.spinLimit() : Int = when (this) {
+    is EventStructureStrategy -> 128 // 2^7
+    else -> 1_048_576 // 2^20
 }

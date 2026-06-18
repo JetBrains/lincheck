@@ -78,9 +78,14 @@ internal class ActiveThreadPoolExecutor(private val testName: String, private va
         }
     }
 
-    fun setSpinBound(spinBound: Int) {
-        taskSpinners.forEach { it.spinBound = spinBound }
-        resultSpinner.spinBound = spinBound
+    /**
+     * Sets the spin limit for all task spinners and the result spinner in the executor.
+     *
+     * @param spinLimit the maximum number of spins allowed for spinners before yielding.
+     */
+    fun setSpinLimit(spinLimit: Int) {
+        taskSpinners.forEach { it.spinLimit = spinLimit }
+        resultSpinner.spinLimit = spinLimit
     }
 
     /**

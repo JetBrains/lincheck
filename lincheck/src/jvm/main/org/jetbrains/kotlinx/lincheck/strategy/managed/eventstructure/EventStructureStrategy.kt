@@ -45,8 +45,6 @@ internal class EventStructureStrategy(
     val memoryModel : MemoryModel = MemoryModel.SequentialConsistency,
 ) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode, context) {
 
-    override val spinLoopBound: Int = 128
-
     private val memoryInitializer: MemoryInitializer = { location ->
         runInsideIgnoredSection {
             location.read(eventStructure.eventStructureObjectTracker::getValue)?.opaque()
