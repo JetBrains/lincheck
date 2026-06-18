@@ -9,6 +9,7 @@
  */
 
 package org.jetbrains.lincheck.util
+import java.util.concurrent.locks.LockSupport
 
 /**
  * A spinner implements utility functions for spinning in a loop.
@@ -75,6 +76,13 @@ class Spinner private constructor(
      * the spin-loop should perform before yielding to other threads.
      */
     fun pollYieldLimit(): Int =
+        1 + if (isSpinning) PARK_CYCLES_LIMIT else 0
+
+    /**
+     * Determines the limit for the number of iterations
+     * the spin-loop should perform before parking the current thread
+     */
+    fun pollParkLimit(): Int =
         1 + if (isSpinning) spinLimit else 0
 
     /**
@@ -110,6 +118,28 @@ class Spinner private constructor(
             }
             if (counter % pollCount == 0) {
                 limit = pollYieldLimit()
+            }
+        }
+    }
+
+    /**
+     * Waits in the spin-loop until the given condition is true
+     * with periodical yielding to other threads.
+     *
+     * @param condition A lambda function that determines the condition to wait for.
+     *   The function should return true when the condition is satisfied, and false otherwise.
+     */
+    inline fun spinWaitUntilOrPark(condition: () -> Boolean) {
+        var counter = 0
+        var limit = pollParkLimit()
+        val pollCount = PARK_CYCLES_LIMIT
+        while (!condition()) {
+            counter++
+            if (counter % limit == 0) {
+                LockSupport.park()
+            }
+            if (counter % pollCount == 0) {
+                limit = pollParkLimit()
             }
         }
     }
@@ -205,4 +235,5 @@ fun SpinnerGroup(nThreads: Int, spinLimit: Int = SPIN_CYCLES_LIMIT): List<Spinne
 
 //NOTE: Should be powers of 2
 const val SPIN_CYCLES_LIMIT: Int = 1_048_576 // 2^20
-const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1024 // 2^10
+const val PARK_CYCLES_LIMIT: Int = 1024  // 2^10
+const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1024

@@ -87,17 +87,11 @@ class ManagedThreadScheduler : ThreadScheduler() {
     fun awaitTurn(threadId: ThreadId) {
         check(threadId == getCurrentThreadId())
         val threadData = threads[threadId]!!
-        threadData.spinner.spinWaitUntil {
+        threadData.spinner.spinWaitUntilOrPark {
             if (threadData.state == ThreadState.ABORTED) {
                 raiseThreadAbortError()
             }
-
-            if(scheduledThreadId == threadId) {
-                return@spinWaitUntil true
-            }
-
-            LockSupport.park()
-            false
+            scheduledThreadId == threadId
         }
     }
 
