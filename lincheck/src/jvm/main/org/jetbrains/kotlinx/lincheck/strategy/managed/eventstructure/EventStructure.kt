@@ -324,7 +324,7 @@ internal class EventStructure(
 
         val blockedRequests = danglingRequests
             .filter {
-                blockedEvents.values.any { blockedDesc -> blockedDesc.request == it && blockedDesc.response == null }
+                blockedEvents.values.any { blockedDesc -> blockedDesc.request == it }
             }
 
         frontier.apply {
