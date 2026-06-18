@@ -227,6 +227,7 @@ fun ObjectID.getObjectHashCode(): Int =
 
 /**
  * Retrieves the unique serial object number for the given object.
+ * If an object is not registered in the tracker, returns -1.
  *
  * @param obj the object for which the object number is to be retrieved.
  * @return the unique object number if the object is registered in the tracker,
@@ -235,6 +236,14 @@ fun ObjectID.getObjectHashCode(): Int =
 fun ObjectTracker.getObjectNumberOrDefault(obj: Any): Int =
     get(obj)?.objectNumber ?: -1
 
+/**
+ * Retrieves the unique serial object number for the given object.
+ *
+ * @param obj the object for which the object number is to be retrieved.
+ * @return the unique object number if the object is registered in the tracker.
+ *    Otherwise, throws a NullPointerException exception.
+ *
+ */
 fun ObjectTracker.getObjectNumber(obj: Any): Int =
     get(obj)!!.objectNumber
 
