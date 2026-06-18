@@ -34,9 +34,9 @@ abstract class SequentialConsistencyViolation : Inconsistency()
 
 class SequentialConsistencyChecker(
     val memoryModel: MemoryModel,
-    val checkReleaseAcquireConsistency: Boolean = true,
+    checkReleaseAcquireConsistency: Boolean = true,
     val approximateSequentialConsistency: Boolean = true,
-    val checkCoherence: Boolean = true,
+    checkCoherence: Boolean = true,
 ) : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
     private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
@@ -56,85 +56,13 @@ class SequentialConsistencyChecker(
             .ensure { it.isConsistent() }
 
         // TODO: The current coherence checker is just for RA, we need to seperate the SC coherence from RA coherence
-        if(memoryModel == MemoryModel.SequentialConsistency) {
+        if (memoryModel == MemoryModel.SequentialConsistency) {
             SequentialConsistencyReplayer().ensure {
                 it.replay(executionOrder.ordering) != null
             }
         }
         return null
     }
-
-    /*
-        // we will gradually approximate the total sequential execution order of events
-        // by a partial order, starting with the partial causality order
-        var executionOrderApproximation : Relation<AtomicThreadEvent> = causalityOrder
-        // first try to check release/acquire consistency (it is cheaper) ---
-        // release/acquire inconsistency will also imply violation of sequential consistency,
-        if (releaseAcquireChecker != null) {
-            when (val verdict = releaseAcquireChecker.check(execution)) {
-                is ReleaseAcquireInconsistency -> return verdict
-                is ConsistencyWitness -> {
-                    // if execution is release/acquire consistent,
-                    // the writes-before relation can be used
-                    // to refine the execution ordering approximation
-                    val rmwChainsStorage = verdict.witness.rmwChainsStorage
-                    val writesBefore = verdict.witness.writesBefore
-                    executionOrderApproximation = executionOrderApproximation union writesBefore
-                    // TODO: combine SC approximation phase with coherence phase
-                    if (computeCoherenceOrdering) {
-                        return checkByCoherenceOrdering(execution, memoryAccessEventIndex, rmwChainsStorage, writesBefore)
-                    }
-                }
-            }
-        }
-        // TODO: combine SC approximation phase with coherence phase (and remove this check)
-        check(!computeCoherenceOrdering)
-        if (approximateSequentialConsistency) {
-            // TODO: embed the execution order approximation relation into the execution instance,
-            //   so that this (and following stages) can be implemented as separate consistency check classes
-            val executionIndex = MutableAtomicMemoryAccessEventIndex()
-                .apply { index(execution) }
-            val scApprox = SequentialConsistencyOrder(execution, executionIndex, executionOrderApproximation).apply {
-                initialize()
-                compute()
-            }
-            if (!scApprox.isConsistent()) {
-                return SequentialConsistencyApproximationInconsistency()
-            }
-            executionOrderApproximation = scApprox
-        }
-        // get dependency covering to guide the search
-        val covering = execution.buildExternalCovering(executionOrderApproximation)
-        // aggregate atomic events before replaying
-        val (aggregated, remapping) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
-        // check consistency by trying to replay execution using sequentially consistent abstract machine
-        return checkByReplaying(aggregated, covering.aggregate(remapping))
-    */
-
-
-    // private fun checkByCoherenceOrdering(
-    //     execution: Execution<AtomicThreadEvent>,
-    //     executionIndex: AtomicMemoryAccessEventIndex,
-    //     rmwChainsStorage: ReadModifyWriteOrder,
-    //     wbRelation: WritesBeforeOrder,
-    // ): ConsistencyVerdict<SequentialConsistencyWitness> {
-    //     val writesOrder = causalityOrder union wbRelation
-    //     val executionOrderComputable = computable {
-    //         ExecutionOrder(execution, executionIndex, Relation.empty())
-    //     }
-    //     val coherence = CoherenceOrder(execution, executionIndex, rmwChainsStorage, writesOrder,
-    //             executionOrder = executionOrderComputable
-    //         )
-    //         .apply { initialize(); compute() }
-    //     if (!coherence.isConsistent())
-    //         return SequentialConsistencyCoherenceViolation()
-    //     val executionOrder = executionOrderComputable.value.ensure { it.isConsistent() }
-    //     SequentialConsistencyReplayer(1 + execution.maxThreadID).ensure {
-    //         it.replay(executionOrder.ordering) != null
-    //     }
-    //     return SequentialConsistencyWitness.create(executionOrder.ordering)
-    // }
-
 }
 
 class CoherenceViolation : SequentialConsistencyViolation() {

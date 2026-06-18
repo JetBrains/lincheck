@@ -75,8 +75,6 @@ interface ThreadEvent : Event {
      */
     val causalityClock: VectorClock
 
-    // TODO: maybe generalize the notion of vector clocks somehow, to avoid making a new vector clock for each
-    //   freaking relation we want to track
     val happensBeforeClock: VectorClock
 
     /**
@@ -310,7 +308,7 @@ abstract class AbstractThreadEvent(
     // TODO: In the future we need also resolve release-acquire fences
     final override val happensBeforeClock: VectorClock = run {
         dependencies.fold(parent?.happensBeforeClock?.copy() ?: MutableVectorClock()) { clock, event ->
-            if(this.label.isAcquire() && event.label.isRelease() ) {
+            if (this.label.isAcquire() && event.label.isRelease() ) {
                 clock + event.happensBeforeClock
             } else {
                 clock
@@ -462,11 +460,11 @@ val causalityOrder = Relation<ThreadEvent> { x, y ->
     (x != y) && y.causalityClock.observes(x.threadId, x.threadPosition)
 }
 
-val happensBeforeOrder = Relation<ThreadEvent> { x, y ->
+val releaseAcquireHappensBefore = Relation<ThreadEvent> { x, y ->
     (x != y) && y.happensBeforeClock.observes(x.threadId, x.threadPosition)
 }
 
-val happensBeforeLocOrder = (happensBeforeOrder intersection sameLocation) union initRelation
+val happensBeforeSameLocationOrder = (releaseAcquireHappensBefore intersection sameLocation) union initRelation
 
 val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }
 
