@@ -14,6 +14,6 @@
             <toc-element topic="progress-guarantees.md"/>
             <toc-element topic="sequential-specification.md"/>
         </toc-element>
+        <toc-element topic="lincheck-kmp.md"/>
 	</snippet>
-    <toc-element topic="lincheck-model-checking.md"/>
 </instance-profile>
