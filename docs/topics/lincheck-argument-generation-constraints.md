@@ -19,14 +19,14 @@ To limit the range of the generated argument values in Lincheck:
    }
    ```
 
-* `name` – the name of the argument generator.
-* `gen` – the [type](#generator-types) of the generator.
-* `conf` – the configuration string for the generator. Here, Lincheck generates integer values from 1 to 2.
+   * `name` – the name of the argument generator.
+   * `gen` – the [type](#generator-types) of the generator.
+   * `conf` – the configuration string for the generator. Here, Lincheck generates integer values from 1 to 2.
 
-> Lincheck provides generators for multiple value types. Each type uses a different configuration string template.
->
-> Read more in the [Generator types](#generator-types) section.
-{ style = "tip" }
+   > Lincheck provides generators for multiple value types. Each type uses a different configuration string template.
+   >
+   > Read more in the [Generator types](#generator-types) section.
+   { style = "tip" }
 
 2. Annotate the operations parameters with `@Param` to apply the constraints:
 
@@ -54,30 +54,27 @@ With the constraints in place, Lincheck generates scenarios using only values wi
 
 Lincheck provides the following argument generator types:
 
-<table xmlns="">
-  <thead>
+<table>
     <tr>
       <th>Generator</th>
       <th>Configuration template</th>
       <th>Description</th>
     </tr>
-  </thead>
-  <tbody>
     <tr>
       <td><code>IntGen</code></td>
       <td><code>"min:max"</code></td>
-      <td>Generates <code>Int</code> values between <code>min</code> and <code>max</code>, inclusive. </br></br>
+      <td>Generates <code>Int</code> values between <code>min</code> and <code>max</code>, inclusive. <br/><br/>
           If the configuration string is empty, uses the full integer range from <code>Int.MIN_VALUE</code> to 
-          <code>Int.MAX_VALUE</code>. </br></br>
+          <code>Int.MAX_VALUE</code>. <br/><br/>
           Example:
           <code>"1:3" -> [1, 2, 3]</code></td>
     </tr>
     <tr>
       <td><code>StringGen</code></td>
-      <td><code>"maxWordLength:alphabet"</code></br><code>"maxWordLength"</code></br><code>""</code></td>
+      <td><code>"maxWordLength:alphabet"</code><br/><code>"maxWordLength"</code><br/><code>""</code></td>
       <td>Generates random string values up to <code>maxWordLength</code> from the provided <code>alphabet</code>.
-          The default <code>alphabet</code> is <code>[a-zA-Z\d _]</code>. </br>
-          The default <code>maxWordLength</code> is <code>15</code>. </br></br>
+          The default <code>alphabet</code> is <code>[a-zA-Z\d _]</code>. <br/>
+          The default <code>maxWordLength</code> is <code>15</code>. <br/><br/>
           Example:
           <code-block lang="text">"2:abc" -> [
     "a", "b", "c",
@@ -89,7 +86,7 @@ Lincheck provides the following argument generator types:
     <tr>
       <td><code>EnumGen</code></td>
       <td><code>"Enum.Const1,Enum.Const2,..."</code></td>
-      <td>Generates a random value from the specified list of enum values. </br></br>
+      <td>Generates a random value from the specified list of enum values. <br/><br/>
           Example:
           <code-block lang="text">"Enum.Const1,Enum.Const2" -> [
     Enum.Const1, 
@@ -100,61 +97,60 @@ Lincheck provides the following argument generator types:
       <td><code>BooleanGen</code></td>
       <td><code>""</code></td>
       <td>Generates <code>true</code> and <code>false</code> values. Does not require a specific configuration 
-          string. </br></br>
+          string. <br/><br/>
           Example:
           <code>"" -> [true, false]</code></td>
     </tr>
     <tr>
       <td><code>DoubleGen</code></td>
-      <td><code>"start:step:end"</code></br><code>"start:end"</code></br><code>""</code></td>
+      <td><code>"start:step:end"</code><br/><code>"start:end"</code><br/><code>""</code></td>
       <td>Generates <code>Double</code> values from <code>start</code> to <code>end</code>, incrementing by
-          <code>step</code>. </br></br> 
-          Default <code>step</code> value is <code>(end - start)/100</code>. </br></br> 
+          <code>step</code>. <br/><br/> 
+          Default <code>step</code> value is <code>(end - start)/100</code>. <br/><br/> 
           If the configuration string is empty, generates values from <code>Int.MIN_VALUE</code> to 
-          <code>Int.MAX_VALUE</code> with <code>step = 0.1</code>. </br></br>
+          <code>Int.MAX_VALUE</code> with <code>step = 0.1</code>. <br/><br/>
           Example:
           <code>"0.0:0.1:1.0" -> [0.0, 0.1, 0.2, ..., 0.9, 1.0]</code></td>
     </tr>
     <tr>
       <td><code>FloatGen</code></td>
-      <td><code>"start:step:end"</code></br><code>"start:end"</code></br><code>""</code></td>
-      <td>Same as <code>DoubleGen</code> with values converted to <code>Float</code>. </br></br>
+      <td><code>"start:step:end"</code><br/><code>"start:end"</code><br/><code>""</code></td>
+      <td>Same as <code>DoubleGen</code> with values converted to <code>Float</code>. <br/><br/>
           Example:
           <code>"0.0:0.1:1.0" -> [0.0, 0.1, 0.2, ..., 0.9, 1.0]</code></td>
     </tr>
     <tr>
       <td><code>LongGen</code></td>
       <td><code>"min:max"</code></td>
-      <td>Same as <code>IntGen</code> with values converted to <code>Long</code>. </br></br>
+      <td>Same as <code>IntGen</code> with values converted to <code>Long</code>. <br/><br/>
           Example:
           <code>"1:3" -> [1, 2, 3]</code></td>
     </tr>
     <tr>
       <td><code>ShortGen</code></td>
       <td><code>"min:max"</code></td>
-      <td>Generates <code>Short</code> values between <code>min</code> and <code>max</code>, inclusive. </br></br>
+      <td>Generates <code>Short</code> values between <code>min</code> and <code>max</code>, inclusive. <br/><br/>
           If the configuration string is empty, uses the full short integer range from <code>-32768</code> 
-          to <code>32767</code>. </br></br>
+          to <code>32767</code>. <br/><br/>
           Example:
           <code>"1:3" -> [1, 2, 3]</code></td>
     </tr>
     <tr>
       <td><code>ByteGen</code></td>
       <td><code>"min:max"</code></td>
-      <td>Generates <code>Byte</code> values between <code>min</code> and <code>max</code>, inclusive. </br></br>
+      <td>Generates <code>Byte</code> values between <code>min</code> and <code>max</code>, inclusive. <br/><br/>
           If the configuration string is empty, uses the full byte range from <code>-128</code> to 
-          <code>127</code>. </br></br>
+          <code>127</code>. <br/><br/>
           Example:
           <code>"1:3" -> [1, 2, 3]</code></td>
     </tr>
     <tr>
       <td><code>ThreadIdGen</code></td>
       <td><code>""</code></td>
-      <td>Returns the ID number of the current thread. Does not require a specific configuration string. </br></br>
+      <td>Returns the ID number of the current thread. Does not require a specific configuration string. <br/><br/>
           Example:
           <code>"" -> [1, 2]</code></td>
     </tr>
-  </tbody>
 </table>
 
 ## What's next
