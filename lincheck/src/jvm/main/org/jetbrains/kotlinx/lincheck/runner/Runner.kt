@@ -116,5 +116,6 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
  */
 fun Strategy.spinLimit() : Int = when (this) {
     is EventStructureStrategy -> 128 // 2^7
+    is ManagedStrategy -> 128
     else -> 1_048_576 // 2^20
 }
