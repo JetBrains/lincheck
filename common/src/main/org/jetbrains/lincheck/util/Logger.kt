@@ -131,7 +131,7 @@ object Logger {
     val LINE_SEPARATOR: String = System.lineSeparator()
 }
 
-@JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.WARN
+@JvmField val DEFAULT_LOG_LEVEL = LoggingLevel.DEBUG
 
 enum class LoggingLevel {
     VERBOSE, DEBUG, INFO, WARN, ERROR, OFF
