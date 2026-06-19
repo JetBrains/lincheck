@@ -53,8 +53,8 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
      */
     protected abstract val executor : ActiveThreadPoolExecutor
 
-    protected open fun setSpinLimit(spinBound: Int) {
-        executor.setSpinLimit(spinBound)
+    protected open fun setSpinLimit(spinLimit: Int) {
+        executor.setSpinLimit(spinLimit)
     }
 
     /**
