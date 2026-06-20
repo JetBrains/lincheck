@@ -77,9 +77,9 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
     /**
      * The sequential consistency order (sc) of the execution.
      *
-     * @see SequentialConsistencyOrder
+     * @see MemoryModelConsistencyOrder
      */
-    val sequentialConsistencyOrder: Relation<AtomicThreadEvent>
+    val memoryModelConsistencyOrder: Relation<AtomicThreadEvent>
 
     /**
      * The execution order (xo) of the execution.
@@ -111,7 +111,7 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
 
     val extendedCoherenceComputable: ComputableNode<ExtendedCoherenceOrder>
 
-    val sequentialConsistencyOrderComputable: ComputableNode<SequentialConsistencyOrder>
+    val memoryModelConsistencyOrderComputable: ComputableNode<MemoryModelConsistencyOrder>
 
     val executionOrderComputable: ComputableNode<ExecutionOrder>
 
@@ -200,8 +200,8 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
 
     override val extendedCoherence: Relation<AtomicThreadEvent> by extendedCoherenceComputable
 
-    override val sequentialConsistencyOrderComputable = computable {
-        SequentialConsistencyOrder(
+    override val memoryModelConsistencyOrderComputable = computable {
+        MemoryModelConsistencyOrder(
             execution,
             memoryAccessEventIndex,
             happensBeforeOrder union extendedCoherenceComputable.value,
@@ -210,7 +210,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     }
         .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
 
-    override val sequentialConsistencyOrder: Relation<AtomicThreadEvent> by sequentialConsistencyOrderComputable
+    override val memoryModelConsistencyOrder: Relation<AtomicThreadEvent> by memoryModelConsistencyOrderComputable
 
     override val executionOrderComputable = computable {
         ExecutionOrder(
@@ -234,7 +234,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         listOf<AtomicEventConsistencyChecker>(
             ReadModifyWriteAtomicityChecker(execution = this),
 
-            IncrementalSequentialConsistencyChecker(
+            IncrementalMemoryModelConsistencyChecker(
                 execution = this,
                 memoryModel,
                 checkReleaseAcquireConsistency = memoryModel == MemoryModel.ReleaseAcquire,

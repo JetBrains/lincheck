@@ -32,7 +32,7 @@ import kotlin.collections.*
 
 abstract class SequentialConsistencyViolation : Inconsistency()
 
-class SequentialConsistencyChecker(
+class MemoryModelConsistencyChecker(
     val memoryModel: MemoryModel,
     checkReleaseAcquireConsistency: Boolean = true,
     checkCoherence: Boolean = true,
@@ -71,13 +71,13 @@ class CoherenceViolation : SequentialConsistencyViolation() {
     }
 }
 
-class IncrementalSequentialConsistencyChecker(
+class IncrementalMemoryModelConsistencyChecker(
     execution: MutableExtendedExecution,
     memoryModel: MemoryModel,
     checkReleaseAcquireConsistency: Boolean = true,
 ) : AbstractPartialIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(
     execution = execution,
-    checker = SequentialConsistencyChecker(
+    checker = MemoryModelConsistencyChecker(
         memoryModel,
         checkReleaseAcquireConsistency,
     )
@@ -173,7 +173,7 @@ class SequentialConsistencyApproximationInconsistency : SequentialConsistencyVio
     }
 }
 
-class SequentialConsistencyOrder(
+class MemoryModelConsistencyOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val memoryAccessOrder: Relation<AtomicThreadEvent>,

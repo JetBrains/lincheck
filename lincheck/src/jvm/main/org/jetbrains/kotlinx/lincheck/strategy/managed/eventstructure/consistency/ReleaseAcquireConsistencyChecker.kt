@@ -34,7 +34,7 @@ class ReleaseAcquireInconsistency : Inconsistency() {
     }
 }
 
-// TODO: should we remove this?
+// TODO: should we remove this? To prevent confusion with the actual Release Acquire consistency checker
 class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
     override fun check(execution: MutableExtendedExecution): Inconsistency? {
