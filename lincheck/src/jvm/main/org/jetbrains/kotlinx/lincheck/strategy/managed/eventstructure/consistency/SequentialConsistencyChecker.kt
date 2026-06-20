@@ -35,7 +35,6 @@ abstract class SequentialConsistencyViolation : Inconsistency()
 class SequentialConsistencyChecker(
     val memoryModel: MemoryModel,
     checkReleaseAcquireConsistency: Boolean = true,
-    val approximateSequentialConsistency: Boolean = true,
     checkCoherence: Boolean = true,
 ) : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
@@ -76,13 +75,11 @@ class IncrementalSequentialConsistencyChecker(
     execution: MutableExtendedExecution,
     memoryModel: MemoryModel,
     checkReleaseAcquireConsistency: Boolean = true,
-    approximateSequentialConsistency: Boolean = true,
 ) : AbstractPartialIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(
     execution = execution,
     checker = SequentialConsistencyChecker(
         memoryModel,
         checkReleaseAcquireConsistency,
-        approximateSequentialConsistency,
     )
 ) {
 
