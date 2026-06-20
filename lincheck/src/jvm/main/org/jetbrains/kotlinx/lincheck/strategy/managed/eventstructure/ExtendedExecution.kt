@@ -142,6 +142,15 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     val memoryModel: MemoryModel,
 ) : MutableExtendedExecution, MutableExecution<AtomicThreadEvent> by execution {
 
+    val happensBeforeOrder :  Relation<AtomicThreadEvent>
+        get() {
+            return when (memoryModel) {
+                MemoryModel.SequentialConsistency -> causalityOrder
+                MemoryModel.ReleaseAcquire -> releaseAcquireHappensBefore
+                MemoryModel.JAM21 -> TODO()
+            }
+        }
+
     val coherenceCausalOrder :  Relation<AtomicThreadEvent>
         get() {
             return when (memoryModel) {

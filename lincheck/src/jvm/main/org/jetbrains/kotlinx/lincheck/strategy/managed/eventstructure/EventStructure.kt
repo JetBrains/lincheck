@@ -1034,7 +1034,7 @@ internal class EventStructure(
             writeValue = value, // TODO: change API of other methods to also take ValueID
             readModifyWriteDescriptor = readModifyWriteDescriptor,
             codeLocation = codeLocation,
-            memoryOrdering = memoryOrderOverride(memoryOrder)
+            memoryOrdering = memoryOrder
         )
         return addSendEvent(iThread, label)
     }
@@ -1049,7 +1049,7 @@ internal class EventStructure(
             readValue = NULL_OBJECT_NUMBER.toLong(),
             readModifyWriteDescriptor = readModifyWriteDescriptor,
             codeLocation = codeLocation,
-            memoryOrdering = memoryOrderOverride(memoryOrder)
+            memoryOrdering = memoryOrder
         )
         return addRequestEvent(iThread, label)
     }
@@ -1260,7 +1260,7 @@ internal class EventStructure(
         val writes = calculateMemoryLocationView(location, observation).events
         return writes.filter { write ->
             !writes.any { other ->
-                happensBeforeOrder(write, other)
+                releaseAcquireHappensBefore(write, other)
             }
         }
     }
@@ -1269,16 +1269,6 @@ internal class EventStructure(
     private fun resetReadCodeLocationsCounter(iThread: Int) {
         // reset all code-locations counters of the given thread
         readCodeLocationsCounter.keys.retainAll { (tid, _) -> tid != iThread }
-    }
-
-    // NOTE: In the case of sequential consistency, to make sure that
-    // happensBeforeOrder === causalityOrder, we change the memory ordering of
-    // reads to VOLATILE
-    private fun memoryOrderOverride(memoryOrder: MemoryOrdering) : MemoryOrdering {
-        if(memoryModel == MemoryModel.SequentialConsistency) {
-            return MemoryOrdering.VOLATILE
-        }
-        return memoryOrder
     }
 
 }

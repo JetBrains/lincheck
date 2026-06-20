@@ -642,7 +642,6 @@ fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel): 
             writeValue = write.value,
             readModifyWriteDescriptor = read.readModifyWriteDescriptor!!,
             codeLocation = read.codeLocation,
-            // NOTE: Possible bug? We should include the memory order of the write somehow
             memoryOrdering = read.memoryOrdering
         )
     }

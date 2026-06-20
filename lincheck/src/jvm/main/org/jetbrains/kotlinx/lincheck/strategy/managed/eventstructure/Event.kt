@@ -460,11 +460,11 @@ val causalityOrder = Relation<ThreadEvent> { x, y ->
     (x != y) && y.causalityClock.observes(x.threadId, x.threadPosition)
 }
 
-val happensBeforeOrder = Relation<ThreadEvent> { x, y ->
+val releaseAcquireHappensBefore = Relation<ThreadEvent> { x, y ->
     (x != y) && y.happensBeforeClock.observes(x.threadId, x.threadPosition)
 }
 
-val happensBeforeSameLocationOrder = (happensBeforeOrder intersection sameLocation) union initRelation
+val happensBeforeSameLocationOrder = (releaseAcquireHappensBefore intersection sameLocation) union initRelation
 
 val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }
 
