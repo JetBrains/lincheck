@@ -152,7 +152,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         }
 
     override val memoryAccessEventIndex =
-        MutableAtomicMemoryAccessEventIndex(happensBeforeOrder).apply { index(execution) }
+        MutableAtomicMemoryAccessEventIndex().apply { index(execution) }
 
     override val readModifyWriteOrderComputable = computable { ReadModifyWriteOrder(execution) }
 

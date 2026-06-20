@@ -174,16 +174,16 @@ fun AtomicMemoryAccessEventIndex.getLastWrite(location: MemoryLocation): AtomicT
     getWrites(location).lastOrNull()
 
 
-fun AtomicMemoryAccessEventIndex(happensBefore: Relation<AtomicThreadEvent>): AtomicMemoryAccessEventIndex =
-    MutableAtomicMemoryAccessEventIndex(happensBefore)
+fun AtomicMemoryAccessEventIndex(): AtomicMemoryAccessEventIndex =
+    MutableAtomicMemoryAccessEventIndex()
 
-fun MutableAtomicMemoryAccessEventIndex(happensBefore: Relation<AtomicThreadEvent>): MutableAtomicMemoryAccessEventIndex =
-    MutableAtomicMemoryAccessEventIndexImpl(happensBefore)
+fun MutableAtomicMemoryAccessEventIndex(): MutableAtomicMemoryAccessEventIndex =
+    MutableAtomicMemoryAccessEventIndexImpl()
 
 typealias AtomicMemoryAccessEventClassifier =
         EventIndexClassifier<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>
 
-private class MutableAtomicMemoryAccessEventIndexImpl(val happensBefore: Relation<AtomicThreadEvent>) : MutableAtomicMemoryAccessEventIndex {
+private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAccessEventIndex {
 
     private data class LocationInfoData(
         override var isReadWriteRaceFree: Boolean,
@@ -248,13 +248,13 @@ private class MutableAtomicMemoryAccessEventIndexImpl(val happensBefore: Relatio
                     // to detect write-write race,
                     // it is sufficient to check only against the latest write event
                     val lastWrite = getLastWrite(location)!!
-                    info.isWriteWriteRaceFree = happensBefore(lastWrite, event)
+                    info.isWriteWriteRaceFree = happensBeforeOrder(lastWrite, event)
                 }
                 if (info.isReadWriteRaceFree) {
                     // to detect read-write race,
                     // we need to check against all the read-request events
                     info.isReadWriteRaceFree = getReadRequests(location).all { read ->
-                        happensBefore(read, event)
+                        happensBeforeOrder(read, event)
                     }
                 }
             }
@@ -263,9 +263,9 @@ private class MutableAtomicMemoryAccessEventIndexImpl(val happensBefore: Relatio
             // it is sufficient to check only against the latest write event
             event.label is ReadAccessLabel && info.isRaceFree -> {
                 val lastWrite = getLastWrite(location)!!
-                if (happensBefore(lastWrite, event))
+                if (happensBeforeOrder(lastWrite, event))
                     return
-                check(happensBefore.unordered(lastWrite, event))
+                check(happensBeforeOrder.unordered(lastWrite, event))
                 info.isReadWriteRaceFree = false
             }
 
@@ -273,7 +273,7 @@ private class MutableAtomicMemoryAccessEventIndexImpl(val happensBefore: Relatio
             // we need to check against all the write events
             event.label is ReadAccessLabel && info.isReadWriteRaceFree -> {
                 info.isReadWriteRaceFree = getWrites(location).all { write ->
-                    happensBefore(write, event)
+                    happensBeforeOrder(write, event)
                 }
             }
         }
