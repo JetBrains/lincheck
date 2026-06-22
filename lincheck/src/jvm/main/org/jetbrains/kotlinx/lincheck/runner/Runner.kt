@@ -111,11 +111,11 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
 }
 
 /**
- * Determines the spin loop iteration limit for the current strategy.
- * See: https://github.com/JetBrains/lincheck/issues/1008
+ * Determines the spin-loop iteration limit for the current strategy.
+ * The spin-waiting is effectively disabled for managed (model checking) strategies,
+ * see: https://github.com/JetBrains/lincheck/issues/1008 for details.
  */
 fun Strategy.spinLimit() : Int = when (this) {
-    is EventStructureStrategy -> 128 // 2^7
-    is ManagedStrategy -> 128
-    else -> 1_048_576 // 2^20
+    is ManagedStrategy -> 128          // 2^7
+    else               -> 1_048_576    // 2^20
 }
