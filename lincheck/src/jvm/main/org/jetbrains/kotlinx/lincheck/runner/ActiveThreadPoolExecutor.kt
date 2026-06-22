@@ -54,7 +54,7 @@ internal class ActiveThreadPoolExecutor(private val testName: String, private va
      * the main thread will be parked immediately without spinning;
      * in this case, if `nCPUs = nThreads` all the scenario threads still be spinning.
      */
-    private val resultSpinner = Spinner(nThreads + 1)
+    private val resultSpinner = Spinner(threadCount = nThreads + 1)
 
     /**
      * This flag is set to `true` if one of the submitted tasks hung.

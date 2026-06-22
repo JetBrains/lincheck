@@ -33,7 +33,11 @@ class Spinner private constructor(
      *   the number of threads and avoid spinning if that is not the case.
      *  @param spinLimit Defines the limit for iterations of the spin-loop [spinWaitBoundedUntil] before it exits.
      */
-    constructor(threadCount: Int, spinLimit: Int = SPIN_CYCLES_LIMIT) : this(threadCount, threadCounter = null, spinLimit)
+    constructor(threadCount: Int, spinLimit: Int = SPIN_CYCLES_LIMIT) : this(
+        threadCount = threadCount,
+        threadCounter = null,
+        spinLimit = spinLimit,
+    )
 
     /**
      * Creates an instance of the [Spinner] class.
@@ -46,7 +50,7 @@ class Spinner private constructor(
      *   This information is used to check if the number of available CPUs is greater than
      *   the number of threads in the group and avoid spinning if that is not the case.
      */
-    constructor(spinLimit: Int = SPIN_CYCLES_LIMIT, threadCounter: () -> Int, ) : this(
+    constructor(spinLimit: Int = SPIN_CYCLES_LIMIT, threadCounter: () -> Int) : this(
         threadCount = -1,
         threadCounter = threadCounter,
         spinLimit = spinLimit,
@@ -195,7 +199,7 @@ inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
  */
 @Suppress("FunctionName")
 fun SpinnerGroup(nThreads: Int, spinLimit: Int = SPIN_CYCLES_LIMIT): List<Spinner> {
-    return Array(nThreads) { Spinner(nThreads, spinLimit) }.asList()
+    return Array(nThreads) { Spinner(threadCount = nThreads, spinLimit = spinLimit) }.asList()
 }
 
 
