@@ -212,6 +212,8 @@ internal fun isStackTraceElementClass(className: String): Boolean =
 internal fun isJavaUtilArraysClass(className: String): Boolean =
     className == "java.util.Arrays"
 
+internal fun isKotlinArraysUtilJVMClass(className: String): Boolean =
+    className == "kotlin.collections.ArraysUtilJVM"
 /**
  * Checks if the provided class name matches the [jdk.internal.access.JavaLangAccess] class.
  */

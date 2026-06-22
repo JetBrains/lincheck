@@ -706,6 +706,9 @@ private fun shouldNotInstrument(className: String, methodName: String, descripto
     // See details in https://github.com/JetBrains/lincheck/issues/717.
     if (isJavaUtilArraysClass(className))
         return true
+
+    if (isKotlinArraysUtilJVMClass(className))
+        return true
     // Do not instrument coroutines' internal machinery.
     if (isCoroutineInternalClass(className))
         return true
