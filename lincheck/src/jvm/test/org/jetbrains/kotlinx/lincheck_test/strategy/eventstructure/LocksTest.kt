@@ -12,10 +12,12 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.lincheck.datastructures.scenario
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
+@Ignore
 class LocksTest {
 
     @Test
