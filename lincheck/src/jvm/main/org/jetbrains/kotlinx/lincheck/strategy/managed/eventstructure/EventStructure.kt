@@ -1273,7 +1273,7 @@ internal class EventStructure(
 
     // NOTE: In the case of sequential consistency, to make sure that
     // happensBeforeOrder === causalityOrder, we change the memory ordering of
-    // reads to VOLATILE
+    // reads to VOLATILE, effectively treating every read/write as sequentially-consistent (aka `volatile`)
     private fun memoryOrderOverride(memoryOrder: MemoryOrdering) : MemoryOrdering {
         if(memoryModel == MemoryModel.SequentialConsistency) {
             return MemoryOrdering.VOLATILE
