@@ -308,7 +308,7 @@ abstract class AbstractThreadEvent(
     // TODO: In the future we need also resolve release-acquire fences
     final override val happensBeforeClock: VectorClock = run {
         dependencies.fold(parent?.happensBeforeClock?.copy() ?: MutableVectorClock()) { clock, event ->
-            if (this.label.isAcquire() && event.label.isRelease() ) {
+            if (this.label.isAcquire() && event.label.isRelease()) {
                 clock + event.happensBeforeClock
             } else {
                 clock
