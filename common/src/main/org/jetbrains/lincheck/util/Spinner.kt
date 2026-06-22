@@ -21,10 +21,8 @@ class Spinner private constructor(
 
     /**
      * Creates an instance of the [Spinner] class.
-     *
-     *  @param spinLimit Defines the limit for iterations of the spin-loop [spinWaitBoundedUntil] before it exits.
      */
-    constructor(spinLimit: Int = SPIN_CYCLES_LIMIT) : this(threadCount = -1, threadCounter = null, spinLimit)
+    constructor() : this(threadCount = -1, threadCounter = null, spinLimit = SPIN_CYCLES_LIMIT)
 
     /**
      * Creates an instance of the [Spinner] class.
