@@ -16,12 +16,13 @@ package org.jetbrains.lincheck.util
 class Spinner private constructor(
     private val threadCount: Int,
     private val threadCounter: (() -> Int)?,
+    var spinLimit: Int,
 ) {
 
     /**
      * Creates an instance of the [Spinner] class.
      */
-    constructor() : this(threadCount = -1, threadCounter = null)
+    constructor() : this(threadCount = -1, threadCounter = null, spinLimit = SPIN_CYCLES_LIMIT)
 
     /**
      * Creates an instance of the [Spinner] class.
@@ -30,12 +31,18 @@ class Spinner private constructor(
      *   may wait for a common condition in the spin-loop.
      *   This information is used to check if the number of available CPUs is greater than
      *   the number of threads and avoid spinning if that is not the case.
+     *  @param spinLimit Defines the limit for iterations of the spin-loop [spinWaitBoundedUntil] before it exits.
      */
-    constructor(threadCount: Int) : this(threadCount, threadCounter = null)
+    constructor(threadCount: Int, spinLimit: Int = SPIN_CYCLES_LIMIT) : this(
+        threadCount = threadCount,
+        threadCounter = null,
+        spinLimit = spinLimit,
+    )
 
     /**
      * Creates an instance of the [Spinner] class.
      *
+     * @param spinLimit Defines the limit for iterations of the spin-loop [spinWaitBoundedUntil] before it exits.
      * @param threadCounter Denotes the number of threads in a group that
      *   may wait for a common condition in the spin-loop.
      *   The number of threads in a group is allowed to change dynamically ---
@@ -43,7 +50,11 @@ class Spinner private constructor(
      *   This information is used to check if the number of available CPUs is greater than
      *   the number of threads in the group and avoid spinning if that is not the case.
      */
-    constructor(threadCounter: () -> Int) : this(threadCount = -1, threadCounter = threadCounter)
+    constructor(spinLimit: Int = SPIN_CYCLES_LIMIT, threadCounter: () -> Int) : this(
+        threadCount = -1,
+        threadCounter = threadCounter,
+        spinLimit = spinLimit,
+    )
 
     /**
      * Determines whether the spinner should actually spin in a loop or if it should exit immediately.
@@ -64,13 +75,13 @@ class Spinner private constructor(
      * the spin-loop should perform before yielding to other threads.
      */
     fun pollYieldLimit(): Int =
-        1 + if (isSpinning) SPIN_CYCLES_LIMIT else 0
+        1 + if (isSpinning) spinLimit else 0
 
     /**
      * Defines the limit for iterations in a spin-loop before it exits.
      */
     fun pollExitLimit(): Int =
-        if (isSpinning) SPIN_CYCLES_LIMIT else 0
+        if (isSpinning) spinLimit else 0
 
     /**
      * Calculates the elapsed time in nanoseconds since the provided start time.
@@ -187,11 +198,11 @@ inline fun <T> Spinner.spinWaitBoundedFor(getter: () -> T?): T? {
  * @param nThreads The number of threads in the group.
  */
 @Suppress("FunctionName")
-fun SpinnerGroup(nThreads: Int): List<Spinner> {
-    return Array(nThreads) { Spinner(nThreads) }.asList()
+fun SpinnerGroup(nThreads: Int, spinLimit: Int = SPIN_CYCLES_LIMIT): List<Spinner> {
+    return Array(nThreads) { Spinner(threadCount = nThreads, spinLimit = spinLimit) }.asList()
 }
 
 
-const val SPIN_CYCLES_LIMIT: Int = 1_000_000
-
-const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1_000
+//NOTE: Should be powers of 2
+const val SPIN_CYCLES_LIMIT: Int = 1_048_576 // 2^20
+const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1024 // 2^10

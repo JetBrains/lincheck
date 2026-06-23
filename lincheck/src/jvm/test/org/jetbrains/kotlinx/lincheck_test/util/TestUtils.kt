@@ -169,7 +169,7 @@ private val String.filtered: String get() {
 // - everything from `java.base/java.lang` (because code locations may vary between different versions of JVM)
 private val TEST_EXECUTION_TRACE_ELEMENT_REGEX = listOf(
     "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.TestThreadExecution(\\d+)\\.run\\(Unknown Source\\)",
-    "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.FixedActiveThreadsExecutor\\.testThreadRunnable\\\$lambda\\\$(\\d+)\\(FixedActiveThreadsExecutor.kt:(\\d+)\\)",
+    "(\\W*)at org\\.jetbrains\\.kotlinx\\.lincheck\\.runner\\.ActiveThreadPoolExecutor\\.testThreadRunnable\\\$lambda\\\$(\\d+)\\(ActiveThreadPoolExecutor.kt:(\\d+)\\)",
     "(\\W*)at (java.base\\/)?java.lang(.*)"
 ).joinToString(separator = ")|(", prefix = "(", postfix = ")").toRegex()
 
