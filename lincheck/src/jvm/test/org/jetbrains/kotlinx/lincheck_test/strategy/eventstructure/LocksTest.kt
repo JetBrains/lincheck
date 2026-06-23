@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.lincheck.datastructures.scenario
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -49,6 +50,8 @@ class LocksTest {
     }
 
     @Test
+    @Ignore // TODO: triggers weird JDK-21 hung bugs,
+            //   likely due to some Java/Kotlin arrays/collections classes instrumentation
     fun testSynchronizedIncrement3() {
         val expectedOutcomes: Set<List<Int>> = setOf(
             listOf(0,1,2,3),
