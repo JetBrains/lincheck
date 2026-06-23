@@ -1,79 +1,78 @@
 [//]: # (title: Lincheck in Kotlin Multiplatform projects)
-[//]: # (description: Learn how to set up Lincheck tests in multiplatform projects)
+[//]: # (description: Learn how to set up Lincheck tests in multiplatform projects.)
 
-Lincheck can be used with [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform/quickstart.html) for 
-testing the code targeting the JVM.
-
-> **Will Lincheck support other platforms in the future?**
->
-> Lincheck relies heavily on JVM for [bytecode manipulation](lincheck-testing-strategies.md#model-checking) that is not 
-> supported on other platforms. 
-> 
-> Implementing model checking for multiple targets is not only challenging, but also provides 
-> little value. Model checking enables Lincheck to test the code in a deterministic 
-> sandbox environment, which means that the results of the tests will be the same regardless 
-> of the platform.
-> 
-{style="tip"}
-
-This article will guide you through setting up Lincheck tests in a Kotlin Multiplatform project.
+Lincheck can be used with [Kotlin Multiplatform](https://kotlinlang.org/docs/multiplatform/quickstart.html) 
+to test the code targeting the JVM. This article will guide you through setting up Lincheck tests in a Kotlin 
+Multiplatform project.
 
 You will:
 * Set up your project to run Lincheck tests for targets using the JVM.
-* Create a `Counter` structure shared between all targets.
-* Create tests for `Counter` shared between all targets and tests specific to the JVM.
+* Create classes for counter data structures shared between all targets.
+* Create tests for the counters shared between all targets and tests specific to the JVM.
 * Run the tests.
 
 ## Set up a project
 
-1. Create a [new Kotlin Multiplatform project](https://kotlinlang.org/docs/multiplatform/quickstart.html) in IntelliJ IDEA or open an existing one.
+1. Create a [new Kotlin Multiplatform project](https://kotlinlang.org/docs/multiplatform/quickstart.html) in IntelliJ IDEA. When creating a project, make sure that:
+   * The **Include tests** checkbox is checked when creating a project.
+   * Your project has a JVM-based (a server, desktop, or Android) target. You can verify that
+      your code compiles for the JVM by checking the `shared/build.gradle.kts` or `core/build.gradle.kts` file:
 
-   Your project must have a JVM target, for example, a server, desktop, or an Android app. You can make sure that
-   your code compiles for the JVM by checking the `shared/build.gradle.kts` or `core/build.gradle.kts` file:
+      ```kotlin
+      kotlin {
+          // ...
+          
+          jvm()
+          
+          // ...
+          
+          // If you have an Android target, the use of JVM is
+          // stated in the Android configuration section
+          androidLibrary {
+              // ...
+      
+              compilerOptions {
+                  jvmTarget = JvmTarget.JVM_11
+              }
+              
+              // ...
+          }
+      }
+      ```
+   
+   > **Server/Desktop + Android** and **Server/Desktop + Android + iOS** projects
+   > 
+   > Kotlin currently doesn't support [sharing the code between JVM and Android targets](https://kotlinlang.org/docs/multiplatform/multiplatform-hierarchy.html#manual-configuration).
+   > You will not be able to create shared tests for your platforms, but you can still test the code with Lincheck
+   > using [platform-specific tests](https://kotlinlang.org/docs/multiplatform/multiplatform-run-tests.html#add-platform-specific-tests).
+   >
+   > For more information about the general test setup for Lincheck, read the 
+   > [Getting started with Lincheck](lincheck-getting-started.md) article. 
+   {style="warning"}
 
-   ```kotlin
-   kotlin {
-       // ...
-       
-       jvm()
-       
-       // ...
-       
-       // If you have an Android app, the use of JVM is
-       // stated in the Android configuration section
-       androidLibrary {
-           // ...
-   
-           compilerOptions {
-               jvmTarget = JvmTarget.JVM_11
-           }
-           
-           // ...
-       }
-   }
-   ```
-   
 2. Set up the tests folder and Lincheck dependency according to the target platforms in your project:
    * [**Desktop/Android + iOS**](#server-or-desktop-or-android-ios)
    * [**Server + iOS, Server + Desktop**, **Server + Desktop + iOS**](#server-desktop-android-ios)
-   * **Server/Desktop + Android**, **Server/Desktop + Android + iOS** – Kotlin doesn't currently support [sharing a source 
-     set for JVM + Android targets](https://kotlinlang.org/docs/multiplatform/multiplatform-hierarchy.html#manual-configuration). 
 
 ### Desktop/Android + iOS {id="server-or-desktop-or-android-ios"}
 
 The directory for the platform-specific tests is created by the Kotlin Multiplatform plugin automatically.
 For example, for a desktop target it is `shared/src/jvmTest`.
 
-Add a Lincheck dependency to the [test source set](https://kotlinlang.org/docs/multiplatform/multiplatform-add-dependencies.html#kotlinx-libraries):
+Add a Lincheck dependency to the platform-specific [test source set](https://kotlinlang.org/docs/multiplatform/multiplatform-add-dependencies.html#kotlinx-libraries) and a Kotlin test dependency to the 
+`commonTest` source set:
 
 <tabs>
 <tab id="desktop" title="Desktop">
     <code-block lang="Kotlin">
-    // app/shared/build.gradle.kts
+    // shared/build.gradle.kts
     kotlin {
         sourceSets {
+            commonTest.dependencies {
+                implementation(libs.kotlin.test)
+            }
             jvmTest {
-                implementation("org.jetbrains.lincheck:lincheck:3.5")
+                implementation("org.jetbrains.lincheck:lincheck:%lincheckVersion%")
             }
         }
     }
@@ -81,11 +80,14 @@ Add a Lincheck dependency to the [test source set](https://kotlinlang.org/docs/m
 </tab>
 <tab id="android" title="Android">
     <code-block lang="Kotlin">
-    // app/shared/build.gradle.kts
+    // shared/build.gradle.kts
     kotlin {
         sourceSets {
+            commonTest.dependencies {
+                implementation(libs.kotlin.test)
+            }
             getByName("androidHostTest").dependencies {
-                implementation("org.jetbrains.lincheck:lincheck:3.5")
+                implementation("org.jetbrains.lincheck:lincheck:%lincheckVersion%")
             }
         }
     }
@@ -95,16 +97,17 @@ Add a Lincheck dependency to the [test source set](https://kotlinlang.org/docs/m
 
 ### Server + iOS, Server + Desktop, Server + Desktop + iOS {id="server-desktop-android-ios"}
 
-1. Create a `core/src/jvmTest` directory. Gradle will run the tests
-   in the `core/src/jvmTest` directory for all platforms that use the JVM.
+1. Create a `core/src/jvmTest/kotlin` directory. Gradle will run the tests
+   in this directory for all platforms that use the JVM.
 
-   If your project has a `shared/src/jvmTest` directory, you can use it instead. However,
-   it is recommended to place the code relevant to both the server and desktop/iOS apps in the `core`
-   folder. 
+   Projects with a desktop target also have a `shared/src/jvmTest/kotlin` directory which you can use instead.
+   However, it is recommended to place the code relevant to both the server and desktop/iOS targets in the `core` 
+   directory. 
 
-   If your project already has a `shared/src/jvmTest` directory, and you create a `core/src/jvmTest`
-   directory, delete the `shared/src/jvmTest` directory.
-2. Add a Lincheck dependency to the `jvmTest` source set:
+   If you have a desktop target and create a `core/src/jvmTest/kotlin` directory, delete the
+   `shared/src/jvmTest/kotlin` directory.
+2. Add a Lincheck dependency to the `jvmTest` source set and a Kotlin test dependency to the
+   `commonTest` source set::
 
    ```kotlin
    // core/build.gradle.kts
@@ -112,20 +115,21 @@ Add a Lincheck dependency to the [test source set](https://kotlinlang.org/docs/m
        // ...
        sourceSets {
            // ...
-           jvmTest {
-               dependencies {
-                   implementation("org.jetbrains.kotlinx:lincheck:3.5")
-               }
+           commonTest.dependencies {
+               implementation(libs.kotlin.test)
+           }
+           jvmTest.dependencies {
+               implementation("org.jetbrains.lincheck:lincheck:%lincheckVersion%")
            }
        }
    }
    ```
 
-## Create shared structures
+## Create shared classes
 
-Create structures shared between all targets regardless of the platform:
+Create classes implementing counter data structures that are shared between all targets regardless of the platform:
 
-1. Create an `UnsafeCounter` structure in the `core/src/commonMain` or `shared/src/commonMain` directory:
+1. Create an `UnsafeCounter.kt` file in the `core/src/commonMain` or `shared/src/commonMain` directory:
 
    ```kotlin
    class UnsafeCounter {
@@ -139,9 +143,12 @@ Create structures shared between all targets regardless of the platform:
    }
    ```
 
-2. In the same directory, create a `SafeCounter` structure:
+2. Create a `SafeCounter.kt` file in the same directory:
 
    ```kotlin
+   import kotlin.concurrent.atomics.AtomicInt
+   import kotlin.concurrent.atomics.ExperimentalAtomicApi
+
    @OptIn(ExperimentalAtomicApi::class)
    class SafeCounter {
        private val _value = AtomicInt(0)
@@ -168,6 +175,9 @@ regardless of the platform:
 1. Create an `UnsafeCounterTest.kt` file in the `core/src/commonTest` or `shared/src/commonTest` directory:
    
    ```kotlin
+   import kotlin.test.Test
+   import kotlin.test.assertEquals
+   
    class UnsafeCounterTest {
       @Test
       fun testIncrement() {
@@ -179,9 +189,12 @@ regardless of the platform:
    }
    ```
 
-2. In the same directory, create a `SafeCounterTest.kt` file:
+2. Create a `SafeCounterTest.kt` file in the same directory:
 
    ```kotlin
+   import kotlin.test.Test
+   import kotlin.test.assertEquals
+   
    class SafeCounterTest {
       @Test
       fun testIncrement() {
@@ -197,9 +210,13 @@ regardless of the platform:
 
 Write tests that are [only run for platforms targeting the JVM](https://kotlinlang.org/docs/multiplatform/multiplatform-run-tests.html#add-platform-specific-tests):
 
-1. In the [test directory for JVM-specific tests](#set-up-a-project), create an `UnsafeCounterConcurrentTest.kt` file:
+1. Create an `UnsafeCounterConcurrentTest.kt` file in the [test directory for JVM-specific tests](#set-up-a-project):
 
    ```kotlin
+   import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+   import org.jetbrains.lincheck.datastructures.Operation
+   import kotlin.test.Test
+   
    class UnsafeCounterConcurrentTest {
        private val c = UnsafeCounter()
    
@@ -216,9 +233,13 @@ Write tests that are [only run for platforms targeting the JVM](https://kotlinla
    }
    ```
 
-2. In the same directory, create a `SafeCounterConcurrentTest.kt` file:
+2. Create a `SafeCounterConcurrentTest.kt` file in the same directory:
 
    ```kotlin
+   import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+   import org.jetbrains.lincheck.datastructures.Operation
+   import kotlin.test.Test
+   
    class SafeCounterConcurrentTest {
        private val c = SafeCounter()
    
@@ -237,13 +258,13 @@ Write tests that are [only run for platforms targeting the JVM](https://kotlinla
 
 ## Run the tests
 
-At this point, your project should have the shared implementation of the `Counter` structure, the shared tests,
-and the JVM-specific tests for `Counter`. The directory structure of your project should look like this:
+At this point, your project should have the shared implementation of the counter data structures, the shared tests,
+and the JVM-specific tests for counters. The directory structure of your project should look like this:
 
 <tabs>
-<tab title="Server + Desktop + iOS">
-   <img src="server-desktop-ios-structure.png" 
-        alt="A screenshot of the project file structure for the server, desktop, and iOS platforms."
+<tab title="Android + iOS">
+   <img src="android-ios-structure.png" 
+        alt="A screenshot of the project file structure for the Android and iOS platforms."
         width="300"/>
 </tab>
 <tab title="Server + iOS">
@@ -251,14 +272,14 @@ and the JVM-specific tests for `Counter`. The directory structure of your projec
         alt="A screenshot of the project file structure for the server and iOS platforms."
         width="300"/>
 </tab>
-<tab title="Android + iOS">
-   <img src="android-ios-structure.png" 
-        alt="A screenshot of the project file structure for the Android and iOS platforms."
-        width="300"/>
-</tab>
 <tab title="Desktop + iOS">
    <img src="desktop-ios-structure.png" 
         alt="A screenshot of the project file structure for the desktop and iOS platforms."
+        width="300"/>
+</tab>
+<tab title="Server + Desktop + iOS">
+   <img src="server-desktop-ios-structure.png" 
+        alt="A screenshot of the project file structure for the server, desktop, and iOS platforms."
         width="300"/>
 </tab>
 </tabs>
@@ -271,6 +292,15 @@ If you run the `allTests` Gradle task, every test in your project will be execut
 For example, the JVM-specific tests are executed with the JVM test runner:
 
 ![A screenshot of the test execution report. The Lincheck tests are marked with a `jvm` tag.](tests-executed-with-jvm.png){width=300}
+
+## Support for platforms other than the JVM
+
+Lincheck is unlikely to support other platforms in the future.
+
+Lincheck relies heavily on JVM for [bytecode manipulation](lincheck-testing-strategies.md#model-checking), 
+which makes model checking challenging to implement on other platforms. Moreover, using model checking for multiple 
+platforms at the same time provides little value because Lincheck tests the code in a deterministic sandbox environment, 
+and the results of the tests will be the same regardless of the platform.
 
 ## See also
 
