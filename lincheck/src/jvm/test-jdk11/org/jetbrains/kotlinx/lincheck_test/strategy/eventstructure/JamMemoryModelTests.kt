@@ -21,6 +21,11 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.util.JdkVersion
+import org.jetbrains.lincheck.util.isJdk8
+import org.jetbrains.lincheck.util.jdkVersion
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import java.util.concurrent.atomic.*
 import org.junit.Test
 import org.junit.Ignore
@@ -28,6 +33,14 @@ import java.lang.invoke.VarHandle
 import kotlin.concurrent.thread
 
 class JamMemoryModelTests {
+
+    @Before
+    fun setUp() {
+        // currently these tests lead to hangs on JDK-21, apparently due to
+        // an unrelated bug with Kotlin stdlib arrays/collection util functions instrumentation,
+        // see https://github.com/JetBrains/lincheck/issues/564 for details
+        assumeFalse((jdkVersion == JdkVersion.JDK_21))
+    }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Ignore
