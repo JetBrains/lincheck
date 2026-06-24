@@ -16,7 +16,6 @@ import org.jetbrains.lincheck.util.JdkVersion
 import org.jetbrains.lincheck.util.jdkVersion
 import org.junit.Assume.assumeFalse
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -62,8 +61,6 @@ class LocksTest {
     }
 
     @Test
-    @Ignore // TODO: triggers weird JDK-21 hung bugs,
-            //   likely due to some Java/Kotlin arrays/collections classes instrumentation
     fun testSynchronizedIncrement3() {
         val expectedOutcomes: Set<List<Int>> = setOf(
             listOf(0,1,2,3),
