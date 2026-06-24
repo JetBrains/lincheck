@@ -142,7 +142,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     val memoryModel: MemoryModel,
 ) : MutableExtendedExecution, MutableExecution<AtomicThreadEvent> by execution {
 
-    val coherenceCausalOrder :  Relation<AtomicThreadEvent>
+    val coherenceCausalOrder : Relation<AtomicThreadEvent>
         get() {
             return when (memoryModel) {
                 MemoryModel.SequentialConsistency -> happensBeforeOrder
@@ -163,7 +163,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
             execution,
             memoryAccessEventIndex,
             readModifyWriteOrderComputable.value,
-            happensBeforeOrder // TODO: maybe have a variable for "the order" instead of changing it everywhere
+            happensBeforeOrder,
         )
     }
         .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
@@ -236,8 +236,8 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
 
             IncrementalMemoryModelConsistencyChecker(
                 execution = this,
-                memoryModel,
-                checkReleaseAcquireConsistency = memoryModel == MemoryModel.ReleaseAcquire,
+                memoryModel = memoryModel,
+                checkReleaseAcquireConsistency = true,
             )
         ),
         listOf(),
