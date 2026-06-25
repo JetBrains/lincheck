@@ -76,7 +76,7 @@ class Spinner private constructor(
      * the spin-loop should perform before yielding to other threads.
      */
     fun pollYieldLimit(): Int =
-        1 + if (isSpinning) SPIN_CYCLES_LIMIT else 0
+        1 + if (isSpinning) spinLimit else 0
 
     /**
      * Determines the limit for the number of iterations
@@ -235,4 +235,4 @@ fun SpinnerGroup(nThreads: Int, spinLimit: Int = SPIN_CYCLES_LIMIT): List<Spinne
 
 //NOTE: Should be powers of 2
 const val SPIN_CYCLES_LIMIT: Int = 1_048_576 // 2^20
-const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1024
+const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1024 // 2^10
