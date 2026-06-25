@@ -76,7 +76,7 @@ class Spinner private constructor(
      * the spin-loop should perform before yielding to other threads.
      */
     fun pollYieldLimit(): Int =
-        1 + if (isSpinning) PARK_CYCLES_LIMIT else 0
+        1 + if (isSpinning) SPIN_CYCLES_LIMIT else 0
 
     /**
      * Determines the limit for the number of iterations
@@ -124,7 +124,7 @@ class Spinner private constructor(
 
     /**
      * Waits in the spin-loop until the given condition is true
-     * with periodical yielding to other threads.
+     * and periodically parks thread after spinning for too long.
      *
      * @param condition A lambda function that determines the condition to wait for.
      *   The function should return true when the condition is satisfied, and false otherwise.
@@ -132,7 +132,7 @@ class Spinner private constructor(
     inline fun spinWaitUntilOrPark(condition: () -> Boolean) {
         var counter = 0
         var limit = pollParkLimit()
-        val pollCount = PARK_CYCLES_LIMIT
+        val pollCount = SPIN_CYCLES_LIMITS_POLL_COUNT
         while (!condition()) {
             counter++
             if (counter % limit == 0) {
@@ -235,5 +235,4 @@ fun SpinnerGroup(nThreads: Int, spinLimit: Int = SPIN_CYCLES_LIMIT): List<Spinne
 
 //NOTE: Should be powers of 2
 const val SPIN_CYCLES_LIMIT: Int = 1_048_576 // 2^20
-const val PARK_CYCLES_LIMIT: Int = 1024  // 2^10
 const val SPIN_CYCLES_LIMITS_POLL_COUNT = 1024
