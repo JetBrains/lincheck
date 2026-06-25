@@ -34,6 +34,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.junit.Assert
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 
 internal const val UNIQUE = -1
 internal const val UNKNOWN = -2
@@ -87,9 +88,10 @@ internal fun<Outcome> litmusTest(
     testClass: Class<*>,
     testScenario: ExecutionScenario,
     outcomes: Set<Outcome>,
+    memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
     getOutcome: (ExecutionResult) -> Outcome,
 ) {
-    litmusTest(testClass, testScenario, assertSame(outcomes), getOutcome)
+    litmusTest(testClass, testScenario, assertSame(outcomes), memoryModel, getOutcome)
 }
 
 
@@ -97,6 +99,7 @@ internal fun<Outcome> litmusTest(
     testClass: Class<*>,
     testScenario: ExecutionScenario,
     outcomeVerifier: OutcomeVerifier<Outcome>,
+    memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
     getOutcome: (ExecutionResult) -> Outcome,
 ) {
     val outcomes: MutableList<Outcome> = mutableListOf()
@@ -105,22 +108,23 @@ internal fun<Outcome> litmusTest(
         true
     }
     withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
-        val strategy = createStrategy(testClass, testScenario)
+        val strategy = createStrategy(testClass, memoryModel, testScenario)
         val failure = strategy.runIteration(INVOCATIONS, verifier)
         assert(failure == null) { failure.toString() }
         outcomeVerifier.verify(outcomes)
     }
 }
 
-private fun createConfiguration(testClass: Class<*>) =
+private fun createConfiguration(testClass: Class<*>, memoryModel: MemoryModel) =
     ModelCheckingOptions()
         .useExperimentalModelChecking()
+        .memoryModel(memoryModel)
         // for tests debugging set large timeout
         .invocationTimeout(60 * 60 * 1000)
         .createTestConfigurations(testClass)
 
-internal fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario): EventStructureStrategy {
-    return createConfiguration(testClass)
+internal fun createStrategy(testClass: Class<*>, memoryModel: MemoryModel, scenario: ExecutionScenario): EventStructureStrategy {
+    return createConfiguration(testClass, memoryModel)
         .createStrategy(
             testClass = testClass,
             scenario = scenario,
@@ -157,10 +161,11 @@ internal fun <T> createStrategy(
     timeoutMs: Long,
     settings: ManagedStrategySettings,
     inIdeaPluginReplayMode: Boolean = false,
+    memoryModel: MemoryModel,
     block: () -> T
 ): EventStructureStrategy {
     val runner = LambdaRunner(timeoutMs = timeoutMs, block)
-    return EventStructureStrategy(runner, settings, inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+    return EventStructureStrategy(runner, settings, inIdeaPluginReplayMode, LincheckInstrumentation.context, memoryModel).also {
         runner.initializeStrategy(it)
     }
 }
@@ -178,6 +183,7 @@ internal fun <T> createStrategy(
  */
 internal inline fun<reified Outcome> litmusTest(
     outcomeVerifier: OutcomeVerifier<Outcome>,
+    memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
     noinline block: () -> Outcome,
 ) {
     val INVOCATIONS = 10000
@@ -191,7 +197,7 @@ internal inline fun<reified Outcome> litmusTest(
     }
     withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
         ensureObjectIsTransformed(block)
-        createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, block).use { strategy ->
+        createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, memoryModel, block).use { strategy ->
             val failure = strategy.runIteration(INVOCATIONS, verifier)
             assert(failure == null) { failure.toString() }
             outcomeVerifier.verify(outcomes)
