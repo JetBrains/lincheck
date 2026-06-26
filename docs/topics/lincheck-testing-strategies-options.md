@@ -151,7 +151,7 @@ executed sequentially.
     <td><code>sequentialSpecification</code></td>
     <td>Same as the tested data structure.</td>
     <td>The sequential version of the tested data structure. This structure is used during the
-        <a href="sequential-specification.md">verification process</a>.</td>
+        <a href="lincheck-results-validation.md">verification process</a>.</td>
 </tr>
 </table>
 
@@ -240,4 +240,4 @@ Lincheck's execution scenarios.
 
 * [Configuring algorithm constraints](constraints.md)
 * [Checking for non-blocking progress guarantees](progress-guarantees.md)
-* [Defining a sequential specification of an algorithm](sequential-specification.md)
+* [Defining a sequential specification of an algorithm](lincheck-results-validation.md)

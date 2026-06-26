@@ -110,5 +110,5 @@ add unexpected blocking code, so the obstruction-freedom check will also help wi
 
 ## Next step
 
-Learn how to [specify the sequential specification](sequential-specification.md) of the testing algorithm explicitly,
+Learn how to [specify the sequential specification](lincheck-results-validation.md) of the testing algorithm explicitly,
 improving the Lincheck tests robustness.
