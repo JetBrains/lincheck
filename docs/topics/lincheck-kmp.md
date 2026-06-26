@@ -27,7 +27,7 @@ You will:
          // ...
          
          // If you have an Android target, the use of JVM is
-         // stated in the Android configuration section
+         // configured in the `androidLibrary` section
          androidLibrary {
              // ...
              
