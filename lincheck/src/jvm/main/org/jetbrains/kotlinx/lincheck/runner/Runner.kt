@@ -116,6 +116,9 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
  * see: https://github.com/JetBrains/lincheck/issues/1008 for details.
  */
 fun Strategy.spinLimit() : Int = when (this) {
-    is ManagedStrategy -> 128          // 2^7
-    else               -> 1_048_576    // 2^20
+    is ManagedStrategy -> MANAGED_STRATEGY_SPIN_LIMIT
+    else               -> DEFAULT_STRATEGY_SPIN_LIMIT
 }
+
+val MANAGED_STRATEGY_SPIN_LIMIT = 128 // 2^7
+val DEFAULT_STRATEGY_SPIN_LIMIT = 1_048_576 // 2^20

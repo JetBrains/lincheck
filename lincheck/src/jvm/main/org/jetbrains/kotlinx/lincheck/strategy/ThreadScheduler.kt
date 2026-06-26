@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy
 
+import org.jetbrains.kotlinx.lincheck.runner.DEFAULT_STRATEGY_SPIN_LIMIT
 import sun.nio.ch.lincheck.TestThread
 import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.util.*
@@ -102,16 +103,17 @@ open class ThreadScheduler {
         val id: ThreadId,
         val descriptor: ThreadDescriptor,
         val scheduler: ThreadScheduler,
+        spinLimit: Int,
     ) {
         @Volatile var state: ThreadState = ThreadState.INITIALIZED
 
         @Volatile var blockingReason: BlockingReason? = null
 
-        val spinner: Spinner = Spinner { scheduler.threads.size }
+        val spinner: Spinner = Spinner(spinLimit = spinLimit) { scheduler.threads.size }
     }
 
     protected open fun createThreadData(id: ThreadId, descriptor: ThreadDescriptor): ThreadData {
-        return ThreadData(id, descriptor, this)
+        return ThreadData(id, descriptor, this, DEFAULT_STRATEGY_SPIN_LIMIT)
     }
 
     /**
