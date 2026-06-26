@@ -246,5 +246,5 @@ Learn about [testing strategies](lincheck-testing-strategies.md) available in Li
 
 * [Generating operation arguments](operation-arguments.md)
 * [Configuring algorithm constraints](constraints.md)
-* [Checking for non-blocking progress guarantees](progress-guarantees.md)
+* [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
 * [Defining sequential specification of the algorithm](sequential-specification.md)

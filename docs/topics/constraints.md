@@ -100,4 +100,4 @@ Note that all consuming `poll()` and `peek()` invocations are performed from a s
 
 ## Next step
 
-Learn how to [check your algorithm for progress guarantees](progress-guarantees.md) with the model checking strategy.
+Learn how to [check your algorithm for progress guarantees](lincheck-progress-guarantees.md) with the model checking strategy.
