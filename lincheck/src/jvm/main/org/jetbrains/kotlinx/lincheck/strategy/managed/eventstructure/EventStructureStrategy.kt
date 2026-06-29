@@ -377,7 +377,6 @@ internal class EventStructureStrategy(
     ) {
         threadDescriptor.runInsideIgnoredSection {
             super.beforeThreadStart(threadDescriptor, startingThread, startingThreadDescriptor)
-            runInsideIgnoredSection {
             val newThreadId = threadScheduler.getThreadId(startingThread)
             // NOTE: The main thread is a special case, since it is forked from the "initial" thread,
             //       which is not tracked in Eventstrcuture. Therefore, we want to skip tracking it
