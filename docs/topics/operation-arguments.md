@@ -129,5 +129,5 @@ one of the values may be overwritten and lost.
 
 ## Next step
 
-Learn how to test data structures that set [access constraints on the execution](constraints.md),
+Learn how to test data structures that set [access constraints on the execution](lincheck-operation-execution-options.md),
 such as single-producer single-consumer queues.
