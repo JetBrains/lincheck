@@ -155,7 +155,7 @@ Lincheck provides the following argument generator types:
 
 ## What's next
 
-Learn how to [restrict certain operations to a single thread](constraints.md) in Lincheck.
+Learn how to [restrict certain operations to a single thread](lincheck-operation-execution-options.md) in Lincheck.
 
 ## See also
 
