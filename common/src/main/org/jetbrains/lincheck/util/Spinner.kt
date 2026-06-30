@@ -9,6 +9,7 @@
  */
 
 package org.jetbrains.lincheck.util
+import java.util.concurrent.locks.LockSupport
 
 /**
  * A spinner implements utility functions for spinning in a loop.
@@ -78,6 +79,13 @@ class Spinner private constructor(
         1 + if (isSpinning) spinLimit else 0
 
     /**
+     * Determines the limit for the number of iterations
+     * the spin-loop should perform before parking the current thread
+     */
+    fun pollParkLimit(): Int =
+        1 + if (isSpinning) spinLimit else 0
+
+    /**
      * Defines the limit for iterations in a spin-loop before it exits.
      */
     fun pollExitLimit(): Int =
@@ -110,6 +118,28 @@ class Spinner private constructor(
             }
             if (counter % pollCount == 0) {
                 limit = pollYieldLimit()
+            }
+        }
+    }
+
+    /**
+     * Waits in the spin-loop until the given condition is true
+     * and periodically parks thread after spinning for too long.
+     *
+     * @param condition A lambda function that determines the condition to wait for.
+     *   The function should return true when the condition is satisfied, and false otherwise.
+     */
+    inline fun spinWaitUntilOrPark(condition: () -> Boolean) {
+        var counter = 0
+        var limit = pollParkLimit()
+        val pollCount = SPIN_CYCLES_LIMITS_POLL_COUNT
+        while (!condition()) {
+            counter++
+            if (counter % limit == 0) {
+                LockSupport.park()
+            }
+            if (counter % pollCount == 0) {
+                limit = pollParkLimit()
             }
         }
     }
