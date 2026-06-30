@@ -57,6 +57,12 @@ internal data class ManagedStrategySettings(
     val awaitLoopsAnalysisEnabled: Boolean,
 
     /**
+     * @property adaptiveLoopDetectorEnabled Controls which loop detector implementation is used.
+     * When `true`, the adaptive loop detector is used. When `false`, the bounded loop detector is used.
+     */
+    val adaptiveLoopDetectorEnabled: Boolean,
+
+    /**
      * @property guarantees A list of methods' guarantees.
      *
      * @see org.jetbrains.lincheck.datastructures.ManagedStrategyGuarantee

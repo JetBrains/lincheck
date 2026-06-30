@@ -75,12 +75,18 @@ internal abstract class ManagedStrategy(
         get() = (runner as? ExecutionScenarioRunner)?.testInstance
 
     // Detector of loops or hangs (i.e. active locks).
-    internal val loopDetector: LoopDetector = BoundedLoopDetector(
-        iterationsBeforeThreadSwitch = settings.loopIterationsBeforeThreadSwitch,
-        iterationsBound = settings.loopBound,
-        recursiveCallsBound = settings.recursionBound,
-        awaitLoopsAnalysisEnabled = settings.awaitLoopsAnalysisEnabled,
-    )
+    internal val loopDetector: LoopDetector = if (settings.adaptiveLoopDetectorEnabled)
+        AdaptiveLoopDetector(
+            iterationBoundThreshold = settings.loopBound,
+            recursiveCallsBound = settings.recursionBound,
+        )
+    else
+        BoundedLoopDetector(
+            iterationsBeforeThreadSwitch = settings.loopIterationsBeforeThreadSwitch,
+            iterationsBound = settings.loopBound,
+            recursiveCallsBound = settings.recursionBound,
+            awaitLoopsAnalysisEnabled = settings.awaitLoopsAnalysisEnabled,
+        )
 
     // Current execution part, if defined by the runner, `PARALLEL` otherwise
     protected val currentExecutionPart: ExecutionPart
@@ -1373,7 +1379,12 @@ internal abstract class ManagedStrategy(
         if (value !== null && objectTracker.shouldTrackObject(value)) {
             objectTracker.registerObjectIfAbsent(value)
         }
-
+        // inform loop detector about a shared read
+        if (shouldTrackFieldAccess(obj, fieldDescriptor)) {
+            val locationKey = fieldLocationKey(obj, fieldId)
+            val valueHash = value?.hashCode() ?: 0
+            loopDetector.onSharedRead(threadId, codeLocation, locationKey, valueHash)
+        }
         if (collectTrace) {
             val valueRepresentation = objectTracker.getObjectRepresentation(value)
             val typeRepresentation = objectFqTypeName(value)
@@ -1404,6 +1415,13 @@ internal abstract class ManagedStrategy(
     ) = threadDescriptor.runInsideIgnoredSection {
         if (value !== null && objectTracker.shouldTrackObject(value)) {
             objectTracker.registerObjectIfAbsent(value)
+        }
+        // inform loop detector about a shared read
+        if (shouldTrackArrayAccess(array)) {
+            val threadId = threadScheduler.getCurrentThreadId()
+            val locationKey = arrayLocationKey(array, index)
+            val valueHash = value?.hashCode() ?: 0
+            loopDetector.onSharedRead(threadId, codeLocation, locationKey, valueHash)
         }
         if (collectTrace) {
             val eventId = getNextEventId()
@@ -1447,6 +1465,11 @@ internal abstract class ManagedStrategy(
             return
         }
         newSwitchPoint(threadId, codeLocation)
+
+        // inform loop detector about a shared write
+        val locationKey = fieldLocationKey(obj, fieldId)
+        val valueHash = value?.hashCode() ?: 0
+        loopDetector.onSharedWrite(threadId, codeLocation, locationKey, valueHash)
 
         // TODO: consider moving trace point addition to `afterWriteField`.
         val eventId = getNextEventId()
@@ -1498,6 +1521,11 @@ internal abstract class ManagedStrategy(
             return
         }
         newSwitchPoint(threadId, codeLocation)
+
+        // inform loop detector about a shared write
+        val locationKey = arrayLocationKey(array, index)
+        val valueHash = value?.hashCode() ?: 0
+        loopDetector.onSharedWrite(threadId, codeLocation, locationKey, valueHash)
 
         // TODO: consider moving trace point addition to `afterWriteArrayElement`.
         val eventId = getNextEventId()
@@ -1574,6 +1602,12 @@ internal abstract class ManagedStrategy(
 
     private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
         obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
+
+    private fun fieldLocationKey(obj: Any?, fieldId: Int): Int =
+        System.identityHashCode(obj) * 31 + fieldId
+
+    private fun arrayLocationKey(array: Any?, index: Int): Int =
+        System.identityHashCode(array) * 31 + index
 
     override fun getThreadLocalRandom(): InjectedRandom = runInsideIgnoredSection {
         return randoms[threadScheduler.getCurrentThreadId()]!!
@@ -1899,6 +1933,11 @@ internal abstract class ManagedStrategy(
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
         val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
+        // inform loop detector about a cas results
+        if (atomicMethodDescriptor != null && atomicMethodDescriptor.kind.isCasSetter) {
+            val casSuccess = result == true
+            loopDetector.onCasResult(threadId, /* codeLocation */ 0, casSuccess)
+        }
         // get method's analysis section type
         val methodSection = methodAnalysisSectionType(
             receiver,
@@ -2164,7 +2203,8 @@ internal abstract class ManagedStrategy(
                         iThread = threadId,
                         actorId = currentActorId[threadId]!!,
                         loopId = loopId,
-                        codeLocation = enterCodeLocation
+                        codeLocation = enterCodeLocation,
+                        loopKind = loopDetector.getCurrentLoopKind(threadId, loopId, enterCodeLocation)
                     )
                 )
             }
@@ -2192,6 +2232,7 @@ internal abstract class ManagedStrategy(
             }
 
             val iteration = loopDetector.getCurrentLoopIteration(threadId, loopId, codeLocation)
+            val loopKind = loopDetector.getCurrentLoopKind(threadId, loopId, codeLocation)
             traceCollector?.addTracePointInternal(
                 LoopIterationTracePoint(
                     context = context,
@@ -2200,7 +2241,8 @@ internal abstract class ManagedStrategy(
                     actorId = currentActorId[threadId]!!,
                     codeLocation = codeLocation,
                     loopId = loopId,
-                    iteration = iteration
+                    iteration = iteration,
+                    loopKind = loopKind
                 )
             )
         }
@@ -2215,9 +2257,11 @@ internal abstract class ManagedStrategy(
         when (decision) {
             LoopDetector.Decision.IDLE -> {}
             LoopDetector.Decision.SWITCH_THREAD -> {
+                val enabledThreads = availableThreads(threadId).toSet()
                 tryAbortingUserThreads(threadId, BlockingReason.LiveLocked)
                 onSwitchPoint(threadId)
                 switchCurrentThread(threadId, BlockingReason.LiveLocked)
+                loopDetector.onSwitchedFromLoop(threadId, loopId, codeLocation, enabledThreads)
             }
 
             LoopDetector.Decision.STUCK -> {
@@ -2229,7 +2273,8 @@ internal abstract class ManagedStrategy(
                             iThread = threadId,
                             actorId = currentActorId[threadId]!!,
                             loopId = loopId,
-                            codeLocation = codeLocation
+                            codeLocation = codeLocation,
+                            loopKind = loopDetector.getCurrentLoopKind(threadId, loopId, codeLocation)
                         )
                     )
                 }

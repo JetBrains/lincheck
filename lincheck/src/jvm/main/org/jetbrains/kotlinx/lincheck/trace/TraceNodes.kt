@@ -10,6 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck.trace
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopKind
+
 /**
  * Represents a single node in the hierarchical trace structure.
  *
@@ -150,6 +152,7 @@ internal class LoopNode(
 ) : TraceNode(eventNumber, tracePoint) {
     override val tracePoint: LoopStartTracePoint get() = super.tracePoint as LoopStartTracePoint
     var foldedTotalIterations: Int? = null
+    var foldedLoopKind: LoopKind? = null
 
     fun totalIterations(): Int =
         foldedTotalIterations ?: children.sumOf {
@@ -159,14 +162,25 @@ internal class LoopNode(
             }
         }
 
+    fun loopKind(): LoopKind =
+        foldedLoopKind
+            ?: children
+                .asSequence()
+                .filterIsInstance<LoopIterationNode>()
+                .map { it.loopKind }
+                .firstOrNull { it != LoopKind.UNKNOWN }
+            ?: LoopKind.UNKNOWN
+
     override fun toString(withLocation: Boolean): String {
         val iters = totalIterations()
-        val base = "loop($iters iterations)"
+        val kind = loopKind().takeIf { it != LoopKind.UNKNOWN }?.let { ", detected loop kind: $it" } ?: ""
+        val base = "loop($iters iterations$kind)"
         return "$base at ${tracePoint.toString(withLocation = true, withValues = true).substringAfter(" at ")}"
     }
 
     override fun copy(): TraceNode = LoopNode(tracePoint, eventNumber).also {
         it.foldedTotalIterations = this.totalIterations()
+        it.foldedLoopKind = this.loopKind().takeIf { kind -> kind != LoopKind.UNKNOWN }
     }
 }
 
@@ -174,7 +188,8 @@ internal class LoopIterationNode(
     tracePoint: TracePoint,
     eventNumber: Int,
     val from: Int = (tracePoint as? LoopIterationTracePoint)?.iteration ?: 1,
-    val to: Int = (tracePoint as? LoopIterationTracePoint)?.iteration ?: 1
+    val to: Int = (tracePoint as? LoopIterationTracePoint)?.iteration ?: 1,
+    val loopKind: LoopKind = (tracePoint as? LoopIterationTracePoint)?.loopKind ?: LoopKind.UNKNOWN,
 ) : TraceNode(eventNumber, tracePoint) {
     override val tracePoint: TracePoint get() = super.tracePoint
 
@@ -189,7 +204,7 @@ internal class LoopIterationNode(
         return tracePoint.toString(withLocation, true)
     }
 
-    override fun copy(): TraceNode = LoopIterationNode(tracePoint, eventNumber, from, to)
+    override fun copy(): TraceNode = LoopIterationNode(tracePoint, eventNumber, from, to, loopKind)
 }
 
 internal class RecursionNode(
@@ -287,6 +302,7 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
 
                 // If in Loop, pop up to closing node
                 if (curr is LoopNode) {
+                    curr.foldedLoopKind = event.loopKind.takeIf { it != LoopKind.UNKNOWN } ?: curr.foldedLoopKind
                     currentNodePerThread[currentThreadId] = curr.parent
                 }
             }

@@ -39,6 +39,9 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
     protected var awaitLoopsAnalysisEnabled: Boolean =
         ManagedCTestConfiguration.DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED
 
+    protected var adaptiveLoopDetectorEnabled: Boolean =
+        ManagedCTestConfiguration.DEFAULT_ENABLE_ADAPTIVE_LOOP_DETECTOR
+
     protected val guarantees: MutableList<ManagedStrategyGuarantee> =
         ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
 
@@ -81,6 +84,13 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
      */
     fun enableAwaitLoopsAnalysis(enabled: Boolean = true): OPT = applyAndCast {
         this.awaitLoopsAnalysisEnabled = enabled
+    }
+
+    /**
+     * Enables or disables the adaptive loop detector.
+     */
+    fun enableAdaptiveLoopDetector(enabled: Boolean = true): OPT = applyAndCast {
+        this.adaptiveLoopDetectorEnabled = enabled
     }
 
     /**
@@ -143,6 +153,7 @@ abstract class ManagedCTestConfiguration(
     customScenarios: List<ExecutionScenario>,
     internal val stdLibAnalysisEnabled: Boolean,
     internal val awaitLoopsAnalysisEnabled: Boolean,
+    internal val adaptiveLoopDetectorEnabled: Boolean
 ) : CTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -168,6 +179,7 @@ abstract class ManagedCTestConfiguration(
             checkObstructionFreedom = this.checkObstructionFreedom,
             analyzeStdLib = this.stdLibAnalysisEnabled,
             awaitLoopsAnalysisEnabled = this.awaitLoopsAnalysisEnabled,
+            adaptiveLoopDetectorEnabled = this.adaptiveLoopDetectorEnabled,
             guarantees = this.guarantees.ifEmpty { null },
         )
 
@@ -191,6 +203,8 @@ abstract class ManagedCTestConfiguration(
         val DEFAULT_STDLIB_ANALYSIS_ENABLED = AnalysisProfile.DEFAULT.analyzeStdLib
 
         const val DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED = true
+
+        const val DEFAULT_ENABLE_ADAPTIVE_LOOP_DETECTOR = true
 
         val DEFAULT_GUARANTEES = listOf<ManagedStrategyGuarantee>()
     }

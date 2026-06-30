@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopKind
 import org.jetbrains.lincheck.util.collections.*
 
 /**
@@ -441,6 +442,13 @@ private fun foldLoopIterations(children: List<TraceNode>): List<TraceNode> {
 
             val firstNode = children[startIndex]
             val lastNode = children[startIndex + totalNodesCovered - 1]
+            val foldedLoopKind = children
+                .subList(startIndex, startIndex + totalNodesCovered)
+                .asSequence()
+                .filterIsInstance<LoopIterationNode>()
+                .map { it.loopKind }
+                .firstOrNull { it != LoopKind.UNKNOWN }
+                ?: LoopKind.UNKNOWN
 
             val startIter = if (firstNode is LoopIterationNode) firstNode.from else 1
             val endIter = if (lastNode is LoopIterationNode) lastNode.to else cycle.bestCount
@@ -451,7 +459,8 @@ private fun foldLoopIterations(children: List<TraceNode>): List<TraceNode> {
                     tracePoint = firstNode.tracePoint,
                     eventNumber = firstNode.eventNumber,
                     from = startIter,
-                    to = endIter
+                    to = endIter,
+                    loopKind = foldedLoopKind
                 )
                 firstNode.children.forEach { child ->
                     rangeNode.addChild(deepCopyNode(child))

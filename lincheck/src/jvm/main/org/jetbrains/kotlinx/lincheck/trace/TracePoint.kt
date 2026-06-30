@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.LoopKind
 import org.jetbrains.kotlinx.lincheck.util.VoidResult
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
 import org.jetbrains.lincheck.util.isLincheckInternalException
@@ -624,10 +625,11 @@ internal class LoopIterationTracePoint(
     codeLocation: Int,
     val loopId: Int,
     val iteration: Int,
+    val loopKind: LoopKind = LoopKind.UNKNOWN,
 ) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     override fun toStringCompact(withValues: Boolean): String = "<iteration $iteration>"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        LoopIterationTracePoint(context, eventId, iThread, actorId, codeLocation, loopId, iteration)
+        LoopIterationTracePoint(context, eventId, iThread, actorId, codeLocation, loopId, iteration, loopKind)
     }
 }
 
@@ -638,10 +640,11 @@ internal class LoopEndTracePoint(
     actorId: Int,
     codeLocation: Int,
     val loopId: Int,
+    val loopKind: LoopKind = LoopKind.UNKNOWN,
 ) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
     override fun toStringCompact(withValues: Boolean): String = "loop end"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        LoopEndTracePoint(context, eventId, iThread, actorId, codeLocation, loopId)
+        LoopEndTracePoint(context, eventId, iThread, actorId, codeLocation, loopId, loopKind)
     }
 }
 
