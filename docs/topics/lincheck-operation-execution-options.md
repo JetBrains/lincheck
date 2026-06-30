@@ -92,22 +92,22 @@ Consider the following channel test:
 ```kotlin
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
 class ChannelCancellableTest {
-  private val ch = Channel<Int>()
+    private val ch = Channel<Int>()
+    
+    @Operation
+    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
+    
+    @Operation(cancellableOnSuspension = true)
+    suspend fun receive() = ch.receive()
   
-  @Operation
-  suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
   
-  @Operation(cancellableOnSuspension = true)
-  suspend fun receive() = ch.receive()
-
-
-  @Test
-  fun test() = ModelCheckingOptions()
-      .iterations(50)
-      .invocationsPerIteration(1000)
-      // Report the scenarios even if the test has not failed
-      .logLevel(LoggingLevel.INFO)
-      .check(this::class)
+    @Test
+    fun test() = ModelCheckingOptions()
+        .iterations(50)
+        .invocationsPerIteration(1000)
+        // Report the scenarios even if the test has not failed
+        .logLevel(LoggingLevel.INFO)
+        .check(this::class)
 }
 ```
 
@@ -160,21 +160,21 @@ Consider the following channel test:
 ```kotlin
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
 class PromptCancellationTest {
-  private val ch = Channel<Int>()
-  
-  @Operation
-  suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
-  
-  @Operation(cancellableOnSuspension = true, promptCancellation = true)
-  suspend fun receive() = ch.receive()
-  
-  @Test
-  fun test() = ModelCheckingOptions()
-      .iterations(50)
-      .invocationsPerIteration(1000)
-      // Report the scenarios even if the test has not failed
-      .logLevel(LoggingLevel.INFO)
-      .check(this::class)
+    private val ch = Channel<Int>()
+    
+    @Operation
+    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
+    
+    @Operation(cancellableOnSuspension = true, promptCancellation = true)
+    suspend fun receive() = ch.receive()
+    
+    @Test
+    fun test() = ModelCheckingOptions()
+        .iterations(50)
+        .invocationsPerIteration(1000)
+        // Report the scenarios even if the test has not failed
+        .logLevel(LoggingLevel.INFO)
+        .check(this::class)
 }
 ```
 
