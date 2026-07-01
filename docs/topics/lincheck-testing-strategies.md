@@ -110,6 +110,6 @@ generation, enabling stalled execution detection, and providing thread-safety gu
 ## See also
 
 * [Generating operation arguments](operation-arguments.md)
-* [Configuring algorithm constraints](constraints.md)
+* [Configuring operation execution options](lincheck-operation-execution-options.md)
 * [Checking for non-blocking progress guarantees](progress-guarantees.md)
 * [Defining sequential specification of the algorithm](lincheck-results-validation.md)

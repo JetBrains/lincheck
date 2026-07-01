@@ -20,7 +20,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
-import java.lang.reflect.*
 import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import kotlin.coroutines.*
@@ -94,6 +93,11 @@ internal class ExecutionScenarioRunner(
 
     init {
         resetState()
+    }
+
+    override fun setSpinLimit(spinLimit: Int) {
+        super.setSpinLimit(spinLimit)
+        spinners.forEach { it.spinLimit = spinLimit }
     }
 
     /**

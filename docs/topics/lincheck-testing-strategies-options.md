@@ -236,6 +236,6 @@ Lincheck's execution scenarios.
 
 ## See also
 
-* [Configuring algorithm constraints](constraints.md)
+* [Configuring operation execution options](lincheck-operation-execution-options.md)
 * [Checking for non-blocking progress guarantees](progress-guarantees.md)
 * [Defining a sequential specification of an algorithm](lincheck-results-validation.md)

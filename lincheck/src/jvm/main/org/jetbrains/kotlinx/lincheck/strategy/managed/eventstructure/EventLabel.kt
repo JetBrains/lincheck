@@ -642,6 +642,7 @@ fun ReadModifyWriteAccessLabel(read: ReadAccessLabel, write: WriteAccessLabel): 
             writeValue = write.value,
             readModifyWriteDescriptor = read.readModifyWriteDescriptor!!,
             codeLocation = read.codeLocation,
+            // NOTE: Possible bug? We should include the memory order of the write somehow
             memoryOrdering = read.memoryOrdering
         )
     }
@@ -697,6 +698,25 @@ fun EventLabel.isExclusiveWriteAccess(): Boolean =
  */
 fun EventLabel.isInitializingWriteAccess(): Boolean =
     this is InitializationLabel || this is ObjectAllocationLabel
+
+fun EventLabel.isRelease(): Boolean =
+    (this is WriteAccessLabel && (
+            this.memoryOrdering == MemoryOrdering.RELEASE || this.memoryOrdering == MemoryOrdering.VOLATILE
+    )) ||
+    (this is ThreadForkLabel) ||
+    (this is ThreadFinishLabel) ||
+    (this is UnlockLabel) ||
+    (this is NotifyLabel)
+
+
+fun EventLabel.isAcquire(): Boolean =
+    (this is ReadAccessLabel && (
+            this.memoryOrdering == MemoryOrdering.ACQUIRE || this.memoryOrdering == MemoryOrdering.VOLATILE
+    )) ||
+    (this is ThreadJoinLabel) ||
+    (this is ThreadStartLabel) ||
+    (this is LockLabel) ||
+    (this is WaitLabel)
 
 /**
  * Checks if the initialization label can be interpreted as a write access to the given memory location.
