@@ -11,6 +11,7 @@ package org.jetbrains.kotlinx.lincheck.runner
 
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.lincheck.util.ensure
 import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.TestThread
@@ -52,11 +53,16 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
      */
     protected abstract val executor : ActiveThreadPoolExecutor
 
+    protected open fun setSpinLimit(spinLimit: Int) {
+        executor.setSpinLimit(spinLimit)
+    }
+
     /**
      * Initializes the strategy to be used in the runner.
      */
     fun initializeStrategy(strategy: Strategy) {
         this.strategy = strategy
+        setSpinLimit(strategy.spinLimit())
     }
 
     /**
@@ -103,3 +109,16 @@ internal abstract class AbstractActiveThreadPoolRunner : Runner {
         executor.close()
     }
 }
+
+/**
+ * Determines the spin-loop iteration limit for the current strategy.
+ * The spin-waiting is effectively disabled for managed (model checking) strategies,
+ * see: https://github.com/JetBrains/lincheck/issues/1008 for details.
+ */
+fun Strategy.spinLimit() : Int = when (this) {
+    is ManagedStrategy -> MANAGED_STRATEGY_SPIN_LIMIT
+    else               -> DEFAULT_STRATEGY_SPIN_LIMIT
+}
+
+val MANAGED_STRATEGY_SPIN_LIMIT = 128 // 2^7
+val DEFAULT_STRATEGY_SPIN_LIMIT = 1_048_576 // 2^20

@@ -77,9 +77,9 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
     /**
      * The sequential consistency order (sc) of the execution.
      *
-     * @see SequentialConsistencyOrder
+     * @see MemoryModelConsistencyOrder
      */
-    val sequentialConsistencyOrder: Relation<AtomicThreadEvent>
+    val memoryModelConsistencyOrder: Relation<AtomicThreadEvent>
 
     /**
      * The execution order (xo) of the execution.
@@ -111,7 +111,7 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
 
     val extendedCoherenceComputable: ComputableNode<ExtendedCoherenceOrder>
 
-    val sequentialConsistencyOrderComputable: ComputableNode<SequentialConsistencyOrder>
+    val memoryModelConsistencyOrderComputable: ComputableNode<MemoryModelConsistencyOrder>
 
     val executionOrderComputable: ComputableNode<ExecutionOrder>
 
@@ -130,16 +130,26 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
     fun checkConsistency(): Inconsistency?
 }
 
-fun ExtendedExecution(): ExtendedExecution =
-    MutableExtendedExecution()
+fun ExtendedExecution(memoryModel: MemoryModel): ExtendedExecution =
+    MutableExtendedExecution(memoryModel)
 
-fun MutableExtendedExecution(): MutableExtendedExecution =
-    ExtendedExecutionImpl(ResettableExecution())
+fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution =
+    ExtendedExecutionImpl(ResettableExecution(), memoryModel)
 
 
 /* private */ class ExtendedExecutionImpl(
-    val execution: ResettableExecution
+    val execution: ResettableExecution,
+    val memoryModel: MemoryModel,
 ) : MutableExtendedExecution, MutableExecution<AtomicThreadEvent> by execution {
+
+    val coherenceCausalOrder : Relation<AtomicThreadEvent>
+        get() {
+            return when (memoryModel) {
+                MemoryModel.SequentialConsistency -> happensBeforeOrder
+                MemoryModel.ReleaseAcquire -> happensBeforeSameLocationOrder
+                MemoryModel.JAM21 -> TODO()
+            }
+        }
 
     override val memoryAccessEventIndex =
         MutableAtomicMemoryAccessEventIndex().apply { index(execution) }
@@ -153,7 +163,7 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
             execution,
             memoryAccessEventIndex,
             readModifyWriteOrderComputable.value,
-            causalityOrder
+            happensBeforeOrder,
         )
     }
         .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
@@ -165,7 +175,8 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
             execution,
             memoryAccessEventIndex,
             readModifyWriteOrderComputable.value,
-            causalityOrder union writesBeforeOrderComputable.value, // TODO: add eco or sc?
+            happensBeforeOrder union writesBeforeOrderComputable.value, // TODO: add eco or sc?
+            coherenceCausalOrder,
         )
     }
         .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
@@ -177,7 +188,7 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
         ExtendedCoherenceOrder(
             execution,
             memoryAccessEventIndex,
-            causalityOrder union writesBeforeOrderComputable.value // TODO: add coherence
+            happensBeforeOrder union writesBeforeOrderComputable.value // TODO: add coherence
         )
     }
         .dependsOn(writesBeforeOrderComputable, soft = true, invalidating = true)
@@ -189,23 +200,23 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
 
     override val extendedCoherence: Relation<AtomicThreadEvent> by extendedCoherenceComputable
 
-    override val sequentialConsistencyOrderComputable = computable {
-        SequentialConsistencyOrder(
+    override val memoryModelConsistencyOrderComputable = computable {
+        MemoryModelConsistencyOrder(
             execution,
             memoryAccessEventIndex,
-            causalityOrder union extendedCoherenceComputable.value,
+            happensBeforeOrder union extendedCoherenceComputable.value,
             // TODO: refine eco order after sc order computation (?)
         )
     }
         .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
 
-    override val sequentialConsistencyOrder: Relation<AtomicThreadEvent> by sequentialConsistencyOrderComputable
+    override val memoryModelConsistencyOrder: Relation<AtomicThreadEvent> by memoryModelConsistencyOrderComputable
 
     override val executionOrderComputable = computable {
         ExecutionOrder(
             execution,
             memoryAccessEventIndex,
-            causalityOrder union extendedCoherence, // TODO: add sc order
+            happensBeforeOrder union extendedCoherence, // TODO: add sc order
         )
     }
         .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
@@ -215,6 +226,7 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
             coherenceOrderComputable.value.executionOrder = this
         }
 
+    //NOTE: This seems to be unused
     override val executionOrder: Relation<AtomicThreadEvent> by executionOrderComputable
 
     private val consistencyChecker = aggregateConsistencyCheckers(
@@ -222,10 +234,10 @@ fun MutableExtendedExecution(): MutableExtendedExecution =
         listOf<AtomicEventConsistencyChecker>(
             ReadModifyWriteAtomicityChecker(execution = this),
 
-            IncrementalSequentialConsistencyChecker(
+            IncrementalMemoryModelConsistencyChecker(
                 execution = this,
+                memoryModel = memoryModel,
                 checkReleaseAcquireConsistency = true,
-                approximateSequentialConsistency = false
             )
         ),
         listOf(),
