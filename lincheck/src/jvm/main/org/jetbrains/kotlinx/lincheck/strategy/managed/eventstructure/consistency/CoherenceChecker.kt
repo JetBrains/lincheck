@@ -47,6 +47,7 @@ class CoherenceOrder(
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteOrder,
     val writesOrder: Relation<AtomicThreadEvent>,
+    val coherenceCausalOrder: Relation<AtomicThreadEvent>,
     var extendedCoherenceOrder: ComputableNode<ExtendedCoherenceOrder>? = null,
     var executionOrder: ComputableNode<ExecutionOrder>? = null,
 ) : Relation<AtomicThreadEvent>, Computable {
@@ -86,13 +87,17 @@ class CoherenceOrder(
 
     override fun compute() {
         check(map.isEmpty())
-        generate(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder).forEach { coherence ->
+        generate(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder, coherenceCausalOrder).forEach { coherence ->
+            // TODO: Also maybe lets keep coherence checker for SC and make a RA coherence checker somewhere else
+            // TODO: there is a probably a better place for these two relations
+
             val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex,
-                writesOrder = causalityOrder union coherence
+                writesOrder = coherence union coherenceCausalOrder
             )
                 .apply { initialize(); compute() }
+
             val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
-                approximation = causalityOrder union extendedCoherence
+                approximation = extendedCoherence union coherenceCausalOrder
             )
                 .apply { initialize(); compute() }
             if (!executionOrder.isConsistent())
@@ -112,7 +117,8 @@ class CoherenceOrder(
             execution: Execution<AtomicThreadEvent>,
             memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
             rmwChainsStorage: ReadModifyWriteOrder,
-            writesOrder: Relation<AtomicThreadEvent>
+            writesOrder: Relation<AtomicThreadEvent>,
+            causalOrder: Relation<AtomicThreadEvent>,
         ): Sequence<CoherenceOrder> {
             val coherenceOrderings = memoryAccessEventIndex.locations.mapNotNull { location ->
                 if (memoryAccessEventIndex.isWriteWriteRaceFree(location))
@@ -126,11 +132,11 @@ class CoherenceOrder(
             }
             if (coherenceOrderings.isEmpty()) {
                 return sequenceOf(
-                    CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder)
+                    CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder, causalOrder)
                 )
             }
             return coherenceOrderings.cartesianProduct().map { coherenceList ->
-                val coherenceOrder = CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder)
+                val coherenceOrder = CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder, causalOrder)
                 for (coherence in coherenceList) {
                     val location = coherence.getLocationForSameLocationWriteAccesses()!!
                     val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!

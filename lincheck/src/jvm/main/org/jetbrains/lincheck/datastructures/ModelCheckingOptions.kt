@@ -17,6 +17,7 @@ import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
@@ -29,9 +30,16 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
 
     private var experimentalModelChecking = false
+    private var memoryModel: MemoryModel = MemoryModel.SequentialConsistency
 
     internal fun useExperimentalModelChecking(): ModelCheckingOptions {
         experimentalModelChecking = true
+        return this
+    }
+
+    internal fun memoryModel(model: MemoryModel): ModelCheckingOptions {
+        check(experimentalModelChecking) { "You need to set experimentalModelChecking to use this feature" }
+        memoryModel = model
         return this
     }
 

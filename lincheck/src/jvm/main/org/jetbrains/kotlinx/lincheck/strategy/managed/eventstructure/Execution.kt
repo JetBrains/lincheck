@@ -353,7 +353,7 @@ fun<E : ThreadEvent> Execution<E>.computeForwardVectorClock(event: E, relation: 
 ): VectorClock {
     val capacity = 1 + this.maxThreadId
     val clock = MutableVectorClock()
-    for (i in 0 until capacity) {
+    for (i in -1 until capacity) {
         val threadEvents = get(i) ?: continue
         val position = if (respectsProgramOrder) {
             // TODO: this uses binary search from utils. Replace it with standard binary search function (I did not want to use my brain right now)
@@ -408,7 +408,7 @@ fun<E : ThreadEvent> Execution<E>.buildGraph(
         val clock = execution.computeForwardVectorClock(event, relation,
             respectsProgramOrder = respectsProgramOrder
         )
-        (0 until nThreads).mapNotNull { tid ->
+        (-1 until nThreads).mapNotNull { tid ->
             if (clock[tid] != -1) execution[tid, clock[tid]] else null
         }
     }
@@ -419,6 +419,7 @@ fun<E : ThreadEvent> Execution<E>.buildGraph(
     }
 
 }
+
 
 // TODO: include parent event in covering (?) and remove `External`
 fun<E : ThreadEvent> Execution<E>.buildExternalCovering(

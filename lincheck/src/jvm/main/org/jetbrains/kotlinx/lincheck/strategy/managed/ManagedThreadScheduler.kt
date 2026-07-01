@@ -10,9 +10,12 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.kotlinx.lincheck.runner.MANAGED_STRATEGY_SPIN_LIMIT
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.LincheckAnalysisAbortedError
+import sun.nio.ch.lincheck.ThreadDescriptor
+import java.util.concurrent.locks.LockSupport
 
 
 /**
@@ -57,6 +60,8 @@ class ManagedThreadScheduler : ThreadScheduler() {
      */
     fun scheduleThread(threadId: Int) {
         scheduledThreadId = threadId
+        val thread = getThread(threadId)
+        LockSupport.unpark(thread)
     }
 
     /**
@@ -84,12 +89,18 @@ class ManagedThreadScheduler : ThreadScheduler() {
     fun awaitTurn(threadId: ThreadId) {
         check(threadId == getCurrentThreadId())
         val threadData = threads[threadId]!!
-        threadData.spinner.spinWaitUntil {
+        threadData.spinner.spinWaitUntilOrPark {
             if (threadData.state == ThreadState.ABORTED) {
                 raiseThreadAbortError()
             }
             scheduledThreadId == threadId
         }
+    }
+
+    // Override, so we can set the spinLimit of the spinners to something smaller
+    // Note: that preferably the spin limit here should match the spin limit for Strategy.spinLimit
+    override fun createThreadData(id: ThreadId, descriptor: ThreadDescriptor): ThreadData {
+        return ThreadData(id, descriptor, this, MANAGED_STRATEGY_SPIN_LIMIT)
     }
 
     private fun raiseThreadAbortError(): Nothing {

@@ -10,11 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy
 
+import org.jetbrains.kotlinx.lincheck.runner.DEFAULT_STRATEGY_SPIN_LIMIT
 import sun.nio.ch.lincheck.TestThread
 import sun.nio.ch.lincheck.ThreadDescriptor
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.Spinner
 import java.util.Collections
+import java.util.concurrent.locks.LockSupport
 
 /**
  * Enumeration representing the various states of a thread.
@@ -101,16 +103,17 @@ open class ThreadScheduler {
         val id: ThreadId,
         val descriptor: ThreadDescriptor,
         val scheduler: ThreadScheduler,
+        spinLimit: Int,
     ) {
         @Volatile var state: ThreadState = ThreadState.INITIALIZED
 
         @Volatile var blockingReason: BlockingReason? = null
 
-        val spinner: Spinner = Spinner { scheduler.threads.size }
+        val spinner: Spinner = Spinner(spinLimit = spinLimit) { scheduler.threads.size }
     }
 
     protected open fun createThreadData(id: ThreadId, descriptor: ThreadDescriptor): ThreadData {
-        return ThreadData(id, descriptor, this)
+        return ThreadData(id, descriptor, this, DEFAULT_STRATEGY_SPIN_LIMIT)
     }
 
     /**
@@ -335,6 +338,7 @@ open class ThreadScheduler {
     fun abortThread(threadId: ThreadId) {
         threads[threadId].apply {
             state = ThreadState.ABORTED
+            LockSupport.unpark(descriptor.thread)
         }
     }
 
@@ -348,6 +352,7 @@ open class ThreadScheduler {
             if (thread.state == ThreadState.FINISHED)
                 continue
             thread.state = ThreadState.ABORTED
+            LockSupport.unpark(thread.descriptor.thread)
         }
     }
 
@@ -362,6 +367,7 @@ open class ThreadScheduler {
             if (thread.state == ThreadState.FINISHED || thread.id == currentThreadId)
                 continue
             thread.state = ThreadState.ABORTED
+            LockSupport.unpark(thread.descriptor.thread)
         }
     }
 

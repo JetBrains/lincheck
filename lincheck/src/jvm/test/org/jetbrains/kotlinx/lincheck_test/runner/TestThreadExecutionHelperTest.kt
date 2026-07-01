@@ -24,8 +24,12 @@ import java.util.*
 class TestThreadExecutionHelperTest {
     private var runner: ExecutionScenarioRunner? = null
 
+    // All tests and set-up/tear-down run under `withLincheckTestContext` block
+    // to ensure Lincheck's `Injections` and all related classes are properly loaded,
+    // since `TestThreadExecution` is toughly coupled with the injections' machinery.
+
     @Before
-    fun setUp() {
+    fun setUp() = withLincheckTestContext(InstrumentationMode.STRESS) {
         val strategy: Strategy = object : Strategy() {
             override val runner: Runner get() {
                 throw UnsupportedOperationException()
