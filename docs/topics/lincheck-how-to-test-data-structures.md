@@ -105,9 +105,8 @@ To test it, Lincheck performs the following steps:
    ![A diagram of the verification process. The results of one execution schedule are compared
    to the results of the same operations executed sequentially.](verification.svg){width=300}
 
-   <!-- TODO: uncomment after the article is published
    At this step, Lincheck can also validate the structure if provided with a
-   [validation function](lincheck-results-validation.md). -->
+   [validation function](lincheck-results-validation.md).
 
 ## Example: test an implementation of a Treiber stack structure
 
