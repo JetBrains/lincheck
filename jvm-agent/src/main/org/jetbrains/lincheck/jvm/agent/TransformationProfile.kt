@@ -702,8 +702,8 @@ private fun shouldNotInstrument(className: String, methodName: String, descripto
     // Do not instrument `MethodHandles` constructors.
     if (isMethodHandleRelatedClass(className) && methodName == "<init>")
         return true
-    // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
-    // See details in https://github.com/JetBrains/lincheck/issues/717.
+    // Instrumentation of `java.util.Arrays` class causes
+    // some subtle flaky bugs, see details in https://github.com/JetBrains/lincheck/issues/717.
     if (isJavaUtilArraysClass(className))
         return true
     // Do not instrument coroutines' internal machinery.
