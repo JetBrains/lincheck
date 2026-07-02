@@ -332,7 +332,7 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeNewObjectCreation(threadDescriptor: ThreadDescriptor, className: String) {}
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
+    override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String) {}
     override fun afterInvokeDynamicObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
 
     override fun getCachedInvokeDynamicCallSite(
@@ -354,8 +354,6 @@ class TraceCollectingEventTracker(
     ) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
     }
-
-    override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) {}
 
     override fun beforeReadField(
         threadDescriptor: ThreadDescriptor,

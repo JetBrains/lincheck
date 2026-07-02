@@ -18,7 +18,11 @@ Detailed trace:
 | -------------------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                            |
 |   atomicReference.get(): Node#1 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:27)                               |
+|   AtomicReferencesNamesTest.Node.<init>(2): Node#2 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:27)            |
+|     Object.<init>(): Node#2 at AtomicReferencesNamesTest.Node.<init>(AtomicReferencesNamesTests.kt:54)                                 |
 |   atomicReference.compareAndSet(Node#1, Node#2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:27)         |
+|   AtomicReferencesNamesTest.Node.<init>(3): Node#3 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:28)            |
+|     Object.<init>(): Node#3 at AtomicReferencesNamesTest.Node.<init>(AtomicReferencesNamesTests.kt:54)                                 |
 |   atomicReference.set(Node#3) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:28)                                 |
 |   atomicInteger.get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:30)                                      |
 |   atomicInteger.compareAndSet(0, 2): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:30)                     |
@@ -30,7 +34,11 @@ Detailed trace:
 |   atomicBoolean.compareAndSet(true, true): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:36)               |
 |   atomicBoolean.set(false) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:37)                                    |
 |   atomicReferenceArray[0].get(): Node#4 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:39)                       |
+|   AtomicReferencesNamesTest.Node.<init>(2): Node#5 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:39)            |
+|     Object.<init>(): Node#5 at AtomicReferencesNamesTest.Node.<init>(AtomicReferencesNamesTests.kt:54)                                 |
 |   atomicReferenceArray[0].compareAndSet(Node#4, Node#5): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:39) |
+|   AtomicReferencesNamesTest.Node.<init>(3): Node#6 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:40)            |
+|     Object.<init>(): Node#6 at AtomicReferencesNamesTest.Node.<init>(AtomicReferencesNamesTests.kt:54)                                 |
 |   atomicReferenceArray[0].set(Node#6) at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:40)                         |
 |   atomicIntegerArray[0].get(): 0 at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:42)                              |
 |   atomicIntegerArray[0].compareAndSet(0, 1): true at AtomicReferencesNamesTest.operation(AtomicReferencesNamesTests.kt:42)             |

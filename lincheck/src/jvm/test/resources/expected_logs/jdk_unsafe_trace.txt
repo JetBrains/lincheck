@@ -35,6 +35,8 @@ Detailed trace:
 |         <iteration 2> at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1016)                                                |
 |           tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                              |
 |             tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                         |
+|           ConcurrentHashMap.Node.<init>(1, 1, 2): Node#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)             |
+|             Object.<init>(): Node#1 at ConcurrentHashMap.Node.<init>(ConcurrentHashMap.java:631)                              |
 |           casTabAt(Array<Node>#1, 1, null, Node#1): true at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)             |
 |             tab[1].compareAndSetReference(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)       |
 |       addCount(1, 0) at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1075)                                                 |

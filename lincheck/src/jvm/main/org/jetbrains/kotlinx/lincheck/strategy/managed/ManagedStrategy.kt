@@ -336,7 +336,7 @@ internal abstract class ManagedStrategy(
         if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
         val registeredThreads = getRegisteredThreads()
-        val threadNames = MutableList(registeredThreads.size) { "" }
+        val threadNames = MutableList((registeredThreads.keys.maxOrNull() ?: -1) + 1) { "" }
         registeredThreads.forEach { (threadId, thread) ->
             when (val threadNumber = objectTracker.getObjectDisplayNumber(thread)) {
                 0    -> threadNames[threadId] = "Main Thread"
@@ -1540,9 +1540,9 @@ internal abstract class ManagedStrategy(
         LincheckInstrumentation.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
+    override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String): Unit =
         threadDescriptor.runInsideIgnoredSection {
-            if (objectTracker.shouldTrackObject(obj)) {
+            if (objectTracker.shouldTrackObject(obj) && objectTracker[obj] == null) {
                 objectTracker.registerNewObject(obj)
             }
         }
@@ -1562,15 +1562,12 @@ internal abstract class ManagedStrategy(
             }
         }
 
-    private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
+    private fun shouldTrackArrayAccess(obj: Any?): Boolean = objectTracker.shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldDescriptor: FieldDescriptor): Boolean =
-      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && (trackFinalFields || !fieldDescriptor.isFinal)
-
-    private fun shouldTrackObjectAccess(obj: Any?): Boolean {
-        // by default, we track accesses to all objects
-        return objectTracker.shouldTrackObjectAccess(obj)
-    }
+        objectTracker.shouldTrackObjectAccess(obj) &&
+        (trackFinalFields || !fieldDescriptor.isFinal) &&
+        !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName)
 
     private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
         obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
@@ -1629,14 +1626,6 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * Tracks all objects in [objs] eagerly.
-     * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
-     */
-    override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInsideIgnoredSection {
-        memorySnapshot.trackObjects(objs)
-    }
-
-    /**
      * Tracks fields that are accessed via System.arraycopy, Unsafe API, VarHandle API, Java AFU API, and kotlinx.atomicfu.
      *
      * *Must be called from [runInsideIgnoredSection].*
@@ -1682,7 +1671,13 @@ internal abstract class ManagedStrategy(
             intrinsicDescriptor.isArraysCopyOfIntrinsic() ||
             intrinsicDescriptor.isArraysCopyOfRangeIntrinsic()
         ) {
-            result?.let { afterNewObjectCreation(threadDescriptor, it) }
+            // `Arrays.copyOf`/`copyOfRange` allocate a fresh array as their return value;
+            // route it through the same path as a regular array allocation.
+            // `canonicalName` mirrors what `ObjectCreationTransformer` pushes for static array allocations
+            // (e.g. `int[]`, `java.lang.String[]`); fall back to `name` if it is `null`.
+            result?.let {
+                afterObjectConstructor(threadDescriptor, it, it.javaClass.canonicalName ?: it.javaClass.name)
+            }
         }
     }
 
@@ -1915,9 +1910,9 @@ internal abstract class ManagedStrategy(
             if (callStackTrace[threadId]!!.isNotEmpty()) {
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when {
-                    result == Unit -> tracePoint.initializeVoidReturnedValue()
-                    result == Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
-                    result == COROUTINE_SUSPENDED && isSuspendFunction(
+                    result === Unit -> tracePoint.initializeVoidReturnedValue()
+                    result === Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
+                    result === COROUTINE_SUSPENDED && isSuspendFunction(
                         methodDescriptor.className,
                         methodDescriptor.methodName,
                         params.asList()

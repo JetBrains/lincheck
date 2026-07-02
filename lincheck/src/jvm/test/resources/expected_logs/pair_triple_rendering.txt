@@ -17,6 +17,7 @@ Detailed trace:
 |                                                           Thread 1                                                            |
 | ----------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                   |
+|   Triple.<init>("a", 3, 4.0): ("a", 3, 4.0) at PairTripleRenderingTest.operation(PairTripleRenderingTest.kt:17)               |
 |   foo(("a", 3, 4.0)): ((1, 2), ("a", 3, 4.0)) at PairTripleRenderingTest.operation(PairTripleRenderingTest.kt:17)             |
 |     pair ➜ (1, 2) at PairTripleRenderingTest.foo(PairTripleRenderingTest.kt:20)                                               |
 |     TuplesKt.to((1, 2), ("a", 3, 4.0)): ((1, 2), ("a", 3, 4.0)) at PairTripleRenderingTest.foo(PairTripleRenderingTest.kt:20) |

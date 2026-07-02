@@ -17,8 +17,12 @@ Detailed trace:
 |                                                                             Thread 1                                                                              |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                                                       |
-|   node ➜ IntWrapper#1 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:26)                                         |
-|   node.compareAndSwapObject(IntWrapper#1, IntWrapper#2): true at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:26) |
-|   node.getAndSetObject(IntWrapper#3): IntWrapper#2 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:27)            |
+|   node ➜ IntWrapper#1 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:27)                                         |
+|   IntWrapper.<init>(2): IntWrapper#2 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:27)                          |
+|     Object.<init>(): IntWrapper#2 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                                      |
+|   node.compareAndSwapObject(IntWrapper#1, IntWrapper#2): true at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:27) |
+|   IntWrapper.<init>(3): IntWrapper#3 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:28)                          |
+|     Object.<init>(): IntWrapper#3 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                                      |
+|   node.getAndSetObject(IntWrapper#3): IntWrapper#2 at SunUnsafeTraceRepresentationTest.operation(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:28)            |
 |   result: void                                                                                                                                                    |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |

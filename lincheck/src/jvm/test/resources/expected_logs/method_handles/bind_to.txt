@@ -3,7 +3,7 @@
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)
 	at org.jetbrains.kotlinx.lincheck_test.representation.BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
@@ -17,11 +17,16 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50) |
 |   block(): threw IllegalStateException at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:44)                                                        |
 |     ensureConcurrentHashMapIsInstrumented() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:50)                                                   |
+|       ConcurrentHashMap.<init>(): ConcurrentHashMap#1 at BaseMethodHandleLookupRepresentationTest.ensureConcurrentHashMapIsInstrumented(MethodHandlesLookupTests.kt:64)         |
+|         AbstractMap.<init>(): ConcurrentHashMap#1 at ConcurrentHashMap.<init>(ConcurrentHashMap.java:828)                                                                       |
+|           Object.<init>(): ConcurrentHashMap#1 at AbstractMap.<init>(AbstractMap.java:73)                                                                                       |
 |     doTest() at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:53)                                                                                  |
 |       Companion.create(): Counter#1 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:131)                                                            |
+|         Counter.<init>(): Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                      |
+|           Object.<init>(): Counter#1 at Counter.<init>(MethodHandlesLookupTests.kt:143)                                                                                         |
 |         Counter.shared = Counter#1 at Counter.Companion.<unknown method>(MethodHandlesLookupTests.kt:165)                                                                       |
 |       methodHandle.invoke() at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:137)                                                                    |
 |         value ➜ 0 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
@@ -30,5 +35,6 @@ Detailed trace:
 |         value ➜ 1 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
 |         value = 2 at Counter.increment(MethodHandlesLookupTests.kt:156)                                                                                                         |
 |       counter.value ➜ 2 at MethodHandlesBindToRepresentationTest.doTest(MethodHandlesLookupTests.kt:139)                                                                        |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at BaseMethodHandleLookupRepresentationTest.block(MethodHandlesLookupTests.kt:56)                    |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -38,10 +38,8 @@ public interface EventTracker {
     void notify(ThreadDescriptor descriptor, int codeLocation, Object monitor, boolean notifyAll);
 
     void beforeNewObjectCreation(ThreadDescriptor descriptor, String className);
-    void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj);
+    void afterObjectConstructor(ThreadDescriptor descriptor, Object obj, String className);
     void afterInvokeDynamicObjectCreation(ThreadDescriptor descriptor, Object obj);
-
-    void updateSnapshotBeforeConstructorCall(Object[] objs);
 
     void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor);
     void beforeReadArrayElement(ThreadDescriptor descriptor, int codeLocation, Object array, int index, ResultInterceptor interceptor);
