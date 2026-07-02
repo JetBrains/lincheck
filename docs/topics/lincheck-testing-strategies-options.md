@@ -233,7 +233,7 @@ fun modelCheckingTest() = ModelCheckingOptions()
 
 ## What’s next
 
-Learn how to [configure argument generation](operation-arguments.md) for operations used in 
+Learn how to [configure argument generation](lincheck-argument-generation-constraints.md) for operations used in 
 Lincheck's execution scenarios.
 
 ## See also
