@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import java.util.concurrent.atomic.*
@@ -1465,6 +1466,53 @@ class PrimitivesTest {
         litmusTest(TestClass::class.java, testScenario, assertSame(outcomes, UNKNOWN)) { results ->
             val b1 = getValue<Any?>(results.parallelResults[0][0]!!)
             return@litmusTest b1
+        }
+    }
+
+
+    class AtomicFuLongVariable {
+        // TODO: In the future we would likely want to switch to atomicfu primitives.
+        //   However, atomicfu currently does not support various access modes that we intend to test here.
+        private val variable: kotlinx.atomicfu.AtomicLong = atomic(0L)
+
+        fun compareAndSet(expected: Long, desired: Long): Boolean {
+            return variable.compareAndSet(expected, desired)
+        }
+
+        fun addAndGet(delta: Long): Long {
+            return variable.addAndGet(delta)
+        }
+
+        fun getAndAdd(delta: Long): Long {
+            return variable.getAndAdd(delta)
+        }
+
+        fun getAndIncrement(): Long {
+            return variable.getAndIncrement()
+        }
+    }
+
+    @Test
+    fun testGetAndIncrementLongFu() {
+        val getAndIncrement = AtomicFuLongVariable::getAndIncrement
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(getAndIncrement)
+                }
+                thread {
+                    actor(getAndIncrement)
+                }
+            }
+        }
+        val outcomes: Set<Pair<Long, Long>> = setOf(
+            0L to 1L,
+            1L to 0L
+        )
+        litmusTest(AtomicFuLongVariable::class.java, testScenario, outcomes) { results ->
+            val r1 = getValue<Long>(results.parallelResults[0][0]!!)
+            val r2 = getValue<Long>(results.parallelResults[1][0]!!)
+            r1 to r2
         }
     }
 }

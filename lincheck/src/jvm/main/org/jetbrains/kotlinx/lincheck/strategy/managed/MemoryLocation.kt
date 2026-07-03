@@ -97,8 +97,8 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
             check(accessLocation is FieldAccessLocation)
             val type = when {
                 receiver is AtomicReferenceFieldUpdater<*,*> -> Types.OBJECT_TYPE
-                receiver is AtomicLongFieldUpdater<*> -> Types.OBJECT_TYPE
-                receiver is AtomicIntegerFieldUpdater<*> -> Types.OBJECT_TYPE
+                receiver is AtomicLongFieldUpdater<*> -> Types.LONG_TYPE
+                receiver is AtomicIntegerFieldUpdater<*> -> Types.INT_TYPE
                 else -> unreachable()
             }
             getFieldAccessMemoryLocation(
