@@ -138,6 +138,12 @@ internal class EventStructureObjectTracker(
     override fun reset() {
         retain { (it as? EventStructureObjectEntry)?.objectKind == ObjectTracker.ObjectKind.EXTERNAL }
     }
+
+    override fun toString(): String {
+        return objectIndex.values.flatMap { entries ->
+            entries.map { entry -> "${entry.objectNumber } -> [${entry.objectKind} ${entry.objectWeakReference.get()}]" }
+        }.joinToString("\n")
+    }
 }
 
 internal fun EventStructureObjectTracker.registerValueIfAbsent(obj: OpaqueValue?): ObjectNumber =
