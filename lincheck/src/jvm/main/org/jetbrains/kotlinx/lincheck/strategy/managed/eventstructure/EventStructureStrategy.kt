@@ -357,8 +357,10 @@ internal class EventStructureStrategy(
 
     override fun onThreadStart(threadId: Int) {
         super.onThreadStart(threadId)
-        if (threadId != eventStructure.mainThreadId && threadId != eventStructure.initThreadId) {
-            eventStructure.addThreadStartEvent(threadId)
+        runInsideIgnoredSection {
+            if (threadId != eventStructure.mainThreadId && threadId != eventStructure.initThreadId) {
+                eventStructure.addThreadStartEvent(threadId)
+            }
         }
     }
 
