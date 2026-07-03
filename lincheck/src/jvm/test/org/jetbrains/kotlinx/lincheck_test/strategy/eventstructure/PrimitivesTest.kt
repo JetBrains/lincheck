@@ -1845,6 +1845,139 @@ class PrimitivesTest {
             res.map { if (it == null) null else it[0] }.toList()
         }
     }
+
+
+    @Test
+    fun testFunctionInConstructor() {
+        class Box(var value: Int) {}
+        class Node {
+            @Volatile
+            var box: Box? = null
+
+            constructor(x: Int) {
+                doComplicatedOperationWithBox(x)
+            }
+
+            fun doComplicatedOperationWithBox(x: Int) {
+                box = Box(x*2 + 5);
+            }
+        }
+        val outcomes =  setOf(5,7)
+
+        litmusTest(assertSame(outcomes)) {
+            var node: Node? = null
+            val t1 = thread {
+                node = Node(0)
+            }
+            val t2 = thread {
+                node = Node(1)
+            }
+
+            t1.join()
+            t2.join()
+
+            node?.box?.value
+        }
+    }
+
+
+    @Test
+    fun testAccessingAnotherObjectFieldInConstructor() {
+        class Box(var value: Int) {}
+        class Writer {
+            var box: Box? = null
+
+            constructor(b: Box, newValue: Int) {
+                write(b, newValue)
+            }
+
+            fun write(b: Box, newValue: Int) {
+                b.value = newValue
+
+            }
+        }
+        class Reader {
+            var value : Int = -1
+
+            constructor(b: Box) {
+                read(b)
+            }
+
+            fun read(b: Box) {
+                value = b.value
+            }
+        }
+
+        val outcomes =  setOf(0, 42)
+
+        litmusTest(assertSame(outcomes)) {
+            val b = Box(0)
+            var r: Reader? = null
+
+            val t1 = thread {
+                r = Reader(b)
+            }
+            val t2 = thread {
+                Writer(b, 42)
+            }
+
+            t1.join()
+            t2.join()
+
+            r?.value
+        }
+    }
+
+
+    @Test
+    fun testFunctionInConstructorScenario() {
+        class Box(var value: Int) {}
+        class Node {
+            @Volatile
+            var box: Box? = null
+
+            constructor(x: Int) {
+                doComplicatedOperationWithBox(x)
+            }
+
+            fun doComplicatedOperationWithBox(x: Int) {
+                box = Box(x*2 + 5);
+            }
+        }
+        class TestClass {
+            var node: Node? = null
+
+            fun t1() {
+                node = Node(0)
+            }
+            fun t2() {
+                node = Node(1)
+            }
+            fun post() : Int? {
+                return node?.box?.value
+            }
+        }
+        val testScenartio = scenario {
+            parallel {
+                thread {}
+                thread {
+                    actor(TestClass::t1)
+                }
+                thread {
+                    actor(TestClass::t2)
+                }
+            }
+            post {
+                actor(TestClass::post)
+            }
+        }
+        val outcomes =  setOf(5,7)
+
+        litmusTest(TestClass::class.java, testScenartio, assertSame(outcomes, UNKNOWN)) { results ->
+            val b1 = getValue<Int>(results.postResults[0]!!)
+            return@litmusTest b1
+        }
+    }
 }
 
 

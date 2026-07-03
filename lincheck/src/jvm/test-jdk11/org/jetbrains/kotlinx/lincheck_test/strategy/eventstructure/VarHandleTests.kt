@@ -28,6 +28,7 @@ import org.junit.Test
 import org.junit.Rule
 import org.junit.rules.TestName
 import org.jetbrains.lincheck.util.UnsafeHolder
+import java.lang.invoke.VarHandle
 
 class VarHandleTests {
 
@@ -40,7 +41,11 @@ class VarHandleTests {
 
         companion object {
             private val updater =
-                AtomicReferenceFieldUpdater.newUpdater(VolatileReferenceVariable::class.java, String::class.java, "variable")
+                AtomicReferenceFieldUpdater.newUpdater(
+                    VolatileReferenceVariable::class.java,
+                    String::class.java,
+                    "variable"
+                )
 
             private val handle = run {
                 val lookup = MethodHandles.lookup()
@@ -189,9 +194,15 @@ class VarHandleTests {
         }
         val values = setOf(null, "a", "b", "c", "d")
         val outcomes: Set<Quad<String?, String?, String?, String?>> =
-            values.flatMap { a -> values.flatMap { b -> values.flatMap { c -> values.flatMap { d ->
-                listOf(Quad(a, b, c, d))
-            }}}}.toSet()
+            values.flatMap { a ->
+                values.flatMap { b ->
+                    values.flatMap { c ->
+                        values.flatMap { d ->
+                            listOf(Quad(a, b, c, d))
+                        }
+                    }
+                }
+            }.toSet()
         litmusTest(VolatileReferenceVariable::class.java, testScenario, outcomes) { results ->
             val a = getValue<String?>(results.parallelResults[4][0]!!)
             val b = getValue<String?>(results.parallelResults[5][0]!!)
@@ -201,4 +212,50 @@ class VarHandleTests {
         }
     }
 
+
+    class VarHandleTestClassWithInnerNode {
+
+        class Node {
+            @JvmField
+            var x: Int = 0
+
+            constructor() {
+                X.set(this, 42)
+            }
+        }
+
+        companion object {
+            val X: VarHandle = run {
+                val lookup = MethodHandles.lookup()
+                lookup.findVarHandle(Node::class.java, "x", Int::class.javaPrimitiveType)
+            }
+        }
+
+        fun threadOne(): Int {
+            val node = Node()
+            X.set(node, 12)
+            return X.get(node) as Int
+        }
+
+    }
+
+    @Test
+    fun testVarHandleWithInnerNode() {
+        //NOTE: this test aims to see if we can track result interception in constructors, as that was not the case earlier
+        //  Probably can make this actually simpler.
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(VarHandleTestClassWithInnerNode::threadOne)
+                }
+            }
+        }
+
+        val outcomes: Set<Int> = setOf(12)
+        litmusTest(VarHandleTestClassWithInnerNode::class.java, testScenario, assertSame(outcomes, UNKNOWN)) {
+            val r0 = getValue<Int>(it.parallelResults[0][0]!!)
+            r0
+        }
+
+    }
 }
