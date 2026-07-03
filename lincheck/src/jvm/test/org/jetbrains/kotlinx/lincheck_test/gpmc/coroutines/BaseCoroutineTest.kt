@@ -29,7 +29,7 @@ abstract class BaseCoroutineTest(
             val settings = LincheckSettings(
                 loopBound = 200,
             )
-            Lincheck.runConcurrentTestInternal(invocations, settings) {
+            Lincheck.runConcurrentTestInternal(invocations, false, settings) {
                 createDispatcher().let { dispatcher ->
                     try {
                         block(dispatcher)

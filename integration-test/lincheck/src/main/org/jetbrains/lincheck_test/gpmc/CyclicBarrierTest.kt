@@ -11,14 +11,14 @@
 package org.jetbrains.lincheck_test.gpmc
 
 import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.CyclicBarrier
 import kotlin.concurrent.thread
 
 class CyclicBarrierTest {
 
-    @Test
-    fun testBarrier() = runConcurrentTest(10000) {
+    val block = {
         val barrier = CyclicBarrier(2)
 
         val t1 = thread {
@@ -31,4 +31,11 @@ class CyclicBarrierTest {
         t1.join()
         t2.join()
     }
+
+    @Test
+    fun testBarrier() = runConcurrentTest(10000, false, block)
+
+    @Ignore("Times out")
+    @Test
+    fun testBarrierEventStructure() = runConcurrentTest(10000, true, block)
 }

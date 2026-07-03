@@ -46,8 +46,9 @@ object Lincheck {
     @JvmOverloads
     fun runConcurrentTest(
         invocations: Int = DEFAULT_INVOCATIONS,
+        useExperimentalModelChecking: Boolean = false,
         block: Runnable
-    ) = runConcurrentTestInternal(invocations, LincheckSettings.DEFAULT, block)
+    ) = runConcurrentTestInternal(invocations, useExperimentalModelChecking, LincheckSettings.DEFAULT, block)
 
     /**
      * This method will explore different interleavings of the [block] body and all the threads created within it,
@@ -62,14 +63,18 @@ object Lincheck {
     @JvmStatic
     internal fun runConcurrentTestInternal(
         invocations: Int = DEFAULT_INVOCATIONS,
+        useExperimentalModelChecking: Boolean = false,
         settings: LincheckSettings,
         block: Runnable
     ) {
-        val options = ModelCheckingOptions()
+        var options = ModelCheckingOptions()
             .analyzeStdLib(settings.analyzeStdLib)
             .loopBound(settings.loopBound)
             .recursionBound(settings.recursionBound)
             .loopIterationsBeforeThreadSwitch(settings.loopIterationsBeforeThreadSwitch)
+
+        if(useExperimentalModelChecking)
+            options = options.useExperimentalModelChecking()
 
         val testCfg = options.createTestConfigurations(block::class.java)
 

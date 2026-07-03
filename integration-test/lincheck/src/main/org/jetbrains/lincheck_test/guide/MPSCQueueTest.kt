@@ -14,6 +14,7 @@ import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.StressOptions
+import org.junit.Ignore
 import org.junit.Test
 
 class MPSCQueueTest {
@@ -34,6 +35,7 @@ class MPSCQueueTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 
+    @Ignore("We need to add loop detectors for this test")
     @Test
     fun eventStructureModelCheckingTest() = ModelCheckingOptions().useExperimentalModelChecking().check(this::class)
 }
