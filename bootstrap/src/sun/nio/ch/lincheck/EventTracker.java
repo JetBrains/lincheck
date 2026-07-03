@@ -54,6 +54,8 @@ public interface EventTracker {
     void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
     void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
 
+    void onArrayCopy(ThreadDescriptor descriptor, Object srcArray, int srcPos, Object dstArray, int dstPos, int length);
+
     void onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor);
     void onMethodCallReturn(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Object result, ResultInterceptor interceptor);
     void onMethodCallException(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Throwable t, ResultInterceptor interceptor);

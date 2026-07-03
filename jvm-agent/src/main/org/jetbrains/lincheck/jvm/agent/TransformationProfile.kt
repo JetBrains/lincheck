@@ -34,6 +34,7 @@ class TransformationConfiguration(
     var trackStaticFieldWrites: Boolean = false,
     var trackArrayElementReads: Boolean = false,
     var trackArrayElementWrites: Boolean = false,
+    var trackArrayCopy: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
     var interceptMethodCallResults: Boolean = false,
@@ -127,17 +128,19 @@ class TransformationConfiguration(
 
     val trackSharedMemoryAccesses: Boolean
         get() = trackRegularFieldReads  || trackStaticFieldReads  || trackArrayElementReads ||
-                trackRegularFieldWrites || trackStaticFieldWrites || trackArrayElementWrites
+                trackRegularFieldWrites || trackStaticFieldWrites || trackArrayElementWrites ||
+                trackArrayCopy
 
     var trackAllSharedMemoryAccesses: Boolean
         get() =
             trackAllFieldsReads && trackArrayElementReads &&
-            trackAllFieldsWrites && trackArrayElementWrites
+            trackAllFieldsWrites && trackArrayElementWrites && trackArrayCopy
         set(value) {
             trackAllFieldsReads = value
             trackArrayElementReads = value
             trackAllFieldsWrites = value
             trackArrayElementWrites = value
+            trackArrayCopy = value
         }
 
     val trackThreadsOperations: Boolean
@@ -192,6 +195,8 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
 
         ThrowTransformer::class.java -> trackThrows
         CatchBlockStartTransformer::class.java -> trackCatchBlocks
+
+        ArrayTransformer::class.java -> trackArrayCopy
 
         // the configuration does not govern other types of transformers,
         // so they should be applied by default
@@ -571,6 +576,7 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
             trackLocalVariableWrites = true
             trackArrayElementReads = true
             trackArrayElementWrites = true
+            trackArrayCopy = true
 
             interceptReadResults = true
         }

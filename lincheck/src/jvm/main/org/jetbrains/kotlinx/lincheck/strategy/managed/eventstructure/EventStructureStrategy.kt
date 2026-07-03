@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.descriptors.getArrayElementType
 import org.jetbrains.lincheck.descriptors.getType
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
@@ -702,8 +703,8 @@ private class EventStructureMemoryTracker(
     }
 
     override fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) {
-        val srcType = srcArray!!::class.getType()
-        val dstType = dstArray!!::class.getType()
+        val srcType = srcArray!!.javaClass.kotlin.getArrayElementType()
+        val dstType = dstArray!!.javaClass.kotlin.getArrayElementType()
         for (i in 0 until length) {
             val readLocation  = objectTracker.getArrayAccessMemoryLocation(srcArray, srcPos + i, srcType)
             val writeLocation = objectTracker.getArrayAccessMemoryLocation(dstArray, dstPos + i, dstType)

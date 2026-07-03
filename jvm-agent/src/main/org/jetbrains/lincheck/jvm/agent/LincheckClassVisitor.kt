@@ -143,6 +143,10 @@ internal class LincheckClassVisitor(
         chain.addTransformer { adapter, mv ->
             ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
+        // ======== Reflection and ArrayCopy ========
+        chain.addTransformer { adapter, mv ->
+            ArrayTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, instrumentationMode == EXPERIMENTAL_MODEL_CHECKING)
+        }
 
         // ======== Method Calls ========
         chain.addTransformer { adapter, mv ->
