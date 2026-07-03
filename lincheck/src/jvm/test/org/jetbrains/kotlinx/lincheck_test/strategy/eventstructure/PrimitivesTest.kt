@@ -1515,6 +1515,43 @@ class PrimitivesTest {
             r1 to r2
         }
     }
+
+
+    @Test
+    fun testGC() {
+        class Box(val x: Int) {}
+        litmusTest(assertSame(setOf(null, 0, 42_000_000), UNKNOWN)) {
+            var x: Box? = Box(0)
+            var r0 : Int? = -1
+
+            val t1 = thread {
+                System.gc()
+                System.gc()
+                x = Box(42_000_000)
+                System.gc()
+                System.gc()
+            }
+            val t2 = thread {
+                System.gc()
+                System.gc()
+                x = null
+                System.gc()
+                System.gc()
+            }
+            val t3 = thread {
+                System.gc()
+                System.gc()
+                r0 = x?.x
+                System.gc()
+                System.gc()
+            }
+
+            t1.join()
+            t2.join()
+            t3.join()
+            r0
+        }
+    }
 }
 
 

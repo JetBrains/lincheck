@@ -107,7 +107,7 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
                 objDisplayNumber,
                 objKind = kind,
                 objWeakReference = objWeakReference,
-                objStrongReference = null,
+                objStrongReference = obj,
                 allocation = allocationEvent,
             )
         }
