@@ -29,4 +29,10 @@ class ObstructionFreedomViolationTest {
     fun runModelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
         .check(this::class)
+
+    @Test(expected = AssertionError::class)
+    fun runEventStructureModelCheckingTest() = ModelCheckingOptions()
+        .useExperimentalModelChecking()
+        .checkObstructionFreedom(true)
+        .check(this::class)
 }

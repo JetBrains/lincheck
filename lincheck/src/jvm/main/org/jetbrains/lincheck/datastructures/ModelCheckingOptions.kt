@@ -37,6 +37,10 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
         return this
     }
 
+    val isExperimentalModelCheckingEnabled: Boolean
+        get() = experimentalModelChecking
+
+
     internal fun memoryModel(model: MemoryModel): ModelCheckingOptions {
         check(experimentalModelChecking) { "You need to set experimentalModelChecking to use this feature" }
         memoryModel = model
@@ -121,7 +125,8 @@ class ModelCheckingCTestConfiguration(
     private val useExperimentalModelChecking =
         experimentalModelChecking || System.getProperty("lincheck.useExperimentalModelChecking")?.toBoolean() ?: false
 
-    override val instrumentationMode: InstrumentationMode get() = MODEL_CHECKING
+    override val instrumentationMode: InstrumentationMode get() =
+        if (useExperimentalModelChecking) InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING else MODEL_CHECKING
 
     override fun createStrategy(
         testClass: Class<*>,

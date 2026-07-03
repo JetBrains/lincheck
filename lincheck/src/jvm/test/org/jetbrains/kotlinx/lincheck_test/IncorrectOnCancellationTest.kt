@@ -35,6 +35,8 @@ class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure
     }
 
     override fun <O : Options<O, *>> O.customize() {
+        // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
+        ignoreExperimentalModelChecking()
         if (this is StressOptions) {
             invocationsPerIteration(10_000)
         }

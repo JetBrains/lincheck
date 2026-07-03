@@ -33,4 +33,7 @@ class MPSCQueueTest {
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+
+    @Test
+    fun eventStructureModelCheckingTest() = ModelCheckingOptions().useExperimentalModelChecking().check(this::class)
 }

@@ -13,10 +13,13 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.kotlinx.lincheck_test.*
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.datastructures.SequentialIntChannel
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
+import org.junit.Assume.assumeTrue
+import org.junit.Ignore
 
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
@@ -33,6 +36,8 @@ class BufferedChannelTest : AbstractLincheckTest() {
     fun poll() = c.tryReceive().getOrNull()
 
     override fun <O : Options<O, *>> O.customize() {
+        // TODO: We ingore for now since event structure strategy does not support coroutines.
+        assumeTrue(this !is ModelCheckingOptions || !isExperimentalModelCheckingEnabled)
         sequentialSpecification(SequentialBuffered2IntChannel::class.java)
     }
 }
