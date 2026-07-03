@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.util.ThreadId
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.util.toBoolean
 import org.jetbrains.lincheck.util.toInt
@@ -28,7 +29,10 @@ import sun.nio.ch.lincheck.TestThread
 import java.lang.ref.WeakReference
 
 
-internal class EventStructureObjectTracker(private val eventStructure: EventStructure): BaseObjectTracker() {
+internal class EventStructureObjectTracker(
+    private val eventStructure: EventStructure,
+    private val currentThreadIdCallback: () -> ThreadId,
+): BaseObjectTracker() {
 
     override val shouldTrackImmutableValues: Boolean = true
 
@@ -94,7 +98,12 @@ internal class EventStructureObjectTracker(private val eventStructure: EventStru
                 allocation = initEvent!!
             )
         } else {
-            val iThread = (Thread.currentThread() as? TestThread)?.threadId ?: eventStructure.mainThreadId
+            // NOTE: currently, some for some parts of the code a thread id of -1 represents an invalid threadID value.
+            //   But for eventStructure it might happen that we call this function when the very first threads are being set up,
+            //   so in that case we would want to default to the mainThreadID instead
+            var iThread = currentThreadIdCallback()
+            if (iThread == -1)  iThread = eventStructure.mainThreadId
+
             // We create a new object allocation event and we "suggest" an objNumber
             // If we are in the replay phase however, the object allocation may have a different id
             // In that case we just take the id from the object allocation

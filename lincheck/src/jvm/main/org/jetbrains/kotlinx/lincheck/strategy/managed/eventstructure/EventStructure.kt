@@ -34,6 +34,7 @@ internal class EventStructure(
     val memoryInitializer: MemoryInitializer,
     // TODO: refactor --- avoid using callbacks!
     private val reportInconsistencyCallback: ReportInconsistencyCallback,
+    private val currentThreadIdCallback: () -> ThreadId,
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = 0
@@ -48,7 +49,7 @@ internal class EventStructure(
      * List of the event structure events.
      */
     val events: SortedList<AtomicThreadEvent> = _events
-    val eventStructureObjectTracker = EventStructureObjectTracker(this)
+    val eventStructureObjectTracker = EventStructureObjectTracker(this, currentThreadIdCallback)
 
     /**
      * Root event of the whole event structure.

@@ -52,7 +52,7 @@ internal class EventStructureStrategy(
     }
 
     private val eventStructure: EventStructure =
-        EventStructure( memoryModel, memoryInitializer, ::onInconsistency) { iThread, reason ->
+        EventStructure( memoryModel, memoryInitializer, ::onInconsistency, ::getCurrentThreadId) { iThread, reason ->
             switchCurrentThread(iThread, reason)
         }
 
@@ -467,6 +467,8 @@ internal class EventStructureStrategy(
     private fun onInconsistency(inconsistency: Inconsistency) {
         abortWithSuddenInvocationResult(InconsistentInvocationResult(inconsistency))
     }
+
+    private fun getCurrentThreadId(): Int  = threadScheduler.getCurrentThreadId()
 
     // NOTE: I guess this should not be final anymore (this has been changed)
     override fun afterCoroutineSuspended(iThread: Int) {
