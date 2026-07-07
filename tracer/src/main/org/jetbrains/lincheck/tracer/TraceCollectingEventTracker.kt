@@ -527,7 +527,7 @@ class TraceCollectingEventTracker(
             methodId = methodId,
             obj = TRValue(context, receiver),
             parameters = params.map { TRValue(context, it) },
-            flags = (if (receiver == Injections.UNINITIALIZED_THIS) SUPER_CONSTRUCTOR_CALL_FLAG else 0).toShort(),
+            flags = (if (receiver === Injections.UNINITIALIZED_THIS) SUPER_CONSTRUCTOR_CALL_FLAG else 0).toShort(),
             parentTracePoint = parentTracepoint,
         )
         strategy.tracePointCreated(parentTracepoint, tracePoint)
