@@ -49,50 +49,46 @@ In this example, you will test the `put()` function of a `ConcurrentHashMap` str
 
 3. Declare a test function with the `checkObstructionFreedom()` option enabled:
 
-  ```kotlin
-  @Test
-   fun modelCheckingTest() = ModelCheckingOptions()
-       .checkObstructionFreedom()
-       .check(this::class)
+    ```kotlin
+    @Test
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .checkObstructionFreedom()
+        .threads(2)
+        .actorsPerThread(1)
+        .check(this::class)
    ```
+   
+   The [`threads`](lincheck-testing-strategies-options.md#scenario-generation) and [`actorsPerThread`](lincheck-testing-strategies-options.md#scenario-generation) 
+   options are used to reduce the number of potential execution scenarios. These options do not change the pass/fail 
+   state of the test, but they significantly reduce the testing time. 
 
 4. Run the test. It should fail with the following report:
 
-  ```text
-  = The algorithm should be non-blocking, but an active lock is detected =
-   | ---------------------- |
-   | Thread 1  |  Thread 2  |
-   | ---------------------- |
-   | put(1, 0) | put(1, -2) |
-   | ---------------------- |
- 
+   ```text
+   = The algorithm should be non-blocking, but an active lock is detected =
+   | --------------------- |
+   | Thread 1  | Thread 2  |
+   | --------------------- |
+   | put(1, 0) | put(1, 1) |
+   | --------------------- |
+   
    The following interleaving leads to the error:
-   | ----------------------------------------------------------------------------------------------------- |
-   |                   Thread 1                    |                       Thread 2                        |
-   | ----------------------------------------------------------------------------------------------------- |
-   | put(1, 0): <hung>                             |                                                       |
-   |   map.put(1, 0)                               |                                                       |
-   |     putVal(1, 0, false)                       |                                                       |
-   |       spread(1): 1                            |                                                       |
-   |       table ➜ null                            |                                                       |
-   |       initTable()                             |                                                       |
-   |         table ➜ null                          |                                                       |
-   |         sizeCtl ➜ 0                           |                                                       |
-   |         sizeCtl.compareAndSetInt(0, -1): true |                                                       |
-   |         table ➜ null                          |                                                       |
-   |         switch                                |                                                       |
-   |                                               | put(1, -2): <hung>                                    |
-   |                                               |   map.put(1, -2)                                      |
-   |                                               |     putVal(1, -2, false)                              |
-   |                                               |       spread(1): 1                                    |
-   |                                               |       table ➜ null                                    |
-   |                                               |       initTable()                                     |
-   |                                               |         /* The following events repeat infinitely: */ |
-   |                                               |     ┌╶> table ➜ null                                  |
-   |                                               |     |   sizeCtl ➜ -1                                  |
-   |                                               |     |   Thread.yield()                                |
-   |                                               |     └╶╶ /* An active lock was detected */             |
-   | ----------------------------------------------------------------------------------------------------- |
+   | -------------------------------------------------------------------------------------------------------------- |
+   |                                          Thread 1                                          |     Thread 2      |
+   | -------------------------------------------------------------------------------------------------------------- |
+   | put(1, 0): <hung>                                                                          |                   |
+   |   map.put(1, 0)                                                                            |                   |
+   |     putVal(1, 0, false)                                                                    |                   |
+   |       spread(1): 1                                                                         |                   |
+   |       table ➜ null                                                                         |                   |
+   |       loop(1 iterations) at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1016)          |                   |
+   |         <iteration 1>                                                                      |                   |
+   |           initTable()                                                                      |                   |
+   |             loop(1 iterations) at ConcurrentHashMap.initTable(ConcurrentHashMap.java:2293) |                   |
+   |             table ➜ null                                                                   |                   |
+   |             switch                                                                         |                   |
+   |                                                                                            | put(1, 1): <hung> |
+   | -------------------------------------------------------------------------------------------------------------- |
    ```
 
 5. Add the `blocking = true` option to the `put()` function annotation:
