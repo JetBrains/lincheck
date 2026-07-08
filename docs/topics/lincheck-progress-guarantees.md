@@ -104,23 +104,23 @@ In this example, you will test the `put()` function of a non-blocking `Concurren
 1. Create a `ConcurrentSkipListMapTest.kt` file.
 2. Create a test class for the `ConcurrentSkipListMap` structure and declare the `put()` function:
 
-  ```kotlin
-  class ConcurrentSkipListMapTest {
-       private val map = ConcurrentSkipListMap<Int, Int>()
-  
-       @Operation
-       fun put(key: Int, value: Int) = map.put(key, value)
-   }
-   ```
+    ```kotlin
+    class ConcurrentSkipListMapTest {
+        private val map = ConcurrentSkipListMap<Int, Int>()
+   
+        @Operation
+        fun put(key: Int, value: Int) = map.put(key, value)
+    }
+    ```
 
 3. Declare a test function with the `checkObstructionFreedom()` option enabled:
 
-  ```kotlin
-  @Test
-   fun modelCheckingTest() = ModelCheckingOptions()
-      .checkObstructionFreedom()
-      .check(this::class)
-   ```
+    ```kotlin
+    @Test
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .checkObstructionFreedom()
+        .check(this::class)
+    ```
 
 4. Run the test. It should pass successfully.
 
