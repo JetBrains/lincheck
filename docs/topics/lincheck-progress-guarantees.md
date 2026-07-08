@@ -25,11 +25,8 @@ Lincheck verifies obstruction-freedom by checking whether a thread can make prog
 If a thread's execution gets [stuck in a loop](lincheck-testing-strategies-options.md#stalled-execution-detection), 
 Lincheck reports an active lock.
 
-<!-- TODO: replace the paragraph when `lincheck-operation-execution-options.md` is merged 
 If certain operations are intentionally blocking, you can mark them with
-[`@Operation(blocking = true)`](lincheck-operation-execution-options.md#blocking-operations) to prevent false positives.-->
-If certain operations are intentionally blocking, you can mark them with `@Operation(blocking = true)` to 
-prevent false positives.
+[`@Operation(blocking = true)`](lincheck-operation-execution-options.md#blocking-operations) to prevent false positives.
 
 ## Example: test `ConcurrentHashMap` for obstruction-freedom
 
@@ -38,8 +35,8 @@ In this example, you will test the `put()` function of a `ConcurrentHashMap` str
 1. Create a `ConcurrentHashMapTest.kt` file.
 2. Create a test class for the `ConcurrentHashMap` structure and declare the `put()` function:
 
-  ```kotlin
-  class ConcurrentHashMapTest {
+   ```kotlin
+   class ConcurrentHashMapTest {
        private val map = ConcurrentHashMap<Int, Int>()
 
        @Operation
@@ -130,7 +127,7 @@ In this example, you will test the `put()` function of a non-blocking `Concurren
 ## See also
 
 * [Configuring argument generation constraints](operation-arguments.md)
-* [Configuring operation execution](constraints.md)
+* [Configuring operation execution](lincheck-operation-execution-options.md)
 <!-- TODO: add a link when `lincheck-results-validation.md` is merged 
 * [Validating execution results](lincheck-results-validation.md) -->
 
