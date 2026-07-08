@@ -25,7 +25,7 @@ Lincheck verifies obstruction-freedom by checking whether a thread can make prog
 If a thread's execution gets [stuck in a loop](lincheck-testing-strategies-options.md#stalled-execution-detection), 
 Lincheck reports an active lock.
 
-If certain operations are intentionally blocking, you can mark them with
+If certain functions are intentionally blocking, you can mark them with
 [`@Operation(blocking = true)`](lincheck-operation-execution-options.md#blocking-operations) to prevent false positives.
 
 ## Example: test `ConcurrentHashMap` for obstruction-freedom
@@ -102,7 +102,7 @@ In this example, you will test the `put()` function of a `ConcurrentHashMap` str
 In this example, you will test the `put()` function of a non-blocking `ConcurrentSkipListMap` structure.
 
 1. Create a `ConcurrentSkipListMapTest.kt` file.
-2. Create a test class for the `ConcurrentSkipListMap` structure and declare the `put()` operation:
+2. Create a test class for the `ConcurrentSkipListMap` structure and declare the `put()` function:
 
   ```kotlin
   class ConcurrentSkipListMapTest {
