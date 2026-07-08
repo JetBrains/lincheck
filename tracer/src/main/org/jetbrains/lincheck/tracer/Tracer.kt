@@ -13,6 +13,9 @@ package org.jetbrains.lincheck.tracer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.trace.INJECTIONS_VOID_OBJECT
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.tracer.Tracer.dumpTrace
+import org.jetbrains.lincheck.tracer.Tracer.startTracing
+import org.jetbrains.lincheck.tracer.Tracer.stopTracing
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.unreachable

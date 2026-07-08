@@ -24,6 +24,7 @@ data class TraceMetaInfo private constructor(
     val methodName: String,
     val startTime: Long,
     val endTime: Long,
+    val points: Int,
     val isDiff: Boolean = false,
     val leftTraceMetaInfo: TraceMetaInfo? = null,
     val rightTraceMetaInfo: TraceMetaInfo? = null
@@ -47,6 +48,10 @@ data class TraceMetaInfo private constructor(
         appendMap(PROPERTIES_HEADER, props)
         appendLine()
         appendMap(ENV_HEADER, env)
+        if (points >= 0) {
+            appendLine()
+            appendLine("$POINTS_HEADER$points")
+        }
     }
 
     companion object {
@@ -54,6 +59,7 @@ data class TraceMetaInfo private constructor(
         private const val METHOD_HEADER: String = "Method: "
         private const val START_TIME_HEADER: String = "Start time: "
         private const val END_TIME_HEADER: String = "End time: "
+        private const val POINTS_HEADER: String = "Points: "
         private const val JVM_ARGS_HEADER: String = "JVM arguments: "
         private const val AGENT_ARGS_HEADER: String = "Agent arguments: "
         private const val PROPERTIES_HEADER: String = "Properties:"
@@ -68,13 +74,14 @@ data class TraceMetaInfo private constructor(
             className: String,
             methodName: String,
             startTime: Long,
-            endTime: Long
+            endTime: Long,
+            points: Int
         ): TraceMetaInfo {
             val bean = ManagementFactory.getRuntimeMXBean()
             // Read JVM args
             val jvmArgs = bean.inputArguments.joinToString(" ") { arg -> arg.escapeShell() }
 
-            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime, endTime)
+            val meta = TraceMetaInfo(jvmArgs, agentArgs, className, methodName, startTime, endTime, points)
             with (meta) {
                 System.getProperties().forEach {
                     props[it.key as String] = it.value as String
@@ -88,7 +95,8 @@ data class TraceMetaInfo private constructor(
             leftMetaInfo: TraceMetaInfo?,
             rightMetaInfo: TraceMetaInfo?,
             startTime: Long,
-            endTime: Long
+            endTime: Long,
+            points: Int,
         ): TraceMetaInfo {
             val bean = ManagementFactory.getRuntimeMXBean()
             // Read JVM args
@@ -101,6 +109,7 @@ data class TraceMetaInfo private constructor(
                 methodName = "",
                 startTime = startTime,
                 endTime = endTime,
+                points = points,
                 isDiff = true,
                 leftTraceMetaInfo = leftMetaInfo,
                 rightTraceMetaInfo = rightMetaInfo
@@ -132,6 +141,14 @@ data class TraceMetaInfo private constructor(
             val jvmArgs = reader.readLine(JVM_ARGS_HEADER) ?: return null
             val agentArgs = reader.readLine(AGENT_ARGS_HEADER) ?: return null
 
+            val props = mutableMapOf<String, String>()
+            if (!reader.readMap(PROPERTIES_HEADER, props)) return null
+
+            val env = mutableMapOf<String, String>()
+            if (!reader.readMap(ENV_HEADER,env)) return null
+
+            val points = reader.readInt(POINTS_HEADER) ?: -1
+
             val meta = TraceMetaInfo(
                 jvmArgs = jvmArgs,
                 agentArgs = agentArgs,
@@ -139,13 +156,13 @@ data class TraceMetaInfo private constructor(
                 methodName = methodName,
                 startTime = startTime,
                 endTime = endTime,
+                points = points,
                 isDiff = isDiff,
                 leftTraceMetaInfo = leftTraceMetaInfo,
                 rightTraceMetaInfo = rightTraceMetaInfo
             )
-
-            if (!reader.readMap(PROPERTIES_HEADER, meta.props)) return null
-            if (!reader.readMap(ENV_HEADER, meta.env)) return null
+            meta.props.putAll(props)
+            meta.env.putAll(env)
 
             return meta
         }
@@ -162,6 +179,11 @@ data class TraceMetaInfo private constructor(
         private fun BufferedReader.readLong(prefix: String): Long? {
             val str = readLine(prefix) ?: return null
             return str.toLongOrNull().ensureValueRead { "Invalid format for \"$prefix\": not a number" }
+        }
+
+        private fun BufferedReader.readInt(prefix: String): Int? {
+            val str = readLine(prefix) ?: return null
+            return str.toIntOrNull().ensureValueRead { "Invalid format for \"$prefix\": not a number" }
         }
 
         private fun BufferedReader.checkHeader(prefix: String): Boolean {

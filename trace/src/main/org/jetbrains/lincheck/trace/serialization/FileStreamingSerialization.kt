@@ -10,16 +10,16 @@
 
 package org.jetbrains.lincheck.trace.serialization
 
-import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.TRContainerTracePoint
+import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.collections.AtomicBitmap
 import java.io.OutputStream
 import java.nio.ByteBuffer
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.max
 import kotlin.reflect.KClass
 
@@ -336,8 +336,6 @@ class FileStreamingTraceCollecting(
         ioThread.start()
     }
 
-    private val points = AtomicInteger(0)
-
     private var seenStringDescriptors = AtomicBitmap()
     private var seenClassDescriptors = AtomicBitmap()
     private var seenMethodDescriptors = AtomicBitmap()
@@ -378,8 +376,6 @@ class FileStreamingTraceCollecting(
         parent: TRContainerTracePoint?,
         created: TRTracePoint
     ) {
-        points.incrementAndGet()
-
         val writer = writers[Thread.currentThread()] ?: return
         try {
             writer.mark()
@@ -415,7 +411,6 @@ class FileStreamingTraceCollecting(
         // Flush all output & exit
         ioThread.exit()
 
-        Logger.info { "Collected ${points.get()} points" }
         Logger.info { "Data size: ${ioThread.dataBytes} bytes" }
         Logger.info { "Index size: ${ioThread.indexBytes} bytes" }
     }
