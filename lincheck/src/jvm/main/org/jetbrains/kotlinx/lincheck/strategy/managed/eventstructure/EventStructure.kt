@@ -402,6 +402,19 @@ internal class EventStructure(
                     }
                 }
             }
+            label is ReadAccessLabel && label.isResponse && label.isExclusive -> run {
+                // TODO: Also handle the case where there are non-exclusive reads messing this up...
+                val write = dependencies.first()
+                val writeLabel = write.label
+                check(writeLabel is WriteAccessLabel || writeLabel is ObjectAllocationLabel || writeLabel is InitializationLabel)
+                for (event in execution) {
+                    val otherLabel = event.label
+                    val otherReadLabel = otherLabel.refine<ReadAccessLabel> { isResponse && isExclusive } ?: continue
+                    if(otherReadLabel.location != label.location) continue
+                    if(event.readsFrom != write) continue
+                    conflicts.add(event)
+                }
+            }
             // wait-response synchronizing with our notify is conflict
             label is WaitLabel && label.isResponse -> run {
                 val notify = dependencies.first { it.label is NotifyLabel }
