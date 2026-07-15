@@ -113,11 +113,9 @@ Lincheck provides the following verifier classes:
   regardless of the "happens-before" constraints. It can be used for structures where the relative order of 
   concurrent operations does not matter.
 
-#### Compare linearizability and serializability
+#### Compare serializability and linearizability
 
-To understand the difference between linearizability and serializability, look at how the two models yield different 
-results for the same data structure. In this example, Lincheck is used to demonstrate that a data structure can be 
-serializable but not linearizable:
+To understand the difference between the two models, see how a data structure can be serializable but not linearizable:
 
 1. Consider the following data structure:
 
