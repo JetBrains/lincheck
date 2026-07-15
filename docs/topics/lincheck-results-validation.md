@@ -13,65 +13,29 @@ concurrent scenario that achieves the same results as the concurrent execution:
 ![A diagram of the verification process in Lincheck. Lincheck compares a concurrent execution to different 
 sequential executions.](verification-process.svg){width=700}
 
-Depending on the [verification property](#verification-properties), there might be additional restrictions 
+Depending on the [verification model](#verification-models), there might be additional restrictions 
 on sequential execution. If no sequential execution matching the verification property can produce the observed 
 results, Lincheck reports an error.
 
-By default, Lincheck verifies the results of the concurrent execution against the linearizability model. 
-To specify a different verification model, use the `verifierClass` option:
-
-```kotlin
-@Test
-fun modelCheckingTest() = ModelCheckingOptions()
-   .verifierClass(SerializabilityVerifier::class)
-   .check(this::class)
-```
-
-### Verification properties
-
-Lincheck can verify the results of the concurrent execution against one of the following properties:
-
-* `LinearizabilityVerifier` – the default option. Concurrent execution is valid if there is a sequential execution 
-  that preserves the ["happens-before"](https://en.wikipedia.org/wiki/Happened-before) relations among the operations 
-  in the concurrent execution.
-* `QuiescentConsistencyVerifier` – works similarly to the linearizability model, but the "happens-before" constraints 
-  are not applied to the operations annotated with `@QuiescentConsistent`:
-
-   ```kotlin
-   @Operation
-   @QuiescentConsistent
-   fun foo() = { ... }
-   ```
-
-   > `QuiescentConsistencyVerifier` does not track actual [quiescent points](https://bura.brunel.ac.uk/bitstream/2438/9717/1/Fulltext.pdf). 
-   > The verifier can potentially miss bugs that occur across the boundaries of quiescent points.
-   >
-   {style="note"}
-
-* `SerializabilityVerifier` – uses the _serializability_ model where the concurrent execution is valid if there 
-  is some sequential execution (in any order) that leads to the same results as the concurrent execution, 
-  regardless of the "happens-before" constraints. It can be used for structures where the relative order of 
-  concurrent operations does not matter.
-
 ### Sequential specification
 
-By default, during the verification process, Lincheck constructs a sequential execution using the operations of 
+By default, during the verification process, Lincheck constructs a sequential execution using the operations of
 the _concurrent_ data structure.
 
 You can specify a sequential data structure with matching operations to:
 * Make sure that the concurrent data structure provides the same results as the sequential one.
-  
-  Typically, single-threaded implementations are simpler than thread-safe implementations, and therefore can be 
-  much more easily verified for correctness (for example, `HashMap` and `ConcurrentHashMap`, `LinkedList` and 
+
+  Typically, single-threaded implementations are simpler than thread-safe implementations, and therefore can be
+  much more easily verified for correctness (for example, `HashMap` and `ConcurrentHashMap`, `LinkedList` and
   `ConcurrentLinkedQueue`).
 
-  By comparing the execution results of two versions of a structure, you can make sure that the more complex 
+  By comparing the execution results of two versions of a structure, you can make sure that the more complex
   concurrent structure behaves similarly to a simpler structure in a single-threaded environment.
 
 * Verify both sequential correctness and concurrency safety in a single test.
 
-![A diagram of the verification process in Lincheck. Lincheck compares a concurrent execution to 
-different sequential executions. Sequential executions use the operations of the specified 
+![A diagram of the verification process in Lincheck. Lincheck compares a concurrent execution to
+different sequential executions. Sequential executions use the operations of the specified
 sequential version of the structure.](verification-process-seq.svg){width=700}
 
 To specify a sequential version of a data structure:
@@ -86,7 +50,7 @@ To specify a sequential version of a data structure:
        .check(this::class)
    ```
 
-An example of a Lincheck test that uses a single-threaded `LinkedList` as the sequential specification 
+An example of a Lincheck test that uses a single-threaded `LinkedList` as the sequential specification
 of `ConcurrentLinkedQueue`:
 
 ```kotlin
@@ -113,15 +77,47 @@ class SequentialQueue {
 }
 ```
 
-### Understand the difference between linearizability and serializability
+### Verification models
 
-With the serializability verification model, it is enough for a concurrent execution to have any corresponding 
-sequential execution that leads to the same results.
+By default, Lincheck verifies the results of the concurrent execution against the linearizability model.
+To apply a different verification model, use the `verifierClass` option:
 
-Linearizability is a stricter verification model – the corresponding sequential execution should also preserve 
-the "happens-before" relationships among the operations.
+```kotlin
+@Test
+fun modelCheckingTest() = ModelCheckingOptions()
+   .verifierClass(SerializabilityVerifier::class)
+   .check(this::class)
+```
 
-In this example, you will use Lincheck to show that a structure can be serializable, but not linearizable:
+Lincheck provides the following verifier classes:
+
+* `LinearizabilityVerifier` – the default option. Concurrent execution is valid if there is a sequential execution 
+  that preserves the ["happens-before"](https://en.wikipedia.org/wiki/Happened-before) relations among the operations 
+  in the concurrent execution.
+* `QuiescentConsistencyVerifier` – uses the _quiescent consistency_ model which works similarly to the linearizability 
+  model, but the "happens-before" constraints are not applied to the operations annotated with `@QuiescentConsistent`:
+
+   ```kotlin
+   @Operation
+   @QuiescentConsistent
+   fun someOperation() = { ... }
+   ```
+
+   > `QuiescentConsistencyVerifier` does not track actual [quiescent points](https://bura.brunel.ac.uk/bitstream/2438/9717/1/Fulltext.pdf). 
+   > The verifier can potentially miss bugs that occur across the boundaries of quiescent points.
+   >
+   {style="note"}
+
+* `SerializabilityVerifier` – uses the _serializability_ model where the concurrent execution is valid if there 
+  is some sequential execution (in any order) that leads to the same results as the concurrent execution, 
+  regardless of the "happens-before" constraints. It can be used for structures where the relative order of 
+  concurrent operations does not matter.
+
+#### Compare linearizability and serializability
+
+To understand the difference between linearizability and serializability, look at how the two models yield different 
+results for the same data structure. In this example, Lincheck is used to demonstrate that a data structure can be 
+serializable but not linearizable:
 
 1. Consider the following data structure:
 
@@ -141,7 +137,7 @@ In this example, you will use Lincheck to show that a structure can be serializa
    }
    ```
 
-   This concurrent structure behaves incorrectly: it stores the elements like a typical queue but returns them randomly.
+   This concurrent structure behaves incorrectly: it stores elements like in a typical queue, but returns them randomly.
 
 2. Implement a sequential version of the queue that correctly stores and returns the elements:
 
@@ -261,7 +257,7 @@ The validation function should:
 * Accept no arguments.
 * Throw an exception if the data structure is in an invalid state.
 
-## See also
+## What's next
 
 * [Configuring argument generation constraints](operation-arguments.md)
 * [Configuring operation execution](lincheck-operation-execution-options.md)
