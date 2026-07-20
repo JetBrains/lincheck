@@ -1530,7 +1530,7 @@ internal abstract class ManagedStrategy(
     override fun onArrayCopy(threadDescriptor: ThreadDescriptor, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) = threadDescriptor.runInsideIgnoredSection {
         if (memoryTracker != null) {
             val threadId = threadScheduler.getCurrentThreadId()
-            memoryTracker!!.interceptArrayCopy(threadId, SYSTEM_ARRAYCOPY_CODE_LOCATION, srcArray, srcPos, dstArray, dstPos, length)
+            memoryTracker!!.interceptArrayCopy(threadId, UNKNOWN_CODE_LOCATION, srcArray, srcPos, dstArray, dstPos, length)
         }
     }
 
@@ -2714,9 +2714,6 @@ private fun TracePoint.isActorMethodCallTracePoint() =
 
 // represents an unknown code location
 internal const val UNKNOWN_CODE_LOCATION = -1
-
-// currently the exact place of System.arraycopy is not known
-internal const val SYSTEM_ARRAYCOPY_CODE_LOCATION = -2
 
 private val PLACEHOLDER_MAIN_THREAD = Thread()
 

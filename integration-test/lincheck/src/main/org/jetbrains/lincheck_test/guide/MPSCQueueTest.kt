@@ -35,7 +35,7 @@ class MPSCQueueTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
 
-    @Ignore("We need to add loop detectors for this test")
+    @Ignore("We need to support loop detection for this test")
     @Test
     fun eventStructureModelCheckingTest() = ModelCheckingOptions().useExperimentalModelChecking().check(this::class)
 }

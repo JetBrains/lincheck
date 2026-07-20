@@ -31,8 +31,8 @@ import java.lang.ref.WeakReference
 
 internal class EventStructureObjectTracker(
     private val eventStructure: EventStructure,
-    private val currentThreadIdCallback: () -> ThreadId,
-): BaseObjectTracker() {
+    private val currentThreadIdCallback: CurrentThreadIdCallback,
+) : BaseObjectTracker() {
 
     override val shouldTrackImmutableValues: Boolean = true
 
@@ -98,7 +98,7 @@ internal class EventStructureObjectTracker(
                 allocation = initEvent!!
             )
         } else {
-            // NOTE: currently, some for some parts of the code a thread id of -1 represents an invalid threadID value.
+            // NOTE: currently, a thread id of -1 represents an invalid threadID value.
             //   But for eventStructure it might happen that we call this function when the very first threads are being set up,
             //   so in that case we would want to default to the mainThreadID instead
             var iThread = currentThreadIdCallback()

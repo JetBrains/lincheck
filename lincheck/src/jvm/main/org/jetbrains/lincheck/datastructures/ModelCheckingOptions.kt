@@ -37,7 +37,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
         return this
     }
 
-    val isExperimentalModelCheckingEnabled: Boolean
+    internal val isExperimentalModelCheckingEnabled: Boolean
         get() = experimentalModelChecking
 
 

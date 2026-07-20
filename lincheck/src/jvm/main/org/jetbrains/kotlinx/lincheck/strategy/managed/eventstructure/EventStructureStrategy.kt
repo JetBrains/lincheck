@@ -517,6 +517,7 @@ internal class EventStructureStrategy(
 }
 
 internal typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
+internal typealias CurrentThreadIdCallback = () -> ThreadId
 internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason?) -> Unit
 
 private class EventStructureMemoryTracker(

@@ -15,6 +15,7 @@ internal data class LincheckSettings(
     val loopIterationsBeforeThreadSwitch: Int = DEFAULT.loopIterationsBeforeThreadSwitch,
     val loopBound: Int = DEFAULT.loopBound,
     val recursionBound: Int = DEFAULT.recursionBound,
+    val useExperimentalModelChecking: Boolean = false,
 ) {
     companion object {
         val DEFAULT = LincheckSettings(
@@ -22,6 +23,7 @@ internal data class LincheckSettings(
             loopIterationsBeforeThreadSwitch = 10,
             loopBound = 50,
             recursionBound = 20,
+            useExperimentalModelChecking = false,
         )
     }
 }
