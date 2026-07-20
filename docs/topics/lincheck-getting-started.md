@@ -59,7 +59,7 @@ dependencies {
          <dependency>
              <groupId>org.jetbrains.lincheck</groupId>
              <artifactId>lincheck</artifactId>
-             <version>${lincheck.version}</version>
+             <version>%lincheckVersion%</version>
              <scope>test</scope>
          </dependency>
          <dependency>
