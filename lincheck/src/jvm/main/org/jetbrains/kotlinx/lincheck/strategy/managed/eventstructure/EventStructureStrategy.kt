@@ -703,8 +703,8 @@ private class EventStructureMemoryTracker(
     }
 
     override fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) {
-        val srcType = srcArray!!.javaClass.kotlin.getArrayElementType()
-        val dstType = dstArray!!.javaClass.kotlin.getArrayElementType()
+        val srcType = srcArray!!.getArrayElementType()
+        val dstType = dstArray!!.getArrayElementType()
         for (i in 0 until length) {
             val readLocation  = objectTracker.getArrayAccessMemoryLocation(srcArray, srcPos + i, srcType)
             val writeLocation = objectTracker.getArrayAccessMemoryLocation(dstArray, dstPos + i, dstType)

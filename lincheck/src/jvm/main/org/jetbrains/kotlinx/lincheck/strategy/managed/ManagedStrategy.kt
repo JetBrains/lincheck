@@ -1348,7 +1348,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
         if (memoryTracker != null) {
-            val type = array.javaClass.kotlin.getArrayElementType()
+            val type = array.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             // TODO: Should we use threadID or thread Descriptor here?
             memoryTracker!!.beforeRead(threadId, codeLocation, location, MemoryOrdering.PLAIN)
@@ -1519,7 +1519,7 @@ internal abstract class ManagedStrategy(
         }
         traceCollector?.addTracePointInternal(tracePoint)
         if (memoryTracker != null) {
-            val type = array.javaClass.kotlin.getArrayElementType()
+            val type = array.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             memoryTracker!!.beforeWrite(threadId, codeLocation, location, MemoryOrdering.PLAIN, value)
         }
