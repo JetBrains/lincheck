@@ -1642,6 +1642,7 @@ internal abstract class ManagedStrategy(
         params: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
+        // Handle atomic access
         if (owner == null || atomicMethodDescriptor == null) return
         val info = atomicMethodDescriptor.getAtomicAccessInfo(context, owner, params)
         when (info.location) {
@@ -1735,12 +1736,19 @@ internal abstract class ManagedStrategy(
             threadScheduler.abortCurrentThread()
         }
 
-        val methodCallInfo = MethodCallInfo(
-            ownerType = Types.ObjectType(methodDescriptor.className),
-            methodSignature = methodDescriptor.methodSignature,
-            codeLocation = codeLocation,
-            methodId = methodId,
-        )
+        // Handle array copy
+        if(receiver == null && methodDescriptor.className == "java.lang.System" && methodDescriptor.methodName == "arraycopy") {
+            val threadId = threadScheduler.getCurrentThreadId()
+            memoryTracker!!.interceptArrayCopy(
+                threadId,
+                UNKNOWN_CODE_LOCATION,
+                params[0],
+                params[1] as Int,
+                params[2],
+                params[3] as Int,
+                params[4] as Int,
+            )
+        }
 
         var shouldInterceptAtomicMethod: Boolean = false
         if (memoryTracker != null && atomicMethodDescriptor != null && receiver != null) {
@@ -1762,6 +1770,12 @@ internal abstract class ManagedStrategy(
             )
         }
 
+        val methodCallInfo = MethodCallInfo(
+            ownerType = Types.ObjectType(methodDescriptor.className),
+            methodSignature = methodDescriptor.methodSignature,
+            codeLocation = codeLocation,
+            methodId = methodId,
+        )
         // obtain deterministic method descriptor if required
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
 
