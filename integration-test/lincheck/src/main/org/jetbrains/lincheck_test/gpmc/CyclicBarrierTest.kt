@@ -33,9 +33,9 @@ class CyclicBarrierTest {
     }
 
     @Test
-    fun testBarrier() = runConcurrentTest(10000, false, block)
+    fun testBarrier() = runConcurrentTest(10000,  block)
 
     @Ignore("Times out")
     @Test
-    fun testBarrierEventStructure() = runConcurrentTest(10000, true, block)
+    fun testBarrierEventStructure() = runConcurrentTest(10000,  block)
 }

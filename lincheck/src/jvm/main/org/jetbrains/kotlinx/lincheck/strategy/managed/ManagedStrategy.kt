@@ -1737,7 +1737,7 @@ internal abstract class ManagedStrategy(
         }
 
         // Handle array copy
-        if(receiver == null && methodDescriptor.className == "java.lang.System" && methodDescriptor.methodName == "arraycopy") {
+        if(receiver == null && methodDescriptor.className == "java.lang.System" && methodDescriptor.methodName == "arraycopy" && memoryTracker != null) {
             val threadId = threadScheduler.getCurrentThreadId()
             memoryTracker!!.interceptArrayCopy(
                 threadId,

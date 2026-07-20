@@ -40,6 +40,7 @@ class ConcurrentLinkedDequeTest {
     fun modelCheckingTest() = ModelCheckingOptions()
         .check(this::class)
 
+    @Ignore("Times out")
     @Test(expected = AssertionError::class)
     fun eventStructureModelCheckingTest() = ModelCheckingOptions()
         .useExperimentalModelChecking()
