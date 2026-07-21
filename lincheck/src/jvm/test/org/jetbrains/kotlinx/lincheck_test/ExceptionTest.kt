@@ -184,6 +184,7 @@ class CoroutineResumedWithExceptionTest : AbstractLincheckTest(IncorrectResultsF
     }
 
     override fun <O : Options<O, *>> O.customize() {
+        ignoreExperimentalModelChecking() // NOTE: Coroutines not supported for event-structure
         iterations(0)
         addCustomScenario(scenario)
         minimizeFailedScenario(false)
