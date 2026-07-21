@@ -10,11 +10,11 @@ Follows the [agents.md](https://agents.md/) convention; `CLAUDE.md` just imports
 | [`bootstrap/`](bootstrap/) | Java classes loaded into `sun.nio.ch.lincheck` so they're visible from any classloader. JDK 8-compatible. |
 | [`common/`](common/) | ASM helpers, `LoggingLevel`, shared utilities. |
 | [`trace/`](trace/) | Binary trace format + reader/writer (eager + lazy). |
-| [`tracer/`](tracer/) | Instrumentation engine on ByteBuddy + ASM. |
-| [`jvm-agent/`](jvm-agent/) | `premain`/`agentmain`; installs the class-file transformer. |
+| [`tracer/`](tracer/) | Runtime tracing engine shared by the agents: `premain`/`agentmain` scaffolding, tracing sessions, event tracking ([AGENTS.md](tracer/AGENTS.md)). |
+| [`jvm-agent/`](jvm-agent/) | Bytecode-instrumentation machinery: class-file transformer + ASM method transformers. |
 | [`lincheck/`](lincheck/) | Lincheck framework: `LinChecker`, strategies, runners, verifiers. |
 | [`trace-recorder/`](trace-recorder/) | JVM agent that records execution traces (stream or dump). |
-| [`live-debugger/`](live-debugger/) | JVM agent for dynamic, non-suspending breakpoints. |
+| [`live-debugger/`](live-debugger/) | JVM agent for dynamic, non-suspending breakpoints ([AGENTS.md](live-debugger/AGENTS.md)). |
 | [`integration-test/`](integration-test/) | `lincheck/` (JCTools etc.), `trace-recorder/` (real-world project recordings), `live-debugger/` (end-to-end coverage). |
 
 ## Build
