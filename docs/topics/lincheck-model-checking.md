@@ -45,7 +45,7 @@ Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, O
 | -------- |
 ```
 
-Some sources of non-determinism can be controlled by Lincheck, while others are either restricted for usage or 
+Some sources of non-determinism are controlled by Lincheck, while others are either restricted for usage or 
 might produce an unexpected test failure.
 
 ### Controlled sources of non-determinism
@@ -58,55 +58,63 @@ When running a test with the model checking strategy, Lincheck controls the foll
 * **Random number generators** – Lincheck fixes the random seed.
 * **Identity hash codes** – Lincheck fixes the [identity hash codes](https://docs.oracle.com/javase/8/docs/api/java/lang/System.html#identityHashCode-java.lang.Object) 
   of objects.
-* **Time API calls** – Lincheck returns a [predefined constant](#time-api-calls) when calling `java.lang.System.nanoTime()` 
-  or `java.lang.System.currentTimeMillis()`.
+* **Time API calls** – Lincheck intercepts the time API calls and [returns deterministic results](#time-api-calls).
 * **Global variables** – Lincheck resets the values of global variables between invocations in model checking tests:
 
   ```kotlin
+  @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
   class GlobalVariableResetTest {
       companion object {
-          private var atomicInt = AtomicInteger(1)
+          private var atomicInt = AtomicInteger(0)
       }
- 
-      @Operation
-      fun modifyInt() {
-          atomicInt.getAndIncrement()
-      }
- 
-      // The value of `atomicInt` is accumulating between the invocations
-      // in a regular test
+  
       @Test
+      @Order(1)
+      fun modelCheckingTest() = Lincheck.runConcurrentTest {
+          val t1 = thread { atomicInt.getAndIncrement() }
+          val t2 = thread { atomicInt.getAndIncrement() }
+  
+          t1.join()
+          t2.join()
+  
+          check(atomicInt.get() == 2)
+      }
+  
+      @Test
+      @Order(2)
+      fun resetAfterModelCheckingTest() {
+          // Verify `atomicInt` has been reset to 0 after `modelCheckingTest()`
+          check(atomicInt.get() == 0)
+      }
+  
+      @Test
+      @Order(3)
       fun regularIncTest() {
-          run {
-              modifyInt()
-              modifyInt()
-          }
-          run {
-              modifyInt()
-              modifyInt()
-          }
-          check(atomicInt.get() == 5)
+          atomicInt.getAndIncrement()
+          check(atomicInt.get() == 1)
       }
- 
-      // In a model checking test, the value of `atomicInt` is reset
-      // between the invocations    
+  
       @Test
-      fun modelCheckingTest() = ModelCheckingOptions()
-          .check(this::class)
+      @Order(4)
+      fun valuePersistsAfterRegularIncTest() {
+          // Verify `atomicInt` still holds 1 after `regularIncTest()`
+          check(atomicInt.get() == 1)
+      }
   }
   ```
 
 ### Uncontrolled sources of non-determinism
 
-Lincheck is not able to control the following sources of non-determinism:
+Lincheck does not control the following sources of non-determinism:
 
 * **Thread-local variables** – Lincheck does not reset thread-local variables between the invocations of a test as it 
   does with global variables. See an example of an error caused by the usage of thread-local variables and a workaround 
   in a [dedicated section](#thread-local-variables).
 * **Weak references** – Lincheck does not control when a garbage collector removes objects that are only referenced 
-  by weak references. Calling `get()` on such objects produces a non-deterministic result which is treated as invalid 
-  by Lincheck.
-* **I/O API calls** – Lincheck does not support calls to I/O APIs, including operations on files, sockets, and networks. 
+  by weak references. Calling `get()` on such objects produces non-deterministic results. The test might pass successfully 
+  despite the use of weak references, but if Lincheck encounters an [inconsistency between the runs of the same test](#deterministic-exploration),
+  it will raise a non-determinism error.
+* **I/O API calls** – Lincheck does not support calls to I/O APIs, including operations on files and sockets. 
   Calling I/O APIs leads to `java.lang.IllegalStateException`. See an example in a [dedicated section](#i-o-api-calls).
 
 ## Bounded exploration
@@ -147,23 +155,25 @@ effects. For example, a missing `@Volatile` modifier might produce a bug caused 
 which cannot be caught by Lincheck’s model checker:
 
 ```kotlin
-class Example {
-   var x = 0 // Not @Volatile
-   var y = 0 // Not @Volatile
+class RelaxedMemoryModelTest {
+    var x = 0 // Not @Volatile
+    var y = 0 // Not @Volatile
 
-   fun thread1() {
-       x = 1
-       y = 1
-   }
-
-   fun thread2() {
-       if (y == 1 && x == 0) {
-           // Code in this block might be executed on real hardware because of
-           // store buffer and compiler reordering.
-           // Lincheck cannot model this behavior with model checking.
-           error("Unreachable under sequential consistency")
-       }
-   }
+    @Test
+    fun modelCheckingTest() = Lincheck.runConcurrentTest {
+        thread {
+            x = 1
+            y = 1
+        }
+        thread {
+            if (y == 1 && x == 0) {
+                // Code in this block might be executed on real hardware because of
+                // store buffer and compiler reordering.
+                // Lincheck cannot model this behavior with model checking.
+                error("Unreachable under sequential consistency")
+           }
+        }
+    }
 }
 ```
 
@@ -191,36 +201,36 @@ concurrent scenario.
  <tab id="coroutines" title="Coroutines">
      <code-block lang="Kotlin">
 class FixedThreadPoolTest {
- @Test
- fun test() = Lincheck.runConcurrentTest {
-     val dispatcher = Executors.newFixedThreadPool(nThreads).asCoroutineDispatcher()
-     runBlocking(dispatcher) {
-         val coro = launch() {
-             while (isActive) { /* ... */ }
-         }
-         coro.cancel()
-         coro.join()
-     }
- }
+    @Test
+    fun test() = Lincheck.runConcurrentTest {
+        val dispatcher = Executors.newFixedThreadPool(nThreads).asCoroutineDispatcher()
+        runBlocking(dispatcher) {
+            val coro = launch() {
+                while (isActive) { /* ... */ }
+            }
+            coro.cancel()
+            coro.join()
+        }
+    }
 }
 </code-block>
  </tab>
  <tab id="forkjoinpool" title="ForkJoinPool">
      <code-block lang="Kotlin">
 class FixedThreadPoolTest {
- @Test
- fun test() = Lincheck.runConcurrentTest {
-     val executorService = Executors.newFixedThreadPool(nThreads)
-     try {
-         val task = object : Runnable { /* ... */ }
-         val future1 = executorService.submit(task)
-         val future2 = executorService.submit(task)
-         future1.get()
-         future2.get()
-     } finally {
-         executorService.shutdown()
-     }
- }
+    @Test
+    fun test() = Lincheck.runConcurrentTest {
+        val executorService = Executors.newFixedThreadPool(nThreads)
+        try {
+            val task = object : Runnable { /* ... */ }
+            val future1 = executorService.submit(task)
+            val future2 = executorService.submit(task)
+            future1.get()
+            future2.get()
+        } finally {
+            executorService.shutdown()
+        }
+    }
 }
 </code-block>
  </tab>
@@ -233,59 +243,45 @@ class FixedThreadPoolTest {
 {style="tip"}
 
 Lincheck does not reset thread-local variables during multiple invocations of the same scenario (unlike it does 
-with [global variables](#controlled-sources-of-non-determinism)). This leads to non-deterministic results which 
-are [treated as invalid by Lincheck](#deterministic-exploration).
+with [global variables](#controlled-sources-of-non-determinism)). This leads to inconsistencies between the runs of the same test.
 
 Example:
 
 ```kotlin
 class ThreadLocalVariableTest {
-  @Operation
-  fun inc(): Int {
-      return getLocalCounter().getAndIncrement()
-  }
+    @Test
+    fun modelCheckingTest() = Lincheck.runConcurrentTest {
+        var counter = getLocalCounter()
+        var t = thread { counter.getAndIncrement() }
+        t.join()
+        check(counter.get() == 1)
+    }
 
-  @Test
-  fun modelCheckingTest() = ModelCheckingOptions()
-      .iterations(0)
-      .addCustomScenario {
-          parallel {
-              thread {
-                  actor(::inc)
-              }
-          }
-      }
-      .check(this::class)
-
-  private fun getLocalCounter() = localCounter.get()
+    private fun getLocalCounter() = localCounter.get()
 }
 
 // Using ThreadLocal to create a variable leads to a failed test
 private val localCounter: ThreadLocal<AtomicInteger> = ThreadLocal.withInitial {
-  AtomicInteger(1)
+    AtomicInteger(0)
 }
 ```
 
-Use of `ThreadLocal` causes Lincheck to report a non-determinism error because the value of the counter accumulates 
-across scenario invocations:
+This test fails with an error because the value of the counter accumulates across scenario invocations:
 
 ```text
-Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).
-== Reporting the first execution without execution trace ==
-= Invalid execution results =
-| -------- |
-| Thread 1 |
-| -------- |
-| inc(): 2 |
-| -------- |
-
-== Reporting the second execution ==
-= Invalid execution results =
-| -------- |
-| Thread 1 |
-| -------- |
-| inc(): 3 |
-| -------- |
+| ---------------------------------------------------------------------------------------- |
+|                   Main Thread                   |                Thread 1                |
+| ---------------------------------------------------------------------------------------- |
+| getLocalCounter(): AtomicInteger#1              |                                        |
+| thread(block = Lambda#1): Thread#1              |                                        |
+| switch (reason: waiting for Thread 1 to finish) |                                        |
+|                                                 | run()                                  |
+|                                                 |   counter ➜ AtomicInteger#1            |
+|                                                 |   AtomicInteger#1.getAndIncrement(): 2 |
+| Thread#1.join()                                 |                                        |
+| counter.element ➜ AtomicInteger#1               |                                        |
+| AtomicInteger#1.get(): 3                        |                                        |
+| ---------------------------------------------------------------------------------------- |
 ```
 
 #### Workaround {id="workaround-thread-local-variables"}
@@ -294,13 +290,13 @@ Create thread-local variables manually by storing values in a `ConcurrentHashMap
 
 ```kotlin
 class ThreadLocalVariableTest {
- val threadLocalCounters = ConcurrentHashMap<Long, AtomicInteger>()
+    val threadLocalCounters = ConcurrentHashMap<Long, AtomicInteger>()
+  
+    // ...
 
- // ...
-
- private fun getLocalCounter() = threadLocalCounters.computeIfAbsent(Thread.currentThread().id) {
-     AtomicInteger(1)
- }
+    private fun getLocalCounter() = threadLocalCounters.computeIfAbsent(Thread.currentThread().id) {
+        AtomicInteger(0)
+    }
 }
 ```
 
@@ -314,7 +310,9 @@ avoiding the accumulation problem.
 {style="tip"}
 
 Lincheck does not control when a garbage collector removes objects that are only referenced by weak references.
-Calling `get()` on such objects produces non-deterministic results, which are [treated as invalid by Lincheck](#deterministic-exploration).
+Calling `get()` on such objects produces non-deterministic results. The test might pass successfully despite the use
+of weak references, but if Lincheck encounters an [inconsistency between the runs of the same test](#deterministic-exploration), 
+it will raise a non-determinism error.
 
 ### Time API calls
 
@@ -323,7 +321,7 @@ Calling `get()` on such objects produces non-deterministic results, which are [t
 {style="tip"}
 
 Lincheck models calls of `java.lang.System.nanoTime()` and `java.lang.System.currentTimeMillis()` by always returning
-a predefined constant to prevent non-deterministic results, which are [treated as invalid by Lincheck](#deterministic-exploration).
+a predefined constant to [prevent inconsistencies between the runs of the same test](#deterministic-exploration).
 
 This approach might not correctly model timeouts, elapsed-time comparisons, rate-limiting, or other intended behavior.
 
@@ -333,24 +331,24 @@ This approach might not correctly model timeouts, elapsed-time comparisons, rate
 >
 {style="tip"}
 
-Lincheck does not support calls to I/O APIs, including operations on files, sockets, and networks, because it might 
-produce non-deterministic results, which are [treated as invalid by Lincheck](#deterministic-exploration).
+Lincheck does not support calls to I/O APIs, including operations on files and sockets to [prevent inconsistencies 
+between the runs of the same test](#deterministic-exploration).
 
 Calling I/O APIs leads to `java.lang.IllegalStateException`:
 
 ```kotlin
 class FilesCreateTempFileTest {
-   @Operation
-   fun operation(): List<String> = List(10) {
-       val tempFile = Files.createTempFile("test-prefix", ".txt")
-       require(Files.exists(tempFile)) { "File was not created: $tempFile" }
-       tempFile.toString()
-   }
+    @Operation
+    fun operation(): List<String> = List(10) {
+        val tempFile = Files.createTempFile("test-prefix", ".txt")
+        require(Files.exists(tempFile)) { "File was not created: $tempFile" }
+        tempFile.toString()
+    }
 
-   // The test fails with the following error message:
-   // "java.lang.IllegalStateException: File operations are not supported in Lincheck"
-   @Test
-   fun modelChecking() = ModelCheckingOptions().check(this::class)
+    // The test fails with the following error message:
+    // "java.lang.IllegalStateException: File operations are not supported in Lincheck"
+    @Test
+    fun modelChecking() = ModelCheckingOptions().check(this::class)
 }
 ```
 
