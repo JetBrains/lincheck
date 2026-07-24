@@ -28,6 +28,7 @@ import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.rules.TestName
 import kotlin.reflect.jvm.javaMethod
 import org.jetbrains.lincheck.util.UnsafeHolder
+import java.util.Arrays
 import kotlin.concurrent.thread
 
 class ArrayCopyTest {
@@ -320,6 +321,54 @@ class ArrayCopyTest {
             t2.join()
 
             res.map { if (it == null) null else it[0] }.toList()
+        }
+    }
+
+    // TODO: Probably should add tests for every flavour of copyOf and copyOfRange
+    @Test
+    fun testArraysCopyOfIntercepted() {
+        val outcomes = setOf(0, 1)
+        litmusTest(assertSame(outcomes)) {
+            var a = IntArray(0)
+            val x = AtomicInteger(0)
+            var r1 = -1;
+            val t1 = thread {
+                a = Arrays.copyOf(a, 2)
+                r1 = x.get()
+            }
+
+            val t2 = thread {
+                x.set(1)
+            }
+
+            t1.join()
+            t2.join()
+
+            r1
+        }
+    }
+
+    @Test
+    fun testArraysCopyOfRangeIntercepted() {
+        val outcomes = setOf(0, 1)
+        litmusTest(assertSame(outcomes)) {
+            var a = IntArray(2)
+            val x = AtomicInteger(0)
+            var r1 = -1;
+
+            val t1 = thread {
+                a = Arrays.copyOfRange(a, 1, 2)
+                r1 = x.get()
+            }
+
+            val t2 = thread {
+                x.set(1)
+            }
+
+            t1.join()
+            t2.join()
+
+            r1
         }
     }
 }
