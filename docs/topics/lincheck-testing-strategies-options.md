@@ -139,9 +139,7 @@ executed sequentially.
 <tr>
     <td><code>verifierClass</code></td>
     <td><code>LinearizabilityVerifier</code></td>
-    <td>The verifier class used during the verification process:
-        <!-- TODO: uncomment after the article is published
-        <a href="lincheck-results-validation.md#verification-properties">verification process</a>:-->
+    <td>The verifier class used during the <a href="lincheck-results-validation.md#verification-models">verification process</a>:
         <list>
             <li><code>LinearizabilityVerifier</code></li>
             <li><code>SerializabilityVerifier</code></li>
@@ -151,7 +149,7 @@ executed sequentially.
     <td><code>sequentialSpecification</code></td>
     <td>Same as the tested data structure.</td>
     <td>The sequential version of the tested data structure. This structure is used during the
-        <a href="sequential-specification.md">verification process</a>.</td>
+        <a href="lincheck-results-validation.md">verification process</a>.</td>
 </tr>
 </table>
 
@@ -240,4 +238,4 @@ Lincheck's execution scenarios.
 
 * [Configuring operation execution options](lincheck-operation-execution-options.md)
 * [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
-* [Defining a sequential specification of an algorithm](sequential-specification.md)
+* [Defining a sequential specification of an algorithm](lincheck-results-validation.md)

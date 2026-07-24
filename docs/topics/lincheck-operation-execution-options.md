@@ -216,4 +216,4 @@ moment it actually processes the result:
 ## See also
 
 * [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
-* [Defining sequential specification of the algorithm](sequential-specification.md)
+* [Defining sequential specification of the algorithm](lincheck-results-validation.md)

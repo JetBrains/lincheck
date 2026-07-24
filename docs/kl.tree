@@ -12,7 +12,7 @@
             <toc-element topic="lincheck-argument-generation-constraints.md" accepts-web-file-names="operation-arguments.html"/>
             <toc-element topic="lincheck-operation-execution-options.md" accepts-web-file-names="constraints.html"/>
             <toc-element topic="lincheck-progress-guarantees.md" accepts-web-file-names="progress-guarantees.html"/>
-            <toc-element topic="sequential-specification.md"/>
+            <toc-element topic="lincheck-results-validation.md" accepts-web-file-names="sequential-specification.html"/>
         </toc-element>
 	</snippet>
 </instance-profile>
