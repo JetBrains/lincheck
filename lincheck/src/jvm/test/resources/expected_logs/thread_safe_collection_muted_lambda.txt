@@ -23,5 +23,6 @@ Detailed trace:
 |       baseCount.compareAndSetLong(0, 1): true at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2327)                                                                        |
 |     a ➜ 7 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:58)                                                                           |
 |     a = 8 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:58)                                                                           |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:59)          |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -11,9 +11,9 @@
 package org.jetbrains.trace.recorder.test.runner
 
 import AbstractGradleTraceIntegrationTest
+import withPermissions
 import java.io.File
 import java.nio.file.Paths
-import kotlin.io.path.createTempFile
 
 abstract class KotlinCompilerTraceRecorderJsonTests : AbstractGradleTraceIntegrationTest() {
     override val projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString()
@@ -38,20 +38,4 @@ abstract class KotlinCompilerTraceRecorderJsonTests : AbstractGradleTraceIntegra
         packageName = "org.jetbrains.trace.recorder.test.impl.generated",
         classNameSuffix = "TraceRecorderJsonIntegrationTests",
     )
-}
-
-private fun <T> withPermissions(block: (File) -> T): T {
-    val permissions = createTempFile("permissions", "txt").toFile()
-    return try {
-        permissions.writeText(
-            """
-                    grant codeBase "file:/-" {
-                        permission java.security.AllPermission;
-                    };
-                """.trimIndent()
-        )
-        block(permissions)
-    } finally {
-        permissions.delete()
-    }
 }

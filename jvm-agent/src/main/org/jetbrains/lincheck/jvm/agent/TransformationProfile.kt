@@ -277,7 +277,7 @@ object StressDefaultTransformationProfile : TransformationProfile {
     override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
         val config = TransformationConfiguration()
 
-        if (methodName == "<clinit>" || methodName == "<init>") {
+        if (methodName == "<clinit>") {
             return config
         }
 
@@ -429,22 +429,13 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
             }
         }
 
-        // Currently, constructors are treated in a special way to avoid problems
-        // with `VerificationError` due to leaking this problem,
-        // see: https://github.com/JetBrains/lincheck/issues/424
-        if (methodName == "<init>") {
-            return config.apply {
-                trackObjectCreations = true
-                trackAllSharedMemoryAccesses = true
-            }
-        }
-
         return config.apply {
             trackObjectCreations = true
 
             trackAllSharedMemoryAccesses = true
 
             trackMethodCalls = true
+            trackConstructorCalls = true
             trackInlineMethodCalls = true
             interceptMethodCallResults = true
 
@@ -549,16 +540,6 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
         if (ideaPluginEnabled && isToStringMethod(methodName, descriptor)) {
             return config.apply {
                 trackObjectCreations = true
-            }
-        }
-
-        // Currently, constructors are treated in a special way to avoid problems
-        // with `VerificationError` due to leaking this problem,
-        // see: https://github.com/JetBrains/lincheck/issues/424
-        if (methodName == "<init>") {
-            return config.apply {
-                trackObjectCreations = true
-                trackAllSharedMemoryAccesses = true
             }
         }
 
@@ -702,8 +683,8 @@ private fun shouldNotInstrument(className: String, methodName: String, descripto
     // Do not instrument `MethodHandles` constructors.
     if (isMethodHandleRelatedClass(className) && methodName == "<init>")
         return true
-    // Instrumentation of `java.util.Arrays` class causes some subtle flaky bugs.
-    // See details in https://github.com/JetBrains/lincheck/issues/717.
+    // Instrumentation of `java.util.Arrays` class causes
+    // some subtle flaky bugs, see details in https://github.com/JetBrains/lincheck/issues/717.
     if (isJavaUtilArraysClass(className))
         return true
     // Do not instrument coroutines' internal machinery.

@@ -18,14 +18,28 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | operation()                                                                                                                                            |
 |   wrapper ➜ IntWrapper#1 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:25)                                         |
+|   IntWrapper.<init>(2): IntWrapper#2 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:25)                             |
+|     Object.<init>(): IntWrapper#2 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                           |
 |   wrapper.compareAndSet(IntWrapper#1, IntWrapper#2): true at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:25)        |
+|   IntWrapper.<init>(3): IntWrapper#3 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:26)                             |
+|     Object.<init>(): IntWrapper#3 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                           |
 |   wrapper.set(IntWrapper#3) at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:26)                                      |
 |   wrapper ➜ IntWrapper#3 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:28)                                         |
+|   IntWrapper.<init>(2): IntWrapper#4 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:28)                             |
+|     Object.<init>(): IntWrapper#4 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                           |
 |   staticWrapper.compareAndSet(IntWrapper#3, IntWrapper#4): false at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:28) |
+|   IntWrapper.<init>(3): IntWrapper#5 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:29)                             |
+|     Object.<init>(): IntWrapper#5 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                           |
 |   staticWrapper.set(IntWrapper#5) at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:29)                                |
 |   array ➜ Array<IntWrapper>#1 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:31)                                    |
+|   IntWrapper.<init>(1): IntWrapper#6 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:31)                             |
+|     Object.<init>(): IntWrapper#6 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                           |
+|   IntWrapper.<init>(2): IntWrapper#7 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:31)                             |
+|     Object.<init>(): IntWrapper#7 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                           |
 |   array[1].compareAndSet(IntWrapper#6, IntWrapper#7): false at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:31)      |
 |   array ➜ Array<IntWrapper>#1 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:32)                                    |
+|   IntWrapper.<init>(1): IntWrapper#8 at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:32)                             |
+|     Object.<init>(): IntWrapper#8 at IntWrapper.<init>(UnsafeUpdaterVarHandleTraceRepresentationTests.kt:86)                                           |
 |   array[1].set(IntWrapper#8) at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:32)                                     |
 |   valueWrapper.value.compareAndSet(1, 2): true at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:34)                   |
 |   valueWrapper.value.set(3) at VarHandleReferenceRepresentationTest.operation(VarHandleRepresentationTests.kt:35)                                      |

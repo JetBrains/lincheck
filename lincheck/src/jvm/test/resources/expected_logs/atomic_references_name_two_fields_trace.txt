@@ -13,13 +13,15 @@ The following interleaving leads to the error:
 | ----------- |
 
 Detailed trace:
-| -------------------------------------------------------------------------------------------------------------------------------------------- |
-|                                                                   Thread 1                                                                   |
-| -------------------------------------------------------------------------------------------------------------------------------------------- |
-| operation()                                                                                                                                  |
-|   atomicReference1 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:97)                 |
-|   atomicReference2 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:97)                 |
-|   atomicReference1.get(): Node#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:97)                       |
-|   atomicReference1.compareAndSet(Node#1, Node#2): true at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:97) |
-|   result: void                                                                                                                               |
-| -------------------------------------------------------------------------------------------------------------------------------------------- |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                       Thread 1                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                           |
+|   atomicReference1 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:76)                          |
+|   atomicReference2 ➜ AtomicReference#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:76)                          |
+|   atomicReference1.get(): Node#1 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:76)                                |
+|   AtomicReferencesFromMultipleFieldsTest.Node.<init>(2): Node#2 at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:76) |
+|     Object.<init>(): Node#2 at AtomicReferencesFromMultipleFieldsTest.Node.<init>(AtomicReferencesNamesTests.kt:79)                                   |
+|   atomicReference1.compareAndSet(Node#1, Node#2): true at AtomicReferencesFromMultipleFieldsTest.operation(AtomicReferencesNamesTests.kt:76)          |
+|   result: void                                                                                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- |

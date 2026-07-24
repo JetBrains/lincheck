@@ -21,7 +21,6 @@ import org.jetbrains.lincheck.descriptors.toType
 import org.jetbrains.lincheck.descriptors.FieldKind
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
-import org.jetbrains.lincheck.util.isInTraceRecorderMode
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*
 
@@ -48,10 +47,7 @@ internal class SharedMemoryAccessTransformer(
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
             isCoroutineInternalClass(owner.toCanonicalClassName()) ||
-            isCoroutineStateMachineClass(owner.toCanonicalClassName()) ||
-            // TODO: JBRes-6844 Further investigate constructors support for lincheck.
-            //       In lincheck mode we do not fully support tracking events inside constructor bodies, some tests fail.
-            (!isInTraceRecorderMode && methodName == "<init>" && className == owner)
+            isCoroutineStateMachineClass(owner.toCanonicalClassName())
         ) {
             super.visitFieldInsn(opcode, owner, fieldName, desc)
             return

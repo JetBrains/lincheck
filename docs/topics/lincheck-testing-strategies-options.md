@@ -161,7 +161,7 @@ executed sequentially.
 <tr>
     <td><code>checkObstructionFreedom</code></td>
     <td><code>false</code></td>
-    <td>Set this option to <code>true</code> to verify the <a href="progress-guarantees.md">obstruction-freedom guarantee</a> of the 
+    <td>Set this option to <code>true</code> to verify the <a href="lincheck-progress-guarantees.md">obstruction-freedom guarantee</a> of the 
         data structure operations.<br/><br/>
         This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
 </table>
@@ -233,11 +233,11 @@ fun modelCheckingTest() = ModelCheckingOptions()
 
 ## What’s next
 
-Learn how to [configure argument generation](operation-arguments.md) for operations used in 
+Learn how to [configure argument generation](lincheck-argument-generation-constraints.md) for operations used in 
 Lincheck's execution scenarios.
 
 ## See also
 
 * [Configuring operation execution options](lincheck-operation-execution-options.md)
-* [Checking for non-blocking progress guarantees](progress-guarantees.md)
+* [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
 * [Defining a sequential specification of an algorithm](sequential-specification.md)

@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.collections.*
+import sun.nio.ch.lincheck.Injections
 import sun.nio.ch.lincheck.WeakIdentityReference
 import java.lang.ref.ReferenceQueue
 import java.lang.ref.WeakReference
@@ -227,13 +228,25 @@ fun ObjectID.getObjectHashCode(): Int =
 
 /**
  * Retrieves the unique serial object number for the given object.
+ * If an object is not registered in the tracker, returns -1.
  *
  * @param obj the object for which the object number is to be retrieved.
  * @return the unique object number if the object is registered in the tracker,
  *   or -1 if no entry is associated with the given object.
  */
-fun ObjectTracker.getObjectNumber(obj: Any): Int =
+fun ObjectTracker.getObjectNumberOrDefault(obj: Any): Int =
     get(obj)?.objectNumber ?: -1
+
+/**
+ * Retrieves the unique serial object number for the given object.
+ *
+ * @param obj the object for which the object number is to be retrieved.
+ * @return the unique object number if the object is registered in the tracker.
+ *    Otherwise, throws a NullPointerException exception.
+ *
+ */
+fun ObjectTracker.getObjectNumber(obj: Any): Int =
+    get(obj)!!.objectNumber
 
 /**
  * Retrieves the display number of a given object.
@@ -524,10 +537,12 @@ open class BaseObjectTracker(
     override fun registerObjectLink(fromObject: Any?, toObject: Any?) {}
 
     override fun shouldTrackObject(obj: Any): Boolean =
-        !obj.isPrimitive && (obj.isImmutable implies shouldTrackImmutableValues)
+        obj !== Injections.UNINITIALIZED_THIS &&
+        !obj.isPrimitive &&
+        (obj.isImmutable implies shouldTrackImmutableValues)
 
     override fun shouldTrackObjectAccess(obj: Any?): Boolean =
-        true // track all accesses by default
+        obj !== Injections.UNINITIALIZED_THIS // track all initialized accesses by default
 
     private fun getEntries(objHashCode: IdentityHashCode): List<ObjectEntry>? {
         val entries = objectIndex[objHashCode] ?: return null
@@ -612,8 +627,9 @@ open class BaseObjectTracker(
     }
 
     private fun overwriteIdentityHashCode(obj: Any) {
-        // Zero out the identity hash code in the object header to ensure deterministic behavior.
-        UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, 0)
+        // Use a non-zero identity hash code: zero is treated by HotSpot as "hash not yet set"
+        // and may be overwritten by a later identityHashCode/hashCode call.
+        UnsafeHolder.UNSAFE.putInt(obj, IDENTITY_HASHCODE_OFFSET, DETERMINISTIC_IDENTITY_HASHCODE)
     }
 }
 
@@ -646,3 +662,10 @@ private typealias IdentityHashCode = Int
  *      https://wiki.openjdk.org/display/lilliput/Compact+Identity+Hashcode
  */
 private const val IDENTITY_HASHCODE_OFFSET = 1L
+
+// We use `1` rather than `0` because HotSpot interprets a zero hashcode slot in the object header
+// as "hashCode has not been computed yet" and is then free to overwrite it on the next
+// `Object.hashCode()` / `System.identityHashCode()` call, destroying determinism.
+// Any non-zero value works; `1` is the smallest such value and is also the default placeholder
+// used by other "deterministic hash" patches.
+private const val DETERMINISTIC_IDENTITY_HASHCODE = 1

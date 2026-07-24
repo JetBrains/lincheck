@@ -324,21 +324,7 @@ internal class EventStructure(
 
         val blockedRequests = danglingRequests
             .filter {
-                // TODO: (it.label !is CoroutineSuspendLabel)
-                check(it.label.isRequest) // Dangling requests should probably be requests
-                if (!it.label.isBlocking) return@filter false
-                val nextEvent = execution[it.threadId, it.threadPosition + 1] ?: return@filter false
-                if (nextEvent.parent != it) return@filter false
-                // Maybe it would be nice to somehow keep track of conflicts as they are added in the event structure?
-                // We already compute the conflicting events when they are added.
-                // This way we do not have to compute them here every time
-                val conflicts = getConflictingEvents(
-                    it.threadId,
-                    nextEvent.label,
-                    it,
-                    it.dependencies
-                ).filter { it != nextEvent }
-                return@filter conflicts.isNotEmpty()
+                blockedEvents.values.any { blockedDesc -> blockedDesc.request == it }
             }
 
         frontier.apply {
@@ -591,6 +577,26 @@ internal class EventStructure(
             label is ReadAccessLabel && label.isResponse ->
                 sequenceOf()
 
+            // Non-re-entrant lock-request synchronizes only with non-reentrant unlock event or allocation event that are not pinned
+            (label is LockLabel && !label.isReentry) -> {
+                // We can either sync with the allocation event of the mutex or with one of the unlock events
+                val unlockEventCandidates = sequenceOf(allocationEvent(label.mutexID)!!) +
+                        execution.filter { it.label.refine<UnlockLabel> { !isReentry && mutexID == label.mutexID } != null }
+
+                // But we cannot synch with unlock events that are already being read by a pinned lock response
+                val unlockEventsWithPinnedResponses = execution.mapNotNull {
+                    val nonReentryLockResponseLabel = it.label.refine<LockLabel> { isResponse && !isReentry && mutexID == label.mutexID }
+                    if (nonReentryLockResponseLabel == null) return@mapNotNull null
+                    // Make sure that the corresponding event is pinned
+                    if (!pinnedEvents.contains(it)) return@mapNotNull null
+                    // Get the unlock event this response reads from
+                    it.syncFrom
+                }.toSet()
+
+                // So we need to filter them out
+                unlockEventCandidates.filter { it !in unlockEventsWithPinnedResponses }
+            }
+
             // re-entry lock-request synchronizes only with initializing unlock
             (label is LockLabel && label.isReentry) ->
                 sequenceOf(allocationEvent(label.mutexID)!!)
@@ -815,7 +821,7 @@ internal class EventStructure(
 
     private fun addEvent(iThread: Int, label: EventLabel, dependencies: List<AtomicThreadEvent>): AtomicThreadEvent {
         tryReplayEvent(iThread)?.let { event ->
-            check(event.label == label)
+            check(event.label == label) { "Expected to replay event with label ${event} but got ${label}" }
             addEventToCurrentExecution(event)
             return event
         }
@@ -1066,12 +1072,12 @@ internal class EventStructure(
         return responseEvent
     }
 
-    fun addLockRequestEvent(iThread: Int, mutex: OpaqueValue,
+    fun addLockRequestEvent(iThread: Int, mutex: Any,
                             isReentry: Boolean = false, reentrancyDepth: Int = 1,
                             isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = LockLabel(
             kind = LabelKind.Request,
-            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerObjectIfAbsent(mutex).objectNumber,
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1084,11 +1090,11 @@ internal class EventStructure(
         return addResponseEvents(lockRequest).first
     }
 
-    fun addUnlockEvent(iThread: Int, mutex: OpaqueValue,
+    fun addUnlockEvent(iThread: Int, mutex: Any,
                        isReentry: Boolean = false, reentrancyDepth: Int = 1,
                        isSynthetic: Boolean = false): AtomicThreadEvent {
         val label = UnlockLabel(
-            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerObjectIfAbsent(mutex).objectNumber,
             isReentry = isReentry,
             reentrancyDepth = reentrancyDepth,
             isSynthetic = isSynthetic,
@@ -1096,10 +1102,10 @@ internal class EventStructure(
         return addSendEvent(iThread, label)
     }
 
-    fun addWaitRequestEvent(iThread: Int, mutex: OpaqueValue): AtomicThreadEvent {
+    fun addWaitRequestEvent(iThread: Int, mutex: Any): AtomicThreadEvent {
         val label = WaitLabel(
             kind = LabelKind.Request,
-            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerObjectIfAbsent(mutex).objectNumber,
         )
         return addRequestEvent(iThread, label)
 
@@ -1110,14 +1116,14 @@ internal class EventStructure(
         return addResponseEvents(waitRequest).first
     }
 
-    fun addNotifyEvent(iThread: Int, mutex: OpaqueValue, isBroadcast: Boolean): AtomicThreadEvent {
+    fun addNotifyEvent(iThread: Int, mutex: Any, isBroadcast: Boolean): AtomicThreadEvent {
         // TODO: we currently ignore isBroadcast flag and handle `notify` similarly as `notifyAll`.
         //   It is correct wrt. Java's semantics, since `wait` can wake-up spuriously according to the spec.
         //   Thus multiple wake-ups due to single notify can be interpreted as spurious.
         //   However, if one day we will want to support wait semantics without spurious wake-ups
         //   we will need to revisit this.
         val label = NotifyLabel(
-            mutexID = eventStructureObjectTracker.registerValueIfAbsent(mutex),
+            mutexID = eventStructureObjectTracker.registerObjectIfAbsent(mutex).objectNumber,
             isBroadcast = isBroadcast,
         )
         return addSendEvent(iThread, label)

@@ -12,9 +12,9 @@ package org.jetbrains.live.debugger.test.runner
 
 import AbstractGradleLiveDebuggerIntegrationTest
 import org.jetbrains.trace.recorder.test.runner.TestGenerator
+import withPermissions
 import java.io.File
 import java.nio.file.Paths
-import kotlin.io.path.createTempFile
 
 abstract class KotlinCompilerLiveDebuggerJsonTests : AbstractGradleLiveDebuggerIntegrationTest() {
     override val projectPath = Paths.get("build", "integrationTestProjects", "kotlin").toString()
@@ -26,21 +26,9 @@ abstract class KotlinCompilerLiveDebuggerJsonTests : AbstractGradleLiveDebuggerI
         extraAgentArgs: Map<String, String>,
         commands: List<String>,
         outputFile: File
-    ) {
-        val permissions = createTempFile("permissions", "txt").toFile()
-        try {
-            permissions.writeText(
-                """
-                    grant codeBase "file:/-" {
-                        permission java.security.AllPermission;
-                    };
-                """.trimIndent()
-            )
-            val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + extraJvmArgs
-            super.runTestImpl(testClassName, testMethodName, extraJvmArgs = allJvmArgs, extraAgentArgs, commands, outputFile)
-        } finally {
-            permissions.delete()
-        }
+    ) = withPermissions { permissions ->
+        val allJvmArgs = listOf("-Djava.security.policy==${permissions.absolutePath}") + extraJvmArgs
+        super.runTestImpl(testClassName, testMethodName, extraJvmArgs = allJvmArgs, extraAgentArgs, commands, outputFile)
     }
 
     companion object Companion : TestGenerator(

@@ -10,14 +10,15 @@
 
 package org.jetbrains.lincheck.trace.serialization
 
-import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.TRContainerTracePoint
+import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.collections.SimpleBitmap
 import java.io.DataOutput
 import java.io.DataOutputStream
 import java.io.OutputStream
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicLong
 
 private class InMemoryTraceContextSavedState: SimpleTraceContextSavedState() {
     override val seenClassDescriptors = SimpleBitmap(1024)
@@ -96,8 +97,6 @@ class MemoryTraceCollecting(
     private val context: TraceContext, 
     private val collectFlat: Boolean,
 ): TraceCollectingStrategy {
-    val points = AtomicLong(0)
-
     // `registerCurrentThread` and `tracePointCreated` are called concurrently from worker threads,
     // so structural modifications (new thread registrations) must not race with reads/writes.
     private val _flatListsPerThread = ConcurrentHashMap<Int, MutableList<TRTracePoint>>()
@@ -116,7 +115,6 @@ class MemoryTraceCollecting(
         parent: TRContainerTracePoint?,
         created: TRTracePoint
     ) {
-        points.incrementAndGet()
         parent?.addChild(created)
         if (collectFlat) {
             _flatListsPerThread[created.threadId]?.add(created)
@@ -130,7 +128,6 @@ class MemoryTraceCollecting(
      * Trace collected in memory can be saved by external means, if needed.
      */
     override fun traceEnded() {
-        Logger.info { "Collected ${points.get()} points" }
     }
 }
 

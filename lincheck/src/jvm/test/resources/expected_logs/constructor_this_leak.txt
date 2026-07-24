@@ -1,0 +1,28 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                  Thread 1                                                                   |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                 |
+|   ConstructorDerived.<init>(): ConstructorDerived#1 at ConstructorThisLeakRepresentationTest.operation(ConstructorRepresentationTest.kt:14) |
+|     ConstructorBase.<init>(): ConstructorDerived#1 at ConstructorDerived.<init>(ConstructorRepresentationTest.kt:32)                        |
+|       Object.<init>(): ConstructorDerived#1 at ConstructorBase.<init>(ConstructorRepresentationTest.kt:26)                                  |
+|       INSTANCE.remember(ConstructorDerived#1) at ConstructorBase.<init>(ConstructorRepresentationTest.kt:28)                                |
+|         value = ConstructorDerived#1 at ConstructorRecorder.remember(ConstructorRepresentationTest.kt:22)                                   |
+|     INSTANCE.remember(ConstructorDerived#1) at ConstructorDerived.<init>(ConstructorRepresentationTest.kt:34)                               |
+|       value = ConstructorDerived#1 at ConstructorRecorder.remember(ConstructorRepresentationTest.kt:22)                                     |
+|   result: void                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------- |
