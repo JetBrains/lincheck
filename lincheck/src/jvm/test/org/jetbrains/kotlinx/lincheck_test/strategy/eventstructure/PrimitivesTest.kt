@@ -29,12 +29,9 @@ import org.jetbrains.kotlinx.lincheck.util.CancelledResult
 import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.scenario
-import org.jetbrains.lincheck.util.JdkVersion
-import org.jetbrains.lincheck.util.jdkVersion
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.Rule
-import org.junit.Assume
 import org.junit.rules.TestName
 import kotlin.reflect.jvm.javaMethod
 import org.jetbrains.lincheck.util.UnsafeHolder
@@ -770,59 +767,7 @@ class PrimitivesTest {
 
     }
 
-    //TODO: Ignored for now need to fix monitor tracker in Managed strategy.
-    @Ignore
-    @Test
-    fun testSynchronized() {
-        val read = SynchronizedVariable::read
-        val addAndGet = SynchronizedVariable::addAndGet
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(addAndGet, 1)
-                }
-                thread {
-                    actor(addAndGet, 1)
-                }
-            }
-            post {
-                actor(read)
-            }
-        }
-        val outcomes: Set<Triple<Int, Int, Int>> = setOf(
-            Triple(1, 2, 2),
-            Triple(2, 1, 2)
-        )
-        // TODO: investigate why `executionCount = 3`
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
-            val r1 = getValue<Int>(results.parallelResults[0][0]!!)
-            val r2 = getValue<Int>(results.parallelResults[1][0]!!)
-            val r3 = getValue<Int>(results.postResults[0]!!)
-            Triple(r1, r2, r3)
-        }
-    }
 
-    //TODO: Ignored for now need to fix monitor tracker in Managed strategy.
-    @Ignore
-    @Test
-    fun testWaitNotify() {
-        val writeAndNotify = SynchronizedVariable::writeAndNotify
-        val waitAndRead = SynchronizedVariable::waitAndRead
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(writeAndNotify, 1)
-                }
-                thread {
-                    actor(waitAndRead)
-                }
-            }
-        }
-        val outcomes = setOf(1)
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
-            getValue<Int>(results.parallelResults[1][0]!!)
-        }
-    }
 
     class ParkLatchedVariable {
 
@@ -1523,3 +1468,5 @@ class PrimitivesTest {
         }
     }
 }
+
+

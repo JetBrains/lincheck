@@ -16,8 +16,6 @@ import java.util.concurrent.atomic.AtomicLong
 
 
 class NullTraceCollecting(private val context: TraceContext): TraceCollectingStrategy {
-    val points = AtomicLong(0)
-
     override fun registerCurrentThread(threadId: Int) {
         context.setThreadName(threadId, Thread.currentThread().name)
     }
@@ -27,9 +25,7 @@ class NullTraceCollecting(private val context: TraceContext): TraceCollectingStr
     override fun tracePointCreated(
         parent: TRContainerTracePoint?,
         created: TRTracePoint
-    ) {
-        points.incrementAndGet()
-    }
+    ) {}
 
     override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {}
 
@@ -37,7 +33,5 @@ class NullTraceCollecting(private val context: TraceContext): TraceCollectingStr
      * Do nothing.
      * Trace collected in memory can be saved by external means, if needed.
      */
-    override fun traceEnded() {
-        Logger.info { "Collected ${points.get()} points" }
-    }
+    override fun traceEnded() {}
 }

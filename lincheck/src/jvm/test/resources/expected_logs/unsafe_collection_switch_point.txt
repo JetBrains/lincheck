@@ -41,9 +41,13 @@ Detailed trace:
 |                                                                                               |       resize(): Array<Node>#1 at HashMap.putVal(HashMap.java:627)                             |
 |                                                                                               |       Array<Node>#1[1] ➜ null at HashMap.putVal(HashMap.java:628)                             |
 |                                                                                               |       newNode(1, 1, 2, null): Node#1 at HashMap.putVal(HashMap.java:629)                      |
+|                                                                                               |         HashMap.Node.<init>(1, 1, 2, null): Node#1 at HashMap.newNode(HashMap.java:1901)      |
+|                                                                                               |           Object.<init>(): Node#1 at HashMap.Node.<init>(HashMap.java:287)                    |
 |                                                                                               |       switch                                                                                  |
 | put1(): null                                                                                  |                                                                                               |
 |   hm.put(1, 1): null at UnsafeCollectionSwitchPointTest.put1(StdLibRepresentationTests.kt:86) |                                                                                               |
+|     HashMap.Node.<init>(1, 1, 1, null): Node#2 at HashMap.newNode(HashMap.java:1901)          |                                                                                               |
+|       Object.<init>(): Node#2 at HashMap.Node.<init>(HashMap.java:287)                        |                                                                                               |
 |   result: null                                                                                |                                                                                               |
 |                                                                                               |       Array<Node>#1[1] = Node#1 at HashMap.putVal(HashMap.java:629)                           |
 |                                                                                               |       modCount ➜ 1 at HashMap.putVal(HashMap.java:659)                                        |

@@ -11,8 +11,8 @@
 package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.trace.printing.printPostProcessedTrace
+import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -31,6 +31,7 @@ class TracingSession(
             val startMode: StartMode,
             val startTime: Long,
             val endTime: Long,
+            val points: Int,
         ) : State()
     }
 
@@ -106,6 +107,7 @@ class TracingSession(
             startMode = currentState.startMode,
             startTime = currentState.startTime,
             endTime = endTime,
+            points = eventTracker.collectedPoints
         )
         Logger.debug { "Trace collected in ${endTime - currentState.startTime} ms" }
 
@@ -145,6 +147,7 @@ class TracingSession(
             methodName = methodName ?: "",
             startTime = currentState.startTime,
             endTime = currentState.endTime,
+            points = currentState.points,
         )
 
         val traceWriteStartTime = System.currentTimeMillis()

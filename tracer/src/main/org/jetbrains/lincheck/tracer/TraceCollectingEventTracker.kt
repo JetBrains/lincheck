@@ -12,9 +12,9 @@ package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.LineCodeLocation
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
-import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.SUPER_CONSTRUCTOR_CALL_FLAG
@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger
 private class ThreadData(
     val threadId: Int
 ) {
+    var pointsCollected = 0
+
     data class StackFrame(
         val call: TRMethodCallTracePoint,
         val shadow: ShadowStackFrame,
@@ -167,6 +169,11 @@ class TraceCollectingEventTracker(
     // so store it here too, but use only at the end
     private val threads = ConcurrentHashMap<Thread, ThreadData>()
 
+    // Number of collected points. It is valid only after call to [finishTracing]
+    // and is -1 before
+    var collectedPoints = -1
+        private set
+
     // Assign unique, monotonically increasing ids to threads. Using threads.size for
     // id assignment is racy: two threads starting concurrently can observe the same size
     // and get identical ids, which corrupts the trace/index.
@@ -272,7 +279,7 @@ class TraceCollectingEventTracker(
                     obj = TRValue(context, thread),
                     parameters = emptyList()
                 )
-                strategy.tracePointCreated(null, tracePoint)
+                rootTracePointCreated(threadData, tracePoint)
                 threadData.setRootCall(tracePoint)
                 threadData.pushStackFrame(tracePoint, thread, isInline = false)
             }
@@ -332,7 +339,7 @@ class TraceCollectingEventTracker(
     }
 
     override fun beforeNewObjectCreation(threadDescriptor: ThreadDescriptor, className: String) {}
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
+    override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String) {}
     override fun afterInvokeDynamicObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any) {}
 
     override fun getCachedInvokeDynamicCallSite(
@@ -354,8 +361,6 @@ class TraceCollectingEventTracker(
     ) = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support invoke dynamic instrumentation" }
     }
-
-    override fun updateSnapshotBeforeConstructorCall(objs: Array<out Any?>) {}
 
     override fun beforeReadField(
         threadDescriptor: ThreadDescriptor,
@@ -398,7 +403,7 @@ class TraceCollectingEventTracker(
             obj = TRValue(context, obj),
             value = TRValue(context, value)
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     override fun afterReadArrayElement(
@@ -418,7 +423,7 @@ class TraceCollectingEventTracker(
             index = index,
             value = TRValue(context, value)
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     override fun beforeWriteField(
@@ -443,7 +448,7 @@ class TraceCollectingEventTracker(
             obj = TRValue(context, obj),
             value = TRValue(context, value)
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     override fun beforeWriteArrayElement(
@@ -463,7 +468,7 @@ class TraceCollectingEventTracker(
             index = index,
             value = TRValue(context, value)
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     override fun afterWrite(threadDescriptor: ThreadDescriptor) {}
@@ -482,7 +487,7 @@ class TraceCollectingEventTracker(
             localVariableId = variableId,
             value = TRValue(context, value)
         )
-        strategy.tracePointCreated(threadData.currentMethodCallTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     override fun afterLocalWrite(
@@ -499,7 +504,7 @@ class TraceCollectingEventTracker(
             localVariableId = variableId,
             value = TRValue(context, value)
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     override fun onMethodCall(
@@ -529,10 +534,10 @@ class TraceCollectingEventTracker(
             methodId = methodId,
             obj = TRValue(context, receiver),
             parameters = params.map { TRValue(context, it) },
-            flags = (if (receiver == Injections.UNINITIALIZED_THIS) SUPER_CONSTRUCTOR_CALL_FLAG else 0).toShort(),
+            flags = (if (receiver === Injections.UNINITIALIZED_THIS) SUPER_CONSTRUCTOR_CALL_FLAG else 0).toShort(),
             parentTracePoint = parentTracepoint,
         )
-        strategy.tracePointCreated(parentTracepoint, tracePoint)
+        tracePointCreated(threadData, tracePoint)
         threadData.pushStackFrame(tracePoint, receiver, isInline = false)
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
@@ -656,7 +661,7 @@ class TraceCollectingEventTracker(
             parameters = emptyList(),
             parentTracePoint = threadData.currentTopTracePoint()
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
         threadData.pushStackFrame(tracePoint, owner, isInline = true)
     }
 
@@ -746,7 +751,7 @@ class TraceCollectingEventTracker(
             traceId = traceId,
         )
         // TODO maybe these tracepoints should be collected separately
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     private fun captureValueSnapshot(value: Any?): TRValue = when {
@@ -789,7 +794,7 @@ class TraceCollectingEventTracker(
                 codeLocationId = codeLocation,
                 loopId = loopId,
             )
-            strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+            tracePointCreated(threadData, tracePoint)
             threadData.enterLoop(tracePoint)
         }
 
@@ -806,7 +811,7 @@ class TraceCollectingEventTracker(
             loopId = loopId,
             loopIteration = currentLoopTracePoint.iterations,
         )
-        strategy.tracePointCreated(currentLoopTracePoint, tracePoint)
+        tracePointCreated(threadData, tracePoint, currentLoopTracePoint)
         threadData.addLoopIteration(tracePoint)
     }
 
@@ -854,7 +859,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             exception = TRValue(context, exception)
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     override fun onCatch(
@@ -869,7 +874,7 @@ class TraceCollectingEventTracker(
             codeLocationId = codeLocation,
             exception = TRValue(context, exception)
         )
-        strategy.tracePointCreated(threadData.currentTopTracePoint(), tracePoint)
+        tracePointCreated(threadData, tracePoint)
     }
 
     /**
@@ -934,7 +939,7 @@ class TraceCollectingEventTracker(
                 obj = TRNull,
                 parameters = emptyList()
             )
-            strategy.tracePointCreated(null, tracePoint)
+            rootTracePointCreated(threadData, tracePoint)
 
             threadData.setRootCall(tracePoint)
             threadData.pushStackFrame(tracePoint, null, isInline = false)
@@ -964,7 +969,7 @@ class TraceCollectingEventTracker(
             flags = INCOMPLETE_METHOD_FLAG.toShort(),
             parentTracePoint = parentTracePoint
         )
-        strategy.tracePointCreated(parentTracePoint, methodCall)
+        tracePointCreated(threadData, methodCall, parentTracePoint)
         if (threadData.getStack().isEmpty()) {
             threadData.setRootCall(methodCall)
         }
@@ -1085,9 +1090,11 @@ class TraceCollectingEventTracker(
     fun finishTracing() {
         // Finish existing threads, except for Main
         val currentThread = Thread.currentThread()
+        var totalPointsCollected = 0
 
         threads
-            .mapNotNull { (thread, _) ->
+            .mapNotNull { (thread, threadData) ->
+                totalPointsCollected += threadData.pointsCollected
                 if (thread == currentThread) null
                 else {
                     val threadDescriptor = ThreadDescriptor.getThreadDescriptor(thread)
@@ -1110,6 +1117,8 @@ class TraceCollectingEventTracker(
         }
 
         strategy.traceEnded()
+        Logger.info { "Collected $totalPointsCollected points" }
+        collectedPoints = totalPointsCollected
     }
 
     /**
@@ -1135,6 +1144,16 @@ class TraceCollectingEventTracker(
             }
         }
         return roots
+    }
+
+    private fun rootTracePointCreated(threadData: ThreadData,  created: TRTracePoint) {
+        threadData.pointsCollected++
+        strategy.tracePointCreated(null, created)
+    }
+
+    private fun tracePointCreated(threadData: ThreadData, created: TRTracePoint, parent: TRContainerTracePoint? = null) {
+        threadData.pointsCollected++
+        strategy.tracePointCreated(parent ?: threadData.currentTopTracePoint(), created)
     }
 
     private fun methodAnalysisSectionType(

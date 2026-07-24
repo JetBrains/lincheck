@@ -423,6 +423,13 @@ public class CTestStructure {
     }
 
     private static boolean isOperationAnnotationPresent(Method m) {
+        // Ignore synthetic bridge methods: since Kotlin 2.4 the compiler copies method annotations
+        // (including `@Operation`) onto the bridge generated for a covariant/generic override,
+        // e.g. `send(Object, Continuation)` bridging `send(Int, Continuation)`.
+        // A bridge has no Kotlin metadata, so it would be misdetected as a non-suspend operation
+        // and its trailing `Continuation` parameter would demand a generator.
+        // The real (non-bridge) method is always declared alongside the bridge, so skipping it loses nothing.
+        if (m.isBridge()) return false;
         return m.isAnnotationPresent(Operation.class);
     }
 

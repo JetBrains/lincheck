@@ -933,11 +933,17 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code after any object is created
+     * Called from the instrumented code after an object constructor has completed,
+     * or after an array allocation. Arrays are treated as one-shot "constructed objects" —
+     * there is no separate `<init>` call for them.
+     *
+     * @param className the name of the class whose constructor was just called,
+     *                  or, for arrays, the canonical name of the array type
+     *                  (e.g. {@code "int[]"} or {@code "java.lang.String[]"}).
      */
-    public static void afterNewObjectCreation(ThreadDescriptor descriptor, Object obj) {
+    public static void afterObjectConstructor(ThreadDescriptor descriptor, Object obj, String className) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.afterNewObjectCreation(descriptor, obj);
+        eventTracker.afterObjectConstructor(descriptor, obj, className);
     }
 
     /**
@@ -953,15 +959,6 @@ public class Injections {
     public static void afterInvokeDynamicObjectCreation(ThreadDescriptor descriptor, Object obj) {
         EventTracker eventTracker = getEventTracker(descriptor);
         eventTracker.afterInvokeDynamicObjectCreation(descriptor, obj);
-    }
-
-    /**
-     * Called from instrumented code before constructors' invocations,
-     * where passed objects are subtypes of the constructor class type.
-     * Required to update the static memory snapshot.
-     */
-    public static void updateSnapshotBeforeConstructorCall(Object[] objs) {
-        getEventTracker().updateSnapshotBeforeConstructorCall(objs);
     }
 
     /**

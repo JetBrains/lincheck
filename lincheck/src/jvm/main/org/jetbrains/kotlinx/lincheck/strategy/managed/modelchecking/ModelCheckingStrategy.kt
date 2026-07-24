@@ -529,13 +529,13 @@ internal class LocalObjectManager : BaseObjectTracker() {
 
     override fun registerObjectLink(fromObject: Any?, toObject: Any?) {
         if (toObject == null) return
-        if (!isLocalObject(fromObject)) {
+        if (shouldTrackObjectAccess(fromObject)) {
             markObjectNonLocal(toObject)
         }
     }
 
     override fun shouldTrackObjectAccess(obj: Any?): Boolean =
-        !isLocalObject(obj)
+        super.shouldTrackObjectAccess(obj) && !isLocalObject(obj)
 
     /**
      * Removes the specified local object and all reachable objects from the set of local objects.

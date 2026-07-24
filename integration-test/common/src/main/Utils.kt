@@ -1,3 +1,6 @@
+import java.io.File
+import kotlin.io.path.createTempFile
+
 /*
  * Lincheck
  *
@@ -10,3 +13,19 @@
 
 fun String.escape(): String = this.replace("\\", "\\\\")
 fun String.escapeDollar() = replace("$", "\\$")
+
+fun <T> withPermissions(block: (File) -> T): T {
+    val permissions = createTempFile("permissions", "txt").toFile()
+    return try {
+        permissions.writeText(
+            """
+                grant {
+                    permission java.security.AllPermission;
+                };
+            """.trimIndent()
+        )
+        block(permissions)
+    } finally {
+        permissions.delete()
+    }
+}

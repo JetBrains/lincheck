@@ -3,7 +3,7 @@
 java.lang.IllegalStateException: Check failed.
 	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:41)
 	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
@@ -17,7 +17,7 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:51) |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50) |
 |   block(): threw IllegalStateException at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:34)                                                  |
 |     concurrentMap.put(1, 1): null at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:39)                                                       |
 |       putVal(1, 1, false): null at ConcurrentHashMap.put(ConcurrentHashMap.java:1006)                                                                                           |
@@ -37,6 +37,8 @@ Detailed trace:
 |           <iteration 2> at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1016)                                                                                                |
 |             tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1018)                                                                              |
 |               tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                         |
+|             ConcurrentHashMap.Node.<init>(1, 1, 1): Node#1 at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                                             |
+|               Object.<init>(): Node#1 at ConcurrentHashMap.Node.<init>(ConcurrentHashMap.java:631)                                                                              |
 |             casTabAt(Array<Node>#1, 1, null, Node#1): true at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1019)                                                             |
 |               tab[1].compareAndSetReference(null, Node#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                                       |
 |         addCount(1, 0) at ConcurrentHashMap.putVal(ConcurrentHashMap.java:1075)                                                                                                 |
@@ -48,5 +50,6 @@ Detailed trace:
 |               sizeCtl ➜ 12 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2343)                                                                                           |
 |     a ➜ 1 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:40)                                                                               |
 |     a = 2 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:40)                                                                               |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at ThreadSafeCollectionUnmutedRepresentationTest.block(StdLibRepresentationTests.kt:41)              |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

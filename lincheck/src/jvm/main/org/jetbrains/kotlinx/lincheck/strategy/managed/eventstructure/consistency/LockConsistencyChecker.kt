@@ -42,6 +42,16 @@ class LockConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, MutableExte
         for (event in execution) {
             val label = event.label.refine<MutexLabel> { isResponse && (this is LockLabel || this is WaitLabel) }
                 ?: continue
+
+            // Reentrant locks are skipped over as we assume that they always sync with an ObjectAllocation label,
+            // and they do not count towards the "uniqueness" requirement
+            if (label is LockLabel && label.isReentry) {
+                check(event.syncFrom.label is ObjectAllocationLabel || event.syncFrom.label is InitializationLabel) {
+                    "Expected reentrant lock $event to sync with object allocation event or init event, got: ${event.syncFrom}"
+                }
+                continue
+            }
+
             if (label is WaitLabel && (event.notifiedBy.label as NotifyLabel).isBroadcast)
                 continue
             val key: Any = when (event.syncFrom.label) {
