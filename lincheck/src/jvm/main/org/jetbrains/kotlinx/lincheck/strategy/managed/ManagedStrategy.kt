@@ -1653,6 +1653,24 @@ internal abstract class ManagedStrategy(
     }
 
     /**
+     * Utility function that tells the [memoryTracker] (if it exists), to handle the effects of arrayCopy
+     * *Must be called from [runInsideIgnoredSection].*
+     */
+    private fun processArrayCopyEffects(params: Array<Any?>) {
+        if(memoryTracker != null) {
+            val threadId = threadScheduler.getCurrentThreadId()
+            memoryTracker!!.interceptArrayCopy(
+                threadId,
+                UNKNOWN_CODE_LOCATION,
+                params[0],
+                params[1] as Int,
+                params[2],
+                params[3] as Int,
+                params[4] as Int,
+            )
+        }
+    }
+    /**
      * Propagates the modification done by intrinsic calls to the strategy.
      * This functionality is required, because we cannot instrument intrinsic methods directly.
      *
@@ -1728,17 +1746,8 @@ internal abstract class ManagedStrategy(
         }
 
         // Handle array copy
-        if(receiver == null && methodDescriptor.className == "java.lang.System" && methodDescriptor.methodName == "arraycopy" && memoryTracker != null) {
-            val threadId = threadScheduler.getCurrentThreadId()
-            memoryTracker!!.interceptArrayCopy(
-                threadId,
-                UNKNOWN_CODE_LOCATION,
-                params[0],
-                params[1] as Int,
-                params[2],
-                params[3] as Int,
-                params[4] as Int,
-            )
+        if(receiver == null && methodDescriptor.isSystemArrayCopy()) {
+            processArrayCopyEffects(params)
         }
 
         var shouldInterceptAtomicMethod: Boolean = false
