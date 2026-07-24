@@ -126,7 +126,7 @@ In this example, you will test the `put()` function of a non-blocking `Concurren
 
 ## See also
 
-* [Configuring argument generation constraints](operation-arguments.md)
+* [Configuring argument generation constraints](lincheck-argument-generation-constraints.md)
 * [Configuring operation execution](lincheck-operation-execution-options.md)
 <!-- TODO: add a link when `lincheck-results-validation.md` is merged 
 * [Validating execution results](lincheck-results-validation.md) -->

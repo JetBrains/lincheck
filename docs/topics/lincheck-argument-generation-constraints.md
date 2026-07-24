@@ -159,5 +159,5 @@ Learn how to [restrict certain operations to a single thread](lincheck-operation
 
 ## See also
 
-* [Checking for non-blocking progress guarantees](progress-guarantees.md)
+* [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
 * [Defining sequential specification of the algorithm](sequential-specification.md)
