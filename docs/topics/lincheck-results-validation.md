@@ -257,6 +257,6 @@ The validation function should:
 
 ## What's next
 
-* [Configuring argument generation constraints](operation-arguments.md)
+* [Configuring argument generation constraints](lincheck-argument-generation-constraints.md)
 * [Configuring operation execution](lincheck-operation-execution-options.md)
-* [Checking for non-blocking progress guarantees](progress-guarantees.md)
+* [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
