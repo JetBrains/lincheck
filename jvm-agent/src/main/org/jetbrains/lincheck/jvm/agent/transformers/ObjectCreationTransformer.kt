@@ -256,9 +256,21 @@ internal class ObjectCreationTransformer(
             instrumented = {
                 // STACK: elementClass, length
                 swap()
+                // STACK: length, elementClass
                 dup()
                 // STACK: length, elementClass, elementClass
-                val elementClass = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                getElementTypeNameFromClass()
+                // STACK: length, elementClass, arrayClassName
+                dup()
+                // STACK: length, elementClass, arrayClassName, arrayClassName
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                // STACK: length, elementClass, arrayClassName, arrayClassName, descriptor
+                swap()
+                // STACK: length, elementClass, arrayClassName, descriptor, arrayClassName
+                invokeStatic(Injections::beforeNewObjectCreation)
+                // STACK: length, elementClass, arrayClassName
+                val arrayClassName = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                // STACK: length, elementClass
                 swap()
                 // STACK: elementClass, length
                 visitMethodInsn(opcode, owner, name, descriptor, isInterface)
@@ -268,10 +280,9 @@ internal class ObjectCreationTransformer(
                 invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                 // STACK: array, array, descriptor
                 swap()
-                loadLocal(elementClass)
-                // STACK: array, descriptor, array, elementClass
-                getElementTypeNameFromClass()
-                // STACK: array, descriptor, array, elementName
+                // STACK: array, descriptor, array
+                loadLocal(arrayClassName)
+                // STACK: array, descriptor, array, arrayClassName
                 invokeStatic(Injections::afterObjectConstructor)
                 // STACK: array
             }
