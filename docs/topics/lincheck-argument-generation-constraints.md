@@ -18,6 +18,7 @@ To limit the range of the generated argument values in Lincheck:
        // Tests
    }
    ```
+   <!-- TODO: figure something out to not use line numbers -->
 
    * `name` – the name of the argument generator.
    * `gen` – the [type](#generator-types) of the generator.
@@ -31,12 +32,8 @@ To limit the range of the generated argument values in Lincheck:
 2. Annotate the operations parameters with `@Param` to apply the constraints:
 
    ```kotlin
-   @Operation
-   fun add(@Param(name = "key") key: Int, value: Int) = map.add(key, value)
-
-   @Operation
-   fun get(@Param(name = "key") key: Int) = map.get(key)
    ```
+   {src="examples/ArgumentGenerationTest.kt" include-symbol="MultiMapTest.add,MultiMapTest.get"}
 
 With the constraints in place, Lincheck generates scenarios using only values within the specified range:
 
