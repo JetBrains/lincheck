@@ -37,9 +37,9 @@ class CountDownLatchTest {
     }
 
     @Test
-    fun testLatchCountdown() = Lincheck.runConcurrentTest(10000,  block)
+    fun testLatchCountdown() = Lincheck.runConcurrentTest(10000, block)
 
     @Ignore("Times out")
     @Test
-    fun testLatchCountdownEventStructure() = Lincheck.runConcurrentTest(10000,  block)
+    fun testLatchCountdownEventStructure() = Lincheck.runConcurrentTest(10000, block)
 }
