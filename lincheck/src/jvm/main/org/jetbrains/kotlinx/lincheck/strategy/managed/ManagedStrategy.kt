@@ -1671,22 +1671,22 @@ internal abstract class ManagedStrategy(
         }
     }
     /**
-     * Propagates the modification done by intrinsic calls to the strategy.
+     * Propagates the modification done by intrinsic/reflection calls to the strategy.
      * This functionality is required, because we cannot instrument intrinsic methods directly.
      *
      * *Must be called from [runInsideIgnoredSection].*
      */
-    private fun processIntrinsicMethodEffects(
+    private fun processMethodEffects(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         result: Any?,
     ) {
-        val intrinsicDescriptor = context.methodPool[methodId]
-        check(intrinsicDescriptor.isIntrinsic) { "Processing intrinsic method effect of non-intrinsic call" }
+        val methodDescriptor = context.methodPool[methodId]
 
         if (
-            intrinsicDescriptor.isArraysCopyOfIntrinsic() ||
-            intrinsicDescriptor.isArraysCopyOfRangeIntrinsic()
+            (methodDescriptor.isIntrinsic && methodDescriptor.isArraysCopyOfIntrinsic()) ||
+            (methodDescriptor.isIntrinsic && methodDescriptor.isArraysCopyOfRangeIntrinsic()) ||
+            methodDescriptor.isArrayNewInstance()
         ) {
             // `Arrays.copyOf`/`copyOfRange` allocate a fresh array as their return value;
             // route it through the same path as a regular array allocation.
@@ -1889,10 +1889,8 @@ internal abstract class ManagedStrategy(
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val methodDescriptor = context.methodPool[methodId]
 
-        // process intrinsic candidate methods
-        if (methodDescriptor.isIntrinsic) {
-            processIntrinsicMethodEffects(threadDescriptor, methodId, result)
-        }
+        // process effects of intrisic/reflection methods
+        processMethodEffects(threadDescriptor, methodId, result)
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
         if (deterministicMethodDescriptor != null) {

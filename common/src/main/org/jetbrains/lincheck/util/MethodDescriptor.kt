@@ -45,6 +45,13 @@ fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
     )
 }
 
+fun MethodDescriptor.isArrayNewInstance(): Boolean {
+    return (
+        className == "java.lang.reflect.Array" &&
+        methodName == "newInstance"
+    )
+}
+
 fun MethodDescriptor.isSystemArrayCopy() : Boolean {
     return className == "java.lang.System" && methodName == "arraycopy"
 }
