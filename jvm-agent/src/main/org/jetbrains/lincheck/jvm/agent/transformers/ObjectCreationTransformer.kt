@@ -246,6 +246,80 @@ internal class ObjectCreationTransformer(
         )
     }
 
+    private fun visitInvokeArrayNewInstance(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
+        // TODO: should also call beforeNewObjectCreation?
+        // STACK: elementClass, length
+        invokeIfInAnalyzedCode(
+            original = {
+                visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+            },
+            instrumented = {
+                // STACK: elementClass, length
+                swap()
+                dup()
+                // STACK: length, elementClass, elementClass
+                val elementClass = newLocal(OBJECT_TYPE).also { storeLocal(it) }
+                swap()
+                // STACK: elementClass, length
+                visitMethodInsn(opcode, owner, name, descriptor, isInterface)
+                // STACK: array
+                dup()
+                // STACK: array, array
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                // STACK: array, array, descriptor
+                swap()
+                loadLocal(elementClass)
+                // STACK: array, descriptor, array, elementClass
+                getElementTypeNameFromClass()
+                // STACK: array, descriptor, array, elementName
+                invokeStatic(Injections::afterObjectConstructor)
+                // STACK: array
+            }
+        )
+    }
+
+    /**
+     * Converts the class of the array elements into the canonical java string represetnation such that
+     * it can be used by [Injections::afterObjectConstructor]
+     * NOTE: Probably could be written as a regular method.
+     *
+     * Stack beore: ..., elementClass : Class<*>
+     * Stack after: ..., elementClassName : String
+     */
+    private fun GeneratorAdapter.getElementTypeNameFromClass() {
+        val getTypeFun: (Class<*>) -> Type = Type::getType
+        val sbType = Type.getType(StringBuilder::class.java)
+        val typeType = Type.getType(Type::class.java)
+        val sbConstructor = Method.getMethod(StringBuilder::class.java.getDeclaredConstructor())
+        val appendMethod = Method.getMethod(StringBuilder::class.java.getDeclaredMethod("append", String::class.java))
+        val toStringMethod = Method.getMethod(StringBuilder::class.java.getDeclaredMethod("toString"))
+        val getClassNameMethod = Method.getMethod(Type::class.java.getDeclaredMethod("getClassName"))
+
+        // elementClass
+        invokeStatic(getTypeFun as KFunction<*>)
+        // elementType
+        // NOTE: we use StringBuilder for Java8 compatibility
+        newInstance(sbType)
+        dup()
+        // elementType, stringBuilder
+        invokeConstructor(sbType, sbConstructor)
+        // elementType, stringBuilder
+        swap()
+        // stringBuilder, elementType
+        // NOTE: getClassName handles the annoying part where arrays elements are handled differently,
+        //   than all the other types
+        invokeVirtual(typeType, getClassNameMethod)
+        // stringBuilder, elementString
+        invokeVirtual(sbType, appendMethod)
+        // stringBuilder
+        push("[]")
+        // stringBuilder, "[]"
+        invokeVirtual(sbType, appendMethod)
+        // stringBuilder,
+        invokeVirtual(sbType, toStringMethod)
+        // name
+    }
+
     /** JVM array descriptor for the primitive type encoded by a NEWARRAY operand. */
     private fun newArrayDescriptor(operand: Int): String = when (operand) {
         T_BOOLEAN -> "[Z"
@@ -357,80 +431,5 @@ internal class ObjectCreationTransformer(
         //   to skip instrumenting allocations of immutable types,
         //   to avoid the runtime overhead when immutable-value tracking is disabled.
         bootstrapMethodOwner == "java/lang/invoke/StringConcatFactory"
-
-
-    private fun visitInvokeArrayNewInstance(opcode: Int, owner: String, name: String, descriptor: String, isInterface: Boolean) = adapter.run {
-        // TODO: should also call beforeNewObjectCreation?
-        // STACK: elementClass, length
-        invokeIfInAnalyzedCode(
-            original = {
-                visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-            },
-            instrumented = {
-                // STACK: elementClass, length
-                swap()
-                dup()
-                // STACK: length, elementClass, elementClass
-                val elementClass = newLocal(OBJECT_TYPE).also { storeLocal(it) }
-                swap()
-                // STACK: elementClass, length
-                visitMethodInsn(opcode, owner, name, descriptor, isInterface)
-                // STACK: array
-                dup()
-                // STACK: array, array
-                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                // STACK: array, array, descriptor
-                swap()
-                loadLocal(elementClass)
-                // STACK: array, descriptor, array, elementClass
-                getElementTypeNameFromClass()
-                // STACK: array, descriptor, array, elementName
-                invokeStatic(Injections::afterObjectConstructor)
-                // STACK: array
-            }
-        )
-    }
-
-    /**
-     * Converts the class of the array elements into the canonical java string represetnation such that
-     * it can be used by [Injections::afterObjectConstructor]
-     * NOTE: Probably could be written as a regular method.
-     *
-     * Stack beore: ..., elementClass : Class<*>
-     * Stack after: ..., elementClassName : String
-     */
-    private fun GeneratorAdapter.getElementTypeNameFromClass() {
-        val getTypeFun: (Class<*>) -> Type = Type::getType
-        val sbType = Type.getType(StringBuilder::class.java)
-        val typeType = Type.getType(Type::class.java)
-        val sbConstructor = Method.getMethod(StringBuilder::class.java.getDeclaredConstructor())
-        val appendMethod = Method.getMethod(StringBuilder::class.java.getDeclaredMethod("append", String::class.java))
-        val toStringMethod = Method.getMethod(StringBuilder::class.java.getDeclaredMethod("toString"))
-        val getClassNameMethod = Method.getMethod(Type::class.java.getDeclaredMethod("getClassName"))
-
-        // elementClass
-        invokeStatic(getTypeFun as KFunction<*>)
-        // elementType
-        // NOTE: we use StringBuilder for Java8 compatibility
-        newInstance(sbType)
-        dup()
-        // elementType, stringBuilder
-        invokeConstructor(sbType, sbConstructor)
-        // elementType, stringBuilder
-        swap()
-        // stringBuilder, elementType
-        // NOTE: getClassName handles the annoying part where arrays elements are handled differently,
-        //   than all the other types
-        invokeVirtual(typeType, getClassNameMethod)
-        // stringBuilder, elementString
-        invokeVirtual(sbType, appendMethod)
-        // stringBuilder
-        push("[]")
-        // stringBuilder, "[]"
-        invokeVirtual(sbType, appendMethod)
-        // stringBuilder,
-        invokeVirtual(sbType, toStringMethod)
-        // name
-    }
 
 }
