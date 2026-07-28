@@ -15,7 +15,7 @@ To test concurrent code with Lincheck:
        // Tests
    }
    ```
-
+   <!-- TODO: create a test or something?? -->
 2. Create a test function as a member function using `runConcurrentTest()`.
 
    ```kotlin
@@ -25,10 +25,10 @@ To test concurrent code with Lincheck:
    }
    ```
 
-> The function parameter is optional; it specifies the number of execution schedules to explore.
-> The default value is `10_000`.
->
-{style="tip"}
+   > The function parameter is optional; it specifies the number of execution schedules to explore.
+   > The default value is `10_000`.
+   >
+   {style="tip"}
 
 3. Run the test. If it fails, Lincheck generates a report with an execution schedule that leads to incorrect behavior.
 
@@ -58,39 +58,8 @@ To test concurrent code with Lincheck:
 Consider this test for `ConcurrentHashMap` functions:
 
 ```kotlin
-import org.jetbrains.lincheck.*
-import java.util.concurrent.*
-import kotlin.concurrent.*
-import kotlin.test.*
-
-
-// This test demonstrates a deadlock caused by two threads
-// performing nested `computeIfAbsent` calls in opposite order.
-class ConcurrentHashMapDeadlock {
-   @Test
-   fun test() = Lincheck.runConcurrentTest {
-       val map = ConcurrentHashMap<String, String>()
-       // Updates `key2` while locking `key1`.
-       val thread1 = thread {
-           map.computeIfAbsent("key1") {
-               map.computeIfAbsent("key2") { "value2" }
-               "value1"
-           }
-       }
-       // Updates `key1` while locking `key2`.
-       val thread2 = thread {
-           map.computeIfAbsent("key2") {
-               map.computeIfAbsent("key1") { "value1" }
-               "value2"
-           }
-       }
-      
-       // Wait until both threads complete.
-       thread1.join()
-       thread2.join()
-   }
-}
 ```
+{src="examples/ConcurrentHashMapDeadlockTest.kt"}
 
 The test fails due to Lincheck finding an execution schedule that leads to a deadlock:
 

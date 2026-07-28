@@ -21,6 +21,7 @@ class CustomGuaranteeTest {
 
     // This test takes less time because Lincheck doesn't need to analyze
     // the methods of `ConcurrentHashMap`
+
     @Test
     fun modelCheckingWithGuaranteesTest() = ModelCheckingOptions()
         .addGuarantee(

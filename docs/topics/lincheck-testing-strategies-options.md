@@ -14,6 +14,7 @@ fun modelCheckingTest() = ModelCheckingOptions()
     .iterations(100) // Specify the number of generated scenarios
     .check(this::class)
 ```
+<!-- TODO: create an example -->
 
 ## Scenario minimization
 
@@ -66,27 +67,8 @@ Set the `minimizeFailedScenario` option to `false` to see the full failed scenar
 Lincheck uses a [domain-specific language](https://kotlinlang.org/docs/type-safe-builders.html) for defining custom scenarios:
 
 ```kotlin
-@Test
-fun test() = StressOptions()
-    .customScenarios {
-        initial {
-            actor(SomeClass1::foo)
-        }
-        parallel {
-            thread {
-                actor(SomeClass1::buzz, 1)
-                actor(SomeClass1::buzz, 2)
-            }
-            thread {
-                actor(SomeClass1::buzz, 3)
-            }
-        }
-        post {
-            actor(SomeClass1::foo)
-        }
-    }
-    .check(this::class)
 ```
+{src="examples/CustomScenarioTest.kt" include-symbol="CustomScenarioTest.test"}
 
 Each scenario consists of three optional sections:
 
@@ -188,15 +170,8 @@ executed sequentially.
 To define a guarantee, use a builder chain: select classes, then methods, then the guarantee type.
 
 ```kotlin
-@Test
-fun modelCheckingTest() = ModelCheckingOptions()
-        .addGuarantee(
-            forClasses("java.util.concurrent.ConcurrentHashMap")
-                .allMethods()
-                .treatAsAtomic()
-        )
-        .check(this::class)
 ```
+{src="examples/CustomGuaranteeTest.kt" include-symbol="CustomGuaranteeTest.modelCheckingWithGuaranteesTest"}
 
 1. Select classes using one of the `forClasses` overloads:
 

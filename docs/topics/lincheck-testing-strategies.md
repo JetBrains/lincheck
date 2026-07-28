@@ -14,10 +14,8 @@ behavior.
 To use model checking for testing a data structure, declare a test function using `ModelCheckingOptions()`:
 
 ```kotlin
-@Test
-fun modelCheckingTest() = ModelCheckingOptions()
-   .check(this::class)
 ```
+{src="examples/CounterStructureTest.kt" include-symbol="CounterStructureTest.test"}
 
 When using the model checking strategy, Lincheck inserts explicit thread-switch instructions at points of 
 shared-memory access (`read` and `write`) or at synchronization points, such as lock acquisition and release, 
@@ -47,10 +45,8 @@ With stress testing, Lincheck executes each scenario multiple times to increase 
 To use stress testing, declare a test function using `StressOptions()`:
 
 ```kotlin
-@Test
-fun stressTest() = StressOptions()
-   .check(this::class)
 ```
+{src="examples/CounterStructureTest.kt" include-symbol="CounterStructureTest.stressTest"}
 
 Unlike with model checking, Lincheck does not control or track thread switches. This makes stress testing 
 faster and does not require Lincheck to make any assumptions about the memory model.

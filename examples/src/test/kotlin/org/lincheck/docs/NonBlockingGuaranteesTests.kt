@@ -9,14 +9,28 @@ import java.util.concurrent.ConcurrentSkipListMap
 class ConcurrentHashMapTest {
     private val map = ConcurrentHashMap<Int, Int>()
 
-    // Add the `blocking = true` option to pass the obstruction-freedom test.
-    // @Operation(blocking = true)
     @Operation
     fun put(key: Int, value: Int) = map.put(key, value)
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom()
+        .threads(2)
+        .actorsPerThread(1)
+        .check(this::class)
+}
+
+class ConcurrentHashMapWithBlockingTest {
+    private val map = ConcurrentHashMap<Int, Int>()
+
+    @Operation(blocking = true)
+    fun put(key: Int, value: Int) = map.put(key, value)
+
+    @Test
+    fun modelCheckingTest() = ModelCheckingOptions()
+        .checkObstructionFreedom()
+        .threads(2)
+        .actorsPerThread(1)
         .check(this::class)
 }
 

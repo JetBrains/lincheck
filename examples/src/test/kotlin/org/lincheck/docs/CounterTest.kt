@@ -1,8 +1,7 @@
 package org.lincheck.docs
 
 import org.jetbrains.lincheck.Lincheck
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import kotlin.test.*
 import kotlin.concurrent.thread
 
 class CounterTest {

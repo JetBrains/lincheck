@@ -9,7 +9,7 @@ import org.jetbrains.lincheck.util.LoggingLevel
 import kotlin.test.Test
 
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
-class ChannelCancellableTest {
+class CancellableOnSuspensionTest {
     private val ch = Channel<Int>()
 
     @Operation
@@ -28,7 +28,7 @@ class ChannelCancellableTest {
 }
 
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
-class PromptCancellationDemo {
+class PromptCancellationTest {
     private val ch = Channel<Int>()
 
     @Operation
