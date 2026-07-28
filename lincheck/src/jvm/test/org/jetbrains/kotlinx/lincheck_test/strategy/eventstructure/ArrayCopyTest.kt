@@ -25,13 +25,25 @@ import org.jetbrains.kotlinx.lincheck.util.CancelledResult
 import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.scenario
+import org.jetbrains.lincheck.util.JdkVersion
 import org.junit.rules.TestName
 import kotlin.reflect.jvm.javaMethod
 import org.jetbrains.lincheck.util.UnsafeHolder
+import org.jetbrains.lincheck.util.jdkVersion
+import org.junit.Assume.assumeFalse
+import org.junit.Before
 import java.util.Arrays
 import kotlin.concurrent.thread
 
 class ArrayCopyTest {
+
+    @Before
+    fun setUp() {
+        // currently these tests lead to hangs on JDK-21, apparently due to
+        // an unrelated bug with Kotlin stdlib arrays/collection util functions instrumentation,
+        // see https://github.com/JetBrains/lincheck/issues/564 for details
+        assumeFalse((jdkVersion == JdkVersion.JDK_21))
+    }
 
     @Test
     fun testArrayCopy() {
