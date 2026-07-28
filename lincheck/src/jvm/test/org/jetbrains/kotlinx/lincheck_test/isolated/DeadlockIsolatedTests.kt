@@ -39,7 +39,7 @@ class DeadlockOnSynchronizedIsolatedTest : AbstractLincheckTest(TimeoutFailure::
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        // TODO: We ignore this test with EventStructure for now, as we need to actually report the deadlock, instead of creashing
+        // TODO: We ignore this test with EventStructure for now, as we need to actually report the deadlock, instead of crashing
         ignoreExperimentalModelChecking()
         minimizeFailedScenario(false)
         invocationTimeout(200)
@@ -57,7 +57,7 @@ class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(TimeoutFailu
     }
 
     override fun <O : Options<O, *>> O.customize() {
-        // TODO: We ignore this test with EventStructure for now, as we need to actually report the deadlock, instead of creashing
+        // TODO: We ignore this test with EventStructure for now, as we need to actually report the deadlock, instead of crashing
         ignoreExperimentalModelChecking()
         actorsBefore(0)
         minimizeFailedScenario(false)

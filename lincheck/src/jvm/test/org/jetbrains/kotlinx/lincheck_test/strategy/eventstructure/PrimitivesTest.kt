@@ -1563,7 +1563,6 @@ class PrimitivesTest {
 
             fun write(b: Box, newValue: Int) {
                 b.value = newValue
-
             }
         }
         class Reader {

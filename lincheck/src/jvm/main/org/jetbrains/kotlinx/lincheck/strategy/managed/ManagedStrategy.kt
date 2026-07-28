@@ -1657,7 +1657,7 @@ internal abstract class ManagedStrategy(
      * *Must be called from [runInsideIgnoredSection].*
      */
     private fun processArrayCopyEffects(params: Array<Any?>) {
-        if(memoryTracker != null) {
+        if (memoryTracker != null) {
             val threadId = threadScheduler.getCurrentThreadId()
             memoryTracker!!.interceptArrayCopy(
                 threadId,
@@ -1746,7 +1746,7 @@ internal abstract class ManagedStrategy(
         }
 
         // Handle array copy
-        if(receiver == null && methodDescriptor.isSystemArrayCopy()) {
+        if (receiver == null && methodDescriptor.isSystemArrayCopy()) {
             processArrayCopyEffects(params)
         }
 

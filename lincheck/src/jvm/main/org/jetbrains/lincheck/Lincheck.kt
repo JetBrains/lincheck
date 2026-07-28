@@ -71,7 +71,7 @@ object Lincheck {
             .recursionBound(settings.recursionBound)
             .loopIterationsBeforeThreadSwitch(settings.loopIterationsBeforeThreadSwitch)
 
-        if(settings.useExperimentalModelChecking)
+        if (settings.useExperimentalModelChecking)
             options = options.useExperimentalModelChecking()
 
         val testCfg = options.createTestConfigurations(block::class.java)

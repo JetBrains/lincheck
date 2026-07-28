@@ -102,7 +102,7 @@ internal class EventStructureObjectTracker(
             //   But for eventStructure it might happen that we call this function when the very first threads are being set up,
             //   so in that case we would want to default to the mainThreadID instead
             var iThread = currentThreadIdCallback()
-            if (iThread == -1)  iThread = eventStructure.mainThreadId
+            if (iThread == -1) iThread = eventStructure.mainThreadId
 
             // We create a new object allocation event and we "suggest" an objNumber
             // If we are in the replay phase however, the object allocation may have a different id

@@ -82,8 +82,7 @@ internal class ObjectCreationTransformer(
     private var uninitializedObjects = 0
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-
-        if(opcode == INVOKESTATIC && owner == "java/lang/reflect/Array" && name == "newInstance") {
+        if (opcode == INVOKESTATIC && owner == "java/lang/reflect/Array" && name == "newInstance") {
             visitInvokeArrayNewInstance(opcode, owner, name, desc, itf)
             return
         }
@@ -370,11 +369,9 @@ internal class ObjectCreationTransformer(
             instrumented = {
                 // STACK: elementClass, length
                 swap()
-                // STACK: length, elementClass
                 dup()
                 // STACK: length, elementClass, elementClass
                 val elementClass = newLocal(OBJECT_TYPE).also { storeLocal(it) }
-                // STACK: length, elementClass
                 swap()
                 // STACK: elementClass, length
                 visitMethodInsn(opcode, owner, name, descriptor, isInterface)
@@ -385,7 +382,7 @@ internal class ObjectCreationTransformer(
                 // STACK: array, array, descriptor
                 swap()
                 loadLocal(elementClass)
-                // STACK: array, array, descriptor, elementClass
+                // STACK: array, descriptor, array, elementClass
                 getElementTypeNameFromClass()
                 // STACK: array, descriptor, array, elementName
                 invokeStatic(Injections::afterObjectConstructor)
@@ -404,10 +401,10 @@ internal class ObjectCreationTransformer(
      */
     private fun GeneratorAdapter.getElementTypeNameFromClass() {
         val getTypeFun: (Class<*>) -> Type = Type::getType
-        val sbType = Type.getType(java.lang.StringBuilder::class.java)
+        val sbType = Type.getType(StringBuilder::class.java)
         val typeType = Type.getType(Type::class.java)
-        val sbConstructor = Method.getMethod(java.lang.StringBuilder::class.java.getDeclaredConstructor())
-        val appendMethod = Method.getMethod(java.lang.StringBuilder::class.java.getDeclaredMethod("append", String::class.java))
+        val sbConstructor = Method.getMethod(StringBuilder::class.java.getDeclaredConstructor())
+        val appendMethod = Method.getMethod(StringBuilder::class.java.getDeclaredMethod("append", String::class.java))
         val toStringMethod = Method.getMethod(StringBuilder::class.java.getDeclaredMethod("toString"))
         val getClassNameMethod = Method.getMethod(Type::class.java.getDeclaredMethod("getClassName"))
 

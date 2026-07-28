@@ -129,7 +129,6 @@ class TransformationConfiguration(
         get() = trackRegularFieldReads  || trackStaticFieldReads  || trackArrayElementReads ||
                 trackRegularFieldWrites || trackStaticFieldWrites || trackArrayElementWrites
 
-
     var trackAllSharedMemoryAccesses: Boolean
         get() =
             trackAllFieldsReads && trackArrayElementReads &&
@@ -193,7 +192,6 @@ internal fun TransformationConfiguration.shouldApplyVisitor(visitorClass: Class<
 
         ThrowTransformer::class.java -> trackThrows
         CatchBlockStartTransformer::class.java -> trackCatchBlocks
-
 
         // the configuration does not govern other types of transformers,
         // so they should be applied by default
