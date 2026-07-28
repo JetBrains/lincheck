@@ -68,7 +68,7 @@ Lincheck uses a [domain-specific language](https://kotlinlang.org/docs/type-safe
 
 ```kotlin
 ```
-{src="examples/CustomScenarioTest.kt" include-symbol="CustomScenarioTest.test"}
+{src="kotlinx-lincheck/CustomScenarioTest.kt" include-symbol="CustomScenarioTest.test"}
 
 Each scenario consists of three optional sections:
 
@@ -171,7 +171,7 @@ To define a guarantee, use a builder chain: select classes, then methods, then t
 
 ```kotlin
 ```
-{src="examples/CustomGuaranteeTest.kt" include-symbol="CustomGuaranteeTest.modelCheckingWithGuaranteesTest"}
+{src="kotlinx-lincheck/CustomGuaranteeTest.kt" include-symbol="CustomGuaranteeTest.modelCheckingWithGuaranteesTest"}
 
 1. Select classes using one of the `forClasses` overloads:
 

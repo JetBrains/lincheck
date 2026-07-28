@@ -59,7 +59,7 @@ Consider this test for `ConcurrentHashMap` functions:
 
 ```kotlin
 ```
-{src="examples/ConcurrentHashMapDeadlockTest.kt"}
+{src="kotlinx-lincheck/ConcurrentHashMapDeadlockTest.kt"}
 
 The test fails due to Lincheck finding an execution schedule that leads to a deadlock:
 

@@ -11,7 +11,7 @@ Let's test this `Counter` data structure with Lincheck:
 
 ```kotlin
 ```
-{src="examples/CounterStructureTest.kt" include-symbol="Counter"}
+{src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="Counter"}
 
 1. Create a test class:
 
@@ -31,7 +31,7 @@ Let's test this `Counter` data structure with Lincheck:
 
    ```kotlin
    ```
-   {src="examples/CounterStructureTest.kt" include-symbol="CounterStructureTest.inc,CounterStructureTest.dec"}
+   {src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.inc,CounterStructureTest.dec"}
 
    This annotation tells Lincheck which methods to include when generating
    execution scenarios.    
@@ -41,7 +41,7 @@ Let's test this `Counter` data structure with Lincheck:
 
    ```kotlin
    ```
-   {src="examples/CounterStructureTest.kt" include-symbol="CounterStructureTest.test"}
+   {src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.test"}
 
    > Learn about the differences between model checking and stress testing in the
    > [Testing Strategies](lincheck-testing-strategies.md) article.
@@ -103,7 +103,7 @@ Consider this _incorrect_ implementation of a [Treiber Stack](https://en.wikiped
 
 ```kotlin
 ```
-{src="examples/TreiberStackTest.kt" include-symbol="TreiberStack"}
+{src="kotlinx-lincheck/TreiberStackTest.kt" include-symbol="TreiberStack"}
 
 You can test this structure with Lincheck to examine how the injected bug affects
 the behavior of the program:
@@ -112,7 +112,7 @@ the behavior of the program:
 
    ```kotlin
    ```
-   {src="examples/TreiberStackTest.kt" include-symbol="TreiberStackTest"}
+   {src="kotlinx-lincheck/TreiberStackTest.kt" include-symbol="TreiberStackTest"}
 
 2. Run the test. Lincheck generates an error report and provides the execution
    scenario that causes incorrect behavior:
@@ -163,7 +163,7 @@ the behavior of the program:
 
    ```kotlin
    ```
-   {src="examples/TreiberStackTest.kt" include-symbol="TreiberStackCorrect.pop"}
+   {src="kotlinx-lincheck/TreiberStackTest.kt" include-symbol="TreiberStackCorrect.pop"}
 
 ## What’s next
 

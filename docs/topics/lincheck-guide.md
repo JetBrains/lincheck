@@ -15,7 +15,7 @@ Lincheck handles the rest:
 
 ```kotlin
 ```
-{src="examples/CounterTest.kt" include-symbol="CounterTest"}
+{src="kotlinx-lincheck/CounterTest.kt" include-symbol="CounterTest"}
 
 If the test fails, Lincheck provides the thread interleaving and the thread switch points that led to an error:
 

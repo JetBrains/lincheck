@@ -45,14 +45,14 @@ To specify a sequential version of a data structure:
 
    ```kotlin
    ```
-   {src="examples/SequentialSpecificationTest.kt" include-symbol="ConcurrentLinkedQueueTest.stressTest"}
+   {src="kotlinx-lincheck/SequentialSpecificationTest.kt" include-symbol="ConcurrentLinkedQueueTest.stressTest"}
 
 An example of a Lincheck test that uses a single-threaded `LinkedList` as the sequential specification
 of `ConcurrentLinkedQueue`:
 
 ```kotlin
 ```
-{src="examples/SequentialSpecificationTest.kt" include-symbol="ConcurrentLinkedQueueTest,SequentialQueue"}
+{src="kotlinx-lincheck/SequentialSpecificationTest.kt" include-symbol="ConcurrentLinkedQueueTest,SequentialQueue"}
 
 ### Verification models
 
@@ -61,7 +61,7 @@ To apply a different verification model, use the `verifier` option:
 
 ```kotlin
 ```
-{src="examples/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.customVerifierTest"}
+{src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.customVerifierTest"}
 
 Lincheck provides the following verifier classes:
 
@@ -95,7 +95,7 @@ To understand the difference between the two models, see how a data structure ca
 
    ```kotlin
    ```
-   {src="examples/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueue"}
+   {src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueue"}
 
    This concurrent structure behaves incorrectly: it stores elements like in a typical queue, but returns them randomly.
 
@@ -103,19 +103,19 @@ To understand the difference between the two models, see how a data structure ca
 
    ```kotlin
    ```
-   {src="examples/LinearizabilitySerializabilityTest.kt" include-symbol="CorrectSequentialQueue"}
+   {src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="CorrectSequentialQueue"}
 
 3. Create a test class and declare the `put()` and `poll()` operations:
 
    ```kotlin
    ```
-   {src="examples/LinearizabilitySerializabilityTest.kt" include-lines="34-42,72"}
+   {src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-lines="34-42,72"}
 
 4. Declare and run a serializability test:
 
    ```kotlin
    ```
-   {src="examples/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.serializabilityTest"}
+   {src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.serializabilityTest"}
 
    It should pass successfully.
 
@@ -123,7 +123,7 @@ To understand the difference between the two models, see how a data structure ca
 
    ```kotlin
    ```
-   {src="examples/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.linearizabilityTest"}
+   {src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.linearizabilityTest"}
 
    The test should fail with the following report:
 

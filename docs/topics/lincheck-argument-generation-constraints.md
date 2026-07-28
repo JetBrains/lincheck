@@ -33,7 +33,7 @@ To limit the range of the generated argument values in Lincheck:
 
    ```kotlin
    ```
-   {src="examples/ArgumentGenerationTest.kt" include-symbol="MultiMapTest.add,MultiMapTest.get"}
+   {src="kotlinx-lincheck/ArgumentGenerationTest.kt" include-symbol="MultiMapTest.add,MultiMapTest.get"}
 
 With the constraints in place, Lincheck generates scenarios using only values within the specified range:
 
