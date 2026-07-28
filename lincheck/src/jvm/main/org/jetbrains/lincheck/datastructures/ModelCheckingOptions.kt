@@ -122,7 +122,7 @@ class ModelCheckingCTestConfiguration(
     awaitLoopsAnalysisEnabled = awaitLoopsAnalysisEnabled,
 ) {
 
-    private val useExperimentalModelChecking =
+    internal val useExperimentalModelChecking =
         experimentalModelChecking || System.getProperty("lincheck.useExperimentalModelChecking")?.toBoolean() ?: false
 
     override val instrumentationMode: InstrumentationMode get() =

@@ -11,6 +11,8 @@
 package org.jetbrains.lincheck_test.gpmc
 
 import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.Lincheck.runConcurrentTestInternal
+import org.jetbrains.lincheck.LincheckSettings
 import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.CyclicBarrier
@@ -35,7 +37,11 @@ class CyclicBarrierTest {
     @Test
     fun testBarrier() = runConcurrentTest(10000, block)
 
-    @Ignore("Times out")
+    @Ignore("Times out") // TODO: fix loop detector
     @Test
-    fun testBarrierEventStructure() = runConcurrentTest(10000, block)
+    fun testBarrierEventStructure() = runConcurrentTestInternal(
+        10000,
+        LincheckSettings(true, 10, 50, 20, true),
+        block
+    )
 }
