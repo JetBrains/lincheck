@@ -15,7 +15,7 @@ declaring the operations:
 
 ```kotlin
 ```
-{src="kotlinx-lincheck/NonParallelGroupTest.kt" include-symbol="NonParallelGroupTest.poll,NonParallelGroupTest.peek,NonParallelGroupTest.offer,NonParallelGroupTest.isEmpty"}
+{ src="kotlinx-lincheck/NonParallelGroupTest.kt" include-symbol="NonParallelGroupTest.poll,NonParallelGroupTest.peek,NonParallelGroupTest.offer,NonParallelGroupTest.isEmpty" }
 
 Lincheck ensures that the operations from the non-parallel group are never executed in parallel with each other. 
 However, these operations can still run in parallel with operations outside of the non-parallel group:
@@ -38,7 +38,7 @@ Use the `runOnce` option to execute the operation only once per test invocation:
 
 ```kotlin
 ```
-{src="kotlinx-lincheck/RunOnceTest.kt" include-symbol="RunOnceTest.singleOp,RunOnceTest.regularOp"}
+{ src="kotlinx-lincheck/RunOnceTest.kt" include-symbol="RunOnceTest.singleOp,RunOnceTest.regularOp" }
 
 An example of a generated scenario:
 
@@ -59,7 +59,7 @@ on an operation marked with the `blocking` option:
 
 ```kotlin
 ```
-{src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapWithBlockingTest.put"}
+{ src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapWithBlockingTest.put" }
 
 ## Cancelable operations
 
@@ -68,13 +68,13 @@ Use the `cancellableOnSuspension` option if the operation can be
 
 ```kotlin
 ```
-{src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="CancellableOnSuspensionTest.receive"}
+{ src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="CancellableOnSuspensionTest.receive" }
 
 Consider the following channel test:
 
 ```kotlin
 ```
-{src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="CancellableOnSuspensionTest"}
+{ src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="CancellableOnSuspensionTest" }
 
 <table>
 <tr><td><code>cancellableOnSuspension = false</code></td><td><code>cancellableOnSuspension = true</code></td></tr>
@@ -117,13 +117,13 @@ you can also set `promptCancellation` to `true`:
 
 ```kotlin
 ```
-{src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="PromptCancellationTest.receive"}
+{ src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="PromptCancellationTest.receive" }
 
 Consider the following channel test:
 
 ```kotlin
 ```
-{src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="PromptCancellationTest"}
+{ src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="PromptCancellationTest" }
 
 <table>
 <tr><td><code>promptCancellation = false</code></td><td><code>promptCancellation = true</code></td></tr>

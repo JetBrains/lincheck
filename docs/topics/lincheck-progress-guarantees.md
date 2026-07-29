@@ -11,7 +11,7 @@ Use the `checkObstructionFreedom` option to verify the obstruction-freedom guara
 
 ```kotlin
 ```
-{src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentSkipListMapTest.modelCheckingTest"}
+{ src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentSkipListMapTest.modelCheckingTest" }
 
 > The `checkObstructionFreedom` option is only available for the
 > [model checking](lincheck-testing-strategies.md#model-checking) strategy.
@@ -35,7 +35,7 @@ In this example, you will test the `put()` function of a `ConcurrentHashMap` str
 
    ```kotlin
    ```
-   {src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapTest"}
+   { src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapTest" }
    
    The [`threads`](lincheck-testing-strategies-options.md#scenario-generation) and [`actorsPerThread`](lincheck-testing-strategies-options.md#scenario-generation) 
    options are used to reduce the number of potential execution scenarios. These options do not change the pass/fail 
@@ -74,7 +74,7 @@ In this example, you will test the `put()` function of a `ConcurrentHashMap` str
 
    ```kotlin
    ```
-   {src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapWithBlockingTest.put"}
+   { src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapWithBlockingTest.put" }
 
 5. Rerun the test. It should pass successfully.
 
@@ -88,7 +88,7 @@ In this example, you will test the `put()` function of a non-blocking `Concurren
 
    ```kotlin
    ```
-   {src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentSkipListMapTest"}
+   { src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentSkipListMapTest" }
 
 3. Run the test. It should pass successfully.
 

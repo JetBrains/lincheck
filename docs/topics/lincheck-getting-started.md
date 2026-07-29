@@ -87,13 +87,13 @@ incorrect behavior.
 
    ```kotlin
    ```
-   {src="kotlinx-lincheck/CounterTest.kt" include-lines="3-5"}
+   { src="kotlinx-lincheck/CounterTest.kt" include-lines="3-5" }
 
 3. Write a test that creates a variable and two threads manipulating that variable:
 
    ```kotlin
    ```
-   {src="kotlinx-lincheck/CounterTest.kt" include-symbol="CounterTest"}
+   { src="kotlinx-lincheck/CounterTest.kt" include-symbol="CounterTest" }
 
 4. Run the test. Lincheck generates a report with a thread interleaving that led to incorrect behavior:
 
@@ -155,26 +155,26 @@ In this section, you will test a simple counter:
 
    ```kotlin
    ```
-   {src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="3-4"}
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="3-4" }
 
 3. Create a `Counter` structure:
 
    ```kotlin
    ```
-   {src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="Counter"}
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="Counter" }
    
 4. Create a `CounterStructureTest` class. Set the initial state of the structure and mark the concurrent operations 
    of the structure with the `@Operation` annotation:
 
    ```kotlin
    ```
-   {src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="13-20,27"}
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="13-20,27" }
 
 5. In the `CounterStructureTest` class, declare a test function using `ModelCheckingOptions()`:
     
    ```kotlin
    ```
-   {src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.test"}
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.test" }
    
    > Learn how model checking works in the [Testing Strategies](lincheck-testing-strategies.md#model-checking) 
    > article.
