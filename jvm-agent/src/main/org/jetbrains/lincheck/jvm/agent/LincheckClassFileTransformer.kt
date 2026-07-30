@@ -15,6 +15,8 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationS
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClasses
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.transformationProfile
+import org.jetbrains.lincheck.jvm.agent.blocklist.BlocklistEngine
+import org.jetbrains.lincheck.jvm.agent.blocklist.DynamicExtentChecker
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
@@ -44,6 +46,12 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         if (collectTransformationStatistics) TransformationStatisticsTracker() else null
     
     val liveDebuggerSettings = LiveDebuggerSettings()
+
+    /** Authoritative sensitive-area blocklist matcher, backed by the settings' blocklist registry. */
+    val blocklistEngine = BlocklistEngine(liveDebuggerSettings.blocklistRegistry)
+
+    /** Dynamic-extent (Stage 3) checker over [blocklistEngine]; consulted on the capture hot path. */
+    val dynamicExtentChecker = DynamicExtentChecker(blocklistEngine)
 
     override fun transform(
         loader: ClassLoader?,
@@ -98,12 +106,11 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         reader.accept(classNode, ClassReader.EXPAND_FRAMES)
 
         val profile = transformationProfile
-        val classInfo = buildClassInformation(classNode, reader, profile)
-
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
-        val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, liveDebuggerSettings, LincheckInstrumentation.context)
 
         try {
+            val classInfo = buildClassInformation(classNode, reader, profile, blocklistEngine, liveDebuggerSettings)
+            val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, LincheckInstrumentation.context)
             val timeNano = measureTimeNano {
                 classNode.accept(visitor)
             }

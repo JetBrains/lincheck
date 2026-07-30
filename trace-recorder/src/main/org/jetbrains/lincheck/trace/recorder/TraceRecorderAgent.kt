@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
+import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
@@ -100,6 +101,10 @@ internal object TraceRecorderAgent {
 
                     override fun removeBreakpoints(uuids: List<java.util.UUID>) {
                         Logger.error { "Remove breakpoints is not supported in trace recorder mode" }
+                    }
+
+                    override fun addSensitiveAreaBlocklists(blocklists: List<SensitiveAreaBlocklist>) {
+                        Logger.error { "Sensitive-area blocklists are not supported in trace recorder mode" }
                     }
 
                     override fun onDisconnected() {

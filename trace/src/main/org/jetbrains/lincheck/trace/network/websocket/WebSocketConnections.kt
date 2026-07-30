@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.trace.network.websocket
 
 import org.java_websocket.WebSocket
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
+import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.encodeToString
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
@@ -45,6 +46,12 @@ class WebSocketTracingCommandSender(private val webSocket: WebSocket) : Closeabl
         webSocket.send("${TracingCommands.REMOVE_BREAKPOINTS}:${uuids.joinToString(",")}")
     }
 
+    override fun addSensitiveAreaBlocklists(blocklists: List<SensitiveAreaBlocklist>) {
+        // The blocklists payload may itself contain ':' (rule fields),
+        // so the receiver splits off the command with limit=2.
+        webSocket.send("${TracingCommands.ADD_SENSITIVE_AREA_BLOCKLISTS}:${blocklists.encodeToString()}")
+    }
+
     override fun close() = webSocket.close()
 }
 
@@ -72,6 +79,28 @@ class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
         webSocket.send("${TracingCallbacks.BREAKPOINT_EXPRESSION_UNSAFE}:$timestamp:$payload")
     }
 
+    override fun breakpointBlocked(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        reason: String,
+        timestamp: Long
+    ) {
+        // Layout: breakpointData ; reason. breakpointData has no ';'; reason absorbs the rest.
+        val payload = "$breakpointData;$reason"
+        webSocket.send("${TracingCallbacks.BREAKPOINT_BLOCKED}:$timestamp:$payload")
+    }
+
+    override fun breakpointHitSuppressed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        blockedFrameClass: String,
+        reason: String,
+        timestamp: Long
+    ) {
+        // Layout: breakpointData ; blockedFrameClass ; reason. The first two have no ';';
+        // reason absorbs the rest.
+        val payload = "$breakpointData;$blockedFrameClass;$reason"
+        webSocket.send("${TracingCallbacks.BREAKPOINT_HIT_SUPPRESSED}:$timestamp:$payload")
+    }
+
     override fun binaryTraceData(data: ByteArray) {
         if (webSocket.isOpen) {
             webSocket.send(data)
@@ -95,6 +124,21 @@ class ClientSink: Closeable, TracingCallbacks {
         timestamp: Long,
     ) {
         Logger.warn { "breakpointExpressionUnsafe dropped: no client connected (breakpoint=$breakpointData, kind=$slot, violation=$safetyViolationMessage)" }
+    }
+    override fun breakpointBlocked(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        reason: String,
+        timestamp: Long,
+    ) {
+        Logger.warn { "breakpointBlocked dropped: no client connected (breakpoint=$breakpointData, reason=$reason)" }
+    }
+    override fun breakpointHitSuppressed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        blockedFrameClass: String,
+        reason: String,
+        timestamp: Long,
+    ) {
+        Logger.warn { "breakpointHitSuppressed dropped: no client connected (breakpoint=$breakpointData, frame=$blockedFrameClass, reason=$reason)" }
     }
     override fun binaryTraceData(data: ByteArray) {
         Logger.warn { "binaryTraceData dropped: no client connected (${data.size} bytes)" }

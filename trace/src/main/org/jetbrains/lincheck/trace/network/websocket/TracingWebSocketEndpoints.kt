@@ -17,6 +17,7 @@ import org.java_websocket.handshake.ServerHandshake
 import org.java_websocket.server.WebSocketServer
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.decodeBlocklistsFromString
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingClient
@@ -52,6 +53,12 @@ fun TracingCommands.handleMessage(message: String?) {
 
             TracingCommands.ADD_BREAKPOINTS -> addBreakpoints(parseBreakpointsPayload(parts))
             TracingCommands.REMOVE_BREAKPOINTS -> removeBreakpoints(parseUuidsPayload(parts))
+
+            TracingCommands.ADD_SENSITIVE_AREA_BLOCKLISTS -> {
+                val encoded = parts.getOrNull(1).orEmpty()
+                val blocklists = if (encoded.isBlank()) emptyList() else decodeBlocklistsFromString(encoded)
+                addSensitiveAreaBlocklists(blocklists)
+            }
 
             else -> Logger.warn { "Unknown command received: $command" }
         }
@@ -108,6 +115,34 @@ fun TracingCallbacks.handleMessage(message: String?) {
                 }
                 val safetyViolationMessage = dataParts[2]
                 breakpointExpressionUnsafe(breakpointData, slot, safetyViolationMessage, timestamp)
+            }
+            TracingCallbacks.BREAKPOINT_BLOCKED -> {
+                // Layout: breakpointData ; reason
+                val dataParts = data.split(";", limit = 2)
+                if (dataParts.size < 2) {
+                    Logger.warn { "Malformed breakpointBlocked notification: $data" }
+                    return
+                }
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[0])
+                if (breakpointData == null) {
+                    Logger.warn { "Failed to parse breakpointBlocked notification: $data" }
+                    return
+                }
+                breakpointBlocked(breakpointData, dataParts[1], timestamp)
+            }
+            TracingCallbacks.BREAKPOINT_HIT_SUPPRESSED -> {
+                // Layout: breakpointData ; blockedFrameClass ; reason
+                val dataParts = data.split(";", limit = 3)
+                if (dataParts.size < 3) {
+                    Logger.warn { "Malformed breakpointHitSuppressed notification: $data" }
+                    return
+                }
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[0])
+                if (breakpointData == null) {
+                    Logger.warn { "Failed to parse breakpointHitSuppressed notification: $data" }
+                    return
+                }
+                breakpointHitSuppressed(breakpointData, dataParts[1], dataParts[2], timestamp)
             }
             else -> Logger.warn { "Unknown notification received: $type" }
         }

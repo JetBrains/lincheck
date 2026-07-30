@@ -15,10 +15,9 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.transformers.*
-import org.jetbrains.lincheck.settings.LiveDebuggerSettings
-import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
+import sun.nio.ch.lincheck.BreakpointStorage
 
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
@@ -26,7 +25,6 @@ internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
     private val profile: TransformationProfile,
     private val statsTracker: TransformationStatisticsTracker?,
-    private val liveDebuggerSettings: LiveDebuggerSettings,
     private val context: TraceContext
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
@@ -213,11 +211,23 @@ internal class LincheckClassVisitor(
         }
         
         // ======== SnapshotBreakpoints ========
-        val breakpoints = liveDebuggerSettings.lineBreakpoints
-            .filterValues { it.isApplicableTo(className.toCanonicalClassName(), fileName) }
+        // Breakpoints and blocklist verdicts come from the same [ClassInformation] snapshot —
+        // re-reading the live settings here could see a breakpoint registered mid-transform
+        // and inject it without its Stage 2 verdict.
+        val breakpoints = classInformation.applicableBreakpoints
         if (breakpoints.isNotEmpty()) {
-            chain.addTransformer { adapter, mv ->
-                SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classVisitor.loader)
+            // Stage 2 — instrumentation-time suppression (authoritative).
+            // If the whole class or this specific method is a blocked sensitive area, the snapshot
+            // hook is simply never injected: no capture, no condition/watch code runs there.
+            val blockMatch = methodInfo.blockMatch
+            if (blockMatch != null) {
+                for ((breakpointId, breakpoint) in breakpoints) {
+                    BreakpointStorage.notifyBreakpointBlocked(breakpointId, breakpoint, blockMatch.reason)
+                }
+            } else {
+                chain.addTransformer { adapter, mv ->
+                    SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classVisitor.loader)
+                }
             }
         }
 

@@ -56,7 +56,18 @@ import java.lang.reflect.Modifier
  * - breakpointsFile — path to an INI file with live debugger breakpoints (optional, liveDebugger mode only);
  *       see [BreakpointsFileParser] for details on file format.
  *       Example: `breakpointsFile="/tmp/breakpoints.ini"`
- *       
+ *
+ * - blocklistFile — path to an INI file with sensitive-area blocklists (optional, liveDebugger mode only);
+ *       policy is active from `premain`, before any breakpoint source is processed.
+ *       See `BlocklistFileParser` for the file format.
+ *       Example: `blocklistFile="/tmp/blocklists.ini"`
+ *
+ * - policyBootstrap — where the agent loads its sensitive-area policy from at startup
+ *       (optional, liveDebugger mode only). `controlPlane` makes the agent pull the policy from the
+ *       control plane (`GET /api/policy` against `LIVE_DEBUGGER_CONTROL_PLANE_URL`) before any
+ *       breakpoint source is processed; `none` (default) loads no policy over the network.
+ *       Combines by union with `blocklistFile=`. Example: `policyBootstrap=controlPlane`
+ *
  * - liveDebuggerHeartbeat — boolean that enables heartbeat messages when used in kubernetes setup.
  *       Example: `liveDebuggerHeartbeat=on` or `liveDebuggerHeartbeat=off`, it is off by default.
  *
@@ -114,7 +125,12 @@ object TraceAgentParameters {
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
+    const val ARGUMENT_BLOCKLIST_FILE = "blocklistFile"
+    const val ARGUMENT_POLICY_BOOTSTRAP = "policyBootstrap"
     const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
+
+    /** Value of [ARGUMENT_POLICY_BOOTSTRAP] that pulls the policy from the control plane at startup. */
+    const val POLICY_BOOTSTRAP_CONTROL_PLANE = "controlPlane"
     const val ARGUMENT_START_SERVER = "tracingServer"
     const val ARGUMENT_SERVER_PORT = "serverPort"
 
@@ -135,6 +151,15 @@ object TraceAgentParameters {
     @JvmStatic
     val breakpointsFilePath: String?
         get() = getArg(ARGUMENT_BREAKPOINTS_FILE)
+
+    @JvmStatic
+    val blocklistFilePath: String?
+        get() = getArg(ARGUMENT_BLOCKLIST_FILE)
+
+    /** `true` when the agent should pull its sensitive-area policy from the control plane at startup. */
+    @JvmStatic
+    val policyBootstrapFromControlPlane: Boolean
+        get() = getArg(ARGUMENT_POLICY_BOOTSTRAP)?.equals(POLICY_BOOTSTRAP_CONTROL_PLANE, ignoreCase = true) == true
 
     @JvmStatic
     val heartBeatEnabled: Boolean

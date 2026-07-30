@@ -62,4 +62,27 @@ open class LiveDebuggerNotification(timestamp: Long) : TracingNotification(times
         val breakpointData: BreakpointData,
         override val timestamp: Long = System.currentTimeMillis(),
     ) : LiveDebuggerNotification(timestamp)
+
+    /**
+     * Notification that a breakpoint was rejected by a sensitive-area blocklist — either at
+     * registration or because the snapshot hook was never injected into a blocked area.
+     * [reason] names the policy that rejected it, so the user never sees a silently dead breakpoint.
+     */
+    data class BreakpointBlocked(
+        val breakpointData: BreakpointData,
+        val reason: String,
+        override val timestamp: Long = System.currentTimeMillis(),
+    ) : LiveDebuggerNotification(timestamp)
+
+    /**
+     * Notification that a hit was suppressed by dynamic-extent enforcement: the call stack passed
+     * through the blocked [blockedFrameClass]. Unlike [BreakpointBlocked], the breakpoint stays
+     * valid — it still fires on call paths that avoid blocked areas.
+     */
+    data class BreakpointHitSuppressed(
+        val breakpointData: BreakpointData,
+        val blockedFrameClass: String,
+        val reason: String,
+        override val timestamp: Long = System.currentTimeMillis(),
+    ) : LiveDebuggerNotification(timestamp)
 }

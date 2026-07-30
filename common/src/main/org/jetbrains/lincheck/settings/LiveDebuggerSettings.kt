@@ -25,7 +25,31 @@ import java.util.*
  */
 typealias BreakpointId = Int
 
+/** A breakpoint rejected at registration time by a sensitive-area blocklist, with the matching rule. */
+class RejectedBreakpoint(val breakpoint: SnapshotBreakpoint, val match: BlockMatch)
+
+/** Outcome of [LiveDebuggerSettings.addBreakpoints]: the breakpoints registered and the ones rejected. */
+class AddBreakpointsResult(
+    val added: List<SnapshotBreakpoint>,
+    val rejected: List<RejectedBreakpoint>,
+)
+
+/**
+ * Outcome of [LiveDebuggerSettings.removeBreakpoints] / [LiveDebuggerSettings.removeAllBreakpoints]:
+ * the breakpoints removed and the requested UUIDs that matched no registered breakpoint.
+ */
+class RemoveBreakpointsResult(
+    val removed: List<SnapshotBreakpoint>,
+    val notFound: List<UUID>,
+)
+
 class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList()) {
+
+    /**
+     * Active sensitive-area blocklists. Registration (Stage 1) rejects breakpoints that fall into a
+     * statically-decidable blocked area; the instrumentation stage remains authoritative.
+     */
+    val blocklistRegistry = SensitiveAreaBlocklistRegistry()
 
     /**
      * Source of unique [BreakpointId] handles assigned at registration time.
@@ -52,11 +76,24 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
      * Registers each breakpoint, skipping any whose [SnapshotBreakpoint.uuid] is already present.
      * Same-line breakpoints with different UUIDs are deliberately treated as distinct.
      *
-     * @return the breakpoints that were actually added (in input order).
+     * **Stage 1 blocklist rejection.** A breakpoint whose class falls into a statically-decidable
+     * blocked area (package rules, class-name / generated-descendant rules) is *not* registered and is
+     * returned in [AddBreakpointsResult.rejected]. Per-method rules are not decidable here
+     * (the enclosing method is unknown until instrumentation),
+     * so passing Stage 1 is not approval — the instrumentation stage is authoritative.
+     *
+     * @return the breakpoints that were actually added and the ones rejected (both in input order).
      */
-    fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>): List<SnapshotBreakpoint> {
+    fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>): AddBreakpointsResult {
         val addedBreakpoints = mutableListOf<SnapshotBreakpoint>()
+        val rejectedBreakpoints = mutableListOf<RejectedBreakpoint>()
         for (breakpoint in breakpoints) {
+            val staticMatch = blocklistRegistry.staticBlockMatch(breakpoint.className)
+            if (staticMatch != null) {
+                Logger.warn { "Breakpoint rejected at registration (${staticMatch.reason}): $breakpoint" }
+                rejectedBreakpoints.add(RejectedBreakpoint(breakpoint, staticMatch))
+                continue
+            }
             // Synchronize the entire check-then-act to prevent two concurrent callers from
             // both passing the duplicate check and registering the same breakpoint twice.
             synchronized(_lineBreakpoints) {
@@ -79,30 +116,33 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
                 addedBreakpoints.add(breakpoint)
             }
         }
-        return addedBreakpoints
+        return AddBreakpointsResult(addedBreakpoints, rejectedBreakpoints)
     }
 
     /**
      * Removes the breakpoints with the given UUIDs.
      *
-     * @return the breakpoints that were actually removed (in input order).
+     * @return the breakpoints that were actually removed and the UUIDs that matched nothing
+     *   (both in input order).
      */
-    fun removeBreakpoints(uuids: List<UUID>): List<SnapshotBreakpoint> {
+    fun removeBreakpoints(uuids: List<UUID>): RemoveBreakpointsResult {
         val removedBreakpoints = mutableListOf<SnapshotBreakpoint>()
+        val notFoundUuids = mutableListOf<UUID>()
         for (uuid in uuids) {
             // Synchronize the entire find-then-remove to prevent two concurrent callers from
             // both finding the entry and attempting a double removal.
             synchronized(_lineBreakpoints) {
-                val (id, removed) = _lineBreakpoints.entries
-                     .firstOrNull { it.value.uuid == uuid }
-                    ?.also { _lineBreakpoints.remove(it.key) }
-                    ?: continue
-
-                BreakpointStorage.removeBreakpoint(id)
-                removedBreakpoints.add(removed)
+                val entry = _lineBreakpoints.entries.firstOrNull { it.value.uuid == uuid }
+                if (entry == null) {
+                    notFoundUuids.add(uuid)
+                    return@synchronized
+                }
+                _lineBreakpoints.remove(entry.key)
+                BreakpointStorage.removeBreakpoint(entry.key)
+                removedBreakpoints.add(entry.value)
             }
         }
-        return removedBreakpoints
+        return RemoveBreakpointsResult(removedBreakpoints, notFoundUuids)
     }
 
     /**
@@ -110,14 +150,14 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
      *
      * @return the breakpoints that were removed.
      */
-    fun removeAllBreakpoints(): List<SnapshotBreakpoint> {
+    fun removeAllBreakpoints(): RemoveBreakpointsResult {
         synchronized(_lineBreakpoints) {
             val removed = _lineBreakpoints.values.toList()
             for (id in _lineBreakpoints.keys) {
                 BreakpointStorage.removeBreakpoint(id)
             }
             _lineBreakpoints.clear()
-            return removed
+            return RemoveBreakpointsResult(removed, notFound = emptyList())
         }
     }
 

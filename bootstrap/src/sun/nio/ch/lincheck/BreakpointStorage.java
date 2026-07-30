@@ -84,6 +84,20 @@ public class BreakpointStorage {
     private static volatile BreakpointExpressionUnsafetyListener onBreakpointExpressionUnsafetyDetected = null;
 
     /**
+     * Called when a breakpoint is rejected by a sensitive-area blocklist (at registration or
+     * instrumentation time). Receives the breakpoint id, {@link BreakpointState#userData}, and an
+     * opaque reason string.
+     */
+    private static volatile BreakpointBlockedListener onBreakpointBlocked = null;
+
+    /**
+     * Called when a hit is suppressed because its call stack passes through a blocked sensitive
+     * area (dynamic-extent / Stage 3). Receives the breakpoint id, {@link BreakpointState#userData},
+     * the blocked frame's class name, and an opaque reason string.
+     */
+    private static volatile HitSuppressedListener onHitSuppressed = null;
+
+    /**
      * Listener for hit-limit events.
      */
     @FunctionalInterface
@@ -99,6 +113,25 @@ public class BreakpointStorage {
     @FunctionalInterface
     public interface BreakpointExpressionUnsafetyListener {
         void onBreakpointExpressionUnsafetyDetected(int breakpointId, Object userData, Object expressionKind, Object safetyViolation);
+    }
+
+    /**
+     * Listener for blocklist-rejection events. The {@code reason} is an opaque human-readable
+     * string the bootstrap layer forwards without inspecting.
+     */
+    @FunctionalInterface
+    public interface BreakpointBlockedListener {
+        void onBreakpointBlocked(int breakpointId, Object userData, Object reason);
+    }
+
+    /**
+     * Listener for dynamic-extent hit-suppression events (a hit skipped because its call stack
+     * passes through a blocked sensitive area). The {@code reason} is an opaque human-readable
+     * string the bootstrap layer forwards without inspecting.
+     */
+    @FunctionalInterface
+    public interface HitSuppressedListener {
+        void onHitSuppressed(int breakpointId, Object userData, String blockedFrameClass, Object reason);
     }
 
     // -------------------------------------------------------------------------
@@ -153,6 +186,20 @@ public class BreakpointStorage {
      */
     public static void removeBreakpoint(int breakpointId) {
         states.remove(breakpointId);
+    }
+
+    /**
+     * Whether the given breakpoint has already reached its hit limit, without consuming budget.
+     * O(1) non-mutating peek used before expensive per-hit work (e.g. the stack capture);
+     * {@link #incrementAndCheckHitLimit} remains the single authority — a benign race with a
+     * concurrent increment only means one extra hit proceeds to the authoritative check.
+     *
+     * @param breakpointId the breakpoint id
+     * @return {@code true} if the limit is reached (or the breakpoint is unregistered)
+     */
+    public static boolean isHitLimitReached(int breakpointId) {
+        BreakpointState state = states.get(breakpointId);
+        return state == null || state.hitCount.get() >= state.hitLimit;
     }
 
     /**
@@ -278,6 +325,55 @@ public class BreakpointStorage {
     public static void notifyBreakpointExpressionUnsafetyDetected(int breakpointId, Object userData, Object expressionKind, Object safetyViolation) {
         BreakpointExpressionUnsafetyListener callback = onBreakpointExpressionUnsafetyDetected;
         if (callback != null) callback.onBreakpointExpressionUnsafetyDetected(breakpointId, userData, expressionKind, safetyViolation);
+    }
+
+    /**
+     * Registers the callback that fires when a breakpoint is rejected by a sensitive-area blocklist.
+     * The callback receives the breakpoint id, {@code userData}, and an opaque reason string.
+     * <p>
+     * Should be called before any breakpoint registration or class transformation, so that no
+     * blocked event can fire before the callback is in place.
+     *
+     * @param callback invoked with the breakpoint id, {@code userData}, and reason
+     */
+    public static void setOnBreakpointBlocked(BreakpointBlockedListener callback) {
+        onBreakpointBlocked = callback;
+    }
+
+    /**
+     * Fires the blocklist-rejection callback for the given breakpoint, if a listener is installed.
+     *
+     * @param breakpointId the breakpoint id
+     * @param userData the breakpoint's {@code userData} (typically a {@code SnapshotBreakpoint})
+     * @param reason opaque human-readable explanation of which policy rejected the breakpoint
+     */
+    public static void notifyBreakpointBlocked(int breakpointId, Object userData, Object reason) {
+        BreakpointBlockedListener callback = onBreakpointBlocked;
+        if (callback != null) callback.onBreakpointBlocked(breakpointId, userData, reason);
+    }
+
+    /**
+     * Registers the callback that fires when a hit is suppressed by dynamic-extent enforcement.
+     * Should be installed before tracing starts, so no suppression event can fire unobserved.
+     *
+     * @param callback invoked with the breakpoint id, {@code userData}, blocked frame class, and reason
+     */
+    public static void setOnHitSuppressed(HitSuppressedListener callback) {
+        onHitSuppressed = callback;
+    }
+
+    /**
+     * Fires the dynamic-extent hit-suppression callback for the given breakpoint, if a listener
+     * is installed.
+     *
+     * @param breakpointId the breakpoint id
+     * @param userData the breakpoint's {@code userData} (typically a {@code SnapshotBreakpoint})
+     * @param blockedFrameClass canonical class name of the blocked stack frame
+     * @param reason opaque human-readable explanation of which policy blocked the frame
+     */
+    public static void notifyHitSuppressed(int breakpointId, Object userData, String blockedFrameClass, Object reason) {
+        HitSuppressedListener callback = onHitSuppressed;
+        if (callback != null) callback.onHitSuppressed(breakpointId, userData, blockedFrameClass, reason);
     }
 
     /**
