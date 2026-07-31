@@ -23,5 +23,10 @@ class CounterStructureTest {
     fun test() = ModelCheckingOptions().check(this::class)
 
     @Test
+    fun testWithIterations() = ModelCheckingOptions()
+        .iterations(100) // Specify the number of generated scenarios
+        .check(this::class)
+
+    @Test
     fun stressTest() = StressOptions().check(this::class)
 }

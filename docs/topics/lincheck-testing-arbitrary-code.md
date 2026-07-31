@@ -11,19 +11,14 @@ To test concurrent code with Lincheck:
 1. Create a test class:
 
    ```kotlin
-   class NewConcurrentTest {
-       // Tests
-   }
    ```
-   <!-- TODO: create a test or something?? -->
-2. Create a test function as a member function using `runConcurrentTest()`.
+   { src="kotlinx-lincheck/CounterTestWithIterations.kt" include-lines="8,24" }
+
+2. Create a test function as a member function using `runConcurrentTest()`:
 
    ```kotlin
-   @Test
-   fun test() = runConcurrentTest(100_000) {
-       // Concurrent code
-   }
    ```
+   { src="kotlinx-lincheck/CounterTestWithIterations.kt" include-symbol="CounterTestWithIterations.test" }
 
    > The function parameter is optional; it specifies the number of execution schedules to explore.
    > The default value is `10_000`.
@@ -32,26 +27,26 @@ To test concurrent code with Lincheck:
 
 3. Run the test. If it fails, Lincheck generates a report with an execution schedule that leads to incorrect behavior.
 
-  ```text
-  | ------------------------------------------------------------------------------- |
-  |                   Main Thread                   |   Thread 1    |   Thread 2    |
-  | ------------------------------------------------------------------------------- |
-  | thread(block = Lambda#2): Thread#1              |               |               |
-  | thread(block = Lambda#3): Thread#2              |               |               |
-  | switch (reason: waiting for Thread 1 to finish) |               |               |
-  |                                                 |               | run()         |
-  |                                                 |               |   counter ➜ 0 |
-  |                                                 |               |   switch      |
-  |                                                 | run()         |               |
-  |                                                 |   counter ➜ 0 |               |
-  |                                                 |   counter = 1 |               |
-  |                                                 |               |   counter = 1 |
-  | Thread#1.join()                                 |               |               |
-  | Thread#2.join()                                 |               |               |
-  | counter.element ➜ 1                             |               |               |
-  | assertEquals(2, 1): threw AssertionFailedError  |               |               |
-  | ------------------------------------------------------------------------------- |
-  ```
+   ```text
+   | ------------------------------------------------------------------------------- |
+   |                   Main Thread                   |   Thread 1    |   Thread 2    |
+   | ------------------------------------------------------------------------------- |
+   | thread(block = Lambda#2): Thread#1              |               |               |
+   | thread(block = Lambda#3): Thread#2              |               |               |
+   | switch (reason: waiting for Thread 1 to finish) |               |               |
+   |                                                 |               | run()         |
+   |                                                 |               |   counter ➜ 0 |
+   |                                                 |               |   switch      |
+   |                                                 | run()         |               |
+   |                                                 |   counter ➜ 0 |               |
+   |                                                 |   counter = 1 |               |
+   |                                                 |               |   counter = 1 |
+   | Thread#1.join()                                 |               |               |
+   | Thread#2.join()                                 |               |               |
+   | counter.element ➜ 1                             |               |               |
+   | assertEquals(2, 1): threw AssertionFailedError  |               |               |
+   | ------------------------------------------------------------------------------- |
+   ```
 
 ## Example: test `ConcurrentHashMap` functions
 

@@ -13,12 +13,8 @@ To limit the range of the generated argument values in Lincheck:
 1. Use the `@Param` annotation to declare an argument generator:
 
    ```kotlin
-   @Param(name = "key", gen = IntGen::class, conf = "1:2")
-   class MultiMapTest {
-       // Tests
-   }
    ```
-   <!-- TODO: figure something out to not use line numbers -->
+   { src="kotlinx-lincheck/ArgumentGenerationTest.kt" include-lines="27,28,42" }
 
    * `name` – the name of the argument generator.
    * `gen` – the [type](#generator-types) of the generator.

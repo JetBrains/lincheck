@@ -168,14 +168,9 @@ By default, Lincheck does not validate the state of the concurrent data structur
 To check the final state, use the `@Validate` annotation on your validation function in the test class:
 
 ```kotlin
-@Validate
-fun validate() {
-    // Check some property of the data structure
-    // Throw an exception if the invariant is violated
-    check(size >= 0) { "Size must be non-negative, but was $size" }
-}
 ```
-<!-- TODO: make an example -->
+{ src="kotlinx-lincheck/ValidationTest.kt" include-symbol="ValidationTest.validate" }
+
 The validation function should:
 * Accept no arguments.
 * Throw an exception if the data structure is in an invalid state.

@@ -9,12 +9,8 @@ detection of stalled execution, verification, and others.
 To enable an option for a testing strategy, set it in the strategy class:
 
 ```kotlin
-@Test
-fun modelCheckingTest() = ModelCheckingOptions()
-    .iterations(100) // Specify the number of generated scenarios
-    .check(this::class)
 ```
-<!-- TODO: create an example -->
+{ src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.testWithIterations" }
 
 ## Scenario minimization
 
