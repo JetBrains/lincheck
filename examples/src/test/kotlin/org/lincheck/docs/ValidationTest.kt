@@ -12,7 +12,6 @@ class Storage {
 }
 
 class ValidationTest {
-
     private val storage = Storage()
 
     @Operation
