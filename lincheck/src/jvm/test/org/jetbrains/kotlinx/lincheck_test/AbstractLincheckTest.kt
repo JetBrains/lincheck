@@ -16,6 +16,7 @@ import org.jetbrains.lincheck.datastructures.StressOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.jetbrains.lincheck.datastructures.Options
 import org.junit.*
+import org.junit.Assume.assumeTrue
 import kotlin.reflect.*
 
 abstract class AbstractLincheckTest(
@@ -57,6 +58,14 @@ abstract class AbstractLincheckTest(
         runInternalTest()
     }
 
+    @Test(timeout = TIMEOUT)
+    fun testWithEventStructureStrategy() : Unit = ModelCheckingOptions().run {
+        invocationsPerIteration(1_000)
+        useExperimentalModelChecking()
+        commonConfiguration()
+        runInternalTest()
+    }
+
     private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
         iterations(30)
         actorsBefore(2)
@@ -65,6 +74,11 @@ abstract class AbstractLincheckTest(
         actorsAfter(2)
         minimizeFailedScenario(false)
         customize()
+    }
+
+    // Util function which allows us to exclude testing with event-structures for test cases that are not supported yet
+    protected fun <O: Options<O, *>> O.ignoreExperimentalModelChecking(): Unit {
+        assumeTrue(this !is ModelCheckingOptions || !isExperimentalModelCheckingEnabled)
     }
 }
 

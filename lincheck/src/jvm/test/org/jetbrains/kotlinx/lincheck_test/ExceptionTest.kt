@@ -184,6 +184,7 @@ class CoroutineResumedWithExceptionTest : AbstractLincheckTest(IncorrectResultsF
     }
 
     override fun <O : Options<O, *>> O.customize() {
+        ignoreExperimentalModelChecking() // NOTE: Coroutines not supported for event-structure
         iterations(0)
         addCustomScenario(scenario)
         minimizeFailedScenario(false)
@@ -203,6 +204,8 @@ class ExceptionInCancellationHandlerTest : AbstractLincheckTest(IncorrectResults
     }
 
     override fun <O : Options<O, *>> O.customize() {
+        // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
+        ignoreExperimentalModelChecking()
         iterations(10)
         sequentialSpecification(CoroutineExceptionTestSequentialImplementation::class.java)
     }

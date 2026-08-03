@@ -330,6 +330,8 @@ fun KClass<*>.getArrayElementType(): Type = when {
     else                -> throw IllegalArgumentException("Argument is not array")
 }
 
+fun Any.getArrayElementType(): Type = this.javaClass.kotlin.getArrayElementType()
+
 fun String.toType(): Type {
     return when (this) {
         "I", "java.lang.Integer" -> INT_TYPE

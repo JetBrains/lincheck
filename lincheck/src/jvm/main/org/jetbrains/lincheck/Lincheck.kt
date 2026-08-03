@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
@@ -25,6 +26,7 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
 import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
+import org.jetbrains.lincheck.datastructures.ModelCheckingCTestConfiguration
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import sun.nio.ch.lincheck.Injections
@@ -65,11 +67,14 @@ object Lincheck {
         settings: LincheckSettings,
         block: Runnable
     ) {
-        val options = ModelCheckingOptions()
+        var options = ModelCheckingOptions()
             .analyzeStdLib(settings.analyzeStdLib)
             .loopBound(settings.loopBound)
             .recursionBound(settings.recursionBound)
             .loopIterationsBeforeThreadSwitch(settings.loopIterationsBeforeThreadSwitch)
+
+        if (settings.useExperimentalModelChecking)
+            options = options.useExperimentalModelChecking()
 
         val testCfg = options.createTestConfigurations(block::class.java)
 
@@ -95,8 +100,13 @@ object Lincheck {
         }
     }
 
-    private fun ManagedCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
+    private fun ModelCheckingCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
         val runner = LambdaRunner(timeoutMs = timeoutMs, block)
+        if (useExperimentalModelChecking) {
+            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+                runner.initializeStrategy(it)
+            }
+        }
         return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
             runner.initializeStrategy(it)
         }

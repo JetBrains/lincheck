@@ -249,7 +249,7 @@ internal class LincheckClassVisitor(
         }
 
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-        if (instrumentationMode == MODEL_CHECKING) {
+        if (instrumentationMode == MODEL_CHECKING || instrumentationMode == EXPERIMENTAL_MODEL_CHECKING) {
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv, context)
         }
 

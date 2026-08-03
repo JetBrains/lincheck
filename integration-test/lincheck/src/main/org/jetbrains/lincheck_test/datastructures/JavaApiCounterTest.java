@@ -38,4 +38,9 @@ public class JavaApiCounterTest {
         new ModelCheckingOptions().check(this.getClass());
     }
 
+    @Test(expected = AssertionError.class)
+    public void eventStructureModelCheckingTest() {
+        new ModelCheckingOptions().useExperimentalModelChecking$lincheck().check(this.getClass());
+    }
+
 }
