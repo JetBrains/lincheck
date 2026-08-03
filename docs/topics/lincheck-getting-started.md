@@ -215,7 +215,7 @@ In this section, you will test a simple counter:
     > Learn how model checking works in the [Testing Strategies](lincheck-testing-strategies.md#model-checking) 
     > article.
     > 
-    {style=”tip”}
+    {style="tip"}
 
 6. Run the test. Lincheck generates an error report with the concurrent scenario and the specific thread interleaving 
    that led to incorrect behavior:

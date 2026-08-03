@@ -36,7 +36,7 @@ cache behavior, and other similar effects under the relaxed
 
 > For more information, see [Model checking](lincheck-model-checking.md).
 >
-{style=”tip”}
+{style="tip"}
 
 ## Stress testing
 
