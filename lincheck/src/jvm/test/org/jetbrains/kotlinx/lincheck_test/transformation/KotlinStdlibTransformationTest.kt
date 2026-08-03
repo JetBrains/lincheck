@@ -12,12 +12,6 @@ package org.jetbrains.kotlinx.lincheck_test.transformation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.util.JdkVersion
-import org.jetbrains.lincheck.util.jdkVersion
-import org.junit.Assume.assumeFalse
-import org.junit.Assume.assumeTrue
-import org.junit.Before
 
 /**
  * This test checks that some methods in kotlin stdlib related to
@@ -60,10 +54,5 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
 
     override fun <O : Options<O, *>> O.customize() {
         iterations(1)
-
-        // currently this test lead to hangs on JDK-21, apparently due to
-        // an unrelated bug with Kotlin stdlib arrays/collection util functions instrumentation,
-        // see https://github.com/JetBrains/lincheck/issues/564 for details
-        assumeTrue(jdkVersion != JdkVersion.JDK_21 || this !is ModelCheckingOptions || !isExperimentalModelCheckingEnabled)
     }
 }

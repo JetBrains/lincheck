@@ -13,15 +13,11 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.paramgen.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
-import org.jetbrains.lincheck.util.JdkVersion
-import org.jetbrains.lincheck.util.jdkVersion
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
 import org.jetbrains.lincheck.datastructures.ParameterGenerator
 import org.jetbrains.lincheck.datastructures.RandomProvider
-import org.junit.Assume.assumeFalse
-import org.junit.Before
 import java.io.*
 import java.util.concurrent.atomic.*
 
@@ -105,12 +101,6 @@ class ValueHolderGen(randomProvider: RandomProvider, conf: String) : ParameterGe
 
 @Param(name = "key", gen = JavaUtilGen::class)
 class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
-    @Before
-    fun setUp() {
-        // https://youtrack.jetbrains.com/issue/JBRes-5736
-        assumeFalse(jdkVersion == JdkVersion.JDK_21)
-    }
-    
     @Operation
     fun operation(@Param(name = "key") key: List<Int>): Int = key[0] + key.sum()
 

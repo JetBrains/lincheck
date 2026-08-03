@@ -69,6 +69,23 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // this can be related to the Kotlin compiler bug:
         // - https://youtrack.jetbrains.com/issue/KT-16727/
         if (internalClassName == null) return null
+        // While `uninstall` reverts the instrumentation, hand the class bytes back unchanged
+        // instead of detaching the transformer and letting the re-transformation see no transformer at all.
+        //
+        // When no attached agent modifies the bytes, the JVM treats the re-transformation as
+        // "not modified by any agent" and, since JDK 20 (JDK-7124710), drops its cached copy of the
+        // original class file. The next re-transformation then reconstitutes the class file from the
+        // already redefined class, whose constant pool is the result of the previous constant pool merge.
+        // Feeding that pool back into the next merge doubles the number of duplicated entries on every
+        // install/uninstall cycle, until the merged pool exceeds the u2 limit of 65535 entries and
+        // `Instrumentation.retransformClasses` starts failing --- with every merge in between
+        // quadratic in the pool size and performed at a safepoint.
+        //
+        // Returning the bytes explicitly marks the class as modified by a re-transformation capable agent,
+        // so the JVM keeps caching the original class file, as it does on JDK < 20.
+        if (LincheckInstrumentation.isRevertingInstrumentation) {
+            return if (classBeingRedefined != null) classBytes else null
+        }
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode)) {
             return null
