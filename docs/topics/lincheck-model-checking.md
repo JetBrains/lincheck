@@ -206,8 +206,8 @@ or the common thread pool with Java's [`ForkJoinPool`](https://docs.oracle.com/j
 
 Use a fixed thread pool:
 
-* as a local coroutines dispatcher,
-* instead of the common thread pool used by `ForkJoinPool`.
+* As a local coroutines dispatcher
+* Instead of the common thread pool used by `ForkJoinPool`
 
 This guarantees that Lincheck can track the lifecycle and activity of threads in a concurrent scenario:
 
