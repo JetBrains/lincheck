@@ -521,6 +521,29 @@ internal class EventStructureStrategy(
         }
         return (resumeEvent != null)
     }
+
+    /**
+     * NOTE: We need a way to combine loop detection with revisit options from the event structure strategy,
+     * Therefore, if the loop detector reports that we are struck during replay of a backtracking option,
+     * then it means that the revisit option is redundant.
+     */
+    override fun processLoopDetectorDecision(
+        decision: LoopDetector.Decision,
+        threadId: ThreadId,
+        loopId: Int,
+        codeLocation: Int
+    ) {
+        val isReplay = eventStructure.inReplayPhase(threadId)
+        if(!isReplay) {
+            super.processLoopDetectorDecision(decision, threadId, loopId, codeLocation)
+            return
+        }
+
+        // NOTE: May need to just have the STUCK decision in this check
+        if(decision == LoopDetector.Decision.STUCK || decision == LoopDetector.Decision.SWITCH_THREAD) {
+            onInconsistency(LoopStuckViolation()) // We stop this backtracking part with an inconsistency.
+        }
+    }
 }
 
 internal typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
@@ -998,4 +1021,7 @@ private class EventStructureParkingTracker(
     override fun reset() {}
 
 }
+
+// TODO: find a better place/name for this?
+class LoopStuckViolation : Inconsistency() {}
 

@@ -2220,7 +2220,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    private fun processLoopDetectorDecision(
+    open protected fun processLoopDetectorDecision(
         decision: LoopDetector.Decision,
         threadId: ThreadId,
         loopId: Int,
