@@ -61,7 +61,9 @@ When running a test with the model checking strategy, Lincheck controls the foll
 * **Identity hash codes**. Lincheck fixes the [identity hash codes](https://docs.oracle.com/javase/8/docs/api/java/lang/System.html#identityHashCode-java.lang.Object) 
   of objects.
 * **Time API calls**. Lincheck intercepts the time API calls and [returns deterministic results](#time-api-calls).
-* **Global variables**. Lincheck resets the values of global variables between invocations in model checking tests:
+* **Top-level and `companion object` properties**. Lincheck resets the values of top-level `var` properties
+  and `companion object` properties (the Kotlin equivalents of global variables) between invocations in 
+  model checking tests:
 
   ```kotlin
   @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -108,7 +110,7 @@ When running a test with the model checking strategy, Lincheck controls the foll
 ### Uncontrolled sources of non-determinism
 
 Lincheck controls [some sources of non-determinism](#controlled-sources-of-non-determinism), but not all. Using 
-non-deterministic code in a way that Lincheck can't handle either prevents you from using Lincheck with this particular
+non-deterministic code in a way that Lincheck cannot control either prevents you from using Lincheck with this particular
 part of code or requires workarounds.
 
 Each uncontrolled source of non-determinism is explained in detail in a dedicated section:
@@ -251,7 +253,8 @@ class FixedThreadPoolTest {
 ### Thread-local variables
 
 Lincheck does not reset thread-local variables during multiple invocations of the same scenario (unlike it does 
-with [global variables](#controlled-sources-of-non-determinism)). This leads to inconsistencies between the runs of the same test.
+with [top-level `var` properties and `companion object` properties](#controlled-sources-of-non-determinism)). 
+This leads to inconsistencies between the runs of the same test.
 
 > Vote for the related issue and track its progress on [GitHub](https://github.com/JetBrains/lincheck/issues/571).
 >
@@ -302,7 +305,7 @@ Create thread-local variables manually by storing values in a `ConcurrentHashMap
 
 ```kotlin
 class ThreadLocalVariableTest {
-    val threadLocalCounters = ConcurrentHashMap<Long, AtomicInteger>()
+    var threadLocalCounters = ConcurrentHashMap<Long, AtomicInteger>()
   
     // ...
 
@@ -312,8 +315,8 @@ class ThreadLocalVariableTest {
 }
 ```
 
-Because `threadLocalCounters` is a [global variable](#controlled-sources-of-non-determinism), Lincheck resets it 
-between invocations, avoiding the accumulation problem.
+Because `threadLocalCounters` is a [top-level `var` property](#controlled-sources-of-non-determinism), Lincheck resets it between invocations, avoiding 
+the accumulation problem.
 
 ### Weak references
 
