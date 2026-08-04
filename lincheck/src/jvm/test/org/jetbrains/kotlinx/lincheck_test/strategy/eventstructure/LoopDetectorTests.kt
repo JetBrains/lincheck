@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistenc
 import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
 class LoopDetectorTests {
@@ -41,7 +42,8 @@ class LoopDetectorTests {
         }
 
         val outcomes = setOf(null, 1)
-        litmusTest(TestClass::class.java, scenario, assertSame(outcomes), MemoryModel.SequentialConsistency) { results ->
+        // NOTE: the number of executions depends on the loop detector bound
+        litmusTest(TestClass::class.java, scenario, assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency) { results ->
             val p1 = getValue<Int?>(results.parallelResults[1][0]!!)
             p1
         }
@@ -68,7 +70,8 @@ class LoopDetectorTests {
         }
 
         val outcomes = setOf(null, 1)
-        litmusTest(TestClass::class.java, scenario, assertSame(outcomes), MemoryModel.SequentialConsistency, 10) { results ->
+        // NOTE: the number of executions depends on the loop detector bound
+        litmusTest(TestClass::class.java, scenario, assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency, 10) { results ->
             val p1 = getValue<Int?>(results.parallelResults[0][0]!!)
             p1
         }
@@ -78,15 +81,17 @@ class LoopDetectorTests {
     @Test
     fun testSpinLoop() {
         val outcomes = setOf<List<Int>>(
-            listOf(1)
+            listOf(42)
         )
 
-        litmusTest(assertSame(outcomes), MemoryModel.SequentialConsistency, 100) {
+        litmusTest(assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency, 100) {
             val x = AtomicInteger(0)
+            var r0 = -1
 
             val t1 = thread {
                 while (x.get() == 0) {
                 }
+                r0 = x.get()
             }
 
             val t2 = thread {
@@ -96,18 +101,18 @@ class LoopDetectorTests {
             t1.join()
             t2.join()
 
-            1
+            listOf(r0)
         }
     }
 
     @Test
     fun testSpinLoop2() {
-        val outcomes = setOf<List<Int>>(
-            listOf(1)
-        )
+        val outcomes = setOf<List<Int>>(listOf(42))
 
-        litmusTest(assertSame(outcomes), MemoryModel.SequentialConsistency, 10) {
+        litmusTest(assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency, 10) {
             val x = AtomicInteger(0)
+
+            var r0 = -1
 
 
             val t1 = thread {
@@ -117,12 +122,50 @@ class LoopDetectorTests {
             val t2 = thread {
                 while (x.get() == 0) {
                 }
+                r0 = x.get()
             }
 
             t1.join()
             t2.join()
 
-            1
+            listOf(42)
+        }
+    }
+
+    @Test
+    fun testComplicatedSpinLoop() {
+        // Contains a loop shape to the loop inside the enqueue operation a blocking MS queue [MSQueueBlocking]
+        val outcomes = setOf<List<Int>>(listOf(42))
+
+        litmusTest(assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency, 10) {
+            val x = AtomicReference<AtomicInteger>(AtomicInteger(0))
+            var r0 = -1
+
+
+            val t1 = thread {
+                while(true) {
+                    val r0 = x.get()
+                    if (r0.compareAndSet(0, 1)) {
+                        x.set(AtomicInteger(0))
+                        break
+                    }
+                }
+            }
+
+            val t2 = thread {
+                while(true) {
+                    val r0 = x.get()
+                    if (r0.compareAndSet(0, 2)) {
+                        x.set(AtomicInteger(0))
+                        break
+                    }
+                }
+            }
+
+            t1.join()
+            t2.join()
+
+            listOf(42)
         }
     }
 }
