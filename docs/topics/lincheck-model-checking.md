@@ -8,9 +8,9 @@ schedules of a program and find the ones that lead to incorrect results.
 
 When testing concurrent code using model checking, Lincheck makes sure that the exploration of the execution 
 schedules is:
-* [Deterministic](#deterministic-exploration) – each invocation of a model checking test returns the same result if 
+* [Deterministic](#deterministic-exploration). Each invocation of a model checking test returns the same result if 
   the input data has not changed.
-* [Bounded](#bounded-exploration) – each test explores only a limited number of execution schedules. The number of possible execution 
+* [Bounded](#bounded-exploration). Each test explores only a limited number of execution schedules. The number of possible execution 
   schedules grows exponentially with the size of the program, and always exploring all of them would significantly 
   increase testing times. You can adjust the limit by changing the value of 
   [`invocationsPerIteration`](lincheck-testing-strategies-options.md#scenario-generation).
@@ -107,8 +107,11 @@ When running a test with the model checking strategy, Lincheck controls the foll
 
 ### Uncontrolled sources of non-determinism
 
-Usage of the features related to the uncontrolled sources of non-determinism is either restricted or requires 
-workarounds. Each uncontrolled source of non-determinism is explained in detail in a dedicated section:
+Lincheck controls [some sources of non-determinism](#controlled-sources-of-non-determinism), but not all. Using 
+non-deterministic code in a way that Lincheck can't handle either prevents you from using Lincheck with this particular
+part of code or requires workarounds.
+
+Each uncontrolled source of non-determinism is explained in detail in a dedicated section:
 
 * [Thread-local variables](#thread-local-variables)
 * [Weak references](#weak-references)
@@ -129,10 +132,10 @@ When Lincheck is unable to analyze _all_ execution schedules, it tries to evenly
 
 ### Example: schedules with one thread switch 
 
-See how Lincheck models execution schedules with a single thread switch in a two-thread scenario:
+See how Lincheck models execution schedules with a single preemptive thread switch in a two-thread scenario:
 
 ![A diagram of four execution schedules modeled by Lincheck for the same two-thread scenario with a single 
-context switch between threads.](model-checking.svg){width=700}
+thread switch between threads.](model-checking.svg){width=700}
 
 Because Lincheck starts by modeling a schedule with a thread switch in the first thread, the next modeled schedule 
 is more likely to have a thread switch in the second thread. This continues until Lincheck either reaches the limit 
@@ -147,9 +150,9 @@ The model checking strategy has the following known limitations.
 Model checking requires Lincheck to assume a
 [sequentially consistent memory model](https://en.wikipedia.org/wiki/Sequential_consistency) of the execution.
 
-The relaxed memory model used in Java can introduce bugs related to instruction reordering, memory cache
-behavior, and other similar effects. With model checking, Lincheck cannot simulate such effects and catch bugs related 
-to them.
+The [relaxed memory model](https://en.wikipedia.org/wiki/Java_memory_model) used in Java can introduce bugs related to 
+instruction reordering, memory cache behavior, and other similar effects. With model checking, Lincheck cannot simulate 
+such effects and catch bugs related to them.
 
 > Vote for the related issue and track its progress on [GitHub](https://github.com/JetBrains/lincheck/issues/370).
 >
@@ -190,8 +193,8 @@ a [stress testing strategy](lincheck-testing-strategies.md#stress-testing) for c
 ### Threads created outside the scenario
 
 Lincheck can only track the threads created inside a concurrent scenario. It can miss bugs occurring in externally 
-created threads, such as when using the [default dispatcher with coroutines](https://kotlinlang.org/docs/coroutine-context-and-dispatchers.html) or the common thread pool with 
-Java's [`ForkJoinPool`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinPool.html).
+created threads, such as when using the [default dispatcher with coroutines](https://kotlinlang.org/docs/coroutine-context-and-dispatchers.html) 
+or the common thread pool with Java's [`ForkJoinPool`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ForkJoinPool.html).
 
 > Vote for the related issue and track its progress on [GitHub](https://github.com/JetBrains/lincheck/issues/388).
 >
@@ -199,8 +202,12 @@ Java's [`ForkJoinPool`](https://docs.oracle.com/javase/8/docs/api/java/util/conc
 
 #### Workaround {id="workaround-externally-created-threads"}
 
-Using a fixed thread pool as a local coroutines dispatcher or instead of the common thread pool guarantees that Lincheck 
-can track the lifecycle and activity of threads in a concurrent scenario:
+Use a fixed thread pool:
+
+* as a local coroutines dispatcher,
+* instead of the common thread pool used by `ForkJoinPool`.
+
+This guarantees that Lincheck can track the lifecycle and activity of threads in a concurrent scenario:
 
 <tabs>
  <tab id="coroutines" title="As a local coroutine dispatcher">
@@ -324,8 +331,8 @@ it raises a non-determinism error.
 Lincheck simulates calls of `java.lang.System.nanoTime()` and `java.lang.System.currentTimeMillis()` by always returning
 a predefined constant to [prevent inconsistencies between the runs of the same test](#deterministic-exploration).
 
-This approach might not correctly model timeouts, elapsed-time comparisons, rate-limiting, or other logic that depends 
-on elapsed time.
+This approach might not correctly simulate timeouts, elapsed-time comparisons, rate-limiting, or other logic that 
+depends on elapsed time.
 
 > Vote for the related issue and track its progress on [GitHub](https://github.com/JetBrains/lincheck/issues/390).
 >
