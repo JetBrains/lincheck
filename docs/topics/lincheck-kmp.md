@@ -134,11 +134,11 @@ Create classes implementing counter data structures that are shared between all 
 
    ```kotlin
    class UnsafeCounter {
-      private var value: Int = 0
+       private var value: Int = 0
       
-      fun inc() = value++
+       fun inc() = value++
       
-      fun get(): Int = value
+       fun get(): Int = value
    }
    ```
 
