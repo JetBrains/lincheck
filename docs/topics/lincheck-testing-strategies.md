@@ -34,11 +34,9 @@ This means that Lincheck does not simulate and cannot catch bugs related to inst
 cache behavior, and other similar effects under the relaxed 
 [Java memory model](https://en.wikipedia.org/wiki/Java_memory_model).
 
-<!-- TODO: uncomment after the article is published
 > For more information, see [Model checking](lincheck-model-checking.md).
 >
-{style=”tip”}
--->
+{style="tip"}
 
 ## Stress testing
 

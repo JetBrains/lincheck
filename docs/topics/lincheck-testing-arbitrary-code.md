@@ -111,9 +111,10 @@ Both threads are locked, so the execution has encountered a deadlock.
 
 Learn how to [test data structures using Lincheck](lincheck-how-to-test-data-structures.md).
 
-<!-- TODO: uncomment after the articles are published
 ## See also
 
 * [Model checking in Lincheck](lincheck-model-checking.md)
+
+<!-- TODO: uncomment after the article is published
 * [Lincheck in Kotlin Multiplatform projects](lincheck-kmp.md)
 -->
