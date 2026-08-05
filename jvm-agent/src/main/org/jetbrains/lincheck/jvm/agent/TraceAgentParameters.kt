@@ -71,6 +71,19 @@ import java.lang.reflect.Modifier
  * - liveDebuggerHeartbeat — boolean that enables heartbeat messages when used in kubernetes setup.
  *       Example: `liveDebuggerHeartbeat=on` or `liveDebuggerHeartbeat=off`, it is off by default.
  *
+ * - enableSsl — boolean that makes the agent talk TLS to the control plane, both for the HTTP
+ *       requests and for the WebSocket connection (optional, liveDebugger mode only).
+ *       An `http://` control-plane URL is upgraded to `https://` and the reversed WebSocket
+ *       connection to `wss://`. Off by default, for backward compatibility.
+ *       Example: `enableSsl=on` or `enableSsl=off`.
+ *
+ * - sslTruststorePath — path to the CA truststore verifying the control plane's certificate
+ *       (optional; the JVM default truststore is used when absent). Intended for testing with a
+ *       self-signed CA. Example: `sslTruststorePath="/etc/appglass/tls/truststore.p12"`
+ *
+ * - sslTruststorePassword — password of [ARGUMENT_SSL_TRUSTSTORE_PATH], when it has one (optional).
+ *       Example: `sslTruststorePassword=changeit`
+ *
  * - format — output format for trace recorder dumps. Possible options are:
  *       * `binary` --- serialized binary format;
  *       * `text` --- text output;
@@ -134,6 +147,10 @@ object TraceAgentParameters {
     const val ARGUMENT_START_SERVER = "tracingServer"
     const val ARGUMENT_SERVER_PORT = "serverPort"
 
+    const val ARGUMENT_ENABLE_SSL = "enableSsl"
+    const val ARGUMENT_SSL_TRUSTSTORE_PATH = "sslTruststorePath"
+    const val ARGUMENT_SSL_TRUSTSTORE_PASSWORD = "sslTruststorePassword"
+
     const val DEFAULT_SERVER_PORT = 9999
 
     @JvmStatic
@@ -172,6 +189,20 @@ object TraceAgentParameters {
     @JvmStatic
     val serverPort: Int
         get() = getArg(ARGUMENT_SERVER_PORT)?.toIntOrNull() ?: DEFAULT_SERVER_PORT
+
+    /** `true` when the agent should use TLS for both HTTP and WebSocket traffic to the control plane. */
+    @JvmStatic
+    val sslEnabled: Boolean
+        get() = getArg(ARGUMENT_ENABLE_SSL)?.lowercase() == "on"
+
+    /** CA truststore verifying the control plane's certificate; `null` selects the JVM default truststore. */
+    @JvmStatic
+    val sslTruststorePath: String?
+        get() = getArg(ARGUMENT_SSL_TRUSTSTORE_PATH)
+
+    @JvmStatic
+    val sslTruststorePassword: String?
+        get() = getArg(ARGUMENT_SSL_TRUSTSTORE_PASSWORD)
 
     @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()

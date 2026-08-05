@@ -11,13 +11,13 @@
 package org.jetbrains.lincheck.livedebugger
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.settings.LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR
 import org.jetbrains.lincheck.util.Logger
 import java.net.HttpURLConnection
 import java.net.URI
 
 private const val ENV_NAME = "NAME"
 private const val ENV_NAMESPACE = "NAMESPACE"
-private const val ENV_CONTROL_PLANE_URL = "LIVE_DEBUGGER_CONTROL_PLANE_URL"
 
 private const val DEFAULT_HEARTBEAT_INTERVAL_MS = 10_000L
 private const val HTTP_TIMEOUT_MS = 5_000
@@ -56,10 +56,14 @@ internal object PhoneHomeHeartbeat {
         val name = System.getenv(ENV_NAME)
             ?: error("phoneHome=on requires the $ENV_NAME environment variable to be set")
         val namespace = System.getenv(ENV_NAMESPACE).orEmpty()
-        val controlPlaneUrl = System.getenv(ENV_CONTROL_PLANE_URL)
-            ?: error("phoneHome=on requires the $ENV_CONTROL_PLANE_URL environment variable to be set")
+        val controlPlaneUrl = ControlPlane.normalizeBaseUrl(
+            System.getenv(LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR)
+                ?: error(
+                    "phoneHome=on requires the $LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR environment variable to be set"
+                )
+        )
 
-        val heartbeatUrl = "${controlPlaneUrl.trimEnd('/')}/api/heartbeat"
+        val heartbeatUrl = "$controlPlaneUrl/api/heartbeat"
         val serverPort = TraceAgentParameters.serverPort
         val body = """{"name":"$name","namespace":"$namespace","serverPort":$serverPort}"""
 
@@ -71,7 +75,7 @@ internal object PhoneHomeHeartbeat {
                     if (response.connect && !connectTriggered) {
                         connectTriggered = true
                         Logger.info { "Control plane requested connection (agentId=${response.agentId})" }
-                        onConnectRequested(controlPlaneUrl.trimEnd('/'), response.agentId)
+                        onConnectRequested(controlPlaneUrl, response.agentId)
                     }
                 } catch (e: Exception) {
                     Logger.warn { "Phone-home heartbeat failed: ${e.message}" }
@@ -95,6 +99,7 @@ internal object PhoneHomeHeartbeat {
     private fun sendHeartbeat(url: String, body: String): HeartbeatResult {
         val connection = URI(url).toURL().openConnection() as HttpURLConnection
         try {
+            ControlPlane.configureTls(connection)
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.connectTimeout = HTTP_TIMEOUT_MS

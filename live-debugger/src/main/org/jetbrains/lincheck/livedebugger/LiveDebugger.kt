@@ -121,7 +121,7 @@ internal object LiveDebugger {
      * fails, no control-plane policy is applied (any file-sourced policy still stands).
      */
     fun bootstrapPolicyFromControlPlane() {
-        val blocklists = ControlPlanePolicyBootstrap.fetchBlocklists()
+        val blocklists = ControlPlane.fetchPolicyBlocklists()
         if (blocklists == null) {
             Logger.warn { "No control-plane policy applied (pull failed); breakpoints will register without it" }
             return

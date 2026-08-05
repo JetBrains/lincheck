@@ -30,6 +30,7 @@ import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util.UUID
+import javax.net.ssl.SSLSocketFactory
 
 /**
  * Parses and dispatches an incoming WebSocket command message to the appropriate [TracingCommands] method.
@@ -155,8 +156,13 @@ fun TracingCallbacks.handleMessage(message: String?) {
  * Base class for WebSocket clients that implement [TracingCallbacks].
  * It handles incoming WebSocket messages and dispatches them to the corresponding API methods.
  * Trace data is sent in binary format while notifications and commands are strings.
+ *
+ * @param sslSocketFactory trust material for a `wss://` [serverUri]; `null` uses the JVM default trust.
  */
-abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
+abstract class TracingWebSocketClient(
+    serverUri: URI,
+    sslSocketFactory: SSLSocketFactory? = null,
+) : TracingClient {
     private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri) {
         override fun onOpen(handshakedata: ServerHandshake?) = onConnectionReady()
 
@@ -185,6 +191,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
     override val networkTraceReader: NetworkTraceReader = NetworkTraceReader()
     
     init {
+        sslSocketFactory?.let { webSocketConnection.setSocketFactory(it) }
         webSocketConnection.connect()
     }
 
@@ -251,12 +258,19 @@ abstract class TracingWebSocketServer(address: InetSocketAddress?) : TracingServ
         }
     }
     
-    fun makeReversedConnection(serverUri: URI) {
+    /**
+     * Dials out to [serverUri] and serves this endpoint's notifications over that connection,
+     * replacing any previously established one.
+     *
+     * @param sslSocketFactory trust material for a `wss://` [serverUri]; `null` uses the JVM default trust.
+     */
+    fun makeReversedConnection(serverUri: URI, sslSocketFactory: SSLSocketFactory? = null) {
         val newWsClient = synchronized(this) {
             _client.close()
             _client = ClientSink()
             createReversedWebSocketClient(serverUri)
         }
+        sslSocketFactory?.let { newWsClient.setSocketFactory(it) }
         newWsClient.connect()
     }
 

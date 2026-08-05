@@ -19,6 +19,11 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.*
 
 /**
+ * Name of the environment variable carrying the base URL of the control-plane service.
+ */
+const val LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR = "LIVE_DEBUGGER_CONTROL_PLANE_URL"
+
+/**
  * Internal simple integer-based identifiers for breakpoints.
  * These identifiers are only used internally within javaagent ---
  * external clients should identify breakpoints by [UUID] instead.

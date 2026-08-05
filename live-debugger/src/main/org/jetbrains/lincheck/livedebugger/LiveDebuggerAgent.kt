@@ -22,6 +22,9 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_HEARTBEAT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_ENABLE_SSL
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SSL_TRUSTSTORE_PASSWORD
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SSL_TRUSTSTORE_PATH
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
@@ -59,6 +62,9 @@ internal object LiveDebuggerAgent {
         ARGUMENT_HEARTBEAT,
         ARGUMENT_START_SERVER,
         ARGUMENT_SERVER_PORT,
+        ARGUMENT_ENABLE_SSL,
+        ARGUMENT_SSL_TRUSTSTORE_PATH,
+        ARGUMENT_SSL_TRUSTSTORE_PASSWORD,
     )
     private val agent = object : TracerAgent() {
         override val modeSystemPropertyName: String = LIVE_DEBUGGER_MODE_PROPERTY
@@ -236,6 +242,7 @@ internal object LiveDebuggerAgent {
      */
     private fun connectToControlPlane(controlPlaneUrl: String, agentId: String) {
         try {
+            // `https` maps to `wss` by the same rewrite; the URL was already scheme-normalized upstream.
             val wsUrl = controlPlaneUrl
                 .replace(Regex("^http"), "ws") + "/api/agent/$agentId"
             val server = this.agent.server as? TracingWebSocketServer
@@ -243,7 +250,7 @@ internal object LiveDebuggerAgent {
                 Logger.warn { "Cannot open reversed connection — no server started" }
                 return
             }
-            server.makeReversedConnection(URI(wsUrl))
+            server.makeReversedConnection(URI(wsUrl), ControlPlane.sslSocketFactory())
             Logger.info { "Opened reversed WS connection to $wsUrl" }
         } catch (e: Exception) {
             Logger.error(e) { "Failed to open reversed WS connection to control plane" }
