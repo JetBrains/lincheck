@@ -114,7 +114,4 @@ Learn how to [test data structures using Lincheck](lincheck-how-to-test-data-str
 ## See also
 
 * [Model checking in Lincheck](lincheck-model-checking.md)
-
-<!-- TODO: uncomment after the article is published
 * [Lincheck in Kotlin Multiplatform projects](lincheck-kmp.md)
--->
