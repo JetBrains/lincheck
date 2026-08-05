@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace.network
 
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
+import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import java.io.Closeable
@@ -35,11 +36,30 @@ interface TracingCallbacks : Closeable {
         timestamp: Long
     )
 
+    fun breakpointBlocked(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        reason: String,
+        timestamp: Long
+    )
+
+    /**
+     * A hit was suppressed by dynamic-extent enforcement: the call stack passed through the blocked
+     * [blockedFrameClass]. The breakpoint itself stays valid — it still fires on clean call paths.
+     */
+    fun breakpointHitSuppressed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        blockedFrameClass: String,
+        reason: String,
+        timestamp: Long
+    )
+
     fun binaryTraceData(data: ByteArray)
 
     companion object {
         internal const val HIT_LIMIT_REACHED = "hitLimitReached"
         internal const val BREAKPOINT_EXPRESSION_UNSAFE = "breakpointExpressionUnsafe"
+        internal const val BREAKPOINT_BLOCKED = "breakpointBlocked"
+        internal const val BREAKPOINT_HIT_SUPPRESSED = "breakpointHitSuppressed"
     }
 }
 
@@ -55,13 +75,20 @@ interface TracingCommands {
 
     fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>)
     fun removeBreakpoints(uuids: List<UUID>)
-    
+
+    /**
+     * Adds the given blocklists to the active policy. Add-only: this can only ever *add*
+     * restrictions; idempotent per content-identity uuid, so a re-push after reconnect is a no-op.
+     */
+    fun addSensitiveAreaBlocklists(blocklists: List<SensitiveAreaBlocklist>)
+
     companion object {
         internal const val START_FILE_TRACING = "startFileTracing"
         internal const val START_NETWORK_TRACING = "startNetworkTracing"
         internal const val STOP_TRACING = "stopTracing"
         internal const val ADD_BREAKPOINTS = "addBreakpoints"
         internal const val REMOVE_BREAKPOINTS = "removeBreakpoints"
+        internal const val ADD_SENSITIVE_AREA_BLOCKLISTS = "addSensitiveAreaBlocklists"
     }
 }
 

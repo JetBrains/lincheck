@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.LIVE_DEBUGGING
+import org.jetbrains.lincheck.jvm.agent.blocklist.BlocklistEngine
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaBranchedSameLineFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaChainedCallFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaChainedCallShapeFixture
@@ -18,6 +19,7 @@ import org.jetbrains.lincheck.jvm.agent.fixtures.JavaForLoopFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaForLoopSingleLineFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaIfElseMultiLineFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaIfElseSingleLineFixture
+import org.jetbrains.lincheck.jvm.agent.fixtures.JavaSuperCallConstructorFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaTryCatchFinallyMultiLineFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaTryCatchFinallySingleLineFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaWhileLoopMultiLineFixture
@@ -551,6 +553,52 @@ class SnapshotBreakpointTransformerTest {
         )
     }
 
+    // ── Uninitialized `this` on a constructor's super()/this() line ──────────────────────
+
+    @Test
+    fun `Java -- breakpoint on a super() chaining-call line keeps the class verifiable`() {
+        // The killbill `DefaultAccount.<init>` crash, distilled. `JavaSuperCallConstructorFixture`'s
+        // constructor mirrors that shape:
+        //
+        //     super(id, createdDate, updatedDate);   // L40 — `this` is still uninitializedThis here
+        //     this.externalKey = externalKey;        // L41 — `this` is initialized
+        //     this.email = email;                    // L42
+        //
+        // Every line has its own `LINENUMBER`, so L40 is a perfectly normal breakpoint target — the
+        // IDE's JDI debugger stops on it. This is deliberately NOT the missing-`LINENUMBER` situation
+        // of `JavaMultiLineDelegatingConstructorFixture` (that limitation hits the JDI debugger too,
+        // so it isn't ours to fix); the bug here is purely in snapshot instrumentation.
+        //
+        // At L40 (offset 0, before the super `invokespecial`) local slot 0 is `uninitializedThis`.
+        // Capturing it with `ALOAD 0` into the locals `Object[]` produced bytecode the JVM verifier
+        // rejects ("uninitializedThis is not assignable to Object" @ aastore). `COMPUTE_FRAMES` emits
+        // it anyway, so hook-count assertions never caught it; at runtime it surfaced as a
+        // `VerifyError` during `Instrumentation.retransformClasses`, silently reverting the WHOLE
+        // class to un-instrumented — which is exactly why a tracepoint on L41 also stopped capturing.
+        //
+        // The transformer now substitutes the `UNINITIALIZED_THIS` sentinel for slot 0 in that
+        // window. The breakpoints stay genuinely wired (one hook each) and the class verifies.
+        val fixture = JavaSuperCallConstructorFixture::class.java
+        val breakpoints = listOf(
+            snapshotBreakpoint(fixture, line = 40), // super(...)            — `this` uninitialized
+            snapshotBreakpoint(fixture, line = 41), // this.externalKey = …  — `this` initialized
+        )
+
+        val sites = transformAndCollect(fixture, breakpoints)
+        assertEquals(
+            "A breakpoint on the super(...) line must still inject a hook, not be silently dropped. Got sites=$sites",
+            1, sites.count { it.method == "<init>" && it.line == 40 },
+        )
+        assertEquals(
+            "A breakpoint on the field-init line must inject a hook. Got sites=$sites",
+            1, sites.count { it.method == "<init>" && it.line == 41 },
+        )
+
+        // The decisive assertion: capturing `this` as the sentinel before super() runs leaves the
+        // transformed class passing JVM bytecode verification instead of being reverted wholesale.
+        assertTransformedClassVerifies(fixture, breakpoints)
+    }
+
     // ── JBRes-9243: breakpoints on lambda source lines reach the generated lambda class ───
 
         @Test
@@ -738,7 +786,8 @@ internal fun transformWithSnapshotBreakpoints(
     val liveDebuggerSettings = LiveDebuggerSettings(breakpoints)
     val profile = LiveDebuggerTransformationProfile(liveDebuggerSettings)
 
-    val classInformation = buildClassInformation(classNode, reader, profile)
+    val blocklistEngine = BlocklistEngine(liveDebuggerSettings.blocklistRegistry)
+    val classInformation = buildClassInformation(classNode, reader, profile, blocklistEngine, liveDebuggerSettings)
 
     classNode.accept(
         LincheckClassVisitor(
@@ -747,7 +796,6 @@ internal fun transformWithSnapshotBreakpoints(
             instrumentationMode = LIVE_DEBUGGING,
             profile = profile,
             statsTracker = null,
-            liveDebuggerSettings = liveDebuggerSettings,
             context = TraceContext(),
         ),
     )
@@ -788,3 +836,48 @@ private fun readClassBytes(internalClassName: String): ByteArray =
         Thread.currentThread().contextClassLoader.getResourceAsStream("$internalClassName.class")
     ) { "Could not find $internalClassName.class on the test classpath" }
         .use { it.readBytes() }
+
+/**
+ * Transforms [fixtureClass] with [breakpoints] and forces the real JVM to link — and therefore
+ * bytecode-verify — the result, failing the test with the verifier's own diagnostic otherwise.
+ *
+ * Why this is needed on top of the hook-count assertions: `COMPUTE_FRAMES` is lenient and happily
+ * emits bytecode the JVM verifier rejects (e.g. `uninitializedThis` captured on a constructor's
+ * `super()` / `this()` line). Counting `onSnapshotLineBreakpoint` invocations never catches that —
+ * at runtime it surfaces only as a `VerifyError` during `Instrumentation.retransformClasses`, which
+ * silently reverts the entire class to un-instrumented. Linking the transformed bytes here makes
+ * such breakage a deterministic, readable test failure instead.
+ */
+internal fun assertTransformedClassVerifies(
+    fixtureClass: Class<*>,
+    breakpoints: List<SnapshotBreakpoint>,
+) {
+    val internalName = fixtureClass.name.replace('.', '/')
+    val transformedBytes = transformWithSnapshotBreakpoints(internalName, breakpoints)
+
+    // Defines the fixture from the transformed bytes (the parent already holds the original, so we
+    // must NOT delegate for this one name) while delegating everything else — base classes,
+    // `sun.nio.ch.lincheck.Injections`, … — to the parent so verification can resolve them.
+    val verifyingLoader = object : ClassLoader(fixtureClass.classLoader) {
+        override fun loadClass(name: String, resolve: Boolean): Class<*> {
+            if (name == fixtureClass.name) {
+                synchronized(getClassLoadingLock(name)) {
+                    val loaded = findLoadedClass(name)
+                        ?: defineClass(name, transformedBytes, 0, transformedBytes.size)
+                    if (resolve) resolveClass(loaded)
+                    return loaded
+                }
+            }
+            return super.loadClass(name, resolve)
+        }
+    }
+
+    try {
+        // initialize = true forces linking, which runs bytecode verification.
+        Class.forName(fixtureClass.name, true, verifyingLoader)
+    } catch (e: VerifyError) {
+        throw AssertionError(
+            "Transformed ${fixtureClass.simpleName} failed JVM bytecode verification: ${e.message}", e,
+        )
+    }
+}

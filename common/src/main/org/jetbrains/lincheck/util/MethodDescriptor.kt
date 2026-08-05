@@ -45,6 +45,17 @@ fun MethodDescriptor.isArraysCopyOfRangeIntrinsic(): Boolean {
     )
 }
 
+fun MethodDescriptor.isArrayNewInstance(): Boolean {
+    return (
+        className == "java.lang.reflect.Array" &&
+        methodName == "newInstance"
+    )
+}
+
+fun MethodDescriptor.isSystemArrayCopy() : Boolean {
+    return className == "java.lang.System" && methodName == "arraycopy"
+}
+
 // TODO: java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations
 //  add all tracked intrinsics here
 fun MethodDescriptor.isTrackedIntrinsic(): Boolean =

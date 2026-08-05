@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
+import kotlinx.atomicfu.atomic
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import java.util.concurrent.atomic.*
@@ -29,15 +30,13 @@ import org.jetbrains.kotlinx.lincheck.util.CancelledResult
 import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.scenario
-import org.jetbrains.lincheck.util.JdkVersion
-import org.jetbrains.lincheck.util.jdkVersion
 import org.junit.Ignore
 import org.junit.Test
 import org.junit.Rule
-import org.junit.Assume
 import org.junit.rules.TestName
 import kotlin.reflect.jvm.javaMethod
 import org.jetbrains.lincheck.util.UnsafeHolder
+import kotlin.concurrent.thread
 
 class PrimitivesTest {
 
@@ -770,59 +769,7 @@ class PrimitivesTest {
 
     }
 
-    //TODO: Ignored for now need to fix monitor tracker in Managed strategy.
-    @Ignore
-    @Test
-    fun testSynchronized() {
-        val read = SynchronizedVariable::read
-        val addAndGet = SynchronizedVariable::addAndGet
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(addAndGet, 1)
-                }
-                thread {
-                    actor(addAndGet, 1)
-                }
-            }
-            post {
-                actor(read)
-            }
-        }
-        val outcomes: Set<Triple<Int, Int, Int>> = setOf(
-            Triple(1, 2, 2),
-            Triple(2, 1, 2)
-        )
-        // TODO: investigate why `executionCount = 3`
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
-            val r1 = getValue<Int>(results.parallelResults[0][0]!!)
-            val r2 = getValue<Int>(results.parallelResults[1][0]!!)
-            val r3 = getValue<Int>(results.postResults[0]!!)
-            Triple(r1, r2, r3)
-        }
-    }
 
-    //TODO: Ignored for now need to fix monitor tracker in Managed strategy.
-    @Ignore
-    @Test
-    fun testWaitNotify() {
-        val writeAndNotify = SynchronizedVariable::writeAndNotify
-        val waitAndRead = SynchronizedVariable::waitAndRead
-        val testScenario = scenario {
-            parallel {
-                thread {
-                    actor(writeAndNotify, 1)
-                }
-                thread {
-                    actor(waitAndRead)
-                }
-            }
-        }
-        val outcomes = setOf(1)
-        litmusTest(SynchronizedVariable::class.java, testScenario, outcomes) { results ->
-            getValue<Int>(results.parallelResults[1][0]!!)
-        }
-    }
 
     class ParkLatchedVariable {
 
@@ -1522,4 +1469,184 @@ class PrimitivesTest {
             return@litmusTest b1
         }
     }
+
+
+    class AtomicFuLongVariable {
+        // TODO: In the future we would likely want to switch to atomicfu primitives.
+        //   However, atomicfu currently does not support various access modes that we intend to test here.
+        private val variable: kotlinx.atomicfu.AtomicLong = atomic(0L)
+
+        fun compareAndSet(expected: Long, desired: Long): Boolean {
+            return variable.compareAndSet(expected, desired)
+        }
+
+        fun addAndGet(delta: Long): Long {
+            return variable.addAndGet(delta)
+        }
+
+        fun getAndAdd(delta: Long): Long {
+            return variable.getAndAdd(delta)
+        }
+
+        fun getAndIncrement(): Long {
+            return variable.getAndIncrement()
+        }
+    }
+
+    @Test
+    fun testGetAndIncrementLongFu() {
+        val getAndIncrement = AtomicFuLongVariable::getAndIncrement
+        val testScenario = scenario {
+            parallel {
+                thread {
+                    actor(getAndIncrement)
+                }
+                thread {
+                    actor(getAndIncrement)
+                }
+            }
+        }
+        val outcomes: Set<Pair<Long, Long>> = setOf(
+            0L to 1L,
+            1L to 0L
+        )
+        litmusTest(AtomicFuLongVariable::class.java, testScenario, outcomes) { results ->
+            val r1 = getValue<Long>(results.parallelResults[0][0]!!)
+            val r2 = getValue<Long>(results.parallelResults[1][0]!!)
+            r1 to r2
+        }
+    }
+
+    @Test
+    fun testFunctionInConstructor() {
+        class Box(var value: Int) {}
+        class Node {
+            @Volatile
+            var box: Box? = null
+
+            constructor(x: Int) {
+                doComplicatedOperationWithBox(x)
+            }
+
+            fun doComplicatedOperationWithBox(x: Int) {
+                box = Box(x*2 + 5);
+            }
+        }
+        val outcomes =  setOf(5,7)
+
+        litmusTest(assertSame(outcomes)) {
+            var node: Node? = null
+            val t1 = thread {
+                node = Node(0)
+            }
+            val t2 = thread {
+                node = Node(1)
+            }
+
+            t1.join()
+            t2.join()
+
+            node?.box?.value
+        }
+    }
+
+
+    @Test
+    fun testAccessingAnotherObjectFieldInConstructor() {
+        class Box(var value: Int) {}
+        class Writer {
+            var box: Box? = null
+
+            constructor(b: Box, newValue: Int) {
+                write(b, newValue)
+            }
+
+            fun write(b: Box, newValue: Int) {
+                b.value = newValue
+            }
+        }
+        class Reader {
+            var value : Int = -1
+
+            constructor(b: Box) {
+                read(b)
+            }
+
+            fun read(b: Box) {
+                value = b.value
+            }
+        }
+
+        val outcomes =  setOf(0, 42)
+
+        litmusTest(assertSame(outcomes)) {
+            val b = Box(0)
+            var r: Reader? = null
+
+            val t1 = thread {
+                r = Reader(b)
+            }
+            val t2 = thread {
+                Writer(b, 42)
+            }
+
+            t1.join()
+            t2.join()
+
+            r?.value
+        }
+    }
+
+
+    @Test
+    fun testFunctionInConstructorScenario() {
+        class Box(var value: Int) {}
+        class Node {
+            @Volatile
+            var box: Box? = null
+
+            constructor(x: Int) {
+                doComplicatedOperationWithBox(x)
+            }
+
+            fun doComplicatedOperationWithBox(x: Int) {
+                box = Box(x*2 + 5);
+            }
+        }
+        class TestClass {
+            var node: Node? = null
+
+            fun t1() {
+                node = Node(0)
+            }
+            fun t2() {
+                node = Node(1)
+            }
+            fun post() : Int? {
+                return node?.box?.value
+            }
+        }
+        val testScenartio = scenario {
+            parallel {
+                thread {}
+                thread {
+                    actor(TestClass::t1)
+                }
+                thread {
+                    actor(TestClass::t2)
+                }
+            }
+            post {
+                actor(TestClass::post)
+            }
+        }
+        val outcomes = setOf(5,7)
+
+        litmusTest(TestClass::class.java, testScenartio, assertSame(outcomes, UNKNOWN)) { results ->
+            val b1 = getValue<Int>(results.postResults[0]!!)
+            return@litmusTest b1
+        }
+    }
 }
+
+

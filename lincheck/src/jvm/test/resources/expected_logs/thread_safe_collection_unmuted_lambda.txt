@@ -36,6 +36,9 @@ Detailed trace:
 |         <iteration 2> at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1699)                                                                                         |
 |           tabAt(Array<Node>#1, 1): null at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1701)                                                                       |
 |             tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                           |
+|           ConcurrentHashMap.ReservationNode.<init>(): ReservationNode#1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1702)                                       |
+|             ConcurrentHashMap$Node.<init>(-3, null, null): ReservationNode#1 at ConcurrentHashMap.ReservationNode.<init>(ConcurrentHashMap.java:2270)                           |
+|               Object.<init>(): ReservationNode#1 at ConcurrentHashMap.Node.<init>(ConcurrentHashMap.java:631)                                                                   |
 |           MONITORENTER at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1703)                                                                                        |
 |           casTabAt(Array<Node>#1, 1, null, ReservationNode#1): true at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1704)                                           |
 |             tab[1].compareAndSetReference(null, ReservationNode#1): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                              |
@@ -59,6 +62,9 @@ Detailed trace:
 |                   <iteration 2> at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1699)                                                                               |
 |                     tabAt(Array<Node>#2, 1): null at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1701)                                                             |
 |                       tab[1].getReferenceAcquire(): null at ConcurrentHashMap.tabAt(ConcurrentHashMap.java:760)                                                                 |
+|                     ConcurrentHashMap.ReservationNode.<init>(): ReservationNode#2 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1702)                             |
+|                       ConcurrentHashMap$Node.<init>(-3, null, null): ReservationNode#2 at ConcurrentHashMap.ReservationNode.<init>(ConcurrentHashMap.java:2270)                 |
+|                         Object.<init>(): ReservationNode#2 at ConcurrentHashMap.Node.<init>(ConcurrentHashMap.java:631)                                                         |
 |                     MONITORENTER at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1703)                                                                              |
 |                     casTabAt(Array<Node>#2, 1, null, ReservationNode#2): true at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1704)                                 |
 |                       tab[1].compareAndSetReference(null, ReservationNode#2): true at ConcurrentHashMap.casTabAt(ConcurrentHashMap.java:765)                                    |
@@ -67,6 +73,8 @@ Detailed trace:
 |                         a ➜ 5 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:72)                                   |
 |                         a = 6 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:72)                                   |
 |                         a ➜ 6 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2$lambda$0(StdLibRepresentationTests.kt:72)                                   |
+|                     ConcurrentHashMap.Node.<init>(1, 1, 6): Node#1 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1709)                                            |
+|                       Object.<init>(): Node#1 at ConcurrentHashMap.Node.<init>(ConcurrentHashMap.java:631)                                                                      |
 |                     setTabAt(Array<Node>#2, 1, Node#1) at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1711)                                                        |
 |                       tab[1].putReferenceRelease(Node#1) at ConcurrentHashMap.setTabAt(ConcurrentHashMap.java:769)                                                              |
 |                     MONITOREXIT at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1714)                                                                               |
@@ -80,6 +88,8 @@ Detailed trace:
 |               a ➜ 6 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:73)                                                      |
 |               a = 7 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:73)                                                      |
 |               a ➜ 7 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block$lambda$2(StdLibRepresentationTests.kt:73)                                                      |
+|           ConcurrentHashMap.Node.<init>(1, 1, 7): Node#2 at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1709)                                                      |
+|             Object.<init>(): Node#2 at ConcurrentHashMap.Node.<init>(ConcurrentHashMap.java:631)                                                                                |
 |           setTabAt(Array<Node>#1, 1, Node#2) at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1711)                                                                  |
 |             tab[1].putReferenceRelease(Node#2) at ConcurrentHashMap.setTabAt(ConcurrentHashMap.java:769)                                                                        |
 |           MONITOREXIT at ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1714)                                                                                         |
@@ -92,5 +102,6 @@ Detailed trace:
 |             sizeCtl ➜ 12 at ConcurrentHashMap.addCount(ConcurrentHashMap.java:2343)                                                                                             |
 |     a ➜ 7 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:75)                                                                         |
 |     a = 8 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:75)                                                                         |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at ThreadSafeCollectionUnmutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:76)        |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

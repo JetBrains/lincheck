@@ -69,7 +69,7 @@ An example of a generated scenario:
 ## Blocking operations
 
 Use the `blocking` option if the operation is intended to block the execution. If the test checks 
-for [non-blocking guarantees](progress-guarantees.md), Lincheck does not fail a test when the execution stalls 
+for [non-blocking guarantees](lincheck-progress-guarantees.md), Lincheck does not fail a test when the execution stalls 
 on an operation marked with the `blocking` option:
 
 ```kotlin
@@ -215,5 +215,5 @@ moment it actually processes the result:
 
 ## See also
 
-* [Checking for non-blocking progress guarantees](progress-guarantees.md)
-* [Defining sequential specification of the algorithm](sequential-specification.md)
+* [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
+* [Defining sequential specification of the algorithm](lincheck-results-validation.md)

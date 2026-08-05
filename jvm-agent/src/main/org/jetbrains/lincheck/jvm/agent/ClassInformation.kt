@@ -11,9 +11,15 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.descriptors.LocalKind
+import org.jetbrains.lincheck.jvm.agent.blocklist.BlocklistEngine
 import org.jetbrains.lincheck.jvm.agent.analysis.buildControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.emptyControlFlowGraph
+import org.jetbrains.lincheck.settings.BlockMatch
+import org.jetbrains.lincheck.settings.BreakpointId
+import org.jetbrains.lincheck.settings.LiveDebuggerSettings
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.isThisName
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Label
@@ -36,6 +42,10 @@ import java.util.SortedSet
  *       Not min and max, as max can be mapped later to another place.
  *   - [linesToMethodNames] - Sorted list of all known line numbers ranges and method names (without `desc`) for these ranges.
  *   - [nonSyntheticMethodLines] - All source lines found in non-synthetic methods of this class.
+ *   - [applicableBreakpoints] - Snapshot breakpoints applicable to this class, snapshotted at build time.
+ *   - [classBlockMatch] / [methodBlockMatches] - Pre-computed sensitive-area blocklist verdicts
+ *       for the whole class / for individual methods (only blocked methods are present).
+ *       Computed only when [applicableBreakpoints] is non-empty.
  */
 internal data class ClassInformation(
     private val smap: SMAPInfo,
@@ -45,6 +55,9 @@ internal data class ClassInformation(
     private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>,
     private val nonSyntheticMethodLines: Set<Int>,
     private val basicCfgs: Map<String, BasicBlockControlFlowGraph>,
+    val applicableBreakpoints: Map<BreakpointId, SnapshotBreakpoint>,
+    private val classBlockMatch: BlockMatch?,
+    private val methodBlockMatches: Map<String, BlockMatch>,
 ) {
     /**
      * Returns [MethodInformation] for given method.
@@ -57,7 +70,8 @@ internal data class ClassInformation(
             lineRange = methodsToLineRanges[methodName + methodDesc] ?: (0 to 0),
             linesToMethodNames = linesToMethodNames,
             nonSyntheticMethodLines = nonSyntheticMethodLines,
-            basicControlFlowGraph = basicCfgs[methodName + methodDesc]
+            basicControlFlowGraph = basicCfgs[methodName + methodDesc],
+            blockMatch = classBlockMatch ?: methodBlockMatches[methodName + methodDesc],
         )
 }
 
@@ -74,8 +88,13 @@ internal fun buildClassInformation(
     classNode: ClassNode,
     classReader: ClassReader,
     profile: TransformationProfile,
+    blocklistEngine: BlocklistEngine,
+    liveDebuggerSettings: LiveDebuggerSettings,
 ): ClassInformation {
     val (lineRanges, linesToMethodNames) = getMethodsLineRanges(classNode)
+    val applicableBreakpoints = computeApplicableBreakpoints(classNode, liveDebuggerSettings)
+    val (classBlockMatch, methodBlockMatches) =
+        computeBlockMatches(classNode, blocklistEngine, applicableBreakpoints.isNotEmpty())
     return ClassInformation(
         smap = readClassSMAP(classNode, classReader),
         locals = getMethodsLocalVariables(classNode, profile),
@@ -84,7 +103,47 @@ internal fun buildClassInformation(
         linesToMethodNames = linesToMethodNames,
         nonSyntheticMethodLines = getNonSyntheticMethodLines(classNode),
         basicCfgs = computeControlFlowGraphs(classNode, profile),
+        applicableBreakpoints = applicableBreakpoints,
+        classBlockMatch = classBlockMatch,
+        methodBlockMatches = methodBlockMatches,
     )
+}
+
+/**
+ * Snapshots the breakpoints applicable to this class.
+ *
+ * The single snapshot both gates [computeBlockMatches] and drives injection in the visitor:
+ * re-reading the live settings later would let a breakpoint registered mid-transform
+ * be injected without its pre-computed Stage 2 verdict.
+ */
+private fun computeApplicableBreakpoints(
+    classNode: ClassNode,
+    liveDebuggerSettings: LiveDebuggerSettings,
+): Map<BreakpointId, SnapshotBreakpoint> {
+    val canonicalClassName = classNode.name.toCanonicalClassName()
+    val sourceFileName = classNode.sourceFile ?: ""
+    return liveDebuggerSettings.lineBreakpoints.filterValues { it.isApplicableTo(canonicalClassName, sourceFileName) }
+}
+
+/**
+ * Pre-computes the whole-class and per-method sensitive-area blocklist verdicts (Stage 2).
+ * Per-method matches are computed only when the class as a whole is not blocked,
+ * and only for classes with applicable snapshot breakpoints — they are consumed nowhere else.
+ */
+private fun computeBlockMatches(
+    classNode: ClassNode,
+    blocklistEngine: BlocklistEngine,
+    hasApplicableBreakpoints: Boolean,
+): Pair<BlockMatch?, Map<String, BlockMatch>> {
+    if (blocklistEngine.isEmpty() || !hasApplicableBreakpoints) return null to emptyMap()
+    val canonicalClassName = classNode.name.toCanonicalClassName()
+    blocklistEngine.classBlock(canonicalClassName)?.let { return it to emptyMap() }
+    val methodBlockMatches = classNode.methods.mapNotNull { m ->
+        // The visitor never transforms native methods; mirror its skip to avoid needless matching.
+        if ((m.access and Opcodes.ACC_NATIVE) != 0) return@mapNotNull null
+        blocklistEngine.methodBlock(canonicalClassName, m.name, m.desc)?.let { (m.name + m.desc) to it }
+    }.toMap()
+    return null to methodBlockMatches
 }
 
 private fun getMethodsLocalVariables(

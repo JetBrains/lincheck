@@ -17,18 +17,19 @@ Detailed trace:
 |                                                                                            Thread 1                                                                                            |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                                                                                    |
-|   escape = "START" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:32)                                                              |
-|   run(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:34)                                                 |
-|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:50)                                                   |
-|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:20)                                                   |
-|     run$Lambda(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:51)                                        |
-|       escape = "IN LAMBDA 1" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:35)                                                    |
-|       InlineLambdaConditionalTakenDeepThrowTest#1.run(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:36) |
-|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:50)                                               |
-|           escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:20)                                               |
-|         run$Lambda(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:51)                                    |
-|           escape = "IN LAMBDA 2" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:37)                                                |
-|   escape = "CATCH" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:44)                                                              |
-|   escape = "END" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:46)                                                                |
+|   escape = "START" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:31)                                                              |
+|   run(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:33)                                                 |
+|     setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:49)                                                   |
+|       escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:19)                                                   |
+|     run$Lambda(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:50)                                        |
+|       escape = "IN LAMBDA 1" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:34)                                                    |
+|       InlineLambdaConditionalTakenDeepThrowTest#1.run(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:35) |
+|         setEscape("BEFORE BLOCK") at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:49)                                               |
+|           escape = "BEFORE BLOCK" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:19)                                               |
+|         run$Lambda(): threw RuntimeException at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:50)                                    |
+|           escape = "IN LAMBDA 2" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:36)                                                |
+|           RuntimeException.<init>(): RuntimeException#1 at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:37)                         |
+|   escape = "CATCH" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:43)                                                              |
+|   escape = "END" at InlineLambdaConditionalTakenDeepThrowTest.<unknown method>(InlineLambdaConditionalTakenDeepThrowTest.kt:45)                                                                |
 |   result: void                                                                                                                                                                                 |
 | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

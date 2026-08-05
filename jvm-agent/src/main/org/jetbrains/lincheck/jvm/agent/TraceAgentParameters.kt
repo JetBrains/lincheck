@@ -56,9 +56,33 @@ import java.lang.reflect.Modifier
  * - breakpointsFile — path to an INI file with live debugger breakpoints (optional, liveDebugger mode only);
  *       see [BreakpointsFileParser] for details on file format.
  *       Example: `breakpointsFile="/tmp/breakpoints.ini"`
- *       
+ *
+ * - blocklistFile — path to an INI file with sensitive-area blocklists (optional, liveDebugger mode only);
+ *       policy is active from `premain`, before any breakpoint source is processed.
+ *       See `BlocklistFileParser` for the file format.
+ *       Example: `blocklistFile="/tmp/blocklists.ini"`
+ *
+ * - policyBootstrap — where the agent loads its sensitive-area policy from at startup
+ *       (optional, liveDebugger mode only). `controlPlane` makes the agent pull the policy from the
+ *       control plane (`GET /api/policy` against `LIVE_DEBUGGER_CONTROL_PLANE_URL`) before any
+ *       breakpoint source is processed; `none` (default) loads no policy over the network.
+ *       Combines by union with `blocklistFile=`. Example: `policyBootstrap=controlPlane`
+ *
  * - liveDebuggerHeartbeat — boolean that enables heartbeat messages when used in kubernetes setup.
  *       Example: `liveDebuggerHeartbeat=on` or `liveDebuggerHeartbeat=off`, it is off by default.
+ *
+ * - enableSsl — boolean that makes the agent talk TLS to the control plane, both for the HTTP
+ *       requests and for the WebSocket connection (optional, liveDebugger mode only).
+ *       An `http://` control-plane URL is upgraded to `https://` and the reversed WebSocket
+ *       connection to `wss://`. Off by default, for backward compatibility.
+ *       Example: `enableSsl=on` or `enableSsl=off`.
+ *
+ * - sslTruststorePath — path to the CA truststore verifying the control plane's certificate
+ *       (optional; the JVM default truststore is used when absent). Intended for testing with a
+ *       self-signed CA. Example: `sslTruststorePath="/etc/appglass/tls/truststore.p12"`
+ *
+ * - sslTruststorePassword — password of [ARGUMENT_SSL_TRUSTSTORE_PATH], when it has one (optional).
+ *       Example: `sslTruststorePassword=changeit`
  *
  * - format — output format for trace recorder dumps. Possible options are:
  *       * `binary` --- serialized binary format;
@@ -114,9 +138,18 @@ object TraceAgentParameters {
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
+    const val ARGUMENT_BLOCKLIST_FILE = "blocklistFile"
+    const val ARGUMENT_POLICY_BOOTSTRAP = "policyBootstrap"
     const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
+
+    /** Value of [ARGUMENT_POLICY_BOOTSTRAP] that pulls the policy from the control plane at startup. */
+    const val POLICY_BOOTSTRAP_CONTROL_PLANE = "controlPlane"
     const val ARGUMENT_START_SERVER = "tracingServer"
     const val ARGUMENT_SERVER_PORT = "serverPort"
+
+    const val ARGUMENT_ENABLE_SSL = "enableSsl"
+    const val ARGUMENT_SSL_TRUSTSTORE_PATH = "sslTruststorePath"
+    const val ARGUMENT_SSL_TRUSTSTORE_PASSWORD = "sslTruststorePassword"
 
     const val DEFAULT_SERVER_PORT = 9999
 
@@ -137,6 +170,15 @@ object TraceAgentParameters {
         get() = getArg(ARGUMENT_BREAKPOINTS_FILE)
 
     @JvmStatic
+    val blocklistFilePath: String?
+        get() = getArg(ARGUMENT_BLOCKLIST_FILE)
+
+    /** `true` when the agent should pull its sensitive-area policy from the control plane at startup. */
+    @JvmStatic
+    val policyBootstrapFromControlPlane: Boolean
+        get() = getArg(ARGUMENT_POLICY_BOOTSTRAP)?.equals(POLICY_BOOTSTRAP_CONTROL_PLANE, ignoreCase = true) == true
+
+    @JvmStatic
     val heartBeatEnabled: Boolean
         get() = getArg(ARGUMENT_HEARTBEAT)?.lowercase() == "on"
 
@@ -147,6 +189,20 @@ object TraceAgentParameters {
     @JvmStatic
     val serverPort: Int
         get() = getArg(ARGUMENT_SERVER_PORT)?.toIntOrNull() ?: DEFAULT_SERVER_PORT
+
+    /** `true` when the agent should use TLS for both HTTP and WebSocket traffic to the control plane. */
+    @JvmStatic
+    val sslEnabled: Boolean
+        get() = getArg(ARGUMENT_ENABLE_SSL)?.lowercase() == "on"
+
+    /** CA truststore verifying the control plane's certificate; `null` selects the JVM default truststore. */
+    @JvmStatic
+    val sslTruststorePath: String?
+        get() = getArg(ARGUMENT_SSL_TRUSTSTORE_PATH)
+
+    @JvmStatic
+    val sslTruststorePassword: String?
+        get() = getArg(ARGUMENT_SSL_TRUSTSTORE_PASSWORD)
 
     @JvmStatic
     private val namedArgs: MutableMap<String, String?> = mutableMapOf()

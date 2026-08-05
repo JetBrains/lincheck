@@ -15,10 +15,9 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.transformers.*
-import org.jetbrains.lincheck.settings.LiveDebuggerSettings
-import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
+import sun.nio.ch.lincheck.BreakpointStorage
 
 internal class LincheckClassVisitor(
     private val classVisitor: SafeClassWriter,
@@ -26,7 +25,6 @@ internal class LincheckClassVisitor(
     private val instrumentationMode: InstrumentationMode,
     private val profile: TransformationProfile,
     private val statsTracker: TransformationStatisticsTracker?,
-    private val liveDebuggerSettings: LiveDebuggerSettings,
     private val context: TraceContext
 ) : ClassVisitor(ASM_API, classVisitor) {
     private var classVersion = 0
@@ -128,14 +126,25 @@ internal class LincheckClassVisitor(
             ThreadStartJoinTransformer(fileName, className, methodName, methodInfo, context, desc, access, adapter, mv, config)
         }
 
+        // ======== Object Creation ========
+        // `ObjectCreationTransformer` is registered BEFORE `MethodCallTransformer` so that it
+        // sits DEEPER in the transformer chain. The last transformer added becomes the outermost
+        // wrapper and receives original bytecode first, so for an INVOKESPECIAL `<init>` the
+        // emitted order at runtime is:
+        //   onMethodCall(<init>)          <-- MethodCallTransformer (outer) preamble
+        //   <init>(...)                   <-- original instruction
+        //   afterObjectConstructor(obj)   <-- ObjectCreationTransformer (inner) postamble
+        //   onMethodCallReturn(<init>)    <-- MethodCallTransformer (outer) postamble
+        // i.e., the object-creation event reaches the strategy BEFORE the `<init>` method-return event.
+        // Swapping the order would register the constructed object only AFTER the surrounding `<init>` return,
+        // breaking strategies that look up the object on return.
+        chain.addTransformer { adapter, mv ->
+            ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
+        }
+
         // ======== Method Calls ========
         chain.addTransformer { adapter, mv ->
             MethodCallTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config)
-        }
-
-        // ======== Object Creation ========
-        chain.addTransformer { adapter, mv ->
-            ObjectCreationTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv)
         }
 
         // ======== Invokedynamic ========
@@ -166,7 +175,7 @@ internal class LincheckClassVisitor(
 
         // ======== Field, Array, and Local Variables accesses ========
         chain.addTransformer { adapter, mv ->
-            applySharedMemoryAccessTransformer(methodName, desc, access, methodInfo, config, adapter, mv)
+            SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config)
         }
         chain.addTransformer { adapter, mv ->
             LocalVariablesAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config)
@@ -202,11 +211,23 @@ internal class LincheckClassVisitor(
         }
         
         // ======== SnapshotBreakpoints ========
-        val breakpoints = liveDebuggerSettings.lineBreakpoints
-            .filterValues { it.isApplicableTo(className.toCanonicalClassName(), fileName) }
+        // Breakpoints and blocklist verdicts come from the same [ClassInformation] snapshot —
+        // re-reading the live settings here could see a breakpoint registered mid-transform
+        // and inject it without its Stage 2 verdict.
+        val breakpoints = classInformation.applicableBreakpoints
         if (breakpoints.isNotEmpty()) {
-            chain.addTransformer { adapter, mv ->
-                SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classVisitor.loader)
+            // Stage 2 — instrumentation-time suppression (authoritative).
+            // If the whole class or this specific method is a blocked sensitive area, the snapshot
+            // hook is simply never injected: no capture, no condition/watch code runs there.
+            val blockMatch = methodInfo.blockMatch
+            if (blockMatch != null) {
+                for ((breakpointId, breakpoint) in breakpoints) {
+                    BreakpointStorage.notifyBreakpointBlocked(breakpointId, breakpoint, blockMatch.reason)
+                }
+            } else {
+                chain.addTransformer { adapter, mv ->
+                    SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classVisitor.loader)
+                }
             }
         }
 
@@ -228,32 +249,10 @@ internal class LincheckClassVisitor(
         }
 
         // Must appear last in the code, to completely hide intrinsic candidate methods from all transformers
-        if (instrumentationMode == MODEL_CHECKING) {
+        if (instrumentationMode == MODEL_CHECKING || instrumentationMode == EXPERIMENTAL_MODEL_CHECKING) {
             mv = IntrinsicCandidateMethodFilter(className, methodName, desc, initialVisitor, mv, context)
         }
 
-        return mv
-    }
-
-    private fun applySharedMemoryAccessTransformer(
-        methodName: String,
-        desc: String,
-        access: Int,
-        methodInfo: MethodInformation,
-        configuration: TransformationConfiguration,
-        adapter: GeneratorAdapter,
-        methodVisitor: MethodVisitor,
-    ): SharedMemoryAccessTransformer {
-        var mv = methodVisitor
-        if (instrumentationMode != TRACE_RECORDING) {
-            // this transformer is required because currently the snapshot tracker
-            // does not trace memory accesses inside constructors
-            mv = ConstructorArgumentsSnapshotTrackerTransformer(
-                fileName, className, methodName, desc, access, methodInfo, context, adapter, mv,
-                classVisitor::isInstanceOf
-            )
-        }
-        mv = SharedMemoryAccessTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, configuration)
         return mv
     }
 }

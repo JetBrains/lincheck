@@ -17,6 +17,7 @@ import org.java_websocket.handshake.ServerHandshake
 import org.java_websocket.server.WebSocketServer
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.decodeBlocklistsFromString
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingClient
@@ -29,6 +30,7 @@ import java.net.InetSocketAddress
 import java.net.URI
 import java.nio.ByteBuffer
 import java.util.UUID
+import javax.net.ssl.SSLSocketFactory
 
 /**
  * Parses and dispatches an incoming WebSocket command message to the appropriate [TracingCommands] method.
@@ -52,6 +54,12 @@ fun TracingCommands.handleMessage(message: String?) {
 
             TracingCommands.ADD_BREAKPOINTS -> addBreakpoints(parseBreakpointsPayload(parts))
             TracingCommands.REMOVE_BREAKPOINTS -> removeBreakpoints(parseUuidsPayload(parts))
+
+            TracingCommands.ADD_SENSITIVE_AREA_BLOCKLISTS -> {
+                val encoded = parts.getOrNull(1).orEmpty()
+                val blocklists = if (encoded.isBlank()) emptyList() else decodeBlocklistsFromString(encoded)
+                addSensitiveAreaBlocklists(blocklists)
+            }
 
             else -> Logger.warn { "Unknown command received: $command" }
         }
@@ -109,6 +117,34 @@ fun TracingCallbacks.handleMessage(message: String?) {
                 val safetyViolationMessage = dataParts[2]
                 breakpointExpressionUnsafe(breakpointData, slot, safetyViolationMessage, timestamp)
             }
+            TracingCallbacks.BREAKPOINT_BLOCKED -> {
+                // Layout: breakpointData ; reason
+                val dataParts = data.split(";", limit = 2)
+                if (dataParts.size < 2) {
+                    Logger.warn { "Malformed breakpointBlocked notification: $data" }
+                    return
+                }
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[0])
+                if (breakpointData == null) {
+                    Logger.warn { "Failed to parse breakpointBlocked notification: $data" }
+                    return
+                }
+                breakpointBlocked(breakpointData, dataParts[1], timestamp)
+            }
+            TracingCallbacks.BREAKPOINT_HIT_SUPPRESSED -> {
+                // Layout: breakpointData ; blockedFrameClass ; reason
+                val dataParts = data.split(";", limit = 3)
+                if (dataParts.size < 3) {
+                    Logger.warn { "Malformed breakpointHitSuppressed notification: $data" }
+                    return
+                }
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[0])
+                if (breakpointData == null) {
+                    Logger.warn { "Failed to parse breakpointHitSuppressed notification: $data" }
+                    return
+                }
+                breakpointHitSuppressed(breakpointData, dataParts[1], dataParts[2], timestamp)
+            }
             else -> Logger.warn { "Unknown notification received: $type" }
         }
     } catch (e: Exception) {
@@ -120,8 +156,13 @@ fun TracingCallbacks.handleMessage(message: String?) {
  * Base class for WebSocket clients that implement [TracingCallbacks].
  * It handles incoming WebSocket messages and dispatches them to the corresponding API methods.
  * Trace data is sent in binary format while notifications and commands are strings.
+ *
+ * @param sslSocketFactory trust material for a `wss://` [serverUri]; `null` uses the JVM default trust.
  */
-abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
+abstract class TracingWebSocketClient(
+    serverUri: URI,
+    sslSocketFactory: SSLSocketFactory? = null,
+) : TracingClient {
     private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri) {
         override fun onOpen(handshakedata: ServerHandshake?) = onConnectionReady()
 
@@ -150,6 +191,7 @@ abstract class TracingWebSocketClient(serverUri: URI) : TracingClient {
     override val networkTraceReader: NetworkTraceReader = NetworkTraceReader()
     
     init {
+        sslSocketFactory?.let { webSocketConnection.setSocketFactory(it) }
         webSocketConnection.connect()
     }
 
@@ -216,12 +258,19 @@ abstract class TracingWebSocketServer(address: InetSocketAddress?) : TracingServ
         }
     }
     
-    fun makeReversedConnection(serverUri: URI) {
+    /**
+     * Dials out to [serverUri] and serves this endpoint's notifications over that connection,
+     * replacing any previously established one.
+     *
+     * @param sslSocketFactory trust material for a `wss://` [serverUri]; `null` uses the JVM default trust.
+     */
+    fun makeReversedConnection(serverUri: URI, sslSocketFactory: SSLSocketFactory? = null) {
         val newWsClient = synchronized(this) {
             _client.close()
             _client = ClientSink()
             createReversedWebSocketClient(serverUri)
         }
+        sslSocketFactory?.let { newWsClient.setSocketFactory(it) }
         newWsClient.connect()
     }
 

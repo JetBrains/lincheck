@@ -16,6 +16,14 @@ sourceSets {
     }
 }
 
+plugins {
+    id("org.jetbrains.kotlinx.atomicfu")
+}
+
+atomicfu {
+    transformJvm = false
+}
+
 tasks {
     // TODO: rename to match trace-recorder gradle task naming pattern to 'lincheckIntegrationTest'
     register<Test>("integrationTest") {

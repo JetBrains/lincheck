@@ -6,34 +6,41 @@
 | ------------------------ |
 
 The following interleaving leads to the error:
-| --------------------------------------------------------------------------------------------- |
-|      Thread 1      |                                 Thread 2                                 |
-| --------------------------------------------------------------------------------------------- |
-|                    | enqueue(-1): <hung>                                                      |
-|                    |   q.enqueue(-1)                                                          |
-|                    |     loop(1 iterations) at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22) |
-|                    |     switch                                                               |
-| enqueue(1): <hung> |                                                                          |
-| --------------------------------------------------------------------------------------------- |
+| ---------------------------------------------------------------------------------------------------------- |
+|      Thread 1      |                                       Thread 2                                        |
+| ---------------------------------------------------------------------------------------------------------- |
+|                    | enqueue(-1): <hung>                                                                   |
+|                    |   q.enqueue(-1)                                                                       |
+|                    |     MSQueueBlocking$Node.<init>(-1, null, 2, null): Node#1 [recursive call x 2 times] |
+|                    |     loop(1 iterations) at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)              |
+|                    |     switch                                                                            |
+| enqueue(1): <hung> |                                                                                       |
+| ---------------------------------------------------------------------------------------------------------- |
 
 Detailed trace:
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                    Thread 1                                                    |                                                   Thread 2                                                    |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-|                                                                                                                | enqueue(-1): <hung>                                                                                           |
-|                                                                                                                |   q.enqueue(-1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:44)             |
-|                                                                                                                |     loop(1 iterations) at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                      |
-|                                                                                                                |       <iteration 1> at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                         |
-|                                                                                                                |         tail.get(): Node#2 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:23)                                  |
-|                                                                                                                |         curTail.getNext(): AtomicReference#3 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24)                |
-|                                                                                                                |         AtomicReference#3.compareAndSet(null, Node#1): true at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24) |
-|                                                                                                                |     switch                                                                                                    |
-| enqueue(1): <hung>                                                                                             |                                                                                                               |
-|   q.enqueue(1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:44)               |                                                                                                               |
-|     loop(10 iterations) at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                      |                                                                                                               |
-|       <iterations 1-9> at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                       |                                                                                                               |
-|         tail.get(): Node#2 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:23)                                   |                                                                                                               |
-|         curTail.getNext(): AtomicReference#3 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24)                 |                                                                                                               |
-|         AtomicReference#3.compareAndSet(null, Node#3): false at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24) |                                                                                                               |
-|       <iteration 10> at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                         |                                                                                                               |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                Thread 1                                                                |                                                                Thread 2                                                                 |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                                        | enqueue(-1): <hung>                                                                                                                     |
+|                                                                                                                                        |   q.enqueue(-1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:39)                                       |
+|                                                                                                                                        |     MSQueueBlocking$Node.<init>(-1, null, 2, null): Node#1 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:21) [recursive call x 2 times] |
+|                                                                                                                                        |       AtomicReference.<init>(null): AtomicReference#1 at MSQueueBlocking.Node.<init>(MSQueueBlocking.kt:47)                             |
+|                                                                                                                                        |       Object.<init>(): Node#1 at MSQueueBlocking.Node.<init>(MSQueueBlocking.kt:45)                                                     |
+|                                                                                                                                        |     loop(1 iterations) at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                                                |
+|                                                                                                                                        |       <iteration 1> at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                                                   |
+|                                                                                                                                        |         tail.get(): Node#2 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:23)                                                            |
+|                                                                                                                                        |         curTail.getNext(): AtomicReference#3 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24)                                          |
+|                                                                                                                                        |         AtomicReference#3.compareAndSet(null, Node#1): true at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24)                           |
+|                                                                                                                                        |     switch                                                                                                                              |
+| enqueue(1): <hung>                                                                                                                     |                                                                                                                                         |
+|   q.enqueue(1) at ObstructionFreedomViolationEventsCutTest.enqueue(SpinlockEventsCutTests.kt:39)                                       |                                                                                                                                         |
+|     MSQueueBlocking$Node.<init>(1, null, 2, null): Node#3 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:21) [recursive call x 2 times] |                                                                                                                                         |
+|       AtomicReference.<init>(null): AtomicReference#4 at MSQueueBlocking.Node.<init>(MSQueueBlocking.kt:47)                            |                                                                                                                                         |
+|       Object.<init>(): Node#3 at MSQueueBlocking.Node.<init>(MSQueueBlocking.kt:45)                                                    |                                                                                                                                         |
+|     loop(10 iterations) at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                                              |                                                                                                                                         |
+|       <iterations 1-9> at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                                               |                                                                                                                                         |
+|         tail.get(): Node#2 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:23)                                                           |                                                                                                                                         |
+|         curTail.getNext(): AtomicReference#3 at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24)                                         |                                                                                                                                         |
+|         AtomicReference#3.compareAndSet(null, Node#3): false at MSQueueBlocking.enqueue(MSQueueBlocking.kt:24)                         |                                                                                                                                         |
+|       <iteration 10> at MSQueueBlocking.enqueue(MSQueueBlocking.kt:22)                                                                 |                                                                                                                                         |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

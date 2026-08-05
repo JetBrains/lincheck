@@ -118,7 +118,10 @@ internal class MethodCallTransformer(
         // if configuration disables method result interception,
         // does not create an object and pushes `null` instead
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
-            pushResultInterceptor(threadDescriptorLocal, shouldIntercept = configuration.interceptMethodCallResults)
+            pushResultInterceptor(
+                threadDescriptorLocal,
+                shouldIntercept = configuration.interceptMethodCallResults && !isConstructorCall
+            )
             storeLocal(it)
         }
 
@@ -147,7 +150,8 @@ internal class MethodCallTransformer(
                 argumentsArrayLocal,
                 threadDescriptorLocal,
                 resultInterceptorLocal,
-                isUninitThisCall = true
+                isUninitThisCall = true,
+                isConstructorCall = isConstructorCall
             )
             // STACK: result?
         } else {
@@ -161,7 +165,8 @@ internal class MethodCallTransformer(
                         argumentsArrayLocal,
                         threadDescriptorLocal,
                         resultInterceptorLocal,
-                        isUninitThisCall = false
+                        isUninitThisCall = false,
+                        isConstructorCall = isConstructorCall,
                     )
                     // STACK: result?
                 },
@@ -233,10 +238,12 @@ internal class MethodCallTransformer(
         argumentLocals: IntArray,
         resultInterceptorLocal: Int,
         isUninitThisCall: Boolean = false,
+        isConstructorCall: Boolean = false,
     ) {
-        // Result interception is not applicable to super()/this() calls: INVOKESPECIAL leaves the
-        // stack empty, so there is no slot to place an intercepted value into.
-        if (!configuration.interceptMethodCallResults || isUninitThisCall) {
+        // Result interception is not applicable to constructors:
+        //  - for super()/this() calls, INVOKESPECIAL leaves the stack empty;
+        //  - for NEW/<init> pairs, skipping the constructor would leave an uninitialized value.
+        if (!configuration.interceptMethodCallResults || isConstructorCall || isUninitThisCall) {
             runMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
             return
         }
@@ -316,7 +323,8 @@ internal class MethodCallTransformer(
         argumentsArrayLocal: Int,
         threadDescriptorLocal: Int,
         resultInterceptorLocal: Int,
-        isUninitThisCall: Boolean
+        isUninitThisCall: Boolean,
+        isConstructorCall: Boolean,
     ) {
         // Stack <empty>
         processMethodCall(opcode, owner, name, desc, itf,
@@ -325,6 +333,7 @@ internal class MethodCallTransformer(
             argumentLocals,
             resultInterceptorLocal,
             isUninitThisCall,
+            isConstructorCall,
         )
         // STACK: result?
         processMethodCallReturn(
@@ -415,7 +424,6 @@ internal class MethodCallTransformer(
 
     @Suppress("UNUSED_PARAMETER")
     private fun shouldTrackMethodCall(className: String, methodName: String, descriptor: String): Boolean {
-        // TODO: do not ignore <init>
         if (methodName == "<init>" && !configuration.trackConstructorCalls) return false
         if (isIgnoredClass(className)) return false
         if (isCoroutineResumptionSyntheticAccessor(className, methodName)) return false

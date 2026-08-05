@@ -139,9 +139,7 @@ executed sequentially.
 <tr>
     <td><code>verifierClass</code></td>
     <td><code>LinearizabilityVerifier</code></td>
-    <td>The verifier class used during the verification process:
-        <!-- TODO: uncomment after the article is published
-        <a href="lincheck-results-validation.md#verification-properties">verification process</a>:-->
+    <td>The verifier class used during the <a href="lincheck-results-validation.md#verification-models">verification process</a>:
         <list>
             <li><code>LinearizabilityVerifier</code></li>
             <li><code>SerializabilityVerifier</code></li>
@@ -151,7 +149,7 @@ executed sequentially.
     <td><code>sequentialSpecification</code></td>
     <td>Same as the tested data structure.</td>
     <td>The sequential version of the tested data structure. This structure is used during the
-        <a href="sequential-specification.md">verification process</a>.</td>
+        <a href="lincheck-results-validation.md">verification process</a>.</td>
 </tr>
 </table>
 
@@ -161,7 +159,7 @@ executed sequentially.
 <tr>
     <td><code>checkObstructionFreedom</code></td>
     <td><code>false</code></td>
-    <td>Set this option to <code>true</code> to verify the <a href="progress-guarantees.md">obstruction-freedom guarantee</a> of the 
+    <td>Set this option to <code>true</code> to verify the <a href="lincheck-progress-guarantees.md">obstruction-freedom guarantee</a> of the 
         data structure operations.<br/><br/>
         This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
 </table>
@@ -233,11 +231,11 @@ fun modelCheckingTest() = ModelCheckingOptions()
 
 ## What’s next
 
-Learn how to [configure argument generation](operation-arguments.md) for operations used in 
+Learn how to [configure argument generation](lincheck-argument-generation-constraints.md) for operations used in 
 Lincheck's execution scenarios.
 
 ## See also
 
 * [Configuring operation execution options](lincheck-operation-execution-options.md)
-* [Checking for non-blocking progress guarantees](progress-guarantees.md)
-* [Defining a sequential specification of an algorithm](sequential-specification.md)
+* [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
+* [Defining a sequential specification of an algorithm](lincheck-results-validation.md)

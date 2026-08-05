@@ -57,7 +57,7 @@ class Counter {
    > Learn about the differences between model checking and stress testing in the
    > [Testing Strategies](lincheck-testing-strategies.md) article.
    >
-   {style=”tip”}
+   {style="tip"}
 
 5. Run the test. If it fails, Lincheck generates an error report with the scenario
    and execution trace that led to incorrect behavior:
@@ -105,9 +105,8 @@ To test it, Lincheck performs the following steps:
    ![A diagram of the verification process. The results of one execution schedule are compared
    to the results of the same operations executed sequentially.](verification.svg){width=300}
 
-   <!-- TODO: uncomment after the article is published
    At this step, Lincheck can also validate the structure if provided with a
-   [validation function](lincheck-results-validation.md). -->
+   [validation function](lincheck-results-validation.md).
 
 ## Example: test an implementation of a Treiber stack structure
 
@@ -244,7 +243,7 @@ Learn about [testing strategies](lincheck-testing-strategies.md) available in Li
 
 ## See also
 
-* [Generating operation arguments](operation-arguments.md)
+* [Generating operation arguments](lincheck-argument-generation-constraints.md)
 * [Configuring operation execution options](lincheck-operation-execution-options.md)
-* [Checking for non-blocking progress guarantees](progress-guarantees.md)
-* [Defining sequential specification of the algorithm](sequential-specification.md)
+* [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
+* [Defining sequential specification of the algorithm](lincheck-results-validation.md)

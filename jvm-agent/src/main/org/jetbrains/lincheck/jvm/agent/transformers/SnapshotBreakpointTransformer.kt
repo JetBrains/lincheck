@@ -45,6 +45,9 @@ internal class SnapshotBreakpointTransformer(
 
     private val traceIdCapturers = TraceIdCapturerRegistry(config, classLoader)
 
+    // Needs the type analyzer to tell when local slot 0 is still `uninitializedThis` —
+    override val requiresTypeAnalyzer: Boolean = true
+
     /**
      * Source lines that have already emitted an injection hook in the current basic block.
      *
@@ -100,7 +103,7 @@ internal class SnapshotBreakpointTransformer(
 
         val matchingBreakpoints = breakpoints.entries.filter { (_, breakpoint) ->
             breakpoint.lineNumber == line &&
-            // `LincheckClassVisitor` should have already filtered the breakpoints
+            // `buildClassInformation` should have already filtered the breakpoints
             // to the current className/fileName pair,
             // but we still do the check as an additional safeguard.
             breakpoint.isApplicableTo(className.toCanonicalClassName(), fileName)
@@ -344,14 +347,29 @@ internal class SnapshotBreakpointTransformer(
         push(capturedLocals.size)
         visitTypeInsn(ANEWARRAY, OBJECT_TYPE.internalName)
         for (i in capturedLocals.indices) {
-            val idx = capturedLocals[i].index
-            val type = capturedLocals[i].type
-
             dup()
             push(i)
-            visitVarInsn(type.getOpcode(ILOAD), idx)
-            box(type)
+            loadCapturedLocalValue(capturedLocals[i])
             arrayStore(OBJECT_TYPE)
+        }
+    }
+
+    /**
+     * Pushes the boxed value of [local] onto the stack, ready to be stored into a
+     * captured-values `Object[]` (locals snapshot, or condition / watch arguments).
+     *
+     * Special case: a breakpoint on a constructor's `super(...)` / `this(...)` chaining-call
+     * line sits before the chaining `invokespecial`, where local slot 0 still holds
+     * `uninitializedThis`. In that window we substitute with
+     * [Injections.UNINITIALIZED_THIS] instead; `this`'s fields aren't assigned yet, so
+     * no real state is lost.
+     */
+    private fun GeneratorAdapter.loadCapturedLocalValue(local: LocalVariableInfo) {
+        if (typeAnalyzer?.locals?.getOrNull(local.index) == UNINITIALIZED_THIS) {
+            pushUninitializedThisSubstitute()
+        } else {
+            visitVarInsn(local.type.getOpcode(ILOAD), local.index)
+            box(local.type)
         }
     }
 
@@ -486,10 +504,8 @@ internal class SnapshotBreakpointTransformer(
             dup()
             // Push the array index of where to store the variable value
             push(index)
-            // Load the variable at slot localVariableInfo.index
-            visitVarInsn(localVariableInfo.type.getOpcode(ILOAD), localVariableInfo.index)
-            // Boxes primitive values
-            box(localVariableInfo.type)
+            // Load the (boxed) variable value, substituting a sentinel for a not-yet-initialized `this`
+            loadCapturedLocalValue(localVariableInfo)
             // Stores the boxed variable value in the new array
             arrayStore(OBJECT_TYPE)
         }

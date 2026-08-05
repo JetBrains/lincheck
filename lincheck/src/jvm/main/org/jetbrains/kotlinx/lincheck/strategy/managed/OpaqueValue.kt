@@ -116,5 +116,5 @@ internal const val NULL_OBJECT_NUMBER = 0
 internal fun Int.convert(type: Types.Type): Number = when (type) {
     Types.LONG_TYPE -> toLong()
     Types.INT_TYPE  -> this
-    else            -> throw IllegalArgumentException("Expected Long or Int")
+    else            -> throw IllegalArgumentException("Expected Long or Int, got $type")
 }

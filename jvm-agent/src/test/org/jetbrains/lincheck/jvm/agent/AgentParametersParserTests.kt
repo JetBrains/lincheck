@@ -231,4 +231,19 @@ class AgentParametersParserTests {
         assertEquals(listOf("org.jetbrains.*", "com.app.Service", "*Test"), TraceAgentParameters.getIncludePatterns())
         assertEquals(listOf("api.Internal", "*Impl"), TraceAgentParameters.getExcludePatterns())
     }
+
+    @Test
+    fun testPolicyBootstrapControlPlane() {
+        TraceAgentParameters.parseArgs(
+            "class=org.C,method=m,policyBootstrap=controlPlane",
+            listOf(TraceAgentParameters.ARGUMENT_POLICY_BOOTSTRAP)
+        )
+        assertEquals(true, TraceAgentParameters.policyBootstrapFromControlPlane)
+    }
+
+    @Test
+    fun testPolicyBootstrapAbsentDefaultsToFalse() {
+        TraceAgentParameters.parseArgs("class=org.C,method=m", emptyList())
+        assertEquals(false, TraceAgentParameters.policyBootstrapFromControlPlane)
+    }
 }

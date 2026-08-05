@@ -97,8 +97,8 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
             check(accessLocation is FieldAccessLocation)
             val type = when {
                 receiver is AtomicReferenceFieldUpdater<*,*> -> Types.OBJECT_TYPE
-                receiver is AtomicLongFieldUpdater<*> -> Types.OBJECT_TYPE
-                receiver is AtomicIntegerFieldUpdater<*> -> Types.OBJECT_TYPE
+                receiver is AtomicLongFieldUpdater<*> -> Types.LONG_TYPE
+                receiver is AtomicIntegerFieldUpdater<*> -> Types.INT_TYPE
                 else -> unreachable()
             }
             getFieldAccessMemoryLocation(
@@ -183,7 +183,6 @@ class StaticFieldMemoryLocation(
         return (other is StaticFieldMemoryLocation)
                 && (className == other.className)
                 && (fieldName == other.fieldName)
-                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -234,7 +233,6 @@ class ObjectFieldMemoryLocation(
                 && (objID == other.objID)
                 && (className == other.className)
                 && (fieldName == other.fieldName)
-                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -309,7 +307,6 @@ class ArrayElementMemoryLocation(
         return (other is ArrayElementMemoryLocation)
                 && (objID == other.objID)
                 && (index == other.index)
-                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {
@@ -365,7 +362,6 @@ class AtomicPrimitiveMemoryLocation(
             return true
         return (other is AtomicPrimitiveMemoryLocation)
                 && (objID == other.objID)
-                && (kClass == other.kClass)
     }
 
     override fun hashCode(): Int {

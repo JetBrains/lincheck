@@ -336,7 +336,7 @@ internal abstract class ManagedStrategy(
         if (loggedResults is RunnerTimeoutInvocationResult) return null to result
 
         val registeredThreads = getRegisteredThreads()
-        val threadNames = MutableList(registeredThreads.size) { "" }
+        val threadNames = MutableList((registeredThreads.keys.maxOrNull() ?: -1) + 1) { "" }
         registeredThreads.forEach { (threadId, thread) ->
             when (val threadNumber = objectTracker.getObjectDisplayNumber(thread)) {
                 0    -> threadNames[threadId] = "Main Thread"
@@ -1348,7 +1348,7 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         newSwitchPoint(threadId, codeLocation)
         if (memoryTracker != null) {
-            val type = array.javaClass.kotlin.getArrayElementType()
+            val type = array.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             // TODO: Should we use threadID or thread Descriptor here?
             memoryTracker!!.beforeRead(threadId, codeLocation, location, MemoryOrdering.PLAIN)
@@ -1519,15 +1519,13 @@ internal abstract class ManagedStrategy(
         }
         traceCollector?.addTracePointInternal(tracePoint)
         if (memoryTracker != null) {
-            val type = array.javaClass.kotlin.getArrayElementType()
+            val type = array.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             memoryTracker!!.beforeWrite(threadId, codeLocation, location, MemoryOrdering.PLAIN, value)
         }
     }
 
     override fun afterWrite(threadDescriptor: ThreadDescriptor) {}
-
-    // TODO: Should we intercept on array copy?
 
     override fun afterLocalRead(threadDescriptor: ThreadDescriptor, codeLocation: Int, variableId: Int, value: Any?) {}
 
@@ -1540,9 +1538,9 @@ internal abstract class ManagedStrategy(
         LincheckInstrumentation.ensureClassHierarchyIsTransformed(className)
     }
 
-    override fun afterNewObjectCreation(threadDescriptor: ThreadDescriptor, obj: Any): Unit =
+    override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String): Unit =
         threadDescriptor.runInsideIgnoredSection {
-            if (objectTracker.shouldTrackObject(obj)) {
+            if (objectTracker.shouldTrackObject(obj) && objectTracker[obj] == null) {
                 objectTracker.registerNewObject(obj)
             }
         }
@@ -1562,15 +1560,12 @@ internal abstract class ManagedStrategy(
             }
         }
 
-    private fun shouldTrackArrayAccess(obj: Any?): Boolean = shouldTrackObjectAccess(obj)
+    private fun shouldTrackArrayAccess(obj: Any?): Boolean = objectTracker.shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldDescriptor: FieldDescriptor): Boolean =
-      shouldTrackObjectAccess(obj) && !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName) && (trackFinalFields || !fieldDescriptor.isFinal)
-
-    private fun shouldTrackObjectAccess(obj: Any?): Boolean {
-        // by default, we track accesses to all objects
-        return objectTracker.shouldTrackObjectAccess(obj)
-    }
+        objectTracker.shouldTrackObjectAccess(obj) &&
+        (trackFinalFields || !fieldDescriptor.isFinal) &&
+        !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName)
 
     private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
         obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
@@ -1629,14 +1624,6 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * Tracks all objects in [objs] eagerly.
-     * Required as a trick to overcome issue with leaking this in constructors, see https://github.com/JetBrains/lincheck/issues/424.
-     */
-    override fun updateSnapshotBeforeConstructorCall(objs: Array<Any?>) = runInsideIgnoredSection {
-        memorySnapshot.trackObjects(objs)
-    }
-
-    /**
      * Tracks fields that are accessed via System.arraycopy, Unsafe API, VarHandle API, Java AFU API, and kotlinx.atomicfu.
      *
      * *Must be called from [runInsideIgnoredSection].*
@@ -1646,6 +1633,7 @@ internal abstract class ManagedStrategy(
         params: Array<Any?>,
         atomicMethodDescriptor: AtomicMethodDescriptor?,
     ) {
+        // Handle atomic access
         if (owner == null || atomicMethodDescriptor == null) return
         val info = atomicMethodDescriptor.getAtomicAccessInfo(context, owner, params)
         when (info.location) {
@@ -1665,24 +1653,48 @@ internal abstract class ManagedStrategy(
     }
 
     /**
-     * Propagates the modification done by intrinsic calls to the strategy.
+     * Utility function that tells the [memoryTracker] (if it exists), to handle the effects of arrayCopy
+     * *Must be called from [runInsideIgnoredSection].*
+     */
+    private fun processArrayCopyEffects(params: Array<Any?>) {
+        if (memoryTracker != null) {
+            val threadId = threadScheduler.getCurrentThreadId()
+            memoryTracker!!.interceptArrayCopy(
+                threadId,
+                UNKNOWN_CODE_LOCATION,
+                params[0],
+                params[1] as Int,
+                params[2],
+                params[3] as Int,
+                params[4] as Int,
+            )
+        }
+    }
+    /**
+     * Propagates the modification done by intrinsic/reflection calls to the strategy.
      * This functionality is required, because we cannot instrument intrinsic methods directly.
      *
      * *Must be called from [runInsideIgnoredSection].*
      */
-    private fun processIntrinsicMethodEffects(
+    private fun processMethodEffects(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         result: Any?,
     ) {
-        val intrinsicDescriptor = context.methodPool[methodId]
-        check(intrinsicDescriptor.isIntrinsic) { "Processing intrinsic method effect of non-intrinsic call" }
+        val methodDescriptor = context.methodPool[methodId]
 
         if (
-            intrinsicDescriptor.isArraysCopyOfIntrinsic() ||
-            intrinsicDescriptor.isArraysCopyOfRangeIntrinsic()
+            (methodDescriptor.isIntrinsic && methodDescriptor.isArraysCopyOfIntrinsic()) ||
+            (methodDescriptor.isIntrinsic && methodDescriptor.isArraysCopyOfRangeIntrinsic()) ||
+            methodDescriptor.isArrayNewInstance()
         ) {
-            result?.let { afterNewObjectCreation(threadDescriptor, it) }
+            // `Arrays.copyOf`/`copyOfRange` allocate a fresh array as their return value;
+            // route it through the same path as a regular array allocation.
+            // `canonicalName` mirrors what `ObjectCreationTransformer` pushes for static array allocations
+            // (e.g. `int[]`, `java.lang.String[]`); fall back to `name` if it is `null`.
+            result?.let {
+                afterObjectConstructor(threadDescriptor, it, it.javaClass.canonicalName ?: it.javaClass.name)
+            }
         }
     }
 
@@ -1733,12 +1745,10 @@ internal abstract class ManagedStrategy(
             threadScheduler.abortCurrentThread()
         }
 
-        val methodCallInfo = MethodCallInfo(
-            ownerType = Types.ObjectType(methodDescriptor.className),
-            methodSignature = methodDescriptor.methodSignature,
-            codeLocation = codeLocation,
-            methodId = methodId,
-        )
+        // Handle array copy
+        if (receiver == null && methodDescriptor.isSystemArrayCopy()) {
+            processArrayCopyEffects(params)
+        }
 
         var shouldInterceptAtomicMethod: Boolean = false
         if (memoryTracker != null && atomicMethodDescriptor != null && receiver != null) {
@@ -1760,6 +1770,12 @@ internal abstract class ManagedStrategy(
             )
         }
 
+        val methodCallInfo = MethodCallInfo(
+            ownerType = Types.ObjectType(methodDescriptor.className),
+            methodSignature = methodDescriptor.methodSignature,
+            codeLocation = codeLocation,
+            methodId = methodId,
+        )
         // obtain deterministic method descriptor if required
         val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
 
@@ -1873,10 +1889,8 @@ internal abstract class ManagedStrategy(
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         val methodDescriptor = context.methodPool[methodId]
 
-        // process intrinsic candidate methods
-        if (methodDescriptor.isIntrinsic) {
-            processIntrinsicMethodEffects(threadDescriptor, methodId, result)
-        }
+        // process effects of intrisic/reflection methods
+        processMethodEffects(threadDescriptor, methodId, result)
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
         if (deterministicMethodDescriptor != null) {
@@ -1915,9 +1929,9 @@ internal abstract class ManagedStrategy(
             if (callStackTrace[threadId]!!.isNotEmpty()) {
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when {
-                    result == Unit -> tracePoint.initializeVoidReturnedValue()
-                    result == Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
-                    result == COROUTINE_SUSPENDED && isSuspendFunction(
+                    result === Unit -> tracePoint.initializeVoidReturnedValue()
+                    result === Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
+                    result === COROUTINE_SUSPENDED && isSuspendFunction(
                         methodDescriptor.className,
                         methodDescriptor.methodName,
                         params.asList()

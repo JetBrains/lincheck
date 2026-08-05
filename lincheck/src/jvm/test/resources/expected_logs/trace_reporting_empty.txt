@@ -21,3 +21,11 @@ Exception stack traces:
 	at org.jetbrains.kotlinx.lincheck_test.representation.TraceReportingTest.notImplemented(TraceReportingTest.kt:123)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+|                                                              Thread 1                                                              |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+| notImplemented(): NotImplementedError #1                                                                                           |
+|   NotImplementedError.<init>(null, 1, null): NotImplementedError#1 at TraceReportingTest.notImplemented(TraceReportingTest.kt:123) |
+|   result: NotImplementedError #1                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------- |

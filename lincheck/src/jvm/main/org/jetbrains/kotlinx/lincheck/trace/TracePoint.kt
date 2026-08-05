@@ -17,6 +17,7 @@ import org.jetbrains.lincheck.util.isLincheckInternalException
 import org.jetbrains.lincheck.util.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.jvm.agent.toSimpleClassName
 import org.jetbrains.lincheck.trace.TraceContext
 
 data class Trace(
@@ -296,7 +297,13 @@ internal class MethodCallTracePoint(
         
     
     private fun StringBuilder.appendDefaultMethodCall() {
-        if (ownerName != null) append("$ownerName.")
+        // For constructor calls (`<init>`) `ownerName` resolves to `null` whenever the
+        // receiver is the current `this` — i.e. for `super()` / `this()` delegation calls
+        // inside a constructor body. Fall back to the class name being constructed so the
+        // trace makes the constructor chain explicit (e.g. `ConstructorBase.<init>()`
+        // instead of a bare `<init>()`).
+        val displayOwner = ownerName ?: className.takeIf { methodName == "<init>" }?.toSimpleClassName()
+        if (displayOwner != null) append("$displayOwner.")
         if (isSuspend) {
             append("$methodName(${ parameters?.dropLast(1)?.joinToString(", ") ?: "" })")
             append(" [suspendable: ${parameters?.last()}]")

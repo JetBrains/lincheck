@@ -18,9 +18,13 @@ Detailed trace:
 | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | operation()                                                                                                                                         |
 |   array[2].getObject(): IntWrapper#1 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:23)                                |
+|   UnsafeTraceRepresentationTest.IntWrapper.<init>(4): IntWrapper#3 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:24)  |
+|     Object.<init>(): IntWrapper#3 at UnsafeTraceRepresentationTest.IntWrapper.<init>(UnsafeTraceRepresentationTest.kt:31)                           |
 |   node.compareAndSwapObject(IntWrapper#2, IntWrapper#3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:24)       |
 |   value ➜ 2 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                                                         |
 |   value.compareAndSwapInt(2, 3): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:25)                               |
+|   UnsafeTraceRepresentationTest.IntWrapper.<init>(6): IntWrapper#5 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:27)  |
+|     Object.<init>(): IntWrapper#5 at UnsafeTraceRepresentationTest.IntWrapper.<init>(UnsafeTraceRepresentationTest.kt:31)                           |
 |   staticNode.compareAndSwapObject(IntWrapper#4, IntWrapper#5): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:27) |
 |   node.getValue(): 4 at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:28)                                                |
 |   node.value.compareAndSwapInt(4, 6): true at UnsafeTraceRepresentationTest.operation(UnsafeTraceRepresentationTest.kt:28)                          |

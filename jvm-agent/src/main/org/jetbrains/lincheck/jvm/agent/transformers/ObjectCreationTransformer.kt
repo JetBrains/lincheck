@@ -19,6 +19,9 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
+import org.objectweb.asm.commons.Method
+import java.lang.StringBuilder
+import kotlin.reflect.KFunction
 
 /**
  * [ObjectCreationTransformer] tracks creation of new objects,
@@ -36,8 +39,13 @@ internal class ObjectCreationTransformer(
     methodVisitor: MethodVisitor,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
-    /* To track object creation, this transformer inserts `Injections::afterNewObjectCreation` calls
-     * after an object is allocated and initialized.
+    override val requiresTypeAnalyzer: Boolean = true
+
+    /* To track object creation, this transformer inserts `Injections::afterObjectConstructor`
+     * after each object constructor invocation, and right after array allocation
+     * (where the array is already in initialized state and can be treated as a
+     * one-shot "constructed object" — see `afterArrayCreation` below).
+     *
      * The created object is passed into the injected function as an argument.
      *
      * In order to achieve this, this transformer tracks the following instructions:
@@ -58,8 +66,11 @@ internal class ObjectCreationTransformer(
      * and the actual initializing constructor call from the object creation call size.
      *
      * Therefore, to tackle these issues, we maintain a counter of allocated, but not yet initialized objects.
-     * Whenever we encounter a constructor call (i.e., `<init>`) we check for the counter
-     * and inject the object creation tracking method if the counter is not null.
+     * Whenever we encounter a constructor call (i.e., `<init>`) we either:
+     *  - check the counter and inject the object constructor tracking method
+     *    if the constructor corresponds to a preceding `NEW` instruction; or
+     *  - detect a `super()`/`this()` constructor call via the stack frame and inject
+     *    the same tracking method for `this` after that call returns.
      *
      * The solution with allocated objects counter is inspired by:
      * https://github.com/google/allocation-instrumenter
@@ -71,65 +82,107 @@ internal class ObjectCreationTransformer(
     private var uninitializedObjects = 0
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
-        // special handling for a common case of `Object` constructor
-        if (name == "<init>" && owner == "java/lang/Object" && uninitializedObjects > 0) {
-            invokeIfInAnalyzedCode(
-                original = {
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
-                },
-                instrumented = {
-                    val objectLocal = newLocal(OBJECT_TYPE)
-                    copyLocal(objectLocal)
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
-                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(objectLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
+        if (name != "<init>") {
+            super.visitMethodInsn(opcode, owner, name, desc, itf)
+            return
+        }
+
+        if (isReceiverUninitializedThis(desc)) {
+            invokeAfterConstructorForCurrentThis(opcode, owner, name, desc, itf)
+            return
+        }
+
+        if (uninitializedObjects > 0) {
+            invokeAfterConstructorForNewObject(opcode, owner, name, desc, itf)
             uninitializedObjects--
             return
         }
-        if (name == "<init>" && uninitializedObjects > 0) {
-            invokeIfInAnalyzedCode(
-                original = {
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
-                },
-                instrumented = {
-                    val objectLocal = newLocal(OBJECT_TYPE)
-                    // save and pop the constructor parameters from the stack
-                    val constructorType = Type.getType(desc)
-                    val params = storeLocals(constructorType.argumentTypes)
-                    // copy the object on which we call the constructor
-                    copyLocal(objectLocal)
-                    // push constructor parameters back on the stack
-                    params.forEach { loadLocal(it) }
-                    // call the constructor
-                    super.visitMethodInsn(opcode, owner, name, desc, itf)
-                    // call the injected method
-                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(objectLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
-            uninitializedObjects--
-            return
-        }
+
         super.visitMethodInsn(opcode, owner, name, desc, itf)
     }
+
+    private fun GeneratorAdapter.invokeAfterConstructorForNewObject(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean
+    ) {
+        val constructorType = Type.getType(desc)
+        // Fast-path: zero-argument constructor.
+        // Covers `java/lang/Object.<init>` (always no-arg) and every other no-arg `<init>` call.
+        // We can keep the uninitialized receiver on the operand stack with a single `dup` instead of
+        // allocating a local and threading constructor arguments through `storeLocals`/`loadLocal`.
+        val isZeroArg = constructorType.argumentTypes.isEmpty()
+        invokeIfInAnalyzedCode(
+            original = {
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+            },
+            instrumented = {
+                if (isZeroArg) {
+                    // Stack before: ..., uninitObj, uninitObj  (from user's NEW + DUP)
+                    dup()                                     // ..., uninitObj, uninitObj, uninitObj
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
+                                                              // ..., obj, obj   (all uninit refs promoted)
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                                                              // ..., obj, obj, descriptor
+                    swap()                                    // ..., obj, descriptor, obj
+                    push(owner.toCanonicalClassName())        // ..., obj, descriptor, obj, className
+                    invokeStatic(Injections::afterObjectConstructor)
+                                                              // ..., obj
+                } else {
+                    val objectLocal = newLocal(OBJECT_TYPE)
+                    val params = storeLocals(constructorType.argumentTypes)
+                    copyLocal(objectLocal)
+                    params.forEach { loadLocal(it) }
+                    super.visitMethodInsn(opcode, owner, name, desc, itf)
+                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                    loadLocal(objectLocal)
+                    push(owner.toCanonicalClassName())
+                    invokeStatic(Injections::afterObjectConstructor)
+                }
+            }
+        )
+    }
+
+    private fun GeneratorAdapter.invokeAfterConstructorForCurrentThis(
+        opcode: Int,
+        owner: String,
+        name: String,
+        desc: String,
+        itf: Boolean
+    ) {
+        invokeIfInAnalyzedCode(
+            original = {
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+            },
+            instrumented = {
+                super.visitMethodInsn(opcode, owner, name, desc, itf)
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                loadThis()
+                push(owner.toCanonicalClassName())
+                invokeStatic(Injections::afterObjectConstructor)
+            }
+        )
+    }
+
+    /**
+     * Returns true when the receiver of the constructor call being visited is
+     * [UNINITIALIZED_THIS], i.e. this is a `super()` or `this()` delegation call
+     * inside the current constructor body.
+     */
+    private fun isReceiverUninitializedThis(desc: String): Boolean {
+        if (methodName != "<init>") return false
+        val stack = typeAnalyzer?.stack ?: return false
+        val argSlots = Type.getArgumentTypes(desc).sumOf { it.size }
+        return stack.getStackElementAt(argSlots) == UNINITIALIZED_THIS
+    }
+
 
     override fun visitIntInsn(opcode: Int, operand: Int) = adapter.run {
         super.visitIntInsn(opcode, operand)
         if (opcode == NEWARRAY) {
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    dup()
-                    val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
-                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(arrayLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
+            afterArrayCreation(newArrayDescriptor(operand))
         }
     }
 
@@ -153,21 +206,28 @@ internal class ObjectCreationTransformer(
         }
         super.visitTypeInsn(opcode, type)
         if (opcode == ANEWARRAY) {
-            invokeIfInAnalyzedCode(
-                original = {},
-                instrumented = {
-                    dup()
-                    val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
-                    invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
-                    loadLocal(arrayLocal)
-                    invokeStatic(Injections::afterNewObjectCreation)
-                }
-            )
+            // `type` is either an internal object name (e.g. `java/lang/String`) or, when the
+            // element is itself an array, an array descriptor (e.g. `[I`).
+            val elementDescriptor = if (type.startsWith("[")) type else "L$type;"
+            afterArrayCreation("[$elementDescriptor")
         }
     }
 
     override fun visitMultiANewArrayInsn(descriptor: String?, numDimensions: Int) = adapter.run {
         super.visitMultiANewArrayInsn(descriptor, numDimensions)
+        afterArrayCreation(descriptor!!)
+    }
+
+    /**
+     * Injects an `afterObjectConstructor` call right after an array allocation;
+     * handles NEWARRAY/ANEWARRAY/MULTIANEWARRAY instructions.
+     *
+     * Unlike `NEW`, the array is already in a fully-initialized state on top of the stack,
+     * so we just `dup` it and feed the duplicate into the injection.
+     * The `arrayTypeDescriptor` is the JVM array descriptor (e.g. `[I`, `[Ljava/lang/String;`),
+     * converted to a canonical Java name (`int[]`, `java.lang.String[]`) for the `className` argument.
+     */
+    private fun GeneratorAdapter.afterArrayCreation(arrayTypeDescriptor: String) {
         invokeIfInAnalyzedCode(
             original = {},
             instrumented = {
@@ -175,9 +235,23 @@ internal class ObjectCreationTransformer(
                 val arrayLocal = newLocal(OBJECT_TYPE).also { storeLocal(it) }
                 invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
                 loadLocal(arrayLocal)
-                invokeStatic(Injections::afterNewObjectCreation)
+                push(Type.getType(arrayTypeDescriptor).className)
+                invokeStatic(Injections::afterObjectConstructor)
             }
         )
+    }
+
+    /** JVM array descriptor for the primitive type encoded by a NEWARRAY operand. */
+    private fun newArrayDescriptor(operand: Int): String = when (operand) {
+        T_BOOLEAN -> "[Z"
+        T_CHAR    -> "[C"
+        T_FLOAT   -> "[F"
+        T_DOUBLE  -> "[D"
+        T_BYTE    -> "[B"
+        T_SHORT   -> "[S"
+        T_INT     -> "[I"
+        T_LONG    -> "[J"
+        else -> error("Unknown NEWARRAY operand: $operand")
     }
 
     /*
@@ -203,17 +277,19 @@ internal class ObjectCreationTransformer(
      * The cleanest place to hook this allocation is the `invokedynamic` call site itself:
      * the freshly allocated object is left on the operand stack
      * as the instruction's result, so we can `dup` it and feed it to
-     * `afterNewObjectCreation` exactly as we do for `NEW`/`<init>` pairs.
+     * `afterInvokeDynamicObjectCreation` similarly to arrays' `afterObjectConstructor`.
      *
      * One subtlety: a non-capturing lambda's call site target returns a JVM-cached singleton,
      * so the same instance shows up on the stack each time the `invokedynamic` is executed.
      * To avoid registering it more than once,
      * we route this site through the dedicated `afterInvokeDynamicObjectCreation` hook
-     * rather than the regular `afterNewObjectCreation`.
+     * rather than the regular `afterObjectConstructor`.
      * The other, "normal" allocation sites (`NEW`/`NEWARRAY`/`ANEWARRAY`/`MULTIANEWARRAY`)
-     * are guaranteed to produce a fresh instance per execution and use the plain `afterNewObjectCreation`.
-     * As such, at runtime, the implementation of `afterInvokeDynamicObjectCreation` injection should be idempotent,
-     * while implementation of `afterNewObjectCreation` is not obligatory idempotent.
+     * are guaranteed to produce a fresh instance per execution and use the plain `afterObjectConstructor`.
+     * As such, at runtime, the implementation of `afterInvokeDynamicObjectCreation` injection should be idempotent.
+     * Note that implementation of `afterObjectConstructor` generally should also be idempotent
+     * with respect to the same object parameter passed to the injected function,
+     * since multiple `<init>` calls may be made on the same instance through inheritance chains.
      *
      * References:
      *  - JVMS §6.5 invokedynamic — describes how the bootstrap method's

@@ -34,11 +34,9 @@ This means that Lincheck does not simulate and cannot catch bugs related to inst
 cache behavior, and other similar effects under the relaxed 
 [Java memory model](https://en.wikipedia.org/wiki/Java_memory_model).
 
-<!-- TODO: uncomment after the article is published
 > For more information, see [Model checking](lincheck-model-checking.md).
 >
-{style=”tip”}
--->
+{style="tip"}
 
 ## Stress testing
 
@@ -109,7 +107,7 @@ generation, enabling stalled execution detection, and providing thread-safety gu
 
 ## See also
 
-* [Generating operation arguments](operation-arguments.md)
+* [Generating operation arguments](lincheck-argument-generation-constraints.md)
 * [Configuring operation execution options](lincheck-operation-execution-options.md)
-* [Checking for non-blocking progress guarantees](progress-guarantees.md)
-* [Defining sequential specification of the algorithm](sequential-specification.md)
+* [Checking for non-blocking progress guarantees](lincheck-progress-guarantees.md)
+* [Defining sequential specification of the algorithm](lincheck-results-validation.md)
