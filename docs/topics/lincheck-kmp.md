@@ -136,9 +136,7 @@ Create classes implementing counter data structures that are shared between all 
    class UnsafeCounter {
       private var value: Int = 0
       
-      fun inc() { 
-          value++
-      }
+      fun inc() = value++
       
       fun get(): Int = value
    }
@@ -151,20 +149,12 @@ Create classes implementing counter data structures that are shared between all 
    import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
    @OptIn(ExperimentalAtomicApi::class)
-   class SafeCounter {
-       private val _value = AtomicInt(0)
+   class SafeCounter { 
+       private var value = AtomicInt(0)
    
-       var value: Int
-           get() = _value.load()
-           set(newValue) {
-               _value.store(newValue)
-           }
+       fun inc() = value.addAndFetch(1)
    
-       fun inc() {
-           _value.addAndFetch(1)
-       }
-   
-       fun get(): Int = _value.load()
+       fun get(): Int = value.load()
    }
    ```
 
