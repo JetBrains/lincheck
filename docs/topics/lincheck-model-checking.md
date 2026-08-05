@@ -67,7 +67,7 @@ When running a test with the model checking strategy, Lincheck controls the foll
 
   ```kotlin
   @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-  class GlobalVariableResetTest {
+  class VariableResetTest {
       companion object {
           private var atomicInt = AtomicInteger(0)
       }
