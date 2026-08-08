@@ -19,6 +19,7 @@ import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.decodeBlocklistsFromString
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
+import org.jetbrains.lincheck.trace.network.AgentHelloMessage
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingClient
 import org.jetbrains.lincheck.trace.network.TracingCallbacks
@@ -93,6 +94,14 @@ fun TracingCallbacks.handleMessage(message: String?) {
         val data = parts[2]
 
         when (type) {
+            TracingCallbacks.HELLO -> {
+                val parsed = AgentHelloMessage.decodeFromPayload(data, timestamp)
+                if (parsed == null) {
+                    Logger.warn { "Failed to parse hello notification: $data" }
+                    return
+                }
+                hello(parsed)
+            }
             TracingCallbacks.HIT_LIMIT_REACHED -> {
                 val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(data)
                 if (breakpointData == null) {
@@ -210,11 +219,13 @@ abstract class TracingWebSocketServer(address: InetSocketAddress?) : TracingServ
         object: WebSocketServer(address) {
             override fun onOpen(conn: WebSocket?, handshake: ClientHandshake?) {
                 if (conn != null) {
+                    // Hold the lock across onConnectionReady() so the agent's hello is the first
+                    // frame the client sees, before any notification racing in on another thread.
                     synchronized(this@TracingWebSocketServer) {
                         _client.close()
                         _client = WebSocketTracingNotifier(conn)
+                        onConnectionReady()
                     }
-                    onConnectionReady()
                 }
             }
 
@@ -278,10 +289,11 @@ abstract class TracingWebSocketServer(address: InetSocketAddress?) : TracingServ
         return object : WebSocketClient(serverUri) {
             override fun onOpen(handshakedata: ServerHandshake?) {
                 Logger.info { "Reversed WS connection opened to $serverUri" }
+                // Hold the lock across onConnectionReady() so the agent's hello is the first frame.
                 synchronized(this@TracingWebSocketServer) {
                     _client = WebSocketTracingNotifier(this)
+                    onConnectionReady()
                 }
-                onConnectionReady()
             }
 
             override fun onMessage(message: String?) = handleMessage(message)

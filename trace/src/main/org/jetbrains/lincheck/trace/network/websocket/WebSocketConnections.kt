@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.encodeToString
+import org.jetbrains.lincheck.trace.network.AgentHelloMessage
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingCallbacks
 import org.jetbrains.lincheck.trace.network.TracingCommands
@@ -59,6 +60,10 @@ class WebSocketTracingCommandSender(private val webSocket: WebSocket) : Closeabl
  * Server-side [TracingCallbacks] that sends notifications and binary trace data to the connected client over WebSocket.
  */
 class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
+
+    override fun hello(hello: AgentHelloMessage) {
+        webSocket.send("${TracingCallbacks.HELLO}:${hello.timestamp}:${hello.encodeToPayload()}")
+    }
 
     override fun hitLimitReached(
         breakpointData: LiveDebuggerNotification.BreakpointData,
@@ -114,6 +119,9 @@ class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
  * No-op [TracingCallbacks] used as a placeholder when no client is connected.
  */
 class ClientSink: Closeable, TracingCallbacks {
+    override fun hello(hello: AgentHelloMessage) {
+        Logger.warn { "hello dropped: no client connected ($hello)" }
+    }
     override fun hitLimitReached(breakpointData: LiveDebuggerNotification.BreakpointData, timestamp: Long) {
         Logger.warn { "hitLimitReached dropped: no client connected (breakpoint=$breakpointData)" }
     }

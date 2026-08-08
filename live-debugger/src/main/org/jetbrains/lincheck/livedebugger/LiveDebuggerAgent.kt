@@ -30,9 +30,13 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.trace.network.AgentHelloMessage
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
+import org.jetbrains.lincheck.trace.network.PROTOCOL_VERSION
+import org.jetbrains.lincheck.trace.network.RUNTIME_JVM
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
+import org.jetbrains.lincheck.trace.serialization.TRACE_VERSION
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TracingSession
@@ -146,6 +150,23 @@ internal object LiveDebuggerAgent {
         agent.agentmain(agentArgs, inst)
     }
 
+    /**
+     * Builds this agent's [AgentHelloMessage]: JVM runtime, its version, the agent build,
+     * and the trace format it streams.
+     */
+    private fun agentHello(): AgentHelloMessage = AgentHelloMessage(
+        protocolVersion = PROTOCOL_VERSION,
+        runtime = RUNTIME_JVM,
+        runtimeVersion = System.getProperty("java.version") ?: "unknown",
+        agentVersion = LiveDebuggerAgent::class.java.`package`?.implementationVersion ?: "dev",
+        timestamp = System.currentTimeMillis(),
+        // Advertising the trace-format version lets the client reject a trace stream it cannot deserialize
+        // up front, instead of failing mid-stream. This is a separate compatibility axis from
+        // `PROTOCOL_VERSION`: the wire protocol frames commands/notifications,
+        // while this versions the binary payload of `binaryTraceData`.
+        traceVersion = TRACE_VERSION,
+    )
+
     private fun startServer(address: InetSocketAddress?): TracingWebSocketServer? {
         return try {
              val server = object : TracingWebSocketServer(address) {
@@ -182,6 +203,10 @@ internal object LiveDebuggerAgent {
                 }
 
                 override fun onConnectionReady() {
+                    // Introduce ourselves first: the client learns the runtime and versions before
+                    // any command or notification. This runs while the server holds its lock, so the
+                    // hello is guaranteed to be the first frame on the wire.
+                    connection.hello(agentHello())
                     PhoneHomeHeartbeat.setConnectTriggered()
                 }
 

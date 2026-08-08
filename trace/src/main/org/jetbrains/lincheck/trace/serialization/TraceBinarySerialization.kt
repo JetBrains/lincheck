@@ -26,7 +26,8 @@ import java.util.UUID
 
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
-internal const val TRACE_VERSION : Long = 27
+/** Binary trace-format version this build produces and consumes. */
+const val TRACE_VERSION : Long = 27
 
 // Buffer for saving trace in one piece
 internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
