@@ -156,14 +156,14 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
 }
 
 private fun saveTRTracepoint(writer: TraceWriter, tracepoint: TRTracePoint) {
-    tracepoint.save(writer)
+    writer.writeTracePoint(tracepoint)
     if (tracepoint is TRContainerTracePoint) {
         tracepoint.events.forEach {
             if (it != null) {
                 saveTRTracepoint(writer, it)
             }
         }
-        tracepoint.saveFooter(writer)
+        writer.writeTracePointFooter(tracepoint)
     }
 }
 

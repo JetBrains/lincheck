@@ -264,7 +264,7 @@ class NetworkTracePointSender(
         outputStream.writeThreadName(tracePoint.threadId, tracePoint.threadName)
 
         // Write trace point
-        tracePoint.save(writer)
+        writer.writeTracePoint(tracePoint)
 
         // Write block end
         outputStream.writeKind(ObjectKind.BLOCK_END)

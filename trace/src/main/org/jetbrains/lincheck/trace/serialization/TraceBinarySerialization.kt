@@ -940,7 +940,8 @@ internal fun DataInput.readTRTracePoint(context: TraceContext): TRTracePoint {
 // tracepoint bytes can only be produced/consumed through `writeTRTracePoint`/`readTRTracePoint`,
 // which guarantees that the common header is in place.
 //
-// Per-subclass footer helpers stay `internal` because the model classes' `saveFooter`/`loadFooter` methods
+// Per-subclass footer helpers stay `internal` because the `TraceWriter.writeTR<Type>TracePointFooter` methods
+// and the model classes' `loadFooter` methods
 // invoke them between bookkeeping calls that can't be inlined here.
 
 // -------- Field --------

@@ -18,7 +18,21 @@ import java.io.DataOutputStream
 import java.io.OutputStream
 
 /**
- * It is a strategy to save one tracepoint.
+ * An abstract serialization writer for trace data, including the tracepoints themselves.
+ *
+ * One `writeTR<Type>TracePoint` method per tracepoint type;
+ * read/write variants share the method of their sealed base class
+ * (their bodies are identical, the kind byte tells them apart on the read side).
+ * Container tracepoints additionally get a `writeTR<Type>TracePointFooter` method,
+ * which must be called after all children are written.
+ *
+ * Each default `writeTR<Type>TracePoint` implementation:
+ *   1. pre-registers prerequisite descriptors and values (memoized by the writer),
+ *   2. calls [startWriteAnyTracepoint],
+ *   3. calls [writeTRTracePoint] — the top-level dispatcher in `TraceBinarySerialization.kt`
+ *      that emits the kind byte, common header, and the subclass-specific body bytes
+ *      (including children diff-statuses for containers),
+ *   4. calls [endWriteLeafTracepoint] or [endWriteContainerTracepointHeader].
  */
 internal interface TraceWriter : DataOutput, Closeable {
     /**
@@ -93,6 +107,120 @@ internal interface TraceWriter : DataOutput, Closeable {
      * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used code locations.
      */
     fun writeCodeLocation(id: Int)
+
+    /**
+     * Writes a tracepoint of any type by dispatching to its type-specific `writeTR<Type>TracePoint` method.
+     */
+    fun writeTracePoint(tracePoint: TRTracePoint) {
+        when (tracePoint) {
+            is TRMethodCallTracePoint             -> writeTRMethodCallTracePoint(tracePoint)
+            is TRLoopTracePoint                   -> writeTRLoopTracePoint(tracePoint)
+            is TRLoopIterationTracePoint          -> writeTRLoopIterationTracePoint(tracePoint)
+            is TRFieldTracePoint                  -> writeTRFieldTracePoint(tracePoint)
+            is TRArrayTracePoint                  -> writeTRArrayTracePoint(tracePoint)
+            is TRLocalVariableTracePoint          -> writeTRLocalVariableTracePoint(tracePoint)
+            is TRExceptionProcessingTracePoint    -> writeTRExceptionProcessingTracePoint(tracePoint)
+            is TRSnapshotLineBreakpointTracePoint -> writeTRSnapshotLineBreakpointTracePoint(tracePoint)
+        }
+    }
+
+    /**
+     * Writes a footer of a container tracepoint of any type
+     * by dispatching to its type-specific `writeTR<Type>TracePointFooter` method.
+     */
+    fun writeTracePointFooter(tracePoint: TRContainerTracePoint) {
+        when (tracePoint) {
+            is TRMethodCallTracePoint    -> writeTRMethodCallTracePointFooter(tracePoint)
+            is TRLoopTracePoint          -> writeTRLoopTracePointFooter(tracePoint)
+            is TRLoopIterationTracePoint -> writeTRLoopIterationTracePointFooter(tracePoint)
+        }
+    }
+
+    fun writeTRMethodCallTracePoint(tracePoint: TRMethodCallTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        writeMethodDescriptor(tracePoint.methodId)
+        preWriteTRValue(tracePoint.obj)
+        tracePoint.parameters.forEach { preWriteTRValue(it) }
+        writeContainerTracepointHeader(tracePoint)
+    }
+
+    fun writeTRLoopTracePoint(tracePoint: TRLoopTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        writeContainerTracepointHeader(tracePoint)
+    }
+
+    fun writeTRLoopIterationTracePoint(tracePoint: TRLoopIterationTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        writeContainerTracepointHeader(tracePoint)
+    }
+
+    fun writeTRFieldTracePoint(tracePoint: TRFieldTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        writeFieldDescriptor(tracePoint.fieldId)
+        preWriteTRValue(tracePoint.obj)
+        preWriteTRValue(tracePoint.value)
+        writeLeafTracepoint(tracePoint)
+    }
+
+    fun writeTRArrayTracePoint(tracePoint: TRArrayTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        preWriteTRValue(tracePoint.array)
+        preWriteTRValue(tracePoint.value)
+        writeLeafTracepoint(tracePoint)
+    }
+
+    fun writeTRLocalVariableTracePoint(tracePoint: TRLocalVariableTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        writeVariableDescriptor(tracePoint.localVariableId)
+        preWriteTRValue(tracePoint.value)
+        writeLeafTracepoint(tracePoint)
+    }
+
+    fun writeTRExceptionProcessingTracePoint(tracePoint: TRExceptionProcessingTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        preWriteTRValue(tracePoint.exception)
+        writeLeafTracepoint(tracePoint)
+    }
+
+    fun writeTRSnapshotLineBreakpointTracePoint(tracePoint: TRSnapshotLineBreakpointTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        tracePoint.stackTraceCodeLocationIds.forEach { writeCodeLocation(it) }
+        tracePoint.locals.forEach { preWriteTRValue(it) }
+        tracePoint.watches.forEach { preWriteTRValue(it) }
+        writeLeafTracepoint(tracePoint)
+    }
+
+    fun writeTRMethodCallTracePointFooter(tracePoint: TRMethodCallTracePoint) {
+        preWriteTRValue(tracePoint.result)
+        startWriteContainerTracepointFooter()
+        writeMethodCallTracePointFooter(tracePoint)
+        endWriteContainerTracepointFooter(tracePoint.eventId)
+    }
+
+    fun writeTRLoopTracePointFooter(tracePoint: TRLoopTracePoint) {
+        startWriteContainerTracepointFooter()
+        writeLoopTracePointFooter(tracePoint)
+        endWriteContainerTracepointFooter(tracePoint.eventId)
+    }
+
+    fun writeTRLoopIterationTracePointFooter(tracePoint: TRLoopIterationTracePoint) {
+        // No footer body bytes for this kind — only container bookkeeping.
+        startWriteContainerTracepointFooter()
+        endWriteContainerTracepointFooter(tracePoint.eventId)
+    }
+}
+
+private fun TraceWriter.writeLeafTracepoint(tracePoint: TRTracePoint) {
+    startWriteAnyTracepoint()
+    writeTRTracePoint(tracePoint)
+    endWriteLeafTracepoint()
+}
+
+// Marks the tracepoint as a container which could have children and will have a footer.
+private fun TraceWriter.writeContainerTracepointHeader(tracePoint: TRContainerTracePoint) {
+    startWriteAnyTracepoint()
+    writeTRTracePoint(tracePoint)
+    endWriteContainerTracepointHeader(tracePoint.eventId)
 }
 
 /**

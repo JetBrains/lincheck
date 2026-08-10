@@ -379,12 +379,12 @@ class FileStreamingTraceCollecting(
         val writer = writers[Thread.currentThread()] ?: return
         try {
             writer.mark()
-            created.save(writer)
+            writer.writeTracePoint(created)
         } catch (_: BufferOverflowException) {
             // Flush current buffers, start over
             writer.rollback()
             writer.flush()
-            created.save(writer)
+            writer.writeTracePoint(created)
         }
     }
 
@@ -392,12 +392,12 @@ class FileStreamingTraceCollecting(
         val writer = writers[thread] ?: return
         try {
             writer.mark()
-            container.saveFooter(writer)
+            writer.writeTracePointFooter(container)
         } catch (_: BufferOverflowException) {
             // Flush current buffers, start over
             writer.rollback()
             writer.flush()
-            container.saveFooter(writer)
+            writer.writeTracePointFooter(container)
         }
     }
 

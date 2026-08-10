@@ -110,23 +110,6 @@ sealed class TRTracePoint(
         }
     }
 
-    /**
-     * Serializes this tracepoint via the given [TraceWriter] orchestration.
-     *
-     * Each concrete subclass must:
-     *   1. call [saveReferences] (to register prerequisite descriptors via memoization),
-     *   2. call `out.startWriteAnyTracepoint()`,
-     *   3. call `out.writeTRTracePoint(this)` — the top-level dispatcher in
-     *      `TraceBinarySerialization.kt` that emits the kind byte, common header, and the
-     *      subclass-specific body bytes (including children diff-statuses for containers),
-     *   4. call `out.endWriteLeafTracepoint()` or `out.endWriteContainerTracepointHeader(eventId)`.
-     */
-    internal abstract fun save(out: TraceWriter)
-
-    internal open fun saveReferences(out: TraceWriter) {
-        out.writeCodeLocation(codeLocationId)
-    }
-
     val codeLocation: StackTraceElement get() = context.stackTrace(codeLocationId)
     val activeLocals: List<ActiveLocal> get() = context.activeLocals(codeLocationId) ?: emptyList() // used in plugin
     val accessPath: AccessPath? get() = context.accessPath(codeLocationId)
@@ -157,7 +140,7 @@ sealed class TRContainerTracePoint(
 
     val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: SUBTREE_STATUS_UNCHANGED
 
-    // We need this to have unmodifiable list here, ad "children" list needs some bookkeeping
+    // We need this to have unmodifiable list here, as "children" list needs some bookkeeping
     val events: List<TRTracePoint?> get() = children
 
     private fun TRTracePoint.setParentIfContainer(parent: TRContainerTracePoint) {
@@ -171,7 +154,7 @@ sealed class TRContainerTracePoint(
     }
 
     // These two methods are left public intentionally to allow external post-processors
-    // to clone traecepoint with children
+    // to clone tracepoint with children
     fun copyChildrenAddresses(other: TRContainerTracePoint) {
         for (i in 0 ..< other.childrenAddresses.size) {
             addChildAddress(other.childrenAddresses[i])
@@ -246,7 +229,6 @@ sealed class TRContainerTracePoint(
         if (childrenDiffStatuses!!.isEmpty()) childrenDiffStatuses = null
     }
 
-    internal abstract fun saveFooter(out: TraceWriter)
     internal abstract fun loadFooter(inp: DataInput)
 
     companion object {
@@ -316,32 +298,6 @@ class TRMethodCallTracePoint(
     fun isSuperConstructorCall(): Boolean =
         (flags.toInt() and SUPER_CONSTRUCTOR_CALL_FLAG) != 0
 
-    override fun save(out: TraceWriter) {
-        saveReferences(out)
-        out.startWriteAnyTracepoint()
-        out.writeTRTracePoint(this)
-        // Mark this as container tracepoint which could have children and will have footer
-        out.endWriteContainerTracepointHeader(eventId)
-    }
-
-    override fun saveReferences(out: TraceWriter) {
-        super.saveReferences(out)
-        out.writeMethodDescriptor(methodId)
-        out.preWriteTRValue(obj)
-        parameters.forEach {
-            out.preWriteTRValue(it)
-        }
-    }
-
-    override fun saveFooter(out: TraceWriter) {
-        out.preWriteTRValue(result)
-
-        // Mark this as a container tracepoint footer
-        out.startWriteContainerTracepointFooter()
-        out.writeMethodCallTracePointFooter(this)
-        out.endWriteContainerTracepointFooter(eventId)
-    }
-
     override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
         inp.readMethodCallTracePointFooter(context, this)
@@ -390,21 +346,6 @@ class TRLoopTracePoint(
         return iterations++
     }
 
-    override fun save(out: TraceWriter) {
-        saveReferences(out)
-        out.startWriteAnyTracepoint()
-        out.writeTRTracePoint(this)
-        // Mark this as container tracepoint which could have children and will have footer
-        out.endWriteContainerTracepointHeader(eventId)
-    }
-
-    override fun saveFooter(out: TraceWriter) {
-        // Mark this as a container tracepoint footer
-        out.startWriteContainerTracepointFooter()
-        out.writeLoopTracePointFooter(this)
-        out.endWriteContainerTracepointFooter(eventId)
-    }
-
     override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
         inp.readLoopTracePointFooter(this)
@@ -424,20 +365,6 @@ class TRLoopIterationTracePoint(
     parentTracePoint: TRContainerTracePoint? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
 ) : TRContainerTracePoint(context, threadId, codeLocationId, parentTracePoint, eventId) {
-
-    override fun save(out: TraceWriter) {
-        saveReferences(out)
-        out.startWriteAnyTracepoint()
-        out.writeTRTracePoint(this)
-        // Mark this as container tracepoint which could have children and will have footer
-        out.endWriteContainerTracepointHeader(eventId)
-    }
-
-    override fun saveFooter(out: TraceWriter) {
-        // Mark this as a container tracepoint footer (no footer body bytes for this kind).
-        out.startWriteContainerTracepointFooter()
-        out.endWriteContainerTracepointFooter(eventId)
-    }
 
     override fun loadFooter(inp: DataInput) {
         childrenAddresses.finishWrite()
@@ -469,20 +396,6 @@ sealed class TRFieldTracePoint(
     val name: String get() = fieldDescriptor.fieldName
     val isStatic: Boolean get() = fieldDescriptor.isStatic
     val isFinal: Boolean get() = fieldDescriptor.isFinal
-
-    override fun save(out: TraceWriter) {
-        saveReferences(out)
-        out.startWriteAnyTracepoint()
-        out.writeTRTracePoint(this)
-        out.endWriteLeafTracepoint()
-    }
-
-    override fun saveReferences(out: TraceWriter) {
-        super.saveReferences(out)
-        out.writeFieldDescriptor(fieldId)
-        out.preWriteTRValue(obj)
-        out.preWriteTRValue(value)
-    }
 
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
@@ -529,19 +442,6 @@ sealed class TRLocalVariableTracePoint(
     // TODO Make parametrized
     val variableDescriptor: VariableDescriptor get() = context.variablePool[localVariableId]
     val name: String get() = variableDescriptor.name
-
-    override fun save(out: TraceWriter) {
-        saveReferences(out)
-        out.startWriteAnyTracepoint()
-        out.writeTRTracePoint(this)
-        out.endWriteLeafTracepoint()
-    }
-
-    override fun saveReferences(out: TraceWriter) {
-        super.saveReferences(out)
-        out.writeVariableDescriptor(localVariableId)
-        out.preWriteTRValue(value)
-    }
 
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
@@ -591,22 +491,6 @@ class TRSnapshotLineBreakpointTracePoint(
     val stackTrace: List<StackTraceElement>
         get() = stackTraceCodeLocationIds.map { context.stackTrace(it) }
 
-    override fun save(out: TraceWriter) {
-        saveReferences(out)
-        out.startWriteAnyTracepoint()
-        out.writeTRTracePoint(this)
-        out.endWriteLeafTracepoint()
-    }
-
-    override fun saveReferences(out: TraceWriter) {
-        super.saveReferences(out)
-        stackTraceCodeLocationIds.forEach { id ->
-            out.writeCodeLocation(id)
-        }
-        locals.forEach { out.preWriteTRValue(it) }
-        watches.forEach { out.preWriteTRValue(it) }
-    }
-
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
     }
@@ -623,19 +507,6 @@ sealed class TRArrayTracePoint(
 ) : TRTracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
-
-    override fun save(out: TraceWriter) {
-        saveReferences(out)
-        out.startWriteAnyTracepoint()
-        out.writeTRTracePoint(this)
-        out.endWriteLeafTracepoint()
-    }
-
-    override fun saveReferences(out: TraceWriter) {
-        super.saveReferences(out)
-        out.preWriteTRValue(array)
-        out.preWriteTRValue(value)
-    }
 
     override fun toText(appendable: TRAppendable) {
         appendable.append(tracePoint = this)
@@ -674,20 +545,7 @@ sealed class TRExceptionProcessingTracePoint(
     codeLocationId: Int,
     val exception: TRValue,
     eventId: Int
-) : TRTracePoint(context, threadId, codeLocationId, eventId) {
-
-    override fun save(out: TraceWriter) {
-        saveReferences(out)
-        out.startWriteAnyTracepoint()
-        out.writeTRTracePoint(this)
-        out.endWriteLeafTracepoint()
-    }
-
-    override fun saveReferences(out: TraceWriter) {
-        super.saveReferences(out)
-        out.preWriteTRValue(exception)
-    }
-}
+) : TRTracePoint(context, threadId, codeLocationId, eventId)
 
 class TRThrowTracePoint(
     context: TraceContext,

@@ -179,7 +179,7 @@ private fun diffOneThread(
             obj = TRNull,
             parameters = emptyList(),
             eventId = cloner.generateEventId(),
-        ).also { it.save(output) }
+        ).also { output.writeTRMethodCallTracePoint(it) }
     } else {
         null
     }
@@ -194,7 +194,7 @@ private fun diffOneThread(
         rightReader = right,
         rightPoints = listOf(rightRoot)
     )
-    outputRoot?.saveFooter(output)
+    outputRoot?.let { output.writeTRMethodCallTracePointFooter(it) }
     return points
 }
 
@@ -476,7 +476,7 @@ private fun copyTracepointSubtree(
     val outputPoint = cloner(point)
     outputPoint.diffStatus = diffStatus
     addCopiedChild(outputParent, outputPoint)
-    outputPoint.save(output)
+    output.writeTracePoint(outputPoint)
     // Save all children recursively, if needed
     if (outputPoint is TRContainerTracePoint && point is TRContainerTracePoint) {
         // TODO: Batching
@@ -485,7 +485,7 @@ private fun copyTracepointSubtree(
             if (p == null) return@forEach
             points += copyTracepointSubtree(output, cloner, reader, p, diffStatus, outputPoint)
         }
-        outputPoint.saveFooter(output)
+        output.writeTracePointFooter(outputPoint)
         // Free memory
         point.unloadAllChildren()
         outputPoint.unloadAllChildren()
@@ -526,9 +526,9 @@ private fun diffTracepointSubtree(
                     val oldPoint = cloner.cloneLeftTracePoint(lp, rp.eventId)
                     oldPoint.diffStatus = DiffStatus.EDITED_OLD
                     addCopiedChild(outputRoot, oldPoint)
-                    oldPoint.save(output)
+                    output.writeTracePoint(oldPoint)
                     if (oldPoint is TRContainerTracePoint) {
-                        oldPoint.saveFooter(output)
+                        output.writeTracePointFooter(oldPoint)
                     }
                     points += 1
                 }
@@ -536,7 +536,7 @@ private fun diffTracepointSubtree(
                 val outputPoint = cloner.cloneRightTracePoint(rp, lp.eventId)
                 outputPoint.diffStatus = if (strict) DiffStatus.UNCHANGED else DiffStatus.EDITED_NEW
                 addCopiedChild(outputRoot, outputPoint)
-                outputPoint.save(output)
+                output.writeTracePoint(outputPoint)
                 points += 1
 
                 // Maybe, we need to go deeper?
@@ -557,7 +557,7 @@ private fun diffTracepointSubtree(
                         rightPoints = rc.events
                     )
 
-                    outputPoint.saveFooter(output)
+                    output.writeTracePointFooter(outputPoint)
                     outputPoint.unloadAllChildren()
                     lc.unloadAllChildren()
                     rc.unloadAllChildren()
