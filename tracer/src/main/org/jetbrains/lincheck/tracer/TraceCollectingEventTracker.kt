@@ -13,8 +13,8 @@ package org.jetbrains.lincheck.tracer
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.LineCodeLocation
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
+import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
@@ -715,6 +715,10 @@ class TraceCollectingEventTracker(
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
+        // Required policy can become invalid on a re-attach while old hooks are still injected.
+        // Close capture immediately; breakpoint removal/retransformation follows asynchronously.
+        if (!LincheckClassFileTransformer.liveDebuggerSettings.requiredRedactionPolicyValid) return
+
         // Non-mutating hit-limit peek: keeps over-limit hits O(1), before the stack capture below.
         // incrementAndCheckHitLimit (after the dynamic-extent guard) stays the single authority.
         if (BreakpointStorage.isHitLimitReached(breakpointId)) return
@@ -751,8 +755,34 @@ class TraceCollectingEventTracker(
         
         val timeStamp = System.currentTimeMillis()
 
-        val locals = locals.map { captureValueSnapshot(it) }
-        val watches = watches.map { captureValueSnapshot(it) }
+        val redactionPolicy = LincheckClassFileTransformer.liveDebuggerSettings.redactionRegistry.snapshot()
+        val snapshotCapturer = SnapshotCapturer(context, redactionPolicy)
+        // Code-location class names are stored in ASM internal form; class- and package-scoped
+        // redaction rules are written in canonical form and would never match without this.
+        val declaringClassName = context.stackTrace(codeLocation).className.toCanonicalClassName()
+        val activeLocals = context.activeLocals(codeLocation)
+        // A slot-name/value count mismatch violates an instrumentation-layer invariant;
+        // skip the whole tracepoint rather than guess which value belongs to which name.
+        val capturedLocals = try {
+            snapshotCapturer.captureNamedExpressionValues(
+                values = locals,
+                names = activeLocals?.map { it.localName },
+                declaringClassName = declaringClassName,
+            )
+        } catch (e: IllegalArgumentException) {
+            Logger.error(e) { "Skipping snapshot tracepoint $breakpointUuid: local slots are inconsistent" }
+            return
+        }
+        val capturedWatches = try {
+            snapshotCapturer.captureNamedExpressionValues(
+                values = watches,
+                names = breakpoint.watchLabels,
+                declaringClassName = declaringClassName,
+            )
+        } catch (e: IllegalArgumentException) {
+            Logger.error(e) { "Skipping snapshot tracepoint $breakpointUuid: watch slots are inconsistent" }
+            return
+        }
         
         val tracePoint = TRSnapshotLineBreakpointTracePoint(
             context = context,
@@ -761,37 +791,12 @@ class TraceCollectingEventTracker(
             breakpointUuid = breakpointUuid,
             stackTraceCodeLocationIds = stackTraceCodeLocationIds,
             currentTimeMillis = timeStamp,
-            locals = locals,
-            watches = watches,
+            locals = capturedLocals,
+            watches = capturedWatches,
             traceId = traceId,
         )
         // TODO maybe these tracepoints should be collected separately
         tracePointCreated(threadData, tracePoint)
-    }
-
-    private fun captureValueSnapshot(value: Any?): TRValue = when {
-        // TODO: we should re-use `TRValue` factory instead of case analysis here;
-        //   also moving object fields & array elements capturing logic there.
-
-        value == null -> TRNull
-
-        value is Enum<*> -> TRValue(context, value)
-        value is Throwable -> TRExceptionSnapshot(context, value)
-
-        value::class.java.isArray -> {
-            val arraySize = findArrayLength(value)
-            val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
-            val elements = findElementsForArray(value, elementsToRead)
-            TRArraySnapshot(context, value, arraySize, elements)
-        }
-
-        else -> {
-            val objectFields = findFieldsForObject(value)
-            when {
-                objectFields.isNotEmpty() -> TRObjectSnapshot(context, value, objectFields)
-                else -> TRValue(context, value)
-            }
-        }
     }
 
     override fun onLoopIteration(

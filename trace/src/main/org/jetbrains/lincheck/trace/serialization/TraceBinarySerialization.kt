@@ -27,7 +27,7 @@ import java.util.UUID
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
 /** Binary trace-format version this build produces and consumes. */
-const val TRACE_VERSION : Long = 27
+const val TRACE_VERSION : Long = 28
 
 // Buffer for saving trace in one piece
 internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -500,6 +500,9 @@ internal enum class TRValueKind {
     // synthetic markers
     UNFINISHED_METHOD_RESULT,
     UNTRACKED_METHOD_RESULT,
+
+    // capture-time redaction marker; appended to preserve existing ordinal assignments
+    REDACTED,
 }
 
 internal fun DataOutput.writeTRValueKind(value: TRValueKind) {
@@ -520,6 +523,16 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
         is TRNull -> writeTRValueKind(TRValueKind.NULL)
         is TRVoid -> writeTRValueKind(TRValueKind.VOID)
         is TRUnit -> writeTRValueKind(TRValueKind.UNIT)
+        is TRRedacted -> {
+            writeTRValueKind(TRValueKind.REDACTED)
+            val classDescriptor = value.classDescriptor
+            writeBoolean(classDescriptor != null)
+            if (classDescriptor != null) writeClassDescriptor(classDescriptor)
+            val templateUuid = value.templateUuid
+            writeBoolean(templateUuid != null)
+            if (templateUuid != null) writeUUID(templateUuid)
+            writeNullableString(value.templateName)
+        }
 
         // primitives
         is TRPrimitive -> when (val v = value.value) {
@@ -605,7 +618,7 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
             writeTRValueKind(TRValueKind.EXCEPTION_SNAPSHOT)
             writeInt(value.classDescriptor.id)
             writeInt(value.identityHashCode)
-            writeNullableString(value.message)
+            writeTRValue(value.message)
             writeInt(value.stackTrace.size)
             value.stackTrace.forEach { writeString(it) }
         }
@@ -631,6 +644,11 @@ internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readT
     TRValueKind.NULL -> TRNull
     TRValueKind.VOID -> TRVoid
     TRValueKind.UNIT -> TRUnit
+    TRValueKind.REDACTED -> TRRedacted(
+        classDescriptor = if (readBoolean()) readClassDescriptor(context) else null,
+        templateUuid = if (readBoolean()) readUUID() else null,
+        templateName = readNullableString(),
+    )
 
     // primitives
     TRValueKind.PRIMITIVE_BYTE    -> TRPrimitive(readByte())
@@ -701,7 +719,7 @@ internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readT
     TRValueKind.EXCEPTION_SNAPSHOT -> {
         val cd = context.classPool[readInt()]
         val hash = readInt()
-        val message = readNullableString()
+        val message = readTRValue(context)
         val framesSize = readInt()
         val stackTrace = buildList { repeat(framesSize) { add(readString()) } }
         TRExceptionSnapshot(cd, hash, message, stackTrace)
@@ -1191,4 +1209,3 @@ private fun DataInput.readSnapshotLineBreakpointTracePoint(
         eventId = eventId,
     )
 }
-

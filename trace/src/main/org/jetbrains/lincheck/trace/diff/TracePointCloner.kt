@@ -211,6 +211,7 @@ class TracePointCloner(
         is TRNull -> this
         is TRVoid -> this
         is TRUnit -> this
+        is TRRedacted -> copy()
         is TRPrimitive -> TRPrimitive(value)
         is TRString -> TRString(value)
         is TREnum -> {

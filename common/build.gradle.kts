@@ -18,10 +18,12 @@ sourceSets {
     dependencies {
         // main
         val asmVersion: String by project
+        val re2jVersion: String by project
 
         compileOnly(project(":bootstrap"))
         api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
+        implementation("com.google.re2j:re2j:${re2jVersion}")
     }
 }
 

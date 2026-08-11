@@ -65,7 +65,7 @@ class TRExceptionTest {
 
         val captured = TRExceptionSnapshot(context, throwable)
 
-        Assert.assertEquals("deep", captured.message)
+        Assert.assertEquals(TRString("deep"), captured.message)
         Assert.assertEquals(
             "Whole stackTrace must be captured (no truncation)",
             expectedFrames.size,
@@ -98,7 +98,7 @@ class TRExceptionTest {
         val captured = TRExceptionSnapshot(context, throwable)
 
         // RuntimeException() has a null message.
-        Assert.assertEquals(null, captured.message)
+        Assert.assertEquals(TRNull, captured.message)
     }
 
     @Test
@@ -154,6 +154,10 @@ class TRExceptionTest {
         Assert.assertTrue(
             "toString should include the message; got: $rendered",
             rendered.contains("boom"),
+        )
+        Assert.assertTrue(
+            "Non-redacted messages should retain the prior quoted rendering; got: $rendered",
+            rendered.endsWith("(\"boom\")"),
         )
     }
 

@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
+import org.jetbrains.lincheck.trace.serialization.TRACE_VERSION
 import java.io.Closeable
 import java.util.UUID
 
@@ -78,12 +79,28 @@ data class AgentHelloMessage(
         return pairs.entries.joinToString(";") { (key, value) -> "$key=$value" }
     }
 
+    /** Optional protocol capabilities advertised via the [KEY_CAPABILITIES] attribute (comma-separated). */
+    val capabilities: Set<String>
+        get() = attributes[KEY_CAPABILITIES]?.split(',')?.filterTo(mutableSetOf()) { it.isNotEmpty() } ?: emptySet()
+
+    /** Whether this agent speaks the exact protocol/trace format of this build and redacts captures. */
+    val supportsRedactionV1: Boolean
+        get() = protocolVersion == PROTOCOL_VERSION &&
+            traceVersion == TRACE_VERSION &&
+            CAPABILITY_REDACTION_V1 in capabilities
+
     companion object {
         const val KEY_PROTOCOL: String = "protocol"
         const val KEY_RUNTIME: String = "runtime"
         const val KEY_RUNTIME_VERSION: String = "runtimeVersion"
         const val KEY_AGENT_VERSION: String = "agentVersion"
         const val KEY_TRACE_VERSION: String = "traceVersion"
+
+        /** Attribute key naming optional protocol features the sender implements, comma-separated. */
+        const val KEY_CAPABILITIES: String = "capabilities"
+
+        /** Capture-time data redaction: the agent understands and enforces redaction policies. */
+        const val CAPABILITY_REDACTION_V1: String = "REDACTION_V1"
 
         private val RESERVED_KEYS =
             setOf(KEY_PROTOCOL, KEY_RUNTIME, KEY_RUNTIME_VERSION, KEY_AGENT_VERSION, KEY_TRACE_VERSION)

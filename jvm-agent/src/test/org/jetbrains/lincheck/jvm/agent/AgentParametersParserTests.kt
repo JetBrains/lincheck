@@ -246,4 +246,13 @@ class AgentParametersParserTests {
         TraceAgentParameters.parseArgs("class=org.C,method=m", emptyList())
         assertEquals(false, TraceAgentParameters.policyBootstrapFromControlPlane)
     }
+
+    @Test
+    fun testRedactionFilePath() {
+        TraceAgentParameters.parseArgs(
+            """class=org.C,method=m,redactionFile="/tmp/AppGlass policy/redaction.ini"""",
+            listOf(TraceAgentParameters.ARGUMENT_REDACTION_FILE),
+        )
+        assertEquals("/tmp/AppGlass policy/redaction.ini", TraceAgentParameters.redactionFilePath)
+    }
 }

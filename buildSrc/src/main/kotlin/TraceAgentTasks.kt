@@ -241,6 +241,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
             "net.bytebuddy",
             "org.java_websocket",
             "org.slf4j",
+            "com.google.re2j",
         )
 
         packagesToShade.forEach { packageName ->

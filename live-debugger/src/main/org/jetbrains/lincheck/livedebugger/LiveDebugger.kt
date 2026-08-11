@@ -17,6 +17,8 @@ import org.jetbrains.lincheck.settings.BlocklistFileParser
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
+import org.jetbrains.lincheck.settings.PolicyOwner
+import org.jetbrains.lincheck.settings.RedactionFileParser
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
@@ -61,6 +63,25 @@ internal object LiveDebugger {
      */
     private val hitSuppressedNotified = ConcurrentHashMap.newKeySet<String>()
 
+    /** Required policy sources that failed validation/loading; debugging stays closed while non-empty. */
+    private val invalidRequiredRedactionSources = ConcurrentHashMap.newKeySet<PolicyOwner>()
+
+    val isDebuggingAllowed: Boolean
+        get() = invalidRequiredRedactionSources.isEmpty()
+
+    private fun markRequiredPolicyPendingOrInvalid(owner: PolicyOwner) {
+        val settings = LincheckClassFileTransformer.liveDebuggerSettings
+        settings.requiredRedactionPolicyValid = false
+        invalidRequiredRedactionSources.add(owner)
+        removeAllBreakpoints()
+    }
+
+    private fun markRequiredPolicyValid(owner: PolicyOwner) {
+        invalidRequiredRedactionSources.remove(owner)
+        LincheckClassFileTransformer.liveDebuggerSettings.requiredRedactionPolicyValid =
+            invalidRequiredRedactionSources.isEmpty()
+    }
+
     fun loadBreakpointsFromFile(breakpointsFilePath: String?) {
         if (breakpointsFilePath == null) {
             Logger.warn { "Breakpoints file path is not set, skipping breakpoints loading" }
@@ -70,6 +91,12 @@ internal object LiveDebugger {
             Logger.info { "Loading breakpoints from file: $breakpointsFilePath" }
 
             val breakpoints = BreakpointsFileParser.parseBreakpointsFile(breakpointsFilePath)
+            if (!isDebuggingAllowed) {
+                Logger.warn {
+                    "Dropped ${breakpoints.size} startup breakpoint(s): required redaction policy is unavailable"
+                }
+                return
+            }
             val settings = LincheckClassFileTransformer.liveDebuggerSettings
             val result = settings.addBreakpoints(breakpoints)
             result.rejected.forEach { notifyBreakpointBlocked(it.breakpoint, it.match.reason) }
@@ -84,6 +111,10 @@ internal object LiveDebugger {
     }
 
     fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>) {
+        if (!isDebuggingAllowed) {
+            Logger.warn { "Rejected ${breakpoints.size} breakpoint(s): required redaction policy is unavailable" }
+            return
+        }
         Logger.info { "Adding breakpoints: $breakpoints" }
 
         val result = LincheckClassFileTransformer.liveDebuggerSettings
@@ -109,6 +140,29 @@ internal object LiveDebugger {
             Logger.info { "Loaded ${blocklists.size} blocklist(s) from $blocklistFilePath" }
         } catch (e: Exception) {
             Logger.error(e) { "Failed to load blocklists from file: $blocklistFilePath" }
+        }
+    }
+
+    /**
+     * Loads startup redaction policy before any breakpoint source. A configured-invalid file closes
+     * debugging without preventing the application from starting.
+     */
+    fun loadRedactionTemplatesFromFile(redactionFilePath: String?) {
+        if (redactionFilePath == null) {
+            markRequiredPolicyValid(PolicyOwner.STARTUP_FILE)
+            return
+        }
+        markRequiredPolicyPendingOrInvalid(PolicyOwner.STARTUP_FILE)
+        try {
+            val templates = RedactionFileParser.parseTemplatesFile(redactionFilePath)
+            LincheckClassFileTransformer.liveDebuggerSettings.redactionRegistry
+                .replace(PolicyOwner.STARTUP_FILE, templates)
+            markRequiredPolicyValid(PolicyOwner.STARTUP_FILE)
+            Logger.info { "Loaded ${templates.size} redaction template(s) from $redactionFilePath" }
+        } catch (e: Exception) {
+            Logger.error(e) {
+                "Failed to load required redaction policy from $redactionFilePath; debugging is disabled"
+            }
         }
     }
 
@@ -163,6 +217,7 @@ internal object LiveDebugger {
             .removeAllBreakpoints()
         blockedNotified.clear()
         hitSuppressedNotified.clear()
+        if (result.removed.isEmpty()) return
         retransformBreakpointClasses(result.removed)
     }
 

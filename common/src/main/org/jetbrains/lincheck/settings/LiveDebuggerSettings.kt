@@ -56,6 +56,19 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
      */
     val blocklistRegistry = SensitiveAreaBlocklistRegistry()
 
+    /** Active capture-time data-redaction templates, partitioned by policy owner. */
+    val redactionRegistry = RedactionTemplateRegistry()
+
+    /**
+     * Hot-path fail-closed guard for required policy loading.
+     *
+     * This becomes false before an invalid or pending required source is processed, so already
+     * injected hooks cannot capture while their registered breakpoints are being removed.
+     */
+    @Volatile
+    var requiredRedactionPolicyValid: Boolean = true
+        internal set
+
     /**
      * Source of unique [BreakpointId] handles assigned at registration time.
      */
@@ -236,6 +249,9 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
  *   class name (main [watchClassName] plus any auxiliaries the compiler emits, as for [conditionClasses]).
  *   The agent defines all of them. Null if there are no watches.
  * @property hitLimit The maximum number of times the breakpoint can be hit before it is automatically disabled.
+ * @property watchLabels Ordered watch expressions corresponding to values returned by the watch supplier.
+ *   Null when no label metadata is available — a payload encoded before labels existed, or a startup INI
+ *   without the `watchLabels` key. Capture must not confuse that with "this breakpoint has no watches".
  */
 class SnapshotBreakpoint(
     val uuid: UUID,
@@ -249,6 +265,7 @@ class SnapshotBreakpoint(
     val watchFactoryMethodName: String? = null,
     val watchClasses: Map<String, ByteArray>? = null,
     val hitLimit: Int = DEFAULT_HIT_LIMIT,
+    val watchLabels: List<String>? = null,
 ) {
     /** Main condition class bytecode (first/only entry when no companion classes). */
     val conditionCodeFragment: ByteArray? get() = conditionClasses?.get(conditionClassName)
@@ -278,6 +295,7 @@ class SnapshotBreakpoint(
             val watchFactoryMethodName = parts.getOrNull(8)?.let { if (it == "null") null else it }
             val watchClasses = decodeClassMap(parts.getOrNull(9))
             val hitLimit = parts.getOrNull(10)?.toIntOrNull() ?: DEFAULT_HIT_LIMIT
+            val watchLabels = decodeWatchLabels(parts.getOrNull(11))
 
             return SnapshotBreakpoint(
                 uuid = uuid,
@@ -291,6 +309,7 @@ class SnapshotBreakpoint(
                 watchFactoryMethodName = watchFactoryMethodName,
                 watchClasses = watchClasses,
                 hitLimit = hitLimit,
+                watchLabels = watchLabels,
             )
         }
 
@@ -324,12 +343,37 @@ class SnapshotBreakpoint(
             }
             return result
         }
+
+        /** Encodes complete watch labels as one delimiter-safe Base64 field. */
+        fun encodeWatchLabels(labels: List<String>?): String {
+            if (labels.isNullOrEmpty()) return "null"
+            return labels.joinToString(";") { label ->
+                Base64.getEncoder().encodeToString(label.toByteArray(Charsets.UTF_8))
+            }
+        }
+
+        /**
+         * Decodes the field produced by [encodeWatchLabels].
+         *
+         * Returns `null` when the field is absent or carries no labels, so a breakpoint that never
+         * shipped label metadata stays distinguishable from one whose labels are known.
+         */
+        fun decodeWatchLabels(encoded: String?): List<String>? {
+            if (encoded == null || encoded == "null") return null
+            return encoded.split(";").map { label ->
+                try {
+                    String(Base64.getDecoder().decode(label), Charsets.UTF_8)
+                } catch (e: IllegalArgumentException) {
+                    throw IllegalArgumentException("Invalid Base64 watch label", e)
+                }
+            }
+        }
     }
     
     /**
      * Encodes this breakpoint as a colon-separated string accepted by [decodeFromString].
      *
-     * Format: `uuid:className:fileName:lineNumber:conditionClassName:conditionFactoryMethodName:conditionClasses:watchClassName:watchFactoryMethodName:watchClasses:hitLimit`
+     * Format: `uuid:className:fileName:lineNumber:conditionClassName:conditionFactoryMethodName:conditionClasses:watchClassName:watchFactoryMethodName:watchClasses:hitLimit:watchLabels`
      *
      * Class maps are encoded as semicolon-separated `name|base64` pairs
      * (e.g. `com.Foo|CAFEBABE;com.Foo$Companion|DEADBEEF`), or the literal `"null"`.
@@ -347,6 +391,7 @@ class SnapshotBreakpoint(
             watchFactoryMethodName ?: "null",
             encodeClassMap(watchClasses),
             hitLimit.toString(),
+            encodeWatchLabels(watchLabels),
         )
         return parts.joinToString(":")
     }
@@ -486,6 +531,7 @@ object BreakpointsFileParser {
     private const val KEY_WATCH_CLASS_NAME = "watchClassName"
     private const val KEY_WATCH_FACTORY_METHOD_NAME = "watchFactoryMethodName"
     private const val KEY_WATCH_CLASSES = "watchClasses"
+    private const val KEY_WATCH_LABELS = "watchLabels"
 
     /**
      * Parses breakpoints from an INI file.
@@ -576,6 +622,7 @@ object BreakpointsFileParser {
         val watchClassName = properties[KEY_WATCH_CLASS_NAME]
         val watchFactoryMethodName = properties[KEY_WATCH_FACTORY_METHOD_NAME]
         val watchClasses = parseClassMap(properties[KEY_WATCH_CLASSES])
+        val watchLabels = SnapshotBreakpoint.decodeWatchLabels(properties[KEY_WATCH_LABELS]?.ifBlank { null })
 
         val hitLimit = properties[KEY_HIT_LIMIT]?.toIntOrNull() ?: SnapshotBreakpoint.DEFAULT_HIT_LIMIT
 
@@ -599,6 +646,7 @@ object BreakpointsFileParser {
             watchFactoryMethodName = watchFactoryMethodName,
             watchClasses = watchClasses,
             hitLimit = hitLimit,
+            watchLabels = watchLabels,
         )
     }
 

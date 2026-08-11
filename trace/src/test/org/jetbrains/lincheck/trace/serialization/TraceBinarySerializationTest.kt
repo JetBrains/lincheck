@@ -46,6 +46,7 @@ import org.jetbrains.lincheck.trace.TRException
 import org.jetbrains.lincheck.trace.TRExceptionSnapshot
 import org.jetbrains.lincheck.trace.TRReadLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TRReadFieldTracePoint
+import org.jetbrains.lincheck.trace.TRRedacted
 import org.jetbrains.lincheck.trace.TRSnapshotLineBreakpointTracePoint
 import org.jetbrains.lincheck.trace.TRThrowTracePoint
 import org.jetbrains.lincheck.trace.TRTracePoint
@@ -831,18 +832,33 @@ class TraceBinarySerializationTest {
         val cd = context.createAndRegisterClassDescriptor("java.lang.IllegalStateException")
         val cases: List<TRValue> = listOf(
             // No message, no frames — minimum-shape snapshot.
-            TRExceptionSnapshot(cd, 0, message = null, stackTrace = emptyList()),
+            TRExceptionSnapshot(cd, 0, message = TRNull, stackTrace = emptyList()),
             // Typical shape — message present, a couple of rendered frames.
             TRExceptionSnapshot(
                 cd, 0xCAFE,
-                message = "boom",
+                message = TRString("boom"),
                 stackTrace = listOf(
                     "com.example.Foo.bar(Foo.java:42)",
                     "com.example.Foo.main(Foo.java:7)",
                 ),
             ),
             // Empty-string message and one frame — exercises non-null empty path.
-            TRExceptionSnapshot(cd, 1234, message = "", stackTrace = listOf("com.example.Foo.tail(Foo.java:1)")),
+            TRExceptionSnapshot(
+                cd,
+                1234,
+                message = TRString(""),
+                stackTrace = listOf("com.example.Foo.tail(Foo.java:1)"),
+            ),
+            TRExceptionSnapshot(
+                cd,
+                5678,
+                message = TRRedacted(
+                    classDescriptor = context.createAndRegisterClassDescriptor("java.lang.String"),
+                    templateUuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                    templateName = "GDPR defaults",
+                ),
+                stackTrace = emptyList(),
+            ),
         )
         for (value in cases) {
             assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
@@ -854,6 +870,23 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         // [TRUnit] denotes the Kotlin `Unit` singleton; it round-trips through `TRValueKind.UNIT`.
         assertRoundTrip(TRUnit, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+    }
+
+    @Test
+    fun trValueRedacted() {
+        val context = TraceContext()
+        val cases = listOf(
+            TRRedacted(
+                context.createAndRegisterClassDescriptor("java.lang.String"),
+                UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+                "GDPR defaults",
+            ),
+            TRRedacted(context.createAndRegisterClassDescriptor("int"), null, null),
+            TRRedacted(null, null, null),
+        )
+        for (value in cases) {
+            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        }
     }
 
     @Test

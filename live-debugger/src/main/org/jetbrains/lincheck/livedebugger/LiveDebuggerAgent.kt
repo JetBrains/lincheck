@@ -17,6 +17,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BLOCKLIST_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINTS_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_POLICY_BOOTSTRAP
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_REDACTION_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
@@ -62,6 +63,7 @@ internal object LiveDebuggerAgent {
         ARGUMENT_FOPTION,
         ARGUMENT_BREAKPOINTS_FILE,
         ARGUMENT_BLOCKLIST_FILE,
+        ARGUMENT_REDACTION_FILE,
         ARGUMENT_POLICY_BOOTSTRAP,
         ARGUMENT_HEARTBEAT,
         ARGUMENT_START_SERVER,
@@ -77,10 +79,11 @@ internal object LiveDebuggerAgent {
 
         override fun parseArguments(agentArgs: String?) {
             TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
-            // Blocklists first: policy must be active before any breakpoint source is processed,
-            // so Stage-1 registration rejection sees it. Startup file and control-plane pull
-            // combine by union; both run before breakpoints are loaded.
+            // Policy first: blocklists and redaction templates must be active before any
+            // breakpoint source is processed, so Stage-1 registration rejection and capture-time
+            // redaction see them. Startup files and the control-plane pull combine by union.
             LiveDebugger.loadBlocklistsFromFile(TraceAgentParameters.blocklistFilePath)
+            LiveDebugger.loadRedactionTemplatesFromFile(TraceAgentParameters.redactionFilePath)
             if (TraceAgentParameters.policyBootstrapFromControlPlane) {
                 LiveDebugger.bootstrapPolicyFromControlPlane()
             }
@@ -165,12 +168,19 @@ internal object LiveDebuggerAgent {
         // `PROTOCOL_VERSION`: the wire protocol frames commands/notifications,
         // while this versions the binary payload of `binaryTraceData`.
         traceVersion = TRACE_VERSION,
+        // Clients refuse agents without this capability, so no unredacted capture stream
+        // ever reaches an IDE that expects capture-time redaction.
+        attributes = mapOf(AgentHelloMessage.KEY_CAPABILITIES to AgentHelloMessage.CAPABILITY_REDACTION_V1),
     )
 
     private fun startServer(address: InetSocketAddress?): TracingWebSocketServer? {
         return try {
              val server = object : TracingWebSocketServer(address) {
                 override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
+                    if (!LiveDebugger.isDebuggingAllowed) {
+                        Logger.warn { "Ignoring startFileTracing: required redaction policy is unavailable" }
+                        return
+                    }
                     Tracer.launchTracingSession(
                         TracingSession.StartMode.ExternalRequest,
                         TraceOutputMode.BinaryFileStream(traceDumpFilePath),
@@ -180,6 +190,10 @@ internal object LiveDebuggerAgent {
                 }
 
                 override fun startNetworkTracing() {
+                    if (!LiveDebugger.isDebuggingAllowed) {
+                        Logger.warn { "Ignoring startNetworkTracing: required redaction policy is unavailable" }
+                        return
+                    }
                     Tracer.launchTracingSession(
                         TracingSession.StartMode.ExternalRequest,
                         TraceOutputMode.BinaryNetworkStream(this),
@@ -203,6 +217,13 @@ internal object LiveDebuggerAgent {
                 }
 
                 override fun onConnectionReady() {
+                    // A configured-but-invalid required redaction policy cannot recover at
+                    // runtime, so no client connection may observe captures: refuse outright.
+                    if (!LiveDebugger.isDebuggingAllowed) {
+                        Logger.warn { "Closing agent connection: required redaction policy is unavailable" }
+                        connection.close()
+                        return
+                    }
                     // Introduce ourselves first: the client learns the runtime and versions before
                     // any command or notification. This runs while the server holds its lock, so the
                     // hello is guaranteed to be the first frame on the wire.

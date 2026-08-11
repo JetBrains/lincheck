@@ -22,10 +22,15 @@ sourceSets {
         java.srcDirs("src/main")
     }
 
+    test {
+        java.srcDir("src/test")
+    }
+
     dependencies {
         // main
         val asmVersion: String by project
         val byteBuddyVersion: String by project
+        val junitVersion: String by project
 
         compileOnly(project(":bootstrap"))
         implementation(project(":common"))
@@ -38,8 +43,12 @@ sourceSets {
         api("org.ow2.asm:asm-util:${asmVersion}")
         api("net.bytebuddy:byte-buddy:${byteBuddyVersion}")
         api("net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}")
+
+        testImplementation("junit:junit:$junitVersion")
     }
 }
+
+setupTestsJDK(project)
 
 tasks {
     named<JavaCompile>("compileTestJava") {
@@ -55,6 +64,10 @@ tasks {
             project(":trace"),
             project(":tracer")
         )
+    }
+
+    test {
+        configureJvmTestCommon(project)
     }
 }
 

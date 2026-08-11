@@ -4,6 +4,7 @@ import org.jetbrains.lincheck.descriptors.ClassDescriptor
 import org.jetbrains.lincheck.util.*
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.util.UUID
 import kotlin.reflect.KClass
 
 
@@ -43,6 +44,8 @@ import kotlin.reflect.KClass
  * │   ├── TRJavaClass                  java.lang.Class
  * │   └── TRKotlinClass                kotlin.reflect.KClass
  * │
+ * ├── TRRedacted                       typed capture slot whose sensitive content was discarded
+ * │
  * └── TRMarker                         synthetic recorder-emitted markers
  *     ├── TRUnfinishedMethodResult     method tracing cut off before the method returned
  *     └── TRUntrackedMethodResult      method result of untracked method
@@ -64,6 +67,7 @@ val TRValue.className: String? get() = when (this) {
     is TRMarker
         -> null
 
+    is TRRedacted       -> capturedClassName
     is TRString         -> className
     is TRJavaClass      -> className
     is TRKotlinClass    -> className
@@ -199,6 +203,25 @@ data object TRUnit : TRValue() {
     override fun toString(): String = "Unit"
 }
 
+/**
+ * A typed redaction marker that contains policy attribution but no captured content.
+ *
+ * It intentionally carries no length, hash, reference identity, or other value-derived metadata.
+ */
+data class TRRedacted(
+    val classDescriptor: ClassDescriptor?,
+    val templateUuid: UUID?,
+    val templateName: String?,
+) : TRValue() {
+    val capturedClassName: String? get() = classDescriptor?.name
+
+    override fun toString(): String {
+        val type = capturedClassName?.getSimpleClassName() ?: "unknown"
+        val attribution = templateName?.let { " ($it)" }.orEmpty()
+        return "[redacted: $type]$attribution"
+    }
+}
+
 // TODO: re-check if we can get rid of this and re-use void object from `Injections`
 var INJECTIONS_VOID_OBJECT: Any? = null
 
@@ -257,7 +280,7 @@ data class TRPrimitive(val value: Any) : TRValueLike() {
 data class TRString(val value: String) : TRValueLike() {
     val className: String get() = String::class.java.name
 
-    constructor(value: String, truncate: Boolean) : this(if (truncate) value.truncate() else value)
+    constructor(value: String, truncate: Boolean) : this(if (truncate) value.truncateForCapture() else value)
 
     override fun toString(): String = "\"${value.escape()}\""
 }
@@ -268,7 +291,7 @@ private fun String.escape() = this
     .replace("\r", "\\r")
     .replace("\t", "\\t")
 
-private fun String.truncate(): String =
+internal fun String.truncateForCapture(): String =
     if (length > MAX_TRSTRING_LENGTH) "${take(MAX_TRSTRING_LENGTH)}..." else this
 
 
@@ -569,13 +592,18 @@ fun TRException(context: TraceContext, throwable: Throwable): TRException {
 data class TRExceptionSnapshot internal constructor(
     override val classDescriptor: ClassDescriptor,
     override val identityHashCode: Int,
-    val message: String?,
+    val message: TRValue,
     val stackTrace: List<String>,
 ) : TRReferenceLike() {
+    init {
+        require(message is TRNull || message is TRString || message is TRRedacted) {
+            "Exception message must be null, a captured string, or redacted"
+        }
+    }
 
     override fun toString(): String =
         className.adornedClassNameRepresentation() + "@" + identityHashCode +
-                (message?.let { "(\"" + it.escape() + "\")" } ?: "")
+            if (message is TRNull) "" else "($message)"
 }
 
 /**
@@ -593,6 +621,8 @@ data class TRExceptionSnapshot internal constructor(
 fun TRExceptionSnapshot(context: TraceContext, throwable: Throwable): TRExceptionSnapshot {
     val classDescriptor = context.createAndRegisterClassDescriptor(throwable.javaClass.name)
     val message = runCatching { throwable.message }.getOrNull()
+        ?.let { TRString(it, truncate = true) }
+        ?: TRNull
     val stackTrace = runCatching {
         throwable.stackTrace?.map { it.toString() } ?: emptyList()
     }.getOrElse { emptyList() }
@@ -640,20 +670,25 @@ data class TRCharSequence internal constructor(
  */
 fun TRCharSequence(context: TraceContext, charSequence: CharSequence, truncate: Boolean = true): TRCharSequence {
     val classDescriptor = context.createAndRegisterClassDescriptor(charSequence.javaClass.name)
+    val content = capturedCharSequenceContent(charSequence, truncate)
+    return TRCharSequence(classDescriptor, System.identityHashCode(charSequence), content)
+}
+
+/** Safely obtains the exact bounded CharSequence content that capture would store. */
+internal fun capturedCharSequenceContent(charSequence: CharSequence, truncate: Boolean = true): String {
     // Whitelisted CharSequence (StringBuilder / StringBuffer / CharBuffer / …):
     // captured with identity + a snapshot of the textual content.
     // Calling `toString()` on an arbitrary user CharSequence is unsafe, so we guard by Java/Kotlin stdlib packages
     // and additionally wrap in `runCatching` because some implementations may throw
     // if invoked at the "wrong" moment (e.g., a destroyed Segment).
-    val content = if (isClassNameWhitelisted(charSequence)) {
+    return if (isClassNameWhitelisted(charSequence)) {
         runCatching {
-            charSequence.toString().let { if (truncate) it.truncate() else it }
+            charSequence.toString().let { if (truncate) it.truncateForCapture() else it }
         }
         .getOrElse { TRCHAR_SEQUENCE_PLACEHOLDER }
     } else {
         TRCHAR_SEQUENCE_PLACEHOLDER
     }
-    return TRCharSequence(classDescriptor, System.identityHashCode(charSequence), content)
 }
 
 private fun isClassNameWhitelisted(obj: Any): Boolean {
