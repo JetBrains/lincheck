@@ -105,7 +105,7 @@ inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: Lis
     }
 }
 
-fun <E: ThreadEvent> MutableExecutionFrontier<E>.cut(pred: (ThreadEvent) -> Boolean) {
+inline fun <E: ThreadEvent> MutableExecutionFrontier<E>.cut(pred: (ThreadEvent) -> Boolean) {
     threadMap.forEach { (tid, lastEvent) ->
         val pred = lastEvent?.pred(inclusive = true, pred)
         @Suppress("UNCHECKED_CAST")
@@ -132,7 +132,11 @@ fun<E : ThreadEvent> ExecutionFrontier<E>.copy(): MutableExecutionFrontier<E> {
 
 private class ExecutionFrontierImpl<E : ThreadEvent>(
     override val threadMap: MutableThreadMap<E?>
-): MutableExecutionFrontier<E>
+): MutableExecutionFrontier<E> {
+    override fun toString(): String {
+        return threadMap.entries.map { (tid, event) -> "$event" }.joinToString(" | ")
+    }
+}
 
 inline fun<reified E : ThreadEvent> ExecutionFrontier<E>.toExecution(): Execution<E> =
     toMutableExecution()
