@@ -299,7 +299,9 @@ internal class EventStructure(
         check((event.label !is InitializationLabel) implies (event.parent != null)) { "Backtracked event must have a parent: $event" }
         val causalityFrontier = execution.calculateFrontier(event.causalityClock)
         // Special case for rmw events. We need to skip if we have pinned eve
-        for(event in conflicts) { if(event in pinnedEvents) return }
+        for (event in conflicts) {
+            if (event in pinnedEvents) return
+        }
 
         val newPinnedEvents = pinnedEvents.copy().apply {
             merge(causalityFrontier)
@@ -410,8 +412,11 @@ internal class EventStructure(
                 for (event in execution) {
                     val otherLabel = event.label
                     val otherReadLabel = otherLabel.refine<ReadAccessLabel> { isResponse && isExclusive } ?: continue
-                    if(otherReadLabel.location != label.location) continue
-                    if(event.readsFrom != write) continue
+                    if (otherReadLabel.location != label.location) continue
+                    if (event.readsFrom != write) continue
+                    val execlusiveWriteLabel = execution[event.threadId, event.threadPosition + 1]?.label as? WriteAccessLabel ?: continue
+                    // If it is not actually exclusive, or the location does not match then this is a failed CAS, so no conflicts
+                    if (!execlusiveWriteLabel.isExclusive || execlusiveWriteLabel.location != label.location) continue
                     conflicts.add(event)
                 }
             }
