@@ -12,13 +12,13 @@ To test concurrent code with Lincheck:
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/CounterTestWithInvokations.kt" include-lines="8,24" }
+   { src="kotlinx-lincheck/CounterTestWithInvocations.kt" include-lines="8,24" }
 
 2. Create a test function as a member function using `runConcurrentTest()`:
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/CounterTestWithInvokations.kt" include-symbol="CounterTestWithInvokations.test" }
+   { src="kotlinx-lincheck/CounterTestWithInvocations.kt" include-symbol="CounterTestWithInvocations.test" }
 
    > The function parameter is optional; it specifies the number of execution schedules to explore.
    > The default value is `10_000`.
