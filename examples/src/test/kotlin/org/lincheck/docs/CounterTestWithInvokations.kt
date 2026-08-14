@@ -5,7 +5,7 @@ import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class CounterTestWithIterations {
+class CounterTestWithInvokations {
     @Test
     fun test() = Lincheck.runConcurrentTest(100_000) {
         var counter = 0
