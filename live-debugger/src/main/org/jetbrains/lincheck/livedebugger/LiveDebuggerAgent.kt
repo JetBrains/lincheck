@@ -296,7 +296,7 @@ internal object LiveDebuggerAgent {
                 Logger.warn { "Cannot open reversed connection — no server started" }
                 return
             }
-            server.makeReversedConnection(URI(wsUrl), ControlPlane.sslSocketFactory())
+            server.makeReversedConnection(URI(wsUrl), ControlPlane.sslSocketFactory(), ControlPlane.agentAuthHeaders())
             Logger.info { "Opened reversed WS connection to $wsUrl" }
         } catch (e: Exception) {
             Logger.error(e) { "Failed to open reversed WS connection to control plane" }

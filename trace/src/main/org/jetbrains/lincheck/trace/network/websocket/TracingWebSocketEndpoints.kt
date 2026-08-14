@@ -167,12 +167,15 @@ fun TracingCallbacks.handleMessage(message: String?) {
  * Trace data is sent in binary format while notifications and commands are strings.
  *
  * @param sslSocketFactory trust material for a `wss://` [serverUri]; `null` uses the JVM default trust.
+ * @param handshakeHeaders optional headers sent with the WebSocket handshake request,
+ * e.g. for authenticating against a server that requires it.
  */
 abstract class TracingWebSocketClient(
     serverUri: URI,
     sslSocketFactory: SSLSocketFactory? = null,
+    handshakeHeaders: Map<String, String> = emptyMap(),
 ) : TracingClient {
-    private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri) {
+    private val webSocketConnection: WebSocketClient = object : WebSocketClient(serverUri, handshakeHeaders) {
         override fun onOpen(handshakedata: ServerHandshake?) = onConnectionReady()
 
         override fun onMessage(message: String?) = handleMessage(message)
@@ -274,19 +277,25 @@ abstract class TracingWebSocketServer(address: InetSocketAddress?) : TracingServ
      * replacing any previously established one.
      *
      * @param sslSocketFactory trust material for a `wss://` [serverUri]; `null` uses the JVM default trust.
+     * @param handshakeHeaders optional headers sent with the WebSocket handshake request,
+     * e.g. for authenticating against a server that requires it.
      */
-    fun makeReversedConnection(serverUri: URI, sslSocketFactory: SSLSocketFactory? = null) {
+    fun makeReversedConnection(
+        serverUri: URI,
+        sslSocketFactory: SSLSocketFactory? = null,
+        handshakeHeaders: Map<String, String> = emptyMap(),
+    ) {
         val newWsClient = synchronized(this) {
             _client.close()
             _client = ClientSink()
-            createReversedWebSocketClient(serverUri)
+            createReversedWebSocketClient(serverUri, handshakeHeaders)
         }
         sslSocketFactory?.let { newWsClient.setSocketFactory(it) }
         newWsClient.connect()
     }
 
-    private fun createReversedWebSocketClient(serverUri: URI): WebSocketClient {
-        return object : WebSocketClient(serverUri) {
+    private fun createReversedWebSocketClient(serverUri: URI, handshakeHeaders: Map<String, String>): WebSocketClient {
+        return object : WebSocketClient(serverUri, handshakeHeaders) {
             override fun onOpen(handshakedata: ServerHandshake?) {
                 Logger.info { "Reversed WS connection opened to $serverUri" }
                 // Hold the lock across onConnectionReady() so the agent's hello is the first frame.

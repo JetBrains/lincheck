@@ -28,13 +28,20 @@ private const val HTTP_TIMEOUT_MS = 5_000
 private const val MAX_ATTEMPTS = 3
 private const val RETRY_DELAY_MS = 1_000L
 
+/** Env var carrying an optional shared secret to authenticate this agent to the control plane. */
+internal const val ENV_AGENT_SECRET = "LIVE_DEBUGGER_AGENT_SECRET"
+
+/** Header carrying the shared secret, when configured. Part of the wire protocol — must match the server. */
+internal const val AGENT_SECRET_HEADER = "X-AppGlass-Agent-Secret"
+
 /**
  * The agent's side of its connections to the control plane: where the control plane is, how to talk to
- * it securely, and the policy it hands out at startup.
+ * it securely and authenticate to it, and the policy it hands out at startup.
  *
  * TLS comes from the `enableSsl`, `sslTruststorePath` and `sslTruststorePassword` agent arguments and
- * covers every leg — the plain-HTTP calls made here and by [PhoneHomeHeartbeat], plus the reversed
- * WebSocket connection — so a single switch configures all control-plane communication.
+ * the agent credential from [ENV_AGENT_SECRET]; both cover every leg — the HTTP calls made here and by
+ * [PhoneHomeHeartbeat], plus the reversed WebSocket connection — so a single switch configures all
+ * control-plane communication.
  */
 internal object ControlPlane {
 
@@ -65,10 +72,27 @@ internal object ControlPlane {
             )
         } else null
 
-    /** Applies the configured CA truststore to [connection], if it is an HTTPS one. */
-    fun configureTls(connection: HttpURLConnection) {
-        if (connection !is HttpsURLConnection) return
-        sslSocketFactory()?.let { connection.sslSocketFactory = it }
+    /**
+     * Headers authenticating this agent to the control plane: the shared secret when [ENV_AGENT_SECRET]
+     * is set, nothing otherwise (an unprotected control plane expects no credential).
+     *
+     * The same headers go on every leg — the policy pull, the heartbeats, and the reversed WebSocket
+     * handshake — because one control-plane provider guards all of the agent-facing routes.
+     */
+    fun agentAuthHeaders(): Map<String, String> {
+        val secret = System.getenv(ENV_AGENT_SECRET)
+        return if (secret.isNullOrBlank()) emptyMap() else mapOf(AGENT_SECRET_HEADER to secret)
+    }
+
+    /**
+     * Prepares [connection] for a call to the control plane: CA truststore (HTTPS only) plus the agent
+     * credential. Every agent HTTP call goes through here, so no leg can silently skip authentication.
+     */
+    fun configureConnection(connection: HttpURLConnection, authHeaders: Map<String, String> = agentAuthHeaders()) {
+        if (connection is HttpsURLConnection) {
+            sslSocketFactory()?.let { connection.sslSocketFactory = it }
+        }
+        authHeaders.forEach { (name, value) -> connection.setRequestProperty(name, value) }
     }
 
     /**
@@ -91,10 +115,17 @@ internal object ControlPlane {
             }
             return null
         }
-        val url = "${normalizeBaseUrl(baseUrl)}$POLICY_PATH"
+        return pullPolicyBlocklists("${normalizeBaseUrl(baseUrl)}$POLICY_PATH", agentAuthHeaders())
+    }
+
+    /**
+     * The retry loop behind [fetchPolicyBlocklists], taking [url] and [headers] explicitly so the pull
+     * is testable without process environment.
+     */
+    internal fun pullPolicyBlocklists(url: String, headers: Map<String, String>): List<SensitiveAreaBlocklist>? {
         repeat(MAX_ATTEMPTS) { attempt ->
             try {
-                val bundle = fetchPolicy(url)
+                val bundle = fetchPolicy(url, headers)
                 Logger.info {
                     "Pulled policy v${bundle.version} (${bundle.blocklists.size} blocklist(s)) from $url"
                 }
@@ -112,10 +143,10 @@ internal object ControlPlane {
      * Uses [HttpURLConnection] and a manual JSON parse to avoid pulling an HTTP/JSON library onto the
      * agent classpath, mirroring [PhoneHomeHeartbeat].
      */
-    private fun fetchPolicy(url: String): PolicyBundle {
+    private fun fetchPolicy(url: String, headers: Map<String, String>): PolicyBundle {
         val connection = URI(url).toURL().openConnection() as HttpURLConnection
         try {
-            configureTls(connection)
+            configureConnection(connection, headers)
             connection.requestMethod = "GET"
             connection.connectTimeout = HTTP_TIMEOUT_MS
             connection.readTimeout = HTTP_TIMEOUT_MS

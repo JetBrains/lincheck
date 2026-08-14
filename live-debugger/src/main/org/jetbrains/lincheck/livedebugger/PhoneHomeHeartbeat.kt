@@ -36,6 +36,8 @@ private const val HTTP_TIMEOUT_MS = 5_000
  *
  * Optional:
  * - `NAMESPACE` — a grouping label for the agent (e.g. the Kubernetes namespace). Defaults to empty.
+ * - `LIVE_DEBUGGER_AGENT_SECRET` — a shared secret sent as a header on every heartbeat request
+ *   (see [ControlPlane.agentAuthHeaders]), for control planes that require agents to authenticate themselves.
  */
 internal object PhoneHomeHeartbeat {
 
@@ -99,7 +101,7 @@ internal object PhoneHomeHeartbeat {
     private fun sendHeartbeat(url: String, body: String): HeartbeatResult {
         val connection = URI(url).toURL().openConnection() as HttpURLConnection
         try {
-            ControlPlane.configureTls(connection)
+            ControlPlane.configureConnection(connection)
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "application/json")
             connection.connectTimeout = HTTP_TIMEOUT_MS
