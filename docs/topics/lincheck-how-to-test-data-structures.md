@@ -46,7 +46,7 @@ Let's test this `Counter` data structure with Lincheck:
    > Learn about the differences between model checking and stress testing in the
    > [Testing Strategies](lincheck-testing-strategies.md) article.
    >
-   {style=”tip”}
+   {style="tip"}
 
 5. Run the test. If it fails, Lincheck generates an error report with the scenario
    and execution trace that led to incorrect behavior:

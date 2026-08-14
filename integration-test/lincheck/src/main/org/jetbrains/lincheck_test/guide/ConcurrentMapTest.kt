@@ -12,6 +12,7 @@ package org.jetbrains.lincheck_test.guide
 
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
+import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListMap
@@ -42,6 +43,15 @@ class ConcurrentSkipListMapTest {
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
+        .loopIterationsBeforeThreadSwitch(20)
+        .analyzeStdLib(true)
+        .check(this::class)
+
+    @Ignore("Times out")
+    @Test
+    fun eventStrcutureModelCheckingTest() = ModelCheckingOptions()
+        .checkObstructionFreedom(true)
+        .useExperimentalModelChecking()
         .loopIterationsBeforeThreadSwitch(20)
         .analyzeStdLib(true)
         .check(this::class)

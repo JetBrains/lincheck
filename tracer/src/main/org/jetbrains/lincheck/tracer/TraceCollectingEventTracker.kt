@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.LineCodeLocation
+import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
@@ -714,13 +715,11 @@ class TraceCollectingEventTracker(
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        // Check the hit limit before doing any work.
-        // Returns false if the limit has already been reached;
-        // the thread that hits the limit exactly fires the removal callback.
-        if (!BreakpointStorage.incrementAndCheckHitLimit(breakpointId)) return
+        // Non-mutating hit-limit peek: keeps over-limit hits O(1), before the stack capture below.
+        // incrementAndCheckHitLimit (after the dynamic-extent guard) stays the single authority.
+        if (BreakpointStorage.isHitLimitReached(breakpointId)) return
 
-        // Resolve the registered breakpoint.
-        // Skip the hit if the breakpoint was unregistered between increment and lookup.
+        // Resolve the registered breakpoint; skip the hit if it was unregistered concurrently.
         val breakpoint = BreakpointStorage.getUserData(breakpointId) as? SnapshotBreakpoint ?: return
         val breakpointUuid = breakpoint.uuid
 
@@ -728,7 +727,23 @@ class TraceCollectingEventTracker(
         val stackTrace = Exception().stackTrace
             // Removes lincheck related calls
             .filter { !isInLincheckPackage(it.className) }
-        
+
+        // Stage 3 dynamic-extent guard: a hit whose call stack passes through a blocked sensitive
+        // area is not captured — data flowing out of the area must not be observable downstream.
+        // Reuses the stack just captured for the frames panel. Suppressed hits consume no hit-limit budget.
+        val blockedFrame = LincheckClassFileTransformer.dynamicExtentChecker
+            .firstBlockedFrame(stackTrace)
+        if (blockedFrame != null) {
+            BreakpointStorage.notifyHitSuppressed(
+                breakpointId, breakpoint, blockedFrame.frame.className, blockedFrame.match.reason,
+            )
+            return
+        }
+
+        // Authoritative hit-limit accounting; the thread that lands exactly on the limit fires
+        // the removal callback.
+        if (!BreakpointStorage.incrementAndCheckHitLimit(breakpointId)) return
+
         val stackTraceCodeLocationIds = stackTrace.map { stackTraceElement ->
             // TODO JBRes-7631 prevent duplicate code locations
             context.codeLocationsPool.register(LineCodeLocation(stackTraceElement))

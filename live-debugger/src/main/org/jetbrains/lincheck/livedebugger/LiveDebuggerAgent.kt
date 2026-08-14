@@ -14,15 +14,21 @@ import org.jetbrains.lincheck.tracer.TracerAgent
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BLOCKLIST_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINTS_FILE
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_POLICY_BOOTSTRAP
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_HEARTBEAT
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_ENABLE_SSL
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SSL_TRUSTSTORE_PASSWORD
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SSL_TRUSTSTORE_PATH
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
+import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingServer
@@ -51,9 +57,14 @@ internal object LiveDebuggerAgent {
         ARGUMENT_FORMAT,
         ARGUMENT_FOPTION,
         ARGUMENT_BREAKPOINTS_FILE,
+        ARGUMENT_BLOCKLIST_FILE,
+        ARGUMENT_POLICY_BOOTSTRAP,
         ARGUMENT_HEARTBEAT,
         ARGUMENT_START_SERVER,
         ARGUMENT_SERVER_PORT,
+        ARGUMENT_ENABLE_SSL,
+        ARGUMENT_SSL_TRUSTSTORE_PATH,
+        ARGUMENT_SSL_TRUSTSTORE_PASSWORD,
     )
     private val agent = object : TracerAgent() {
         override val modeSystemPropertyName: String = LIVE_DEBUGGER_MODE_PROPERTY
@@ -62,6 +73,13 @@ internal object LiveDebuggerAgent {
 
         override fun parseArguments(agentArgs: String?) {
             TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
+            // Blocklists first: policy must be active before any breakpoint source is processed,
+            // so Stage-1 registration rejection sees it. Startup file and control-plane pull
+            // combine by union; both run before breakpoints are loaded.
+            LiveDebugger.loadBlocklistsFromFile(TraceAgentParameters.blocklistFilePath)
+            if (TraceAgentParameters.policyBootstrapFromControlPlane) {
+                LiveDebugger.bootstrapPolicyFromControlPlane()
+            }
             LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
         }
 
@@ -78,6 +96,8 @@ internal object LiveDebuggerAgent {
 
             LiveDebugger.ensureHitLimitCallbackInstalled()
             LiveDebugger.ensureBreakpointExpressionUnsafetyCallbackInstalled()
+            LiveDebugger.ensureBreakpointBlockedCallbackInstalled()
+            LiveDebugger.ensureHitSuppressedCallbackInstalled()
         }
 
         override fun setupTracingFromApplicationStartIfRequested() {
@@ -157,6 +177,10 @@ internal object LiveDebuggerAgent {
                     LiveDebugger.removeBreakpoints(uuids)
                 }
 
+                override fun addSensitiveAreaBlocklists(blocklists: List<SensitiveAreaBlocklist>) {
+                    LiveDebugger.addSensitiveAreaBlocklists(blocklists)
+                }
+
                 override fun onConnectionReady() {
                     PhoneHomeHeartbeat.setConnectTriggered()
                 }
@@ -187,6 +211,21 @@ internal object LiveDebuggerAgent {
                             notification.safetyViolationMessage,
                             notification.timestamp
                         )
+
+                    is LiveDebuggerNotification.BreakpointBlocked ->
+                        server.connection.breakpointBlocked(
+                            notification.breakpointData,
+                            notification.reason,
+                            notification.timestamp
+                        )
+
+                    is LiveDebuggerNotification.BreakpointHitSuppressed ->
+                        server.connection.breakpointHitSuppressed(
+                            notification.breakpointData,
+                            notification.blockedFrameClass,
+                            notification.reason,
+                            notification.timestamp
+                        )
                 }
             }
             server
@@ -203,6 +242,7 @@ internal object LiveDebuggerAgent {
      */
     private fun connectToControlPlane(controlPlaneUrl: String, agentId: String) {
         try {
+            // `https` maps to `wss` by the same rewrite; the URL was already scheme-normalized upstream.
             val wsUrl = controlPlaneUrl
                 .replace(Regex("^http"), "ws") + "/api/agent/$agentId"
             val server = this.agent.server as? TracingWebSocketServer
@@ -210,7 +250,7 @@ internal object LiveDebuggerAgent {
                 Logger.warn { "Cannot open reversed connection — no server started" }
                 return
             }
-            server.makeReversedConnection(URI(wsUrl))
+            server.makeReversedConnection(URI(wsUrl), ControlPlane.sslSocketFactory())
             Logger.info { "Opened reversed WS connection to $wsUrl" }
         } catch (e: Exception) {
             Logger.error(e) { "Failed to open reversed WS connection to control plane" }

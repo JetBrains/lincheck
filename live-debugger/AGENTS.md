@@ -45,6 +45,13 @@ and opens a *reversed* WebSocket connection to `/api/agent/{agentId}` when the c
 Required environment variables: `NAME`, `LIVE_DEBUGGER_CONTROL_PLANE_URL`; optional: `NAMESPACE`
 (see `PhoneHomeHeartbeat.kt`).
 
+`enableSsl=on` routes both legs over TLS: `ControlPlane` rewrites the configured `http://` URL to
+`https://` (the `^http` → `ws` rewrite then yields `wss://`), installs the truststore's socket factory
+on every `HttpsURLConnection`, and hands the same factory to `makeReversedConnection`.
+Trust material comes from `TlsTrust` in [`common`](../common) —
+`sslTruststorePath` if given, the JVM default truststore otherwise.
+Both legs keep hostname verification on, so the certificate has to name the host in the URL.
+
 ## Building
 
 ```shell
@@ -76,6 +83,8 @@ Arguments are comma-separated `key=value` pairs (parsed by `TraceAgentParameters
 | `tracingServer` | `on`/`off` — start the WebSocket server (default `off`) |
 | `serverPort` | WebSocket server port (default `9999`) |
 | `liveDebuggerHeartbeat` | `on`/`off` — heartbeat mode for orchestrated environments (default `off`) |
+| `enableSsl` | `on`/`off` — TLS for the control-plane connections (default `off`) |
+| `sslTruststorePath`, `sslTruststorePassword` | CA truststore verifying the control plane's certificate (default: JVM truststore) |
 | `breakpointsFile` | path to an INI file with breakpoints, loaded at startup (`BreakpointsFileParser`) |
 | `output`, `format`, `formatOption` | trace output for whole-application tracing without a server |
 

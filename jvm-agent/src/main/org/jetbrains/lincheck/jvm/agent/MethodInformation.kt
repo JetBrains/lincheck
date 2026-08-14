@@ -22,8 +22,11 @@ package org.jetbrains.lincheck.jvm.agent
  *   - [lineRange] - Approximate Range of lines in source file covered by this method.
  *   - [linesToMethodNames] - Sorted list of all known line numbers ranges and method names (without `desc`) for these ranges.
  *   - [nonSyntheticMethodLines] - All source lines found in non-synthetic methods of this class.
+ *   - [blockMatch] - Sensitive-area blocklist rule blocking this method (whole-class or per-method), or `null`.
+ *       Only computed for classes with applicable snapshot breakpoints.
  */
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
+import org.jetbrains.lincheck.settings.BlockMatch
 
 internal data class MethodInformation(
     val smap: SMAPInfo,
@@ -33,6 +36,7 @@ internal data class MethodInformation(
     private val linesToMethodNames: List<Triple<Int, Int, Set<String>>>,
     val nonSyntheticMethodLines: Set<Int>,
     val basicControlFlowGraph: BasicBlockControlFlowGraph?,
+    val blockMatch: BlockMatch?,
 ) {
     // TODO: This method should be used by [LincheckBaseMethodVisitor],
     //  but now it leads to flaky tests on TeamCity.

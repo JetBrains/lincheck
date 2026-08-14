@@ -14,5 +14,7 @@
             <toc-element topic="lincheck-progress-guarantees.md" accepts-web-file-names="progress-guarantees.html"/>
             <toc-element topic="lincheck-results-validation.md" accepts-web-file-names="sequential-specification.html"/>
         </toc-element>
+        <toc-element topic="lincheck-model-checking.md"/>
+        <toc-element topic="lincheck-kmp.md"/>
 	</snippet>
 </instance-profile>

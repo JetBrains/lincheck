@@ -10,7 +10,9 @@
 package org.jetbrains.kotlinx.lincheck_test;
 
 import org.jctools.queues.atomic.*;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.lincheck.datastructures.Operation;
+import org.jetbrains.lincheck.datastructures.Options;
 
 
 public class NonParallelOpGroupTest extends AbstractLincheckTest {
@@ -24,5 +26,11 @@ public class NonParallelOpGroupTest extends AbstractLincheckTest {
     @Operation(nonParallelGroup = "consumer")
     public Integer poll() {
         return queue.poll();
+    }
+
+    @Override
+    public <O extends Options<@NotNull O, ?>> void customize(@NotNull O $this$customize) {
+        // We ignore this as there is a spin loop. Unignore this once loop detector is up and running
+        ignoreExperimentalModelChecking($this$customize);
     }
 }

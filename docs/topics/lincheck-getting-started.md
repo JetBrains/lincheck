@@ -176,10 +176,10 @@ In this section, you will test a simple counter:
    ```
    { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.test" }
    
-   > Learn how model checking works in the [Testing Strategies](lincheck-testing-strategies.md#model-checking) 
-   > article.
-   > 
-   {style=”tip”}
+    > Learn how model checking works in the [Testing Strategies](lincheck-testing-strategies.md#model-checking) 
+    > article.
+    > 
+    {style="tip"}
 
 6. Run the test. Lincheck generates an error report with the concurrent scenario and the specific thread interleaving 
    that led to incorrect behavior:

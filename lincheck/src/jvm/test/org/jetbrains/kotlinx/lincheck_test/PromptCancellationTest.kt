@@ -65,6 +65,8 @@ abstract class AbstractPromptCancellationTest(
     }
 
     override fun <O : Options<O, *>> O.customize() {
+        // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
+        ignoreExperimentalModelChecking()
         actorsBefore(0)
         threads(2)
         actorsPerThread(1)

@@ -103,7 +103,7 @@ internal class SnapshotBreakpointTransformer(
 
         val matchingBreakpoints = breakpoints.entries.filter { (_, breakpoint) ->
             breakpoint.lineNumber == line &&
-            // `LincheckClassVisitor` should have already filtered the breakpoints
+            // `buildClassInformation` should have already filtered the breakpoints
             // to the current className/fileName pair,
             // but we still do the check as an additional safeguard.
             breakpoint.isApplicableTo(className.toCanonicalClassName(), fileName)

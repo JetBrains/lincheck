@@ -589,7 +589,7 @@ class LiveDebuggerTransformationProfile(
         // Check if there are any applicable line breakpoints for the given class
         // (`className` is already in canonical form ,see `LincheckClassFileTransformer.shouldTransform`).
         // The source file is not yet known here, so we use the class-only `applicableTo` pre-filter;
-        // the file-aware overload narrows the match in `LincheckClassVisitor`.
+        // the file-aware overload narrows the match in `buildClassInformation`.
         return settings.lineBreakpoints.values.any { it.isApplicableTo(className) }
     }
 

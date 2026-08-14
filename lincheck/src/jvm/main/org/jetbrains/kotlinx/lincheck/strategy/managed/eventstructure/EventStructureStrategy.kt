@@ -29,6 +29,7 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.descriptors.getArrayElementType
 import org.jetbrains.lincheck.descriptors.getType
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
@@ -52,7 +53,7 @@ internal class EventStructureStrategy(
     }
 
     private val eventStructure: EventStructure =
-        EventStructure( memoryModel, memoryInitializer, ::onInconsistency) { iThread, reason ->
+        EventStructure( memoryModel, memoryInitializer, ::onInconsistency, ::getCurrentThreadId) { iThread, reason ->
             switchCurrentThread(iThread, reason)
         }
 
@@ -357,8 +358,10 @@ internal class EventStructureStrategy(
 
     override fun onThreadStart(threadId: Int) {
         super.onThreadStart(threadId)
-        if (threadId != eventStructure.mainThreadId && threadId != eventStructure.initThreadId) {
-            eventStructure.addThreadStartEvent(threadId)
+        runInsideIgnoredSection {
+            if (threadId != eventStructure.mainThreadId && threadId != eventStructure.initThreadId) {
+                eventStructure.addThreadStartEvent(threadId)
+            }
         }
     }
 
@@ -406,6 +409,10 @@ internal class EventStructureStrategy(
         super.onActorStart(iThread)
         // TODO: move ignored section to ManagedStrategyRunner
         runInsideIgnoredSection {
+            if (threadScheduler.isAborted(iThread)) {
+                disableAnalysis()
+                return
+            }
             if (currentExecutionPart == ExecutionPart.VALIDATION)
                 return@runInsideIgnoredSection
             val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
@@ -416,6 +423,10 @@ internal class EventStructureStrategy(
     override fun onActorFinish(iThread: Int) {
         // TODO: move ignored section to ManagedStrategyRunner
         runInsideIgnoredSection {
+            if (threadScheduler.isAborted(iThread)) {
+                disableAnalysis()
+                return
+            }
             if (currentExecutionPart == ExecutionPart.VALIDATION)
                 return@runInsideIgnoredSection
             val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
@@ -459,6 +470,8 @@ internal class EventStructureStrategy(
     private fun onInconsistency(inconsistency: Inconsistency) {
         abortWithSuddenInvocationResult(InconsistentInvocationResult(inconsistency))
     }
+
+    private fun getCurrentThreadId(): Int  = threadScheduler.getCurrentThreadId()
 
     // NOTE: I guess this should not be final anymore (this has been changed)
     override fun afterCoroutineSuspended(iThread: Int) {
@@ -504,6 +517,7 @@ internal class EventStructureStrategy(
 }
 
 internal typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
+internal typealias CurrentThreadIdCallback = () -> ThreadId
 internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason?) -> Unit
 
 private class EventStructureMemoryTracker(
@@ -690,8 +704,8 @@ private class EventStructureMemoryTracker(
     }
 
     override fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) {
-        val srcType = srcArray!!::class.getType()
-        val dstType = dstArray!!::class.getType()
+        val srcType = srcArray!!.getArrayElementType()
+        val dstType = dstArray!!.getArrayElementType()
         for (i in 0 until length) {
             val readLocation  = objectTracker.getArrayAccessMemoryLocation(srcArray, srcPos + i, srcType)
             val writeLocation = objectTracker.getArrayAccessMemoryLocation(dstArray, dstPos + i, dstType)

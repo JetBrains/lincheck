@@ -37,6 +37,8 @@ class RendezvousChannelTest : AbstractLincheckTest() {
     fun close() = ch.close()
 
     override fun <O : Options<O, *>> O.customize() {
+        // TODO: We ingore for now since event structure strategy does not support coroutines.
+        ignoreExperimentalModelChecking()
         sequentialSpecification(SequentialRendezvousIntChannel::class.java)
         iterations(10)
     }
