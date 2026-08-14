@@ -66,46 +66,8 @@ When running a test with the model checking strategy, Lincheck controls the foll
   model checking tests:
 
   ```kotlin
-  @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-  class VariableResetTest {
-      companion object {
-          private var atomicInt = AtomicInteger(0)
-      }
-  
-      @Test
-      @Order(1)
-      fun modelCheckingTest() = Lincheck.runConcurrentTest {
-          val t1 = thread { atomicInt.getAndIncrement() }
-          val t2 = thread { atomicInt.getAndIncrement() }
-  
-          t1.join()
-          t2.join()
-  
-          check(atomicInt.get() == 2)
-      }
-  
-      @Test
-      @Order(2)
-      fun resetAfterModelCheckingTest() {
-          // Verify `atomicInt` has been reset to 0 after `modelCheckingTest()`
-          check(atomicInt.get() == 0)
-      }
-  
-      @Test
-      @Order(3)
-      fun regularIncTest() {
-          atomicInt.getAndIncrement()
-          check(atomicInt.get() == 1)
-      }
-  
-      @Test
-      @Order(4)
-      fun valuePersistsAfterRegularIncTest() {
-          // Verify `atomicInt` still holds 1 after `regularIncTest()`
-          check(atomicInt.get() == 1)
-      }
-  }
   ```
+  { src="kotlinx-lincheck/VariableResetTest.kt" include-symbol="VariableResetTest" }
 
 ### Uncontrolled sources of non-determinism
 
@@ -165,27 +127,8 @@ Lincheck can miss some bugs caused by low-level effects. For example, a missing 
 a bug caused by store buffer or a compiler reordering, which cannot be caught by Lincheck’s model checker:
 
 ```kotlin
-class RelaxedMemoryModelTest {
-    var x = 0 // Not @Volatile
-    var y = 0 // Not @Volatile
-
-    @Test
-    fun modelCheckingTest() = Lincheck.runConcurrentTest {
-        thread {
-            x = 1
-            y = 1
-        }
-        thread {
-            if (y == 1 && x == 0) {
-                // Code in this block might be executed on real hardware because of
-                // store buffer and compiler reordering.
-                // Lincheck cannot model this behavior with model checking.
-                error("Unreachable under sequential consistency")
-           }
-        }
-    }
-}
 ```
+{ src="kotlinx-lincheck/RelaxedMemoryModelTest.kt" include-symbol="RelaxedMemoryModelTest" }
 
 #### Workaround {id="workaround-relaxed-java-memory-model"}
 
@@ -213,40 +156,14 @@ This guarantees that Lincheck can track the lifecycle and activity of threads in
 
 <tabs>
  <tab id="coroutines" title="As a local coroutine dispatcher">
-     <code-block lang="kotlin">
-class FixedThreadPoolTest {
-    @Test
-    fun test() = Lincheck.runConcurrentTest {
-        val dispatcher = Executors.newFixedThreadPool(nThreads).asCoroutineDispatcher()
-        runBlocking(dispatcher) {
-            val coro = launch() {
-                while (isActive) { /* ... */ }
-            }
-            coro.cancel()
-            coro.join()
-        }
-    }
-}
-</code-block>
+     <code-block lang="kotlin"
+                 src="kotlinx-lincheck/FixedThreadPoolTests.kt"
+                 include-symbol="FixedThreadPoolDispatcherTest"/>
  </tab>
  <tab id="forkjoinpool" title="Instead of the common thread pool">
-     <code-block lang="kotlin">
-class FixedThreadPoolTest {
-    @Test
-    fun test() = Lincheck.runConcurrentTest {
-        val executorService = Executors.newFixedThreadPool(nThreads)
-        try {
-            val task = object : Runnable { /* ... */ }
-            val future1 = executorService.submit(task)
-            val future2 = executorService.submit(task)
-            future1.get()
-            future2.get()
-        } finally {
-            executorService.shutdown()
-        }
-    }
-}
-</code-block>
+     <code-block lang="kotlin"
+                 src="kotlinx-lincheck/FixedThreadPoolTests.kt"
+                 include-symbol="FixedThreadPoolExecutorServiceTest"/>
  </tab>
 </tabs>
 
@@ -263,23 +180,8 @@ This leads to inconsistencies between the runs of the same test.
 Example:
 
 ```kotlin
-class ThreadLocalVariableTest {
-    @Test
-    fun modelCheckingTest() = Lincheck.runConcurrentTest {
-        var counter = getLocalCounter()
-        var t = thread { counter.getAndIncrement() }
-        t.join()
-        check(counter.get() == 1)
-    }
-
-    private fun getLocalCounter() = localCounter.get()
-}
-
-// Using ThreadLocal to create a variable leads to a failed test
-private val localCounter: ThreadLocal<AtomicInteger> = ThreadLocal.withInitial {
-    AtomicInteger(0)
-}
 ```
+{ src="kotlinx-lincheck/ThreadLocalVariableTest.kt" include-symbol="ThreadLocalVariableTest,localCounter" }
 
 This test fails with an error because the value of the counter accumulates across scenario invocations:
 
@@ -304,16 +206,8 @@ This test fails with an error because the value of the counter accumulates acros
 Create thread-local variables manually by storing values in a `ConcurrentHashMap` with thread IDs as keys:
 
 ```kotlin
-class ThreadLocalVariableTest {
-    var threadLocalCounters = ConcurrentHashMap<Long, AtomicInteger>()
-  
-    // ...
-
-    private fun getLocalCounter() = threadLocalCounters.computeIfAbsent(Thread.currentThread().id) {
-        AtomicInteger(0)
-    }
-}
 ```
+{ src="kotlinx-lincheck/ThreadLocalVariableTest.kt" include-symbol="ThreadLocalVariableWorkaroundTest" }
 
 Because `threadLocalCounters` is a [top-level `var` property](#controlled-sources-of-non-determinism), Lincheck resets it between invocations, avoiding 
 the accumulation problem.
@@ -353,20 +247,8 @@ between the runs of the same test](#deterministic-exploration).
 Calling I/O APIs leads to `java.lang.IllegalStateException`:
 
 ```kotlin
-class FilesCreateTempFileTest {
-    @Operation
-    fun operation(): List<String> = List(10) {
-        val tempFile = Files.createTempFile("test-prefix", ".txt")
-        require(Files.exists(tempFile)) { "File was not created: $tempFile" }
-        tempFile.toString()
-    }
-
-    // The test fails with the following error message:
-    // "java.lang.IllegalStateException: File operations are not supported in Lincheck"
-    @Test
-    fun modelChecking() = ModelCheckingOptions().check(this::class)
-}
 ```
+{ src="kotlinx-lincheck/FilesCreateTempFileTest.kt" include-symbol="FilesCreateTempFileTest" }
 
 ### Virtual threads
 
