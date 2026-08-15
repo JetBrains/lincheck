@@ -42,6 +42,11 @@ class ConcurrentQueueTest {
     fun poll(): Int? = q.poll()
 
     @Test
+    fun customVerifierTest() = ModelCheckingOptions()
+        .verifier(SerializabilityVerifier::class.java)
+        .check(this::class.java)
+
+    @Test
     fun serializabilityTest() = ModelCheckingOptions()
         .actorsBefore(0)
         .actorsAfter(0)

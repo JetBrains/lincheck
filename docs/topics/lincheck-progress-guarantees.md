@@ -10,11 +10,8 @@ are also obstruction-free, any violation of obstruction-freedom also indicates a
 Use the `checkObstructionFreedom` option to verify the obstruction-freedom guarantee of the program:
 
 ```kotlin
-@Test
-fun modelCheckingTest() = ModelCheckingOptions()
-   .checkObstructionFreedom()
-   .check(this::class)
 ```
+{ src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentSkipListMapTest.modelCheckingTest" }
 
 > The `checkObstructionFreedom` option is only available for the
 > [model checking](lincheck-testing-strategies.md#model-checking) strategy.
@@ -33,33 +30,18 @@ If certain functions are intentionally blocking, you can mark them with
 In this example, you will test the `put()` function of a `ConcurrentHashMap` structure.
 
 1. Create a `ConcurrentHashMapTest.kt` file.
-2. Create a test class for the `ConcurrentHashMap` structure and declare the `put()` function:
+2. Create a test class for `ConcurrentHashMap`, declare the `put()` function and a test 
+   function with the `checkObstructionFreedom()` option enabled:
 
    ```kotlin
-   class ConcurrentHashMapTest {
-       private val map = ConcurrentHashMap<Int, Int>()
-
-       @Operation
-       fun put(key: Int, value: Int) = map.put(key, value)
-   }
    ```
-
-3. Declare a test function with the `checkObstructionFreedom()` option enabled:
-
-    ```kotlin
-    @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom()
-        .threads(2)
-        .actorsPerThread(1)
-        .check(this::class)
-   ```
+   { src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapTest" }
    
    The [`threads`](lincheck-testing-strategies-options.md#scenario-generation) and [`actorsPerThread`](lincheck-testing-strategies-options.md#scenario-generation) 
    options are used to reduce the number of potential execution scenarios. These options do not change the pass/fail 
    state of the test, but they significantly reduce the testing time. 
 
-4. Run the test. It should fail with the following report:
+3. Run the test. It should fail with the following report:
 
    ```text
    = The algorithm should be non-blocking, but an active lock is detected =
@@ -88,41 +70,27 @@ In this example, you will test the `put()` function of a `ConcurrentHashMap` str
    | -------------------------------------------------------------------------------------------------------------- |
    ```
 
-5. Add the `blocking = true` option to the `put()` function annotation:
+4. Add the `blocking = true` option to the `put()` function annotation:
 
    ```kotlin
-   @Operation(blocking = true)
-   fun put(key: Int, value: Int) = map.put(key, value)
    ```
+   { src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapWithBlockingTest.put" }
 
-6. Rerun the test. It should pass successfully.
+5. Rerun the test. It should pass successfully.
 
 ## Example: test `ConcurrentSkipListMap` for obstruction-freedom
 
 In this example, you will test the `put()` function of a non-blocking `ConcurrentSkipListMap` structure.
 
 1. Create a `ConcurrentSkipListMapTest.kt` file.
-2. Create a test class for the `ConcurrentSkipListMap` structure and declare the `put()` function:
+2. Create a test class for `ConcurrentSkipListMap`, declare the `put()` function and a test function with 
+   the `checkObstructionFreedom()` option enabled:
 
-    ```kotlin
-    class ConcurrentSkipListMapTest {
-        private val map = ConcurrentSkipListMap<Int, Int>()
-   
-        @Operation
-        fun put(key: Int, value: Int) = map.put(key, value)
-    }
-    ```
+   ```kotlin
+   ```
+   { src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentSkipListMapTest" }
 
-3. Declare a test function with the `checkObstructionFreedom()` option enabled:
-
-    ```kotlin
-    @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom()
-        .check(this::class)
-    ```
-
-4. Run the test. It should pass successfully.
+3. Run the test. It should pass successfully.
 
 ## See also
 

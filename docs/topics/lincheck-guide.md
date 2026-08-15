@@ -14,27 +14,8 @@ A concurrency test in Lincheck only requires you to list the operations for each
 Lincheck handles the rest:
 
 ```kotlin
-class CounterTest {
-    @Test // Test function declaration
-    fun test() = Lincheck.runConcurrentTest {
-        var counter = 0
-
-
-        // Increments the counter concurrently
-        val t1 = thread { counter++ }
-        val t2 = thread { counter++ }
-
-
-        // Waits for the threads to finish
-        t1.join()
-        t2.join()
-
-
-        // Checks that both increments have been applied
-        assertEquals(2, counter)
-    }
-}
 ```
+{ src="kotlinx-lincheck/CounterTest.kt" include-symbol="CounterTest" }
 
 If the test fails, Lincheck provides the thread interleaving and the thread switch points that led to an error:
 

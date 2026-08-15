@@ -84,34 +84,16 @@ incorrect behavior.
 
 1. In the `src/test` directory, create a `CounterTest.kt` file.
 2. Import the `org.jetbrains.lincheck`, `kotlinx.concurrent`, and `kotlin.test` libraries: 
-    
-    ```kotlin
-    import org.jetbrains.lincheck.*
-    import kotlin.concurrent.*
-    import kotlin.test.*
-    ```
+
+   ```kotlin
+   ```
+   { src="kotlinx-lincheck/CounterTest.kt" include-lines="3-5" }
 
 3. Write a test that creates a variable and two threads manipulating that variable:
 
-    ```kotlin
-    class CounterTest {
-        @Test // Test function declaration
-        fun test() = Lincheck.runConcurrentTest {
-            var counter = 0
-
-            // Increments the counter concurrently
-            val t1 = thread { counter++ }
-            val t2 = thread { counter++ }
-
-            // Waits for the threads to finish
-            t1.join()
-            t2.join()
-
-            // Checks that both increments have been applied
-            assertEquals(2, counter)
-        }
-    }
-    ```
+   ```kotlin
+   ```
+   { src="kotlinx-lincheck/CounterTest.kt" include-symbol="CounterTest" }
 
 4. Run the test. Lincheck generates a report with a thread interleaving that led to incorrect behavior:
 
@@ -171,46 +153,28 @@ In this section, you will test a simple counter:
 1. In the `src/test` directory, create a `CounterStructureTest.kt` file.
 2. Import the `lincheck.datastructures` and `kotlin.test` libraries:
 
-    ```kotlin
-    import org.jetbrains.lincheck.datastructures.*
-    import kotlin.test.*
-    ```
+   ```kotlin
+   ```
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="3-4" }
 
 3. Create a `Counter` structure:
 
-    ```kotlin
-    class Counter {
-        @Volatile
-        private var value = 0
-    
-        fun inc(): Int = ++value
-        fun get() = value
-    }
-    ```
+   ```kotlin
+   ```
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="Counter" }
    
 4. Create a `CounterStructureTest` class. Set the initial state of the structure and mark the concurrent operations 
    of the structure with the `@Operation` annotation:
 
-    ```kotlin
-    class CounterStructureTest {
-        // Initial state
-        private val c = Counter()
+   ```kotlin
+   ```
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="13-20,27" }
+
+5. In the `CounterStructureTest` class, declare a test function using `ModelCheckingOptions()`:
     
-        // Concurrent operations
-        @Operation
-        fun inc() = c.inc()
-    
-        @Operation
-        fun get() = c.get()
-    }
-    ```
-   
-5. In the `CounterTest` class, declare a test function using `ModelCheckingOptions()`:
-    
-    ```kotlin
-    @Test
-    fun stressTest() = ModelCheckingOptions().check(this::class)
-    ```
+   ```kotlin
+   ```
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.test" }
    
     > Learn how model checking works in the [Testing Strategies](lincheck-testing-strategies.md#model-checking) 
     > article.

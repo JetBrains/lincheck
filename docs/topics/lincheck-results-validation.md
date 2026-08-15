@@ -44,50 +44,24 @@ To specify a sequential version of a data structure:
 2. Specify the data structure using the `sequentialSpecification()` option:
 
    ```kotlin
-   @Test
-   fun stressTest() = StressOptions()
-       .sequentialSpecification(SequentialStructure::class)
-       .check(this::class)
    ```
+   { src="kotlinx-lincheck/SequentialSpecificationTest.kt" include-symbol="ConcurrentLinkedQueueTest.stressTest" }
 
 An example of a Lincheck test that uses a single-threaded `LinkedList` as the sequential specification
 of `ConcurrentLinkedQueue`:
 
 ```kotlin
-class ConcurrentLinkedQueueTest {
-    private val s = ConcurrentLinkedQueue<Int>()
-
-    @Operation
-    fun add(value: Int) = s.add(value)
-
-    @Operation
-    fun poll(): Int? = s.poll()
-
-    @Test
-    fun stressTest() = StressOptions()
-        .sequentialSpecification(SequentialQueue::class.java)
-        .check(this::class)
-}
-
-class SequentialQueue {
-    private val s = LinkedList<Int>()
-
-    fun add(x: Int) = s.add(x)
-    fun poll(): Int? = s.poll()
-}
 ```
+{ src="kotlinx-lincheck/SequentialSpecificationTest.kt" include-symbol="ConcurrentLinkedQueueTest,SequentialQueue" }
 
 ### Verification models
 
 By default, Lincheck verifies the results of the concurrent execution against the linearizability model.
-To apply a different verification model, use the `verifierClass` option:
+To apply a different verification model, use the `verifier` option:
 
 ```kotlin
-@Test
-fun modelCheckingTest() = ModelCheckingOptions()
-   .verifierClass(SerializabilityVerifier::class)
-   .check(this::class)
 ```
+{ src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.customVerifierTest" }
 
 Lincheck provides the following verifier classes:
 
@@ -120,85 +94,36 @@ To understand the difference between the two models, see how a data structure ca
 1. Consider the following data structure:
 
    ```kotlin
-   class ConcurrentQueue {
-       private val elements: MutableList<Int> = ArrayList()
-
-       fun put(x: Int) = synchronized(this) {
-           elements += x
-       }
-
-       fun poll(): Int? = synchronized(this) {
-           if (elements.isEmpty()) return null
-           elements.shuffle()
-           elements.removeAt(0)
-       }
-   }
    ```
+   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueue" }
 
    This concurrent structure behaves incorrectly: it stores elements like in a typical queue, but returns them randomly.
 
 2. Implement a sequential version of the queue that correctly stores and returns the elements:
 
    ```kotlin
-   class SequentialQueue {
-       private val elements: MutableList<Int> = ArrayList()
-  
-       fun put(x: Int) {
-           elements += x
-       }
-  
-       fun poll(): Int? = if (elements.isEmpty()) null else elements.removeAt(0)
-   }
    ```
+   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="CorrectSequentialQueue" }
 
 3. Create a test class and declare the `put()` and `poll()` operations:
 
    ```kotlin
-   @Param(name = "value", gen = IntGen::class, conf = "1:2")
-   class ConcurrentQueueTest {
-       private val q = ConcurrentQueue()
-  
-       @Operation
-       fun put(@Param(name = "value") x: Int) = q.put(x)
-  
-       @Operation
-       fun poll(): Int? = q.poll()
-   }
    ```
+   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-lines="34-42,72" }
 
 4. Declare and run a serializability test:
 
    ```kotlin
-   @Test
-   fun serializabilityTest() = ModelCheckingOptions()
-       .actorsBefore(0)
-       .actorsAfter(0)
-       .actorsPerThread(2)
-       .threads(2)
-       // Verify against serializability
-       .verifier(SerializabilityVerifier::class.java)
-       // Specify the sequential version of the structure
-       .sequentialSpecification(SequentialQueue::class.java)
-       .check(this::class.java)
    ```
+   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.serializabilityTest" }
 
    It should pass successfully.
 
 5. Declare and run a linearizability test:
 
    ```kotlin
-   @Test
-   fun linearizabilityTest() = ModelCheckingOptions()
-       .actorsBefore(0)
-       .actorsAfter(0)
-       .actorsPerThread(2)
-       .threads(2)
-       // Show the full failed scenario
-       .minimizeFailedScenario(false)
-       // Specify the sequential version of the structure
-       .sequentialSpecification(SequentialQueue::class.java)
-       .check(this::class.java)
    ```
+   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-symbol="ConcurrentQueueTest.linearizabilityTest" }
 
    The test should fail with the following report:
 
@@ -243,13 +168,8 @@ By default, Lincheck does not validate the state of the concurrent data structur
 To check the final state, use the `@Validate` annotation on your validation function in the test class:
 
 ```kotlin
-@Validate
-fun validate() {
-    // Check some property of the data structure
-    // Throw an exception if the invariant is violated
-    check(size >= 0) { "Size must be non-negative, but was $size" }
-}
 ```
+{ src="kotlinx-lincheck/ValidationTest.kt" include-symbol="ValidationTest.validate" }
 
 The validation function should:
 * Accept no arguments.

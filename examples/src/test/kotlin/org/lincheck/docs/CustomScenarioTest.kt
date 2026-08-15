@@ -6,36 +6,36 @@ import org.jetbrains.lincheck.util.LoggingLevel
 import kotlin.test.Test
 
 class Structure {
-    fun foo() {}
-    fun buzz(value: Int) {}
+    fun noArgsOp() {}
+    fun argsOp(value: Int) {}
 }
 
 class CustomScenarioTest {
     var struct = Structure()
 
     @Operation
-    fun foo() = struct.foo()
+    fun noArgsOp() = struct.noArgsOp()
 
     @Operation
-    fun buzz(value: Int) = struct.buzz(value)
+    fun argsOp(value: Int) = struct.argsOp(value)
 
     @Test
     fun test() = StressOptions()
         .addCustomScenario {
             initial {
-                actor(Structure::foo)
+                actor(Structure::noArgsOp)
             }
             parallel {
                 thread {
-                    actor(Structure::buzz, 1)
-                    actor(Structure::buzz, 2)
+                    actor(Structure::argsOp, 1)
+                    actor(Structure::argsOp, 2)
                 }
                 thread {
-                    actor(Structure::buzz, 3)
+                    actor(Structure::argsOp, 3)
                 }
             }
             post {
-                actor(Structure::foo)
+                actor(Structure::noArgsOp)
             }
         }
         // Report the scenarios even if the test has not failed

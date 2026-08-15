@@ -133,30 +133,14 @@ Create classes implementing counter data structures that are shared between all 
 1. Create an `UnsafeCounter.kt` file in the `core/src/commonMain` or `shared/src/commonMain` directory:
 
    ```kotlin
-   class UnsafeCounter {
-       private var value: Int = 0
-      
-       fun inc() = value++
-      
-       fun get(): Int = value
-   }
    ```
+   { src="kotlinx-lincheck/UnsafeCounterTests.kt" include-symbol="UnsafeCounter" }
 
 2. Create a `SafeCounter.kt` file in the same directory:
 
    ```kotlin
-   import kotlin.concurrent.atomics.AtomicInt
-   import kotlin.concurrent.atomics.ExperimentalAtomicApi
-
-   @OptIn(ExperimentalAtomicApi::class)
-   class SafeCounter { 
-       private var value = AtomicInt(0)
-   
-       fun inc() = value.addAndFetch(1)
-   
-       fun get(): Int = value.load()
-   }
    ```
+   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="5,6,9,10-17" }
 
 ## Write shared tests
 
@@ -165,36 +149,14 @@ Write tests that are [run for all targets](https://kotlinlang.org/docs/multiplat
 1. Create an `UnsafeCounterTest.kt` file in the `core/src/commonTest` or `shared/src/commonTest` directory:
    
    ```kotlin
-   import kotlin.test.Test
-   import kotlin.test.assertEquals
-   
-   class UnsafeCounterTest {
-      @Test
-      fun testIncrement() {
-         val counter = UnsafeCounter()
-         assertEquals(0, counter.get(), "Initial value should be 0")
-         counter.inc()
-         assertEquals(1, counter.get(), "Value after one increment should be 1")
-      }
-   }
    ```
+   { src="kotlinx-lincheck/UnsafeCounterTests.kt" include-lines="5,6,7,16-24" }
 
 2. Create a `SafeCounterTest.kt` file in the same directory:
 
    ```kotlin
-   import kotlin.test.Test
-   import kotlin.test.assertEquals
-   
-   class SafeCounterTest {
-      @Test
-      fun testIncrement() {
-         val counter = SafeCounter()
-         assertEquals(0, counter.get(), "Initial value should be 0")
-         counter.inc()
-         assertEquals(1, counter.get(), "Value after one increment should be 1")
-      }
-   }
    ```
+   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="7,8,9,19-27" }
    
 ## Write JVM-specific tests
 
@@ -207,48 +169,14 @@ Write tests that are [only run for platforms targeting the JVM](https://kotlinla
    * Any project with a server target – `core/src/jvmTest/kotlin`
 
    ```kotlin
-   import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-   import org.jetbrains.lincheck.datastructures.Operation
-   import kotlin.test.Test
-   
-   class UnsafeCounterConcurrentTest {
-       private val c = UnsafeCounter()
-   
-       @Operation
-       fun inc() = c.inc()
-   
-       @Operation
-       fun get() = c.get()
-   
-       @Test
-       fun modelCheckingTest() {
-           ModelCheckingOptions().check(this::class)
-       }
-   }
    ```
+   { src="kotlinx-lincheck/UnsafeCounterTests.kt" include-lines="3,4,5,7,26-39" }
 
 2. Create a `SafeCounterConcurrentTest.kt` file in the same directory:
 
    ```kotlin
-   import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-   import org.jetbrains.lincheck.datastructures.Operation
-   import kotlin.test.Test
-   
-   class SafeCounterConcurrentTest {
-       private val c = SafeCounter()
-   
-       @Operation
-       fun inc() = c.inc()
-   
-       @Operation
-       fun get() = c.get()
-   
-       @Test
-       fun modelCheckingTest() {
-           ModelCheckingOptions().check(this::class)
-       }
-   }
    ```
+   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="3,4,7,9,29-42" }
 
 ## Run the tests
 

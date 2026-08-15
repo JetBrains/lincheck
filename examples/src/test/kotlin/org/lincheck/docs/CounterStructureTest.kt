@@ -1,7 +1,7 @@
 package org.lincheck.docs
 
 import org.jetbrains.lincheck.datastructures.*
-import kotlin.test.Test
+import kotlin.test.*
 
 class Counter {
     var value = 0
@@ -11,10 +11,8 @@ class Counter {
 }
 
 class CounterStructureTest {
-    // Initial state
     private val c = Counter()
 
-    // Concurrent operations
     @Operation
     fun inc() = c.inc()
 
@@ -23,4 +21,12 @@ class CounterStructureTest {
 
     @Test
     fun test() = ModelCheckingOptions().check(this::class)
+
+    @Test
+    fun testWithIterations() = ModelCheckingOptions()
+        .iterations(100) // Specify the number of generated scenarios
+        .check(this::class)
+
+    @Test
+    fun stressTest() = StressOptions().check(this::class)
 }

@@ -6,18 +6,18 @@ import org.jetbrains.lincheck.util.LoggingLevel
 import kotlin.test.Test
 
 class DummyStructure {
-    fun foo() {}
-    fun buzz() {}
+    fun singleOp() {}
+    fun regularOp() {}
 }
 
 class RunOnceTest {
     var struct = DummyStructure()
 
     @Operation(runOnce = true)
-    fun foo() = struct.foo()
+    fun singleOp() = struct.singleOp()
 
     @Operation
-    fun buzz() = struct.buzz()
+    fun regularOp() = struct.regularOp()
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()

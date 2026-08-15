@@ -10,13 +10,8 @@ and analyzes the results.
 Let's test this `Counter` data structure with Lincheck:
 
 ```kotlin
-class Counter {
-    var value = 0
-
-    fun inc(): Int = ++value
-    fun dec(): Int = --value
-}
 ```
+{ src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="Counter" }
 
 1. Create a test class:
 
@@ -34,25 +29,19 @@ class Counter {
 3. Declare the operations you want to test as member functions and annotate them with
    `@Operation`:
 
-    ```kotlin
-    @Operation
-    fun inc() = c.inc()
-    
-    @Operation
-    fun dec() = c.dec()
-    ```
+   ```kotlin
+   ```
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.inc,CounterStructureTest.dec" }
 
-    This annotation tells Lincheck which methods to include when generating
-    execution scenarios.    
+   This annotation tells Lincheck which methods to include when generating
+   execution scenarios.    
 
 4. Declare a test function as a member function using `ModelCheckingOptions()` or
    `StressOptions()`. Annotate it with `@Test`:
 
    ```kotlin
-   @Test
-   fun modelCheckingTest() = ModelCheckingOptions()
-       .check(this::class)
    ```
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.test" }
 
    > Learn about the differences between model checking and stress testing in the
    > [Testing Strategies](lincheck-testing-strategies.md) article.
@@ -113,67 +102,17 @@ To test it, Lincheck performs the following steps:
 Consider this _incorrect_ implementation of a [Treiber Stack](https://en.wikipedia.org/wiki/Treiber_stack):
 
 ```kotlin
-import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.annotations.*
-import org.jetbrains.lincheck.strategy.managed.modelchecking.*
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.test.*
-
-class TreiberStack<E> {
-    private val top = AtomicReference<Node<E>?>(null)
-
-    fun push(item: E) {
-        val newHead = Node(item)
-        var oldHead: Node<E>?
-
-        do {
-            oldHead = top.get()
-            newHead.next = oldHead
-        } while (!top.compareAndSet(oldHead, newHead))
-    }
-
-    fun pop(): E? {
-        val oldHead = top.get()
-
-        if (oldHead == null) {
-            return null
-        }
-
-        val newHead = oldHead.next
-        top.compareAndSet(oldHead, newHead)
-
-        // Bug: by the time `pop()` finishes execution,
-        // another thread might have already popped this item.
-        return oldHead.item
-    }
-
-    private class Node<E>(
-        val item: E,
-        var next: Node<E>? = null
-    )
-}
 ```
+{ src="kotlinx-lincheck/TreiberStackTest.kt" include-symbol="TreiberStack" }
 
 You can test this structure with Lincheck to examine how the injected bug affects
 the behavior of the program:
 
 1. Create a test structure:
 
-    ```kotlin
-   class TreiberStackTest {
-       private val stack = TreiberStack<Int>()
-  
-       @Operation
-       fun push(value: Int) = stack.push(value)
-  
-       @Operation
-       fun pop(): Int? = stack.pop()
-  
-       @Test
-       fun modelCheckingTest() = ModelCheckingOptions()
-           .check(this::class)
-   }
+   ```kotlin
    ```
+   { src="kotlinx-lincheck/TreiberStackTest.kt" include-symbol="TreiberStackTest" }
 
 2. Run the test. Lincheck generates an error report and provides the execution
    scenario that causes incorrect behavior:
@@ -223,19 +162,8 @@ the behavior of the program:
    to the most recent value before returning the results:
 
    ```kotlin
-   fun pop(): E? {
-       var oldHead: Node<E>?
-       var newHead: Node<E>?
- 
-       do {
-           oldHead = top.get()
-           if (oldHead == null) return null
-           newHead = oldHead.next
-       } while (!top.compareAndSet(oldHead, newHead))
- 
-       return oldHead.item
-   }
    ```
+   { src="kotlinx-lincheck/TreiberStackTest.kt" include-symbol="TreiberStackCorrect.pop" }
 
 ## What’s next
 

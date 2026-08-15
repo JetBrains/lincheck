@@ -14,18 +14,8 @@ To create a group of operations that are never executed in parallel, use the `no
 declaring the operations:
 
 ```kotlin
-@Operation(nonParallelGroup = "consumers")
-fun poll(): Int? = queue.poll()
-
-@Operation(nonParallelGroup = "consumers")
-fun peek(): Int? = queue.peek()
-
-@Operation(nonParallelGroup = "producer")
-fun offer(x: Int) = queue.offer(x)
-
-@Operation
-fun isEmpty(): Boolean = queue.isEmpty()
 ```
+{ src="kotlinx-lincheck/NonParallelGroupTest.kt" include-symbol="NonParallelGroupTest.poll,NonParallelGroupTest.peek,NonParallelGroupTest.offer,NonParallelGroupTest.isEmpty" }
 
 Lincheck ensures that the operations from the non-parallel group are never executed in parallel with each other. 
 However, these operations can still run in parallel with operations outside of the non-parallel group:
@@ -47,23 +37,18 @@ However, these operations can still run in parallel with operations outside of t
 Use the `runOnce` option to execute the operation only once per test invocation:
 
 ```kotlin
-@Operation(runOnce = true)
-fun foo() = struct.foo()
-
-
-@Operation
-fun buzz() = struct.buzz()
 ```
+{ src="kotlinx-lincheck/RunOnceTest.kt" include-symbol="RunOnceTest.singleOp,RunOnceTest.regularOp" }
 
 An example of a generated scenario:
 
 ```text
-| ------------------- |
-| Thread 1 | Thread 2 |
-| ------------------- |
-| buzz()   | foo()    |
-| buzz()   | buzz()   |
-| ------------------- |
+| ----------------------------- |
+| Thread 1      | Thread 2      |
+| ----------------------------- |
+| regularOp()   | singleOp()    |
+| regularOp()   | regularOp()   |
+| ----------------------------- |
 ```
 
 ## Blocking operations
@@ -73,9 +58,8 @@ for [non-blocking guarantees](lincheck-progress-guarantees.md), Lincheck does no
 on an operation marked with the `blocking` option:
 
 ```kotlin
-@Operation(blocking = true)
-fun foo(): Int = struct.foo()
 ```
+{ src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapWithBlockingTest.put" }
 
 ## Cancelable operations
 
@@ -83,33 +67,14 @@ Use the `cancellableOnSuspension` option if the operation can be
 [canceled when it suspends](https://kotlinlang.org/docs/cancellation-and-timeouts.html#suspension-points-and-cancellation):
 
 ```kotlin
-@Operation(cancellableOnSuspension = true)
-fun foo(): Int = struct.foo()
 ```
+{ src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="CancellableOnSuspensionTest.receive" }
 
 Consider the following channel test:
 
 ```kotlin
-@Param(name = "value", gen = IntGen::class, conf = "1:3")
-class ChannelCancellableTest {
-    private val ch = Channel<Int>()
-    
-    @Operation
-    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
-    
-    @Operation(cancellableOnSuspension = true)
-    suspend fun receive() = ch.receive()
-  
-  
-    @Test
-    fun test() = ModelCheckingOptions()
-        .iterations(50)
-        .invocationsPerIteration(1000)
-        // Report the scenarios even if the test has not failed
-        .logLevel(LoggingLevel.INFO)
-        .check(this::class)
-}
 ```
+{ src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="CancellableOnSuspensionTest" }
 
 <table>
 <tr><td><code>cancellableOnSuspension = false</code></td><td><code>cancellableOnSuspension = true</code></td></tr>
@@ -151,32 +116,14 @@ If `cancellableOnSuspension` is enabled and the operation should support
 you can also set `promptCancellation` to `true`:
 
 ```kotlin
-@Operation(cancellableOnSuspension = true, promptCancellation = true)
-fun foo(): Int = struct.foo()
 ```
+{ src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="PromptCancellationTest.receive" }
 
 Consider the following channel test:
 
 ```kotlin
-@Param(name = "value", gen = IntGen::class, conf = "1:3")
-class PromptCancellationTest {
-    private val ch = Channel<Int>()
-    
-    @Operation
-    suspend fun send(@Param(name = "value") value: Int) = ch.send(value)
-    
-    @Operation(cancellableOnSuspension = true, promptCancellation = true)
-    suspend fun receive() = ch.receive()
-    
-    @Test
-    fun test() = ModelCheckingOptions()
-        .iterations(50)
-        .invocationsPerIteration(1000)
-        // Report the scenarios even if the test has not failed
-        .logLevel(LoggingLevel.INFO)
-        .check(this::class)
-}
 ```
+{ src="kotlinx-lincheck/CancellableOperationsTests.kt" include-symbol="PromptCancellationTest" }
 
 <table>
 <tr><td><code>promptCancellation = false</code></td><td><code>promptCancellation = true</code></td></tr>
