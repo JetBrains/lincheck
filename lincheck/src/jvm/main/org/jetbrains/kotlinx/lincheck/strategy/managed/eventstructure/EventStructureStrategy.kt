@@ -310,7 +310,7 @@ internal class EventStructureStrategy(
     }
 
     override fun isActive(iThread: Int): Boolean {
-        // Note: We may want to switch to a livelocked thread in case it you can schedule it
+        // Note: We may want to switch to a livelocked thread in case it can be scheduled
         return (super.isActive(iThread) || threadScheduler.isLiveLocked(iThread)) && (eventStructure.inReplayPhase() implies {
             eventStructure.inReplayPhase(iThread) && eventStructure.canReplayNextEvent(iThread)
         })
@@ -524,7 +524,7 @@ internal class EventStructureStrategy(
 
     /**
      * NOTE: We need a way to combine loop detection with revisit options from the event structure strategy,
-     * Therefore, if the loop detector reports that we are struck during replay of a backtracking option,
+     * Therefore, if the loop detector reports that we are stuck during replay of a backtracking option,
      * then it means that the revisit option is redundant.
      */
     override fun processLoopDetectorDecision(
@@ -534,13 +534,13 @@ internal class EventStructureStrategy(
         codeLocation: Int
     ) {
         val isReplay = eventStructure.inReplayPhase(threadId)
-        if(!isReplay) {
+        if (!isReplay) {
             super.processLoopDetectorDecision(decision, threadId, loopId, codeLocation)
             return
         }
 
         // NOTE: May need to just have the STUCK decision in this check
-        if(decision == LoopDetector.Decision.STUCK || decision == LoopDetector.Decision.SWITCH_THREAD) {
+        if (decision == LoopDetector.Decision.STUCK || decision == LoopDetector.Decision.SWITCH_THREAD) {
             onInconsistency(LoopStuckViolation()) // We stop this backtracking part with an inconsistency.
         }
     }
@@ -1022,6 +1022,5 @@ private class EventStructureParkingTracker(
 
 }
 
-// TODO: find a better place/name for this?
 class LoopStuckViolation : Inconsistency() {}
 

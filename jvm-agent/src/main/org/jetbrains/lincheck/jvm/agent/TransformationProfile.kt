@@ -576,7 +576,7 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
 
             trackLoops = true
             trackIrreducibleLoops = true
-            trackAwaitLoops = false // TODO: This is broken currently
+            trackAwaitLoops = true // TODO: This is broken currently
         }
     }
 }

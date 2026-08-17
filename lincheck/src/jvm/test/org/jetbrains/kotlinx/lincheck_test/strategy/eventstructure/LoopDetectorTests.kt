@@ -19,11 +19,18 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.concurrent.thread
 
+/**
+ * These tests check the integration of the loop detector with the event structure strategy.
+ * Tests contain spin loops which will hopefully be detected by the loop detector.
+ * If the strategy integration is correct, then we should also be able to detect the cases
+ * where we repeatedly revisit a read which causes the loop to not terminate.
+ */
 class LoopDetectorTests {
 
     @Test
     fun testMPSCQueueTest() {
         class TestClass {
+            //NOTE: this data structure contains the [spinWaitForNextNode] method, which
             private val queue = MpscLinkedAtomicQueue<Int>()
             fun offer(x: Int) = queue.offer(x)
             fun poll(): Int? = queue.poll()
@@ -43,7 +50,12 @@ class LoopDetectorTests {
 
         val outcomes = setOf(null, 1)
         // NOTE: the number of executions depends on the loop detector bound
-        litmusTest(TestClass::class.java, scenario, assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency) { results ->
+        litmusTest(
+            TestClass::class.java,
+            scenario,
+            assertSame(outcomes, UNKNOWN),
+            memoryModel = MemoryModel.SequentialConsistency
+        ) { results ->
             val p1 = getValue<Int?>(results.parallelResults[1][0]!!)
             p1
         }
@@ -71,7 +83,13 @@ class LoopDetectorTests {
 
         val outcomes = setOf(null, 1)
         // NOTE: the number of executions depends on the loop detector bound
-        litmusTest(TestClass::class.java, scenario, assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency, 10) { results ->
+        litmusTest(
+            TestClass::class.java,
+            scenario,
+            assertSame(outcomes, UNKNOWN),
+            memoryModel = MemoryModel.SequentialConsistency,
+            invocations = 10
+        ) { results ->
             val p1 = getValue<Int?>(results.parallelResults[0][0]!!)
             p1
         }
@@ -84,7 +102,11 @@ class LoopDetectorTests {
             listOf(42)
         )
 
-        litmusTest(assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency, 100) {
+        litmusTest(
+            assertSame(outcomes, UNKNOWN),
+            memoryModel = MemoryModel.SequentialConsistency,
+            invocations = 100,
+        ) {
             val x = AtomicInteger(0)
             var r0 = -1
 
@@ -109,7 +131,11 @@ class LoopDetectorTests {
     fun testSpinLoop2() {
         val outcomes = setOf<List<Int>>(listOf(42))
 
-        litmusTest(assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency, 10) {
+        litmusTest(
+            assertSame(outcomes, UNKNOWN),
+            memoryModel = MemoryModel.SequentialConsistency,
+            invocations = 10
+        ) {
             val x = AtomicInteger(0)
 
             var r0 = -1
@@ -133,14 +159,16 @@ class LoopDetectorTests {
     }
 
     @Test
-    fun testComplicatedSpinLoop() {
+    fun testBlockingMsQueueSpinLoop() {
         // Contains a loop shape to the loop inside the enqueue operation a blocking MS queue [MSQueueBlocking]
         val outcomes = setOf<List<Int>>(listOf(42))
 
-        litmusTest(assertSame(outcomes, UNKNOWN), MemoryModel.SequentialConsistency, 10) {
+        litmusTest(assertSame(outcomes, UNKNOWN),
+            memoryModel = MemoryModel.SequentialConsistency,
+            invocations = 10
+        ) {
             val x = AtomicReference<AtomicInteger>(AtomicInteger(0))
             var r0 = -1
-
 
             val t1 = thread {
                 while(true) {
