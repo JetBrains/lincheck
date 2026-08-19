@@ -146,6 +146,19 @@ fun<E : ThreadEvent> Execution<E>.nextEvent(event: E): E? =
         events.getOrNull(event.threadPosition + 1)
     }
 
+fun<E: ThreadEvent> Execution<E>.getExclusiveWriteForReadResponse(exclusiveReadResponse: E): ThreadEvent? {
+    val label = exclusiveReadResponse.label
+    check(label is ReadAccessLabel)
+    check(label.isResponse)
+    check(label.isExclusive)
+
+    val nextEvent = nextEvent(exclusiveReadResponse) ?: return null
+    // Next event must be an exclusive write to the same location
+    val nextLabel = nextEvent.label as? WriteAccessLabel ?: return null
+    if (!nextLabel.isExclusive || nextLabel.location != label.location) return null
+    return nextEvent
+}
+
 // TODO: make default constructor
 fun<E : ThreadEvent> Execution(): Execution<E> =
     MutableExecution()

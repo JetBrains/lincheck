@@ -140,6 +140,8 @@ interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMem
 
     val locationInfo: Map<MemoryLocation, LocationInfo>
 
+    fun getWriteReadResponses(write: AtomicThreadEvent, location: MemoryLocation): SortedList<AtomicThreadEvent>
+
     fun getReadRequests(location: MemoryLocation) : SortedList<AtomicThreadEvent> =
         get(AtomicMemoryAccessCategory.ReadRequest, location)
 
@@ -215,7 +217,16 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
         }
     }
 
+    // We need to have memory location as a kay, to handle writes with InitLabel and ObjectAllocationLabel
+    private val readsFromIndex = mutableMapOf<Pair<AtomicThreadEvent, MemoryLocation>, SortedMutableList<AtomicThreadEvent>>()
     private val index = MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>(classifier)
+
+    override fun getWriteReadResponses(
+        write: AtomicThreadEvent,
+        location: MemoryLocation
+    ): SortedList<AtomicThreadEvent> {
+        return readsFromIndex[write to location] ?: sortedListOf()
+    }
 
     override fun get(category: AtomicMemoryAccessCategory, key: MemoryLocation): SortedList<AtomicThreadEvent> =
         index[category, key]
@@ -235,7 +246,21 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
             _locationInfo[label.location] = LocationInfoData()
         }
         updateRaceStatus(label.location, event)
+        updateReadsFromIndex(event)
         index.index(event)
+    }
+
+    private fun updateReadsFromIndex(event: AtomicThreadEvent) {
+        // Handle only read access labels
+        val label = event.label as? ReadAccessLabel ?: return
+        if(!label.isResponse) return
+
+        // Get reads from and add the read to the list of reads
+        val location = label.location
+        val readsFrom = event.readsFrom
+        val reads = readsFromIndex.getOrPut(Pair(readsFrom, location)) { sortedMutableListOf() }
+        check(event !in reads) { "Found read event $event in reads from index for $readsFrom: $reads"}// Sanity check
+        reads.add(event)
     }
 
     private fun updateRaceStatus(location: MemoryLocation, event: AtomicThreadEvent) {
@@ -285,6 +310,7 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
     override fun reset() {
         _locationInfo.clear()
         index.reset()
+        readsFromIndex.clear()
     }
 
 }

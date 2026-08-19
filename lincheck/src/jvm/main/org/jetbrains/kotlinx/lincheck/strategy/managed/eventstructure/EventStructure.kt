@@ -406,19 +406,24 @@ internal class EventStructure(
                 }
             }
             label is ReadAccessLabel && label.isResponse && label.isExclusive -> run {
-                // TODO: Also handle the case where there are non-exclusive reads messing this up...
-                val write = dependencies.first()
+                // NOTE: we assume that the first write dependency is the write that this read reads from.
+                // So this should work just like the [AtomicThreadEvent.readsFrom] method.
+                // As we do not have an event, but just a label and a list of dependencies, we do it manually.
+                val write = dependencies.find { it.label.isWriteAccess() }!! as AtomicThreadEvent
                 val writeLabel = write.label
-                check(writeLabel is WriteAccessLabel || writeLabel is ObjectAllocationLabel || writeLabel is InitializationLabel)
-                for (event in execution) {
-                    val otherLabel = event.label
-                    val otherReadLabel = otherLabel.refine<ReadAccessLabel> { isResponse && isExclusive } ?: continue
-                    if (otherReadLabel.location != label.location) continue
-                    if (event.readsFrom != write) continue
-                    val execlusiveWriteLabel = execution[event.threadId, event.threadPosition + 1]?.label as? WriteAccessLabel ?: continue
-                    // If it is not actually exclusive, or the location does not match then this is a failed CAS, so no conflicts
-                    if (!execlusiveWriteLabel.isExclusive || execlusiveWriteLabel.location != label.location) continue
-                    conflicts.add(event)
+                val location = label.location
+                check(writeLabel.isWriteAccess())
+                // We check if there are any other successful RMW events that read from the same write event
+                // as the write event this read reads from.
+                // In that case they are the conflicting events.
+                for (readEvent in execution.memoryAccessEventIndex.getWriteReadResponses(write, location)) {
+                    check(readEvent.readsFrom == write)
+                    val otherLabel = readEvent.label
+                    // Make sure the read is exclusive
+                    otherLabel.refine<ReadAccessLabel> { isExclusive } ?: continue
+                    // Make sure that it is successful by checking that the next event for the thread is a rmw write
+                    execution.getExclusiveWriteForReadResponse(readEvent) ?: continue
+                    conflicts.add(readEvent)
                 }
             }
             // wait-response synchronizing with our notify is conflict
