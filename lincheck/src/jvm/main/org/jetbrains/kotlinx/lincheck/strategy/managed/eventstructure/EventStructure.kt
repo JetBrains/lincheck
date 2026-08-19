@@ -315,7 +315,7 @@ internal class EventStructure(
             // or are observed by the event, a la GenMC
             cut(conflicts)
             cut { cutEvent ->
-                val shouldDelete = (
+                val shouldCut = (
                     // Deleted events are with id greater than the parent request event and
                     // events which are not in the causality frontier of the event we are backtracking.
                     // The null check is safe because of the check at the beginning of the function
@@ -324,8 +324,8 @@ internal class EventStructure(
                 )
                 // Bail out of the entire backtracking point function
                 // if one of the events we want to delete is pinned
-                if (shouldDelete && pinnedEvents.contains(cutEvent)) return
-                shouldDelete
+                if (shouldCut && pinnedEvents.contains(cutEvent)) return
+                shouldCut
             }
             // NOTE: this can break some tests when locks and monitors are introduced again.
             addUnblockingResponses(conflicts)
