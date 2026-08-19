@@ -1740,8 +1740,8 @@ class PrimitivesTest {
 
         val scenario = scenario {
             parallel {
-                thread{ actor(TestClass::one)}
-                thread{ actor(TestClass::two)}
+                thread { actor(TestClass::one) }
+                thread { actor(TestClass::two) }
             }
         }
 
@@ -1766,13 +1766,13 @@ class PrimitivesTest {
             val r = IntArray(3)
 
             val t1 = thread {
-                r[0] = if(x.compareAndSet(0, 1)) 1 else 0
+                r[0] = if (x.compareAndSet(0, 1)) 1 else 0
             }
             val t2 = thread {
-                r[1] = if(x.compareAndSet(0, 1)) 1 else 0
+                r[1] = if (x.compareAndSet(0, 1)) 1 else 0
             }
             val t3 = thread {
-                r[2] = if(x.compareAndSet(0, 1)) 1 else 0
+                r[2] = if (x.compareAndSet(0, 1)) 1 else 0
             }
 
             t1.join()
@@ -1794,8 +1794,8 @@ class PrimitivesTest {
             val r = IntArray(2)
 
             val t1 = thread {
-                r[0] = if(x.weakCompareAndSetPlain(0, 3)) 1 else 0
-                if(r[0] == 0) r[1] = x.getAndIncrement()
+                r[0] = if (x.weakCompareAndSetPlain(0, 3)) 1 else 0
+                if (r[0] == 0) r[1] = x.getAndIncrement()
             }
 
             val t2 = thread {

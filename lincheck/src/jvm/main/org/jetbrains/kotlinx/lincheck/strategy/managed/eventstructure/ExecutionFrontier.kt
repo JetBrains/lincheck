@@ -105,6 +105,7 @@ inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: Lis
     }
 }
 
+// Pushes back the mutable frontier by removing events until the given predicate is satisfied
 inline fun <E: ThreadEvent> MutableExecutionFrontier<E>.cut(pred: (ThreadEvent) -> Boolean) {
     threadMap.forEach { (tid, lastEvent) ->
         val pred = lastEvent?.pred(inclusive = true, pred)

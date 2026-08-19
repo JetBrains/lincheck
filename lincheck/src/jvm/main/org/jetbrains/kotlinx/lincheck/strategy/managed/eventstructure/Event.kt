@@ -83,6 +83,8 @@ interface ThreadEvent : Event {
     fun predNth(n: Int): ThreadEvent?
 }
 
+
+// Returns the first predecessor of the given event that satisfies the given predicate
 inline fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (ThreadEvent) -> Boolean): ThreadEvent? {
     if (inclusive && predicate(this))
         return this

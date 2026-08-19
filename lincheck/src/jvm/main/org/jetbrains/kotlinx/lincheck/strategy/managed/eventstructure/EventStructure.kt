@@ -297,12 +297,12 @@ internal class EventStructure(
         // [addBinarySynchronizedEvents] and [addBarrierSynchronizedEvents] methods
         // which always pass in a parent
         check((event.label !is InitializationLabel) implies (event.parent != null)) { "Backtracked event must have a parent: $event" }
-        val causalityFrontier = execution.calculateFrontier(event.causalityClock)
-        // Special case for rmw events. We need to skip if we have pinned eve
-        for (event in conflicts) {
-            if (event in pinnedEvents) return
-        }
 
+        // We need to skip creating a backtracking point if any of the conflicts are pinned
+        // as they will be removed.
+        if (conflicts.any { it in pinnedEvents}) return
+
+        val causalityFrontier = execution.calculateFrontier(event.causalityClock)
         val newPinnedEvents = pinnedEvents.copy().apply {
             merge(causalityFrontier)
             cut(conflicts)
@@ -316,14 +316,15 @@ internal class EventStructure(
             cut(conflicts)
             cut { cutEvent ->
                 val shouldDelete = (
-                    // Deleted events are with id > than the parent request event which are not in the causality frontier of
-                    event.parent!!.id < cutEvent.id && // This is safe because of the check at the beginning of the function
+                    // Deleted events are with id greater than the parent request event and
+                    // events which are not in the causality frontier of the event we are backtracking.
+                    // The null check is safe because of the check at the beginning of the function
+                    cutEvent.id > event.parent!!.id &&
                     !causalityFrontier.contains(cutEvent)
                 )
-                // Bail out if one of the events we want to delete is pinned
-                if (shouldDelete && pinnedEvents.contains(cutEvent)) {
-                    return
-                }
+                // Bail out of the entire backtracking point function
+                // if one of the events we want to delete is pinned
+                if (shouldDelete && pinnedEvents.contains(cutEvent)) return
                 !shouldDelete
             }
             // NOTE: this can break some tests when locks and monitors are introduced again.
