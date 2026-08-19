@@ -314,7 +314,7 @@ internal class EventStructure(
             // We need to keep events in the frontier that are either have: id <= (parent.id)
             // or are observed by the event, a la GenMC
             cut(conflicts)
-            cutUntilTrue { cutEvent ->
+            cut { cutEvent ->
                 val shouldDelete = (
                     // Deleted events are with id greater than the parent request event and
                     // events which are not in the causality frontier of the event we are backtracking.
@@ -325,7 +325,7 @@ internal class EventStructure(
                 // Bail out of the entire backtracking point function
                 // if one of the events we want to delete is pinned
                 if (shouldDelete && pinnedEvents.contains(cutEvent)) return
-                !shouldDelete
+                shouldDelete
             }
             // NOTE: this can break some tests when locks and monitors are introduced again.
             addUnblockingResponses(conflicts)

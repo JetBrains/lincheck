@@ -84,7 +84,10 @@ interface ThreadEvent : Event {
 }
 
 
-// Returns the first predecessor of the given event that satisfies the given predicate
+/**
+ * Returns the first predecessor of the given event that satisfies the given [predicate]
+ * @param [inclusive] If we include the current thread event in the search.
+ */
 inline fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (ThreadEvent) -> Boolean): ThreadEvent? {
     if (inclusive && predicate(this))
         return this

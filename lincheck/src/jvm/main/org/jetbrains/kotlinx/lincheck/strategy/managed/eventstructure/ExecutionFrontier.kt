@@ -95,20 +95,21 @@ inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: Lis
         return
     // TODO: optimize --- extract sublist of maximal events having no causal successors,
     //   to remove them faster without the need to compute vector clocks
-    cutUntilTrue {
+    cut {
         // find the program-order latest event, not observing any of the cut events
         // TODO: optimize --- transform events into vector clock
         // TODO: optimize using binary search
-        (it is E) && !events.any { cutEvent ->
+        (it !is E) || events.any { cutEvent ->
             it.causalityClock.observes(cutEvent.threadId, cutEvent.threadPosition)
         }
     }
 }
 
-// Pushes back the mutable frontier by removing events until the given predicate is satisfied
-inline fun <E: ThreadEvent> MutableExecutionFrontier<E>.cutUntilTrue(pred: (ThreadEvent) -> Boolean) {
+// Pushes back the mutable frontier by removing events while they satisfy the given predicate
+inline fun <E: ThreadEvent> MutableExecutionFrontier<E>.cut(pred: (ThreadEvent) -> Boolean) {
     threadMap.forEach { (tid, lastEvent) ->
-        val pred = lastEvent?.pred(inclusive = true, pred)
+        //NOTE: we need to invert pred as it removes events UNTIL the current event is satisfied
+        val pred = lastEvent?.pred(inclusive = true) { !pred(it) }
         @Suppress("UNCHECKED_CAST")
         set(tid, pred as? E)
     }
