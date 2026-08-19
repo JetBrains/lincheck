@@ -314,7 +314,7 @@ internal class EventStructure(
             // We need to keep events in the frontier that are either have: id <= (parent.id)
             // or are observed by the event, a la GenMC
             cut(conflicts)
-            cut { cutEvent ->
+            cutUntilTrue { cutEvent ->
                 val shouldDelete = (
                     // Deleted events are with id greater than the parent request event and
                     // events which are not in the causality frontier of the event we are backtracking.
