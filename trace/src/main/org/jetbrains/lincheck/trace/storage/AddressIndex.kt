@@ -13,11 +13,14 @@ package org.jetbrains.lincheck.trace.storage
 import java.nio.file.Files
 import kotlin.math.min
 
-sealed class AddressIndex {
-    var size: Int = 0
+/**
+ * An append-only index of `Long` addresses, readable as a plain [List].
+ */
+sealed class AddressIndex : AbstractList<Long>() {
+    override var size: Int = 0
         protected set
 
-    abstract operator fun get(index: Int): Long
+    abstract override operator fun get(index: Int): Long
     abstract fun add(address: Long)
 
     open fun finishWrite() {}

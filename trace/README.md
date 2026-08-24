@@ -362,12 +362,21 @@ having special skipping code, it will not be faster than load.
  Instance of lazy loader instatiates a new context used to load data.
 
 ### Printing a tree of trace points.
- Tree of trace points can be pretty-printed to any print stream with help
-of `printRecorderTrace` function. It prints text representation of each trace point
-in the provided list, with indentations to show call hierarchy.
- 
- All not loaded tracepoints in method call tracepoints are folded to
-lines indicating how much was missed.
+ Tree of trace points can be pretty-printed with help of the `printTraceTree` function.
+It prints text representation of each trace point,
+with indentations to show call hierarchy.
+
+ There are two overloads:
+one takes a `LazyTraceReader` and an output stream and prints the trace read from the reader;
+the other takes in-memory root trace points (with a context and an output filename),
+saves them into a temporary trace file, and prints it back through the lazy reader.
+
+ The trace is traversed through the `TraceTree` API:
+trace points are read shallowly on demand,
+and children of a subtree are unloaded after it is printed,
+so only the current path stays materialized.
+Trace compression (call squashing, loop folding, etc.) is applied
+as rewrite rules over the tree during printing.
 
  Tracepoints can be printed with their code locations (`verbose = true`) or 
 without (`verbose = false`).

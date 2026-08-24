@@ -15,7 +15,6 @@ import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.util.Logger
 import java.io.DataInput
 import java.io.DataInputStream
-import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteBuffer
 import kotlin.use
@@ -31,55 +30,6 @@ internal interface TracepointConsumer {
 internal interface BlockConsumer {
     fun blockStarted(threadId: Int) {}
     fun blockEnded(threadId: Int) {}
-}
-
-/**
- * Class which describes fully loaded trace.
- */
-data class TraceWithContext(
-    /**
-     * Trace context with all descriptors belonging to given trace
-     */
-    val context: TraceContext,
-    /**
-     * Trace meta info. Can be `null` if trace is loaded from non-packed (single) data file.
-     */
-    val metaInfo: TraceMetaInfo?,
-    /**
-     * List of all root calls for all traced threads.
-     */
-    val roots: List<TRTracePoint>,
-    /**
-     *  If it is diff, map diff thread id to right and left thread ids. If no thread on left or right,
-     *  id will be -1
-     */
-    val diffThreadMap: Map<Int, Pair<Int, Int>>?
-)
-
-// TODO: introduce `TraceReader` class and move all `loadXXX` methods there
-
-/**
- * Load trace from file. File can contain unpacked binary trace (without index)
- * or packed trace with metainfo, data and index inside.
- *
- * If trace was loaded from packed file, [TraceWithContext.metaInfo] must be filled in,
- * it will be `null` otherwise.
- */
-fun loadRecordedTrace(traceFileName: String): TraceWithContext {
-    val input = openExistingFile(traceFileName)?.buffered(INPUT_BUFFER_SIZE)
-    require(input != null) { "Cannot open trace \"$traceFileName\"" }
-
-    val dataProvider = TraceDataProvider(traceFileName)
-    // We need meta, data file and maybe maps
-    dataProvider.use { provider ->
-        val input = openExistingFile(provider.dataFileName)
-        if (input == null) {
-            throw IOException("Cannot open trace \"$traceFileName\" (data file is lost)")
-        }
-        input.use {
-            return loadRecordedTrace(it, provider.metaInfo, provider.threadIdMap)
-        }
-    }
 }
 
 private fun readMagic(input: InputStream): Long {
@@ -107,55 +57,6 @@ fun isTraceData(traceFileName: String): Boolean {
  */
 fun isTraceData(firstBytes: ByteBuffer): Boolean =
     firstBytes.capacity() >= 8 && firstBytes.getLong(0) == TRACE_MAGIC
-
-/**
- * Load unpacked trace. [inp] must be stream pointing to binary trace format, not
- * packed in any way.
-
- * [TraceWithContext.metaInfo] will be `null`.
- */
-fun loadRecordedTrace(inp: InputStream): TraceWithContext = loadRecordedTrace(inp, null, null)
-
-internal fun loadRecordedTrace(inp: InputStream, meta: TraceMetaInfo?, threadMap: Map<Int, Pair<Int, Int>>?): TraceWithContext {
-    DataInputStream(inp.buffered(INPUT_BUFFER_SIZE)).use { input ->
-        checkDataHeader(input)
-
-        // Create an isolated fresh context for this load
-        val context = TraceContext()
-        val roots = mutableMapOf<Int, MutableList<TRTracePoint>>()
-
-        loadAllObjectsDeep(
-            input = input,
-            context = context,
-            tracepointConsumer = object : TracepointConsumer {
-                override fun tracePointRead(
-                    parent: TRContainerTracePoint?,
-                    tracePoint: TRTracePoint
-                ) {
-                    if (parent == null) {
-                        roots.computeIfAbsent(tracePoint.threadId) { mutableListOf() }.add(tracePoint)
-                    } else {
-                        parent.addChild(tracePoint)
-                    }
-                }
-            },
-            blockConsumer = object : BlockConsumer {}
-        )
-
-        roots.forEach {
-            if (it.value.size > 1) {
-                Logger.warn { "TraceRecorder: Thread #${it.key} contains multiple top-level calls" }
-            }
-        }
-
-        return TraceWithContext(
-            context = context,
-            metaInfo = meta,
-            roots = roots.values.map { it.first() },
-            diffThreadMap = if (meta?.isDiff ?: false) threadMap else null
-        )
-    }
-}
 
 internal fun loadAllObjectsDeep(
     input: DataInputStream,

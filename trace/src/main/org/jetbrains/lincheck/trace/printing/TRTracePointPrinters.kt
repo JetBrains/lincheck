@@ -136,7 +136,10 @@ class DefaultTRTextAppendable(
 
 abstract class AbstractTRMethodCallTracePointPrinter() {
 
-    protected fun TRAppendable.appendTracePoint(tracePoint: TRMethodCallTracePoint): TRAppendable {
+    protected fun TRAppendable.appendTracePoint(
+        tracePoint: TRMethodCallTracePoint,
+        parentCall: TRMethodCallTracePoint? = null,
+    ): TRAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         if (tracePoint.isConstructor()) {
             if (tracePoint.isSuperConstructorCall()) {
@@ -151,7 +154,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             appendSpecialSymbol(")")
             appendResult(tracePoint)
         } else {
-            appendOwner(tracePoint)
+            appendOwner(tracePoint, parentCall)
             appendMethodName(tracePoint.methodDescriptor)
             appendSpecialSymbol("(")
             appendParameters(tracePoint)
@@ -161,8 +164,11 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
         return this
     }
 
-    protected fun TRAppendable.appendOwner(tracePoint: TRMethodCallTracePoint): TRAppendable {
-        if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass()) {
+    protected fun TRAppendable.appendOwner(
+        tracePoint: TRMethodCallTracePoint,
+        parentCall: TRMethodCallTracePoint? = null,
+    ): TRAppendable {
+        if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass(parentCall)) {
             return this
         }
         val ownerName = tracePoint.accessPath
@@ -172,7 +178,7 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
                     appendClassName(tracePoint.classDescriptor)
                     appendSpecialSymbol(".")
                 } else if (it.isCompanionAccess()) {
-                    if (!tracePoint.isCalledFromDefiningClass()) {
+                    if (!tracePoint.isCalledFromDefiningClass(parentCall)) {
                         appendClassName(ClassDescriptor(
                             tracePoint.context,
                             tracePoint.classDescriptor.name.substringBeforeLast("\$Companion"),
@@ -251,8 +257,11 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
 
 object DefaultTRMethodCallTracePointPrinter: AbstractTRMethodCallTracePointPrinter() {
 
-    fun TRAppendable.append(tracePoint: TRMethodCallTracePoint): TRAppendable {
-        appendTracePoint(tracePoint)
+    fun TRAppendable.append(
+        tracePoint: TRMethodCallTracePoint,
+        parentCall: TRMethodCallTracePoint? = null,
+    ): TRAppendable {
+        appendTracePoint(tracePoint, parentCall)
         append(tracePoint, verbose)
         return this
     }

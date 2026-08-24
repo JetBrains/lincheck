@@ -147,7 +147,6 @@ class TracePointCloner(
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
                 loopId = tracePoint.loopId,
-                parentTracePoint = null,
                 eventId = eventId++
             )
 
@@ -157,7 +156,6 @@ class TracePointCloner(
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
                 loopId = tracePoint.loopId,
                 loopIteration = tracePoint.loopIteration,
-                parentTracePoint = null,
                 eventId = eventId++
             )
 
@@ -169,7 +167,6 @@ class TracePointCloner(
                 obj = tracePoint.obj.clone(),
                 parameters = tracePoint.parameters.clone(),
                 flags = tracePoint.flags,
-                parentTracePoint = null,
                 eventId = eventId++
             ).also {
                 it.result = tracePoint.result.clone()

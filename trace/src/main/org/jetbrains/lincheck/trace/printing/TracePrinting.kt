@@ -12,97 +12,55 @@ package org.jetbrains.lincheck.trace.printing
 
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.serialization.*
+import org.jetbrains.lincheck.trace.tree.compressedView
+import org.jetbrains.lincheck.trace.tree.readTraceTrees
+import org.jetbrains.lincheck.util.tree.Tree
+import org.jetbrains.lincheck.util.tree.unloadChildren
 import java.io.File
 import java.io.OutputStream
 import java.io.PrintStream
 
-fun printPostProcessedTrace(outputFileName: String?, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
+/**
+ * Saves [trees] into a temporary trace file and prints it back
+ * with the tree-based printer (see the reader-based [printTraceTree] overload).
+ */
+fun printTraceTree(outputFileName: String?, context: TraceContext, trees: List<Tree<TRTracePoint>>, verbose: Boolean) {
     val input = File.createTempFile("lincheck-trace", ".tmp")
-    saveRecorderTrace(input.absolutePath, context, rootCallsPerThread)
-    printPostProcessedTrace(outputFileName, input.absolutePath, verbose)
+    saveRecorderTrace(input.absolutePath, context, trees)
+    LazyTraceReader(input.absolutePath).use { reader ->
+        val output = if (outputFileName == null) System.out else openNewFile(outputFileName)
+        printTraceTree(output, reader, verbose)
+    }
     input.delete()
 }
 
-fun printPostProcessedTrace(outputFileName: String?, inputFileName: String, verbose: Boolean) {
-    val reader = LazyTraceReader(inputFileName)
-    printPostProcessedTrace(outputFileName, reader, verbose)
-}
-
-fun printPostProcessedTrace(outputFileName: String?, reader: LazyTraceReader, verbose: Boolean) {
-    val output = if (outputFileName == null) System.out else openNewFile(outputFileName)
-    printPostProcessedTrace(output, reader, verbose)
-}
-
-fun printPostProcessedTrace(outputStream: OutputStream, reader: LazyTraceReader, verbose: Boolean) {
-    val roots = reader.readRoots()
+/**
+ * Prints the trace read by [reader] by traversing it through the
+ * [org.jetbrains.lincheck.trace.tree.LazyLoadableTraceTree] API instead of manipulating [TRTracePoint] children directly.
+ *
+ * The `CompressingPostprocessor` modifications are applied as rewrite rules over the tree (see [compressedView]).
+ * The tree path reads trace points shallowly and never invokes the reader's postprocessor.
+ */
+fun printTraceTree(outputStream: OutputStream, reader: LazyTraceReader, verbose: Boolean) {
+    val trees = reader.readTraceTrees().map { it.compressedView(reader.context) }
 
     PrintStream(outputStream.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
-        roots.forEachIndexed { i, root ->
-            output.println(getThreadName(root.threadId, roots.size, reader.context))
-            lazyPrintTRPoint(output, reader, root, 0, verbose)
+        trees.forEach { tree ->
+            val root = tree.root ?: return@forEach
+            output.println(getThreadName(root.data.threadId, trees.size, reader.context))
+            printTraceTreeNode(output, root, 0, verbose)
         }
     }
 }
 
-private fun lazyPrintTRPoint(output: PrintStream, reader: LazyTraceReader, node: TRTracePoint, depth: Int, verbose: Boolean) {
+private fun printTraceTreeNode(output: PrintStream, node: Tree.Node<TRTracePoint>, depth: Int, verbose: Boolean) {
     output.print(" ".repeat(depth * 2))
-    output.println(node.toText(verbose))
-    if (node is TRContainerTracePoint && node.events.isNotEmpty()) {
-        reader.loadAllChildren(node)
-        node.events.forEach { event ->
-            if (event != null) {
-                lazyPrintTRPoint(output, reader, event, depth + 1, verbose)
-            }
-        }
-        node.unloadAllChildren()
+    output.println(node.data.toText(verbose, node.parent?.data))
+    node.children.forEach { child ->
+        printTraceTreeNode(output, child, depth + 1, verbose)
     }
-}
-
-fun printRecorderTrace(fileName: String?, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) =
-    printRecorderTrace(
-        output = if (fileName == null) System.out else openNewFile(fileName),
-        context = context,
-        rootCallsPerThread = rootCallsPerThread,
-        verbose = verbose
-    )
-
-fun printRecorderTrace(output: OutputStream, context: TraceContext, rootCallsPerThread: List<TRTracePoint>, verbose: Boolean) {
-    PrintStream(output.buffered(OUTPUT_BUFFER_SIZE)).use { output ->
-        val appendable = DefaultTRTextAppendable(output, verbose)
-        rootCallsPerThread.forEach { root ->
-            output.println(getThreadName(root.threadId, rootCallsPerThread.size, context))
-            printTRPoint(appendable, root, 0)
-        }
-    }
-}
-
-private fun printTRPoint(appendable: TRAppendable, node: TRTracePoint, depth: Int) {
-    appendable.append(" ".repeat(depth * 2))
-    node.toText(appendable)
-    appendable.append("\n")
-    if (node is TRContainerTracePoint) {
-        var unloaded = 0
-        node.events.forEach { event ->
-            if (event == null) {
-                unloaded++
-            } else {
-                reportUnloaded(appendable, unloaded, depth + 1)
-                unloaded = 0
-                printTRPoint(appendable, event, depth + 1)
-            }
-        }
-        reportUnloaded(appendable, unloaded, depth + 1)
-    }
-}
-
-private fun reportUnloaded(appendable: TRAppendable, unloaded: Int, depth: Int) {
-    if (unloaded == 1) {
-        appendable.append(" ".repeat(depth * 2))
-        appendable.append("... <unloaded child>\n")
-    } else if (unloaded > 1) {
-        appendable.append(" ".repeat(depth * 2))
-        appendable.append("... <${unloaded} unloaded children>\n")
-    }
+    // Keep only the current path materialized, like the non-tree printing above.
+    node.unloadChildren()
 }
 
 private fun getThreadName(idx: Int, totalThreads: Int, context: TraceContext): String {

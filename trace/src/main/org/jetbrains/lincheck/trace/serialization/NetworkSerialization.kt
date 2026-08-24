@@ -113,6 +113,10 @@ class NetworkStreamingTraceCollecting(
         }
     }
 
+    override fun openContainerTracePoint(container: TRContainerTracePoint) {
+        error("Container trace points are not supported by WebSocket trace collection strategy")
+    }
+
     override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {
         error("Container trace points are not supported by WebSocket trace collection strategy")
     }

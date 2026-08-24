@@ -27,6 +27,8 @@ class NullTraceCollecting(private val context: TraceContext): TraceCollectingStr
         created: TRTracePoint
     ) {}
 
+    override fun openContainerTracePoint(container: TRContainerTracePoint) {}
+
     override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {}
 
     /**

@@ -80,6 +80,32 @@ fun <T> LazyLoadableList(
 )
 
 /**
+ * Creates a [LazyLoadableList] that loads elements one by one, discovering its size lazily.
+ *
+ * The size is computed and memoized on the first access to either the size or any element,
+ * so creating the list costs nothing until it is actually queried.
+ *
+ * @param computeSize computes the number of elements; invoked once, on the first size or element access.
+ * @param load computes the element at the given index; invoked lazily on first access and after unloading.
+ * @param unload optional hook invoked when a previously loaded element is unloaded,
+ *   allowing the underlying resource to be released.
+ * @param cacheFactory creates the backing cache list of the requested size;
+ *   allows configuring the cache implementation.
+ */
+fun <T> LazyLoadableList(
+    computeSize: () -> Int,
+    load: (Int) -> T,
+    unload: (Int) -> Unit = {},
+    cacheFactory: (Int) -> MutableList<Any?> = LazyLoadableList.defaultCacheFactory,
+): LazyLoadableList<T> = LazyLoadableListImpl(
+    size = null,
+    computeSize = computeSize,
+    load = load,
+    unload = unload,
+    cacheFactory = cacheFactory,
+)
+
+/**
  * Creates a [LazyLoadableList] that loads all elements in one batch.
  *
  * The whole batch is loaded lazily on the first access, which also discovers the list size;
@@ -90,17 +116,22 @@ fun <T> LazyLoadableList(
  * @param loadAll produces all elements at once; must always return the same number of elements.
  * @param unloadAll optional hook invoked when the loaded batch is dropped,
  *   allowing the underlying resource to be released.
+ * @param computeIsEmpty optional emptiness computation used by [List.isEmpty]
+ *   while the size is not yet discovered, so that the check does not load the batch;
+ *   must agree with the number of elements [loadAll] produces.
  * @param cacheFactory creates the backing cache list of the requested size;
  *   allows configuring the cache implementation.
  */
 fun <T> LazyLoadableList(
     loadAll: () -> List<T>,
     unloadAll: () -> Unit = {},
+    computeIsEmpty: (() -> Boolean)? = null,
     cacheFactory: (Int) -> MutableList<Any?> = LazyLoadableList.defaultCacheFactory,
 ): LazyLoadableList<T> = LazyLoadableListImpl(
     size = null,
     loadAll = loadAll,
     unloadAll = unloadAll,
+    computeIsEmpty = computeIsEmpty,
     cacheFactory = cacheFactory,
 )
 
@@ -109,21 +140,25 @@ fun <T> LazyLoadableList(
  * with pluggable per-element ([load]/[unload]) and whole-list ([loadAll]/[unloadAll]) strategies.
  *
  * When a strategy is absent, the corresponding operations fall back to the other one.
- * When [size] is `null`, it is discovered together with the first [loadAll] batch,
- * and the cache is created only at that point.
+ * When [size] is `null`, it is discovered lazily — via [computeSize] if provided,
+ * or together with the first [loadAll] batch — and the cache is created only at that point.
  */
 private class LazyLoadableListImpl<T>(
     size: Int?,
+    private val computeSize: (() -> Int)? = null,
     private val load: ((Int) -> T)? = null,
     private val unload: ((Int) -> Unit)? = null,
     private val loadAll: (() -> List<T>)? = null,
     private val unloadAll: (() -> Unit)? = null,
+    private val computeIsEmpty: (() -> Boolean)? = null,
     private val cacheFactory: (Int) -> MutableList<Any?>,
 ) : AbstractList<T>(), LazyLoadableList<T> {
 
     init {
         require(load != null || loadAll != null) { "Either load or loadAll must be provided" }
-        require(size != null || loadAll != null) { "Either size or loadAll must be provided" }
+        require(size != null || computeSize != null || loadAll != null) {
+            "Either size, computeSize, or loadAll must be provided"
+        }
     }
 
     private var cache: MutableList<Any?>? =
@@ -131,6 +166,14 @@ private class LazyLoadableListImpl<T>(
 
     override val size: Int
         get() = ensureCache().size
+
+    // While the size is not yet discovered, an explicit emptiness computation
+    // (when provided) answers without loading the batch.
+    override fun isEmpty(): Boolean {
+        cache?.let { return it.isEmpty() }
+        computeIsEmpty?.let { return it.invoke() }
+        return super.isEmpty()
+    }
 
     private fun createCache(size: Int): MutableList<Any?> {
         val cache = cacheFactory.invoke(size)
@@ -141,10 +184,14 @@ private class LazyLoadableListImpl<T>(
         return cache
     }
 
-    // The size may be discoverable only by loading the first batch.
-    // Due to the constructor invariants, either size (cache != null) or loadAll must be provided.
-    private fun ensureCache(): MutableList<Any?> =
-        cache ?: run { loadAll(); cache!! }
+    // The size may be discoverable only lazily: via computeSize or by loading the first batch.
+    // Due to the constructor invariants, size (cache != null), computeSize, or loadAll must be provided.
+    private fun ensureCache(): MutableList<Any?> {
+        cache?.let { return it }
+        computeSize?.let { return createCache(it.invoke()).also { created -> cache = created } }
+        loadAll()
+        return cache!!
+    }
 
     override fun get(index: Int): T {
         load(index)

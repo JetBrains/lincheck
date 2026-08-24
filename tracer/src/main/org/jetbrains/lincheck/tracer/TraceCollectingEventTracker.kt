@@ -212,6 +212,10 @@ class TraceCollectingEventTracker(
     internal val networkStreamingStrategy: NetworkStreamingTraceCollecting? =
         (this.strategy as? NetworkStreamingTraceCollecting)
 
+    // The in-memory strategy, if active; the recorded trees for dump/text output come from it.
+    internal val memoryStrategy: MemoryTraceCollecting? =
+        (this.strategy as? MemoryTraceCollecting)
+
     // For proper completion of threads which are not tracked from the start of the agent,
     // of those threads which are not joined by the Main thread,
     // we need to perform operations in them under the flag `inInjectedCode`.
@@ -527,7 +531,6 @@ class TraceCollectingEventTracker(
             return
         }
 
-        val parentTracepoint = threadData.currentTopTracePoint()
         val tracePoint = TRMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
@@ -536,9 +539,9 @@ class TraceCollectingEventTracker(
             obj = TRValue(context, receiver),
             parameters = params.map { TRValue(context, it) },
             flags = (if (receiver === Injections.UNINITIALIZED_THIS) SUPER_CONSTRUCTOR_CALL_FLAG else 0).toShort(),
-            parentTracePoint = parentTracepoint,
         )
         tracePointCreated(threadData, tracePoint)
+        strategy.openContainerTracePoint(tracePoint)
         threadData.pushStackFrame(tracePoint, receiver, isInline = false)
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
@@ -660,9 +663,9 @@ class TraceCollectingEventTracker(
             methodId = methodId,
             obj = TRValue(context, owner),
             parameters = emptyList(),
-            parentTracePoint = threadData.currentTopTracePoint()
         )
         tracePointCreated(threadData, tracePoint)
+        strategy.openContainerTracePoint(tracePoint)
         threadData.pushStackFrame(tracePoint, owner, isInline = true)
     }
 
@@ -815,6 +818,7 @@ class TraceCollectingEventTracker(
                 loopId = loopId,
             )
             tracePointCreated(threadData, tracePoint)
+            strategy.openContainerTracePoint(tracePoint)
             threadData.enterLoop(tracePoint)
         }
 
@@ -832,6 +836,7 @@ class TraceCollectingEventTracker(
             loopIteration = currentLoopTracePoint.iterations,
         )
         tracePointCreated(threadData, tracePoint, currentLoopTracePoint)
+        strategy.openContainerTracePoint(tracePoint)
         threadData.addLoopIteration(tracePoint)
     }
 
@@ -987,9 +992,9 @@ class TraceCollectingEventTracker(
             obj = obj,
             parameters = params,
             flags = INCOMPLETE_METHOD_FLAG.toShort(),
-            parentTracePoint = parentTracePoint
         )
         tracePointCreated(threadData, methodCall, parentTracePoint)
+        strategy.openContainerTracePoint(methodCall)
         if (threadData.getStack().isEmpty()) {
             threadData.setRootCall(methodCall)
         }
@@ -1141,34 +1146,10 @@ class TraceCollectingEventTracker(
         collectedPoints = totalPointsCollected
     }
 
-    /**
-     * Returns a list of all thread root trace points.
-     */
-    fun getThreadRoots(): List<TRTracePoint> {
-        if (layout.isFlat() && strategy is MemoryTraceCollecting) {
-            // Match the tree-branch cross-thread ordering (sortedBy threadId) so downstream
-            // consumers see the same deterministic thread order regardless of collection layout.
-            return strategy.flatListsPerThread.entries
-                .sortedBy { it.key }
-                .flatMap { it.value }
-        }
-
-        val roots = mutableListOf<TRTracePoint>()
-        threads.values.sortedBy { it.threadId }.forEach { threadData ->
-            val rootCall = threadData.rootCall
-            if (rootCall == null) {
-                val threadName = context.getThreadName(threadData.threadId)
-                Logger.error { "Trace Recorder: Thread #${threadData.threadId + 1} ($threadName): No root call found" }
-            } else {
-                roots.add(rootCall)
-            }
-        }
-        return roots
-    }
-
-    private fun rootTracePointCreated(threadData: ThreadData,  created: TRTracePoint) {
+    private fun rootTracePointCreated(threadData: ThreadData,  created: TRContainerTracePoint) {
         threadData.pointsCollected++
         strategy.tracePointCreated(null, created)
+        strategy.openContainerTracePoint(created)
     }
 
     private fun tracePointCreated(threadData: ThreadData, created: TRTracePoint, parent: TRContainerTracePoint? = null) {

@@ -25,6 +25,16 @@ interface TraceCollectingStrategy {
     fun tracePointCreated(parent: TRContainerTracePoint?, created: TRTracePoint)
 
     /**
+     * Must be called when a created container trace point is opened,
+     * i.e., before trace points nested in it are created.
+     *
+     * Always follows the [tracePointCreated] call with the same trace point.
+     *
+     * @param container the opened container trace point.
+     */
+    fun openContainerTracePoint(container: TRContainerTracePoint)
+
+    /**
      * Must be called when the container trace point is ended and popped from the trace tree.
      *
      * @param thread thread of the [container] trace point.

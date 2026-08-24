@@ -13,6 +13,10 @@ package org.jetbrains.lincheck.trace.diff
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.serialization.*
+import org.jetbrains.lincheck.trace.tree.compressedView
+import org.jetbrains.lincheck.trace.tree.readTraceTrees
+import org.jetbrains.lincheck.util.tree.Tree
+import org.jetbrains.lincheck.util.tree.unloadChildren
 import java.io.DataOutputStream
 import java.io.File
 import java.io.FileOutputStream
@@ -32,23 +36,23 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
     
     val diffStartTime = System.currentTimeMillis()
 
-    // Load all left and right roots.
-    val leftRoots = left.readRoots()
-    val rightRoots = right.readRoots()
+    // Load all left and right roots as lazy trees (with the compressing view applied, as the readers did before).
+    val leftRoots = left.readCompressedTraceRoots()
+    val rightRoots = right.readCompressedTraceRoots()
 
     // Match threads by name for now
     // Try to match same names
-    val threadMap = matchThreads(left, leftRoots, right, rightRoots, options)
+    val threadMap = matchThreads(left, leftRoots.map { it.data }, right, rightRoots.map { it.data }, options)
 
     // Check map, if needed
     if (options.unmatchedThreadsBehavior == TraceDiffOptions.UnmatchedThreadsBehavior.ERROR) {
         threadMap.forEach {
             if (it.rightIdx < 0) {
-                val lid = leftRoots[it.leftIdx].threadId
+                val lid = leftRoots[it.leftIdx].data.threadId
                 throw IllegalStateException("Thread #${it.leftIdx} (id=$lid, name=${it.name}) from left trace was not matched with any thread in right trace.")
             }
             if (it.leftIdx < 0) {
-                val rid = rightRoots[it.rightIdx].threadId
+                val rid = rightRoots[it.rightIdx].data.threadId
                 throw IllegalStateException("Thread #${it.rightIdx} (id=$rid, name=${it.name}) from right trace was not matched with any thread in left trace.")
             }
         }
@@ -82,9 +86,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                 output = output,
                 outputThreadId = 0,
                 name = threadMapping.name,
-                left = left,
                 leftRoot = leftRoots[threadMapping.leftIdx],
-                right = right,
                 rightRoot = rightRoots[threadMapping.rightIdx],
             )
             output.writeThreadName(0, output.context.getThreadName(0))
@@ -109,9 +111,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                         output = output,
                         outputThreadId = outputThreadId,
                         name = name,
-                        left = left,
                         leftRoot = leftRoots[leftThreadIdx],
-                        right = right,
                         rightRoot = rightRoots[rightThreadIdx],
                     )
                 } else if (leftThreadIdx >= 0) {
@@ -120,8 +120,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                     points += copyTracepointSubtree(
                         output = output,
                         cloner = { cloner.cloneLeftTracePoint(it, -1) },
-                        reader = left,
-                        point = leftRoots[leftThreadIdx],
+                        node = leftRoots[leftThreadIdx],
                         diffStatus = DiffStatus.REMOVED
                     )
                 } else if (rightThreadIdx >= 0) {
@@ -130,8 +129,7 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
                     points += copyTracepointSubtree(
                         output = output,
                         cloner = { cloner.cloneRightTracePoint(it, -1) },
-                        reader = right,
-                        point = rightRoots[rightThreadIdx],
+                        node = rightRoots[rightThreadIdx],
                         diffStatus = DiffStatus.ADDED
                     )
                 }
@@ -154,20 +152,21 @@ fun diffTwoTraces(left: LazyTraceReader, right: LazyTraceReader, outputBaseName:
     packDiff(outputBaseName, idMapFile.absolutePath, threadMapFile.absolutePath, metaInfo)
 }
 
+private fun LazyTraceReader.readCompressedTraceRoots(): List<Tree.Node<TRTracePoint>> =
+    readTraceTrees().map { checkNotNull(it.compressedView(context).root) }
+
 private fun diffOneThread(
     cloner: TracePointCloner,
     output: DirectTraceWriter,
     outputThreadId: Int,
     name: String,
-    left: LazyTraceReader,
-    leftRoot: TRTracePoint,
-    right: LazyTraceReader,
-    rightRoot: TRTracePoint,
+    leftRoot: Tree.Node<TRTracePoint>,
+    rightRoot: Tree.Node<TRTracePoint>,
 ): Int {
     output.context.setThreadName(outputThreadId, name)
     var points = 0
     // Diff from roots into virtual root for diff, if we need it
-    val outputRoot = if (!TracePointComparator.strictEqual(leftRoot, rightRoot)) {
+    val outputRoot = if (!TracePointComparator.strictEqual(leftRoot.data, rightRoot.data)) {
         points = 1
         TRMethodCallTracePoint(
             context = output.context,
@@ -189,10 +188,8 @@ private fun diffOneThread(
         cloner = cloner,
         cmp = TracePointComparator,
         outputRoot = outputRoot,
-        leftReader = left,
-        leftPoints = listOf(leftRoot),
-        rightReader = right,
-        rightPoints = listOf(rightRoot)
+        leftNodes = listOf(leftRoot),
+        rightNodes = listOf(rightRoot)
     )
     outputRoot?.let { output.writeTRMethodCallTracePointFooter(it) }
     return points
@@ -467,36 +464,32 @@ private fun saveThreadMap(threadMap: List<ThreadMapElement>): File {
 private fun copyTracepointSubtree(
     output: TraceWriter,
     cloner: (TRTracePoint) -> TRTracePoint,
-    reader: LazyTraceReader,
-    point: TRTracePoint,
+    node: Tree.Node<TRTracePoint>,
     diffStatus: DiffStatus,
     outputParent: TRContainerTracePoint? = null
 ): Int {
     var points = 1
-    val outputPoint = cloner(point)
+    val outputPoint = cloner(node.data)
     outputPoint.diffStatus = diffStatus
-    addCopiedChild(outputParent, outputPoint)
+    countCopiedChild(outputParent)
     output.writeTracePoint(outputPoint)
     // Save all children recursively, if needed
-    if (outputPoint is TRContainerTracePoint && point is TRContainerTracePoint) {
-        // TODO: Batching
-        reader.loadAllChildren(point)
-        point.events.forEach { p ->
-            if (p == null) return@forEach
-            points += copyTracepointSubtree(output, cloner, reader, p, diffStatus, outputPoint)
+    if (outputPoint is TRContainerTracePoint) {
+        node.children.forEach { child ->
+            points += copyTracepointSubtree(output, cloner, child, diffStatus, outputPoint)
         }
         output.writeTracePointFooter(outputPoint)
         // Free memory
-        point.unloadAllChildren()
-        outputPoint.unloadAllChildren()
+        node.unloadChildren()
     }
     return points
 }
 
-private fun addCopiedChild(parent: TRContainerTracePoint?, child: TRTracePoint) {
-    parent?.addChild(child)
-    if (parent is TRLoopTracePoint) {
-        parent.incrementIterations()
+// The output tree is not materialized: nesting is expressed by the save/saveFooter call order.
+// The only parent-side bookkeeping left is the loop-iteration count, written in the loop's footer.
+private fun countCopiedChild(outputParent: TRContainerTracePoint?) {
+    if (outputParent is TRLoopTracePoint) {
+        outputParent.incrementIterations()
     }
 }
 
@@ -505,19 +498,18 @@ private fun diffTracepointSubtree(
     cloner: TracePointCloner,
     cmp: TracePointComparator,
     outputRoot: TRContainerTracePoint?,
-    leftReader: LazyTraceReader,
-    leftPoints: List<TRTracePoint?>,
-    rightReader: LazyTraceReader,
-    rightPoints: List<TRTracePoint?>
+    leftNodes: List<Tree.Node<TRTracePoint>>,
+    rightNodes: List<Tree.Node<TRTracePoint>>
 ): Int {
     var points = 0
-    val diff = diffTracePointLists(cmp, leftPoints, rightPoints)
+    val diff = diffLists(left = leftNodes, right = rightNodes) { l, r -> cmp.editIndependentEqual(l.data, r.data) }
     diff.forEach { line ->
         when (line) {
             is UnchangedDiffLine -> {
-                // We know, it cannot be null
-                val lp = leftPoints[line.leftIdx]!!
-                val rp = rightPoints[line.rightIdx]!!
+                val ln = leftNodes[line.leftIdx]
+                val rn = rightNodes[line.rightIdx]
+                val lp = ln.data
+                val rp = rn.data
                 // It is editing-equivalent trace points
                 val strict = cmp.strictEqual(lp, rp)
 
@@ -525,7 +517,7 @@ private fun diffTracepointSubtree(
                     // "Remove" left and make it without children
                     val oldPoint = cloner.cloneLeftTracePoint(lp, rp.eventId)
                     oldPoint.diffStatus = DiffStatus.EDITED_OLD
-                    addCopiedChild(outputRoot, oldPoint)
+                    countCopiedChild(outputRoot)
                     output.writeTracePoint(oldPoint)
                     if (oldPoint is TRContainerTracePoint) {
                         output.writeTracePointFooter(oldPoint)
@@ -535,40 +527,32 @@ private fun diffTracepointSubtree(
                 // Copy tracepoint itself from right subtree for now
                 val outputPoint = cloner.cloneRightTracePoint(rp, lp.eventId)
                 outputPoint.diffStatus = if (strict) DiffStatus.UNCHANGED else DiffStatus.EDITED_NEW
-                addCopiedChild(outputRoot, outputPoint)
+                countCopiedChild(outputRoot)
                 output.writeTracePoint(outputPoint)
                 points += 1
 
                 // Maybe, we need to go deeper?
                 if (outputPoint is TRContainerTracePoint) {
-                    val lc = lp as TRContainerTracePoint
-                    leftReader.loadAllChildren(lc)
-                    val rc = rp as TRContainerTracePoint
-                    rightReader.loadAllChildren(rc)
-
                     points += diffTracepointSubtree(
                         output = output,
                         cloner = cloner,
                         cmp = TracePointComparator,
                         outputRoot = outputPoint,
-                        leftReader = leftReader,
-                        leftPoints = lc.events,
-                        rightReader = rightReader,
-                        rightPoints = rc.events
+                        leftNodes = ln.children,
+                        rightNodes = rn.children
                     )
 
                     output.writeTracePointFooter(outputPoint)
-                    outputPoint.unloadAllChildren()
-                    lc.unloadAllChildren()
-                    rc.unloadAllChildren()
+                    // Free memory
+                    ln.unloadChildren()
+                    rn.unloadChildren()
                 }
             }
             is RemovedDiffLine -> {
                 points += copyTracepointSubtree(
                     output = output,
                     cloner = { cloner.cloneLeftTracePoint(it, -1) },
-                    reader = leftReader,
-                    point = leftPoints[line.leftIdx]!!,
+                    node = leftNodes[line.leftIdx],
                     diffStatus = DiffStatus.REMOVED,
                     outputParent = outputRoot
                 )
@@ -577,8 +561,7 @@ private fun diffTracepointSubtree(
                 points += copyTracepointSubtree(
                     output = output,
                     cloner = { cloner.cloneRightTracePoint(it, -1) },
-                    reader = rightReader,
-                    point = rightPoints[line.rightIdx]!!,
+                    node = rightNodes[line.rightIdx],
                     diffStatus = DiffStatus.ADDED,
                     outputParent = outputRoot
                 )
@@ -587,15 +570,3 @@ private fun diffTracepointSubtree(
     }
     return points
 }
-
-private fun <T> calculateNotNullSize(list: List<T?>): Int {
-    if (list.isEmpty()) return 0
-    val firstNull = list.indexOf(null)
-    return if (firstNull == -1)
-        list.size
-    else
-        firstNull
-}
-
-private fun diffTracePointLists(cmp: TracePointComparator, leftPoints: List<TRTracePoint?>, rightPoints: List<TRTracePoint?>): List<DiffLine> =
-    diffLists(leftPoints, calculateNotNullSize(leftPoints), rightPoints, calculateNotNullSize(rightPoints)) { l, r -> cmp.editIndependentEqual(l!!,r!!) }

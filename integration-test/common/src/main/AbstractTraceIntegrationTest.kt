@@ -10,8 +10,11 @@
 
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
-import org.jetbrains.lincheck.trace.TRContainerTracePoint
 import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.tree.compressedView
+import org.jetbrains.lincheck.trace.tree.readTraceTrees
+import org.jetbrains.lincheck.util.tree.Tree
+import org.jetbrains.lincheck.util.tree.unloadChildren
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import java.io.File
@@ -185,29 +188,24 @@ abstract class AbstractTraceIntegrationTest {
 
             if (traceShouldContain.isEmpty()) return
 
-            fun traceFind(reader: LazyTraceReader, node: TRTracePoint, query: String): Boolean {
-                val text = node.toText(true)
-                if (text.contains(query)) return true
-                if (node is TRContainerTracePoint && node.events.isNotEmpty()) {
-                    reader.loadAllChildren(node)
-                    val found = node.events.any { event ->
-                        if (event != null) traceFind(reader, event, query)
-                        else false
-                    }
-                    node.unloadAllChildren()
-                    return found
-                }
-                return false
+            fun traceFind(node: Tree.Node<TRTracePoint>, query: String): Boolean {
+                if (node.data.toText(true).contains(query)) return true
+                val found = node.children.any { child -> traceFind(child, query) }
+                // Keep only the current path materialized to bound memory on large traces.
+                node.unloadChildren()
+                return found
             }
-            
+
             try {
-                val reader = LazyTraceReader(file.absolutePath)
-                val roots = reader.readRoots()
-                traceShouldContain.forEach { query ->
-                    val success = roots.any { root ->
-                        traceFind(reader, root, query)
+                LazyTraceReader(file.absolutePath).use { reader ->
+                    // The compressed view matches what the old postprocessing reader produced.
+                    val trees = reader.readTraceTrees().map { it.compressedView(reader.context) }
+                    traceShouldContain.forEach { query ->
+                        val success = trees.any { tree ->
+                            tree.root?.let { root -> traceFind(root, query) } ?: false
+                        }
+                        if (!success) Assertions.fail("Did not find `$query` in trace")
                     }
-                    if (!success) Assertions.fail("Did not find `$query` in trace")
                 }
             } catch (a: AssertionError) {
                 throw a

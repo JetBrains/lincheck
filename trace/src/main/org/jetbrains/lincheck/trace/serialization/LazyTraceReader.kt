@@ -11,8 +11,10 @@
 package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.storage.AddressIndex
 import org.jetbrains.lincheck.trace.storage.RangeIndex
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.collections.LazyLoadableList
 import java.nio.file.StandardOpenOption
 import java.nio.file.Files
 import java.io.*
@@ -27,17 +29,15 @@ import kotlin.io.path.Path
 class LazyTraceReader private constructor(
     private val traceFileName: String,
     private val input: TraceDataProvider,
-    private val postprocessor: TracePostprocessor
 ) : Closeable {
     private fun interface TracepointRegistrator {
         fun register(indexInParent: Int, tracePoint: TRTracePoint?, physicalOffset: Long)
     }
 
-    constructor(baseFileName: String, postprocessor: TracePostprocessor = CompressingPostprocessor) :
+    constructor(baseFileName: String) :
             this(
                 traceFileName = baseFileName,
                 input = TraceDataProvider(baseFileName),
-                postprocessor = postprocessor
             )
 
     private var contextLoaded = false
@@ -97,7 +97,18 @@ class LazyTraceReader private constructor(
         input.close()
     }
 
-    fun readTopLevelTracePoints(): List<List<TRTracePoint>> = lock.withLock {
+    /**
+     * Reads all top-level trace points of every thread shallowly, in thread-id order:
+     * container points stay flat and know nothing about their children,
+     * and the reader's postprocessor is not applied.
+     *
+     * Children are discovered on demand through the tree API
+     * (see [org.jetbrains.lincheck.trace.tree.readTraceTrees]).
+     */
+    fun readTopLevelTracePoints(): List<List<TRTracePoint>> =
+        readTopLevelTracePoints(this::readTracePointShallow)
+
+    private fun readTopLevelTracePoints(pointReader: () -> TRTracePoint?): List<List<TRTracePoint>> = lock.withLock {
         var start = System.currentTimeMillis()
 
         if (!contextLoaded) {
@@ -121,7 +132,7 @@ class LazyTraceReader private constructor(
             loadTracePoints(
                 threadId = threadId,
                 maxRead = Integer.MAX_VALUE,
-                reader = this::readTracePointWithPostprocessor,
+                reader = pointReader,
                 registrator = { _, tracePoint, _ ->
                     if (tracePoint != null) tracepoints.add(tracePoint)
                 }
@@ -136,9 +147,20 @@ class LazyTraceReader private constructor(
             .map { (_, tracepoints) -> tracepoints }
     }
 
-    fun readRoots(): List<TRTracePoint> = lock.withLock {
-        val threadTracepoints = readTopLevelTracePoints()
-        return threadTracepoints.mapIndexedNotNull { threadId, tracepoints ->
+    /**
+     * Reads per-thread root trace points shallowly:
+     * container points stay flat and know nothing about their children,
+     * and the reader's postprocessor is not applied.
+     *
+     * Children are discovered on demand through the tree API
+     * (see [org.jetbrains.lincheck.trace.tree.readTraceTrees]).
+     */
+    fun readShallowRoots(): List<TRTracePoint> = lock.withLock {
+        readTopLevelTracePoints().rootsPerThread()
+    }
+
+    private fun List<List<TRTracePoint>>.rootsPerThread(): List<TRTracePoint> =
+        mapIndexedNotNull { threadId, tracepoints ->
             if (tracepoints.isEmpty()) {
                 Logger.warn { "Thread $threadId does not contain any tracepoints" }
             } else if (tracepoints.size > 1) {
@@ -146,22 +168,26 @@ class LazyTraceReader private constructor(
             }
             tracepoints.firstOrNull()
         }
-    }
 
-    fun loadAllChildren(parent: TRContainerTracePoint) = lock.withLock {
-        if (parent.events.isEmpty()) return
-
+    /**
+     * Reads all direct children of [parent] shallowly, in one sequential scan of its children range.
+     *
+     * Does not modify [parent]:
+     * the returned children are owned by the caller (e.g., lazily loaded tree nodes),
+     * and grandchildren are not loaded.
+     */
+    fun loadAllChildren(parent: TRContainerTracePoint): List<TRTracePoint> = lock.withLock {
         val (start, end) = callTracepointChildren[parent.eventId]
             ?: error("TRContainerTracePoint ${parent.eventId} is not found in index")
 
+        val children = mutableListOf<TRTracePoint>()
         data.seek(calculatePhysicalOffset(parent.threadId, start))
-
         loadTracePoints(
             threadId = parent.threadId,
             maxRead = Integer.MAX_VALUE,
-            reader = this::readTracePointWithPostprocessor,
-            registrator = { idx, tracePoint, _ ->
-                if (tracePoint != null) parent.loadChild(idx, tracePoint)
+            reader = this::readTracePointShallow,
+            registrator = { _, tracePoint, _ ->
+                if (tracePoint != null) children.add(tracePoint)
             }
         )
 
@@ -169,39 +195,103 @@ class LazyTraceReader private constructor(
         check(actualFooterPos == calculatePhysicalOffset(parent.threadId, end)) {
             "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} at position $end, got $actualFooterPos"
         }
+
+        children
     }
 
-    fun loadChild(parent: TRContainerTracePoint, childIdx: Int): Unit = lock.withLock {
-        loadChildrenRange(parent, childIdx, 1)
-    }
+    /**
+     * Returns a lazily loaded list of the direct children of [container], loaded in one batch.
+     *
+     * The whole batch is read shallowly on the first element access (see [loadAllChildren]),
+     * while emptiness is answered from the index alone, without loading the batch.
+     *
+     * Does not modify [container]:
+     * the returned list is owned by the caller (e.g., a tree node that keeps it for its own lifetime).
+     */
+    internal fun readAllChildren(container: TRContainerTracePoint): LazyLoadableList<TRTracePoint> =
+        LazyLoadableList(
+            loadAll = { loadAllChildren(container) },
+            computeIsEmpty = { !hasChildren(container) },
+        )
 
-    fun loadChildrenRange(parent: TRContainerTracePoint, from: Int, count: Int) = lock.withLock {
-        require(from in 0 ..< parent.events.size) { "From index $from must be in range 0 ..< ${parent.events.size}" }
-        require(count in 1 ..parent.events.size - from) { "Count $count must be in range 1 .. ${parent.events.size - from}" }
-
-        data.seek(calculatePhysicalOffset(parent.threadId, parent.getChildAddress(from)))
-        loadTracePoints(
-            threadId = parent.threadId,
-            maxRead = count,
-            reader = this::readTracePointWithPostprocessor,
-            registrator = { idx, tracePoint, _ ->
-                if (tracePoint != null) parent.loadChild(idx + from, tracePoint)
+    /**
+     * Returns a lazily loaded list of the direct children of [container].
+     *
+     * The child addresses are discovered by one skim of the children range,
+     * performed lazily and memoized on the first access to the list's size or an element;
+     * each child is then materialized shallowly on first access,
+     * and after an unload, the next access re-reads the child from the trace data.
+     *
+     * Does not modify [container]:
+     * the returned list is owned by the caller (e.g., a tree node that keeps it for its own lifetime).
+     */
+    internal fun readChildren(container: TRContainerTracePoint): LazyLoadableList<TRTracePoint> {
+        val addresses: Lazy<List<Long>> = lazy { readChildAddresses(container) }
+        return LazyLoadableList(
+            computeSize = { addresses.value.size },
+            load = { index ->
+                readTracePointAt(container.threadId, addresses.value[index])
+                    ?: error("Child $index of trace point ${container.eventId} cannot be loaded")
             }
         )
     }
 
-    fun getChildAndRestorePosition(parent: TRContainerTracePoint, childIdx: Int): TRTracePoint? = lock.withLock {
-        val oldPosition = data.position()
-        loadChild(parent, childIdx)
-        data.seek(oldPosition)
-        return parent.events[childIdx]
+    /**
+     * Whether [container] has any direct children.
+     *
+     * Answered from the index alone — no trace data is read.
+     */
+    private fun hasChildren(container: TRContainerTracePoint): Boolean = lock.withLock {
+        val (start, end) = callTracepointChildren[container.eventId]
+            ?: error("TRContainerTracePoint ${container.eventId} is not found in index")
+        start != end
     }
 
-    private fun readTracePointWithPostprocessor(): TRTracePoint? =
-        postprocessor.postprocess(
-            reader = this@LazyTraceReader,
-            tracePoint = readTracePointWithChildAddresses()
+    /**
+     * Discovers the direct children of [container] by skimming its children range in the trace data.
+     *
+     * The returned addresses are logical offsets to be passed to [readTracePointAt];
+     * they never leave the reader; external users go through [readChildren].
+     */
+    private fun readChildAddresses(container: TRContainerTracePoint): List<Long> = lock.withLock {
+        val (start, end) = callTracepointChildren[container.eventId]
+            ?: error("TRContainerTracePoint ${container.eventId} is not found in index")
+
+        val addresses = AddressIndex.create()
+        data.seek(calculatePhysicalOffset(container.threadId, start))
+        loadTracePoints(
+            threadId = container.threadId,
+            maxRead = Integer.MAX_VALUE,
+            reader = this::readTracePointShallow,
+            registrator = { _, _, physicalOffset ->
+                addresses.add(calculateLogicalOffset(container.threadId, physicalOffset))
+            }
         )
+        addresses.finishWrite()
+
+        val actualFooterPos = data.position() - 1 // 1 is size of object kind
+        check(actualFooterPos == calculatePhysicalOffset(container.threadId, end)) {
+            "Input contains broken data: expected Tracepoint Footer for event ${container.eventId} at position $end, got $actualFooterPos"
+        }
+
+        addresses
+    }
+
+    /**
+     * Reads the single trace point at [address] (a logical offset obtained from [readChildAddresses]) shallowly:
+     * its children are not loaded, no parent link is set, and the reader's postprocessor is not applied.
+     */
+    private fun readTracePointAt(threadId: Int, address: Long): TRTracePoint? = lock.withLock {
+        data.seek(calculatePhysicalOffset(threadId, address))
+        var tracePoint: TRTracePoint? = null
+        loadTracePoints(
+            threadId = threadId,
+            maxRead = 1,
+            reader = this::readTracePointShallow,
+            registrator = { _, point, _ -> tracePoint = point }
+        )
+        tracePoint
+    }
 
     private fun loadTracePoints(
         threadId: Int,
@@ -398,40 +488,11 @@ class LazyTraceReader private constructor(
 
         val kind = data.readKind()
         if (kind == ObjectKind.TRACEPOINT_FOOTER) {
+            // TODO: loading footer could also be extracted to the DefaultTracePointSerializer (name should change as well)
             tracePoint.loadFooter(data)
         } else {
             Logger.error { "TraceRecorder: Unexpected object kind $kind when loading tracepoints" }
         }
-
-        return tracePoint
-    }
-
-    private fun readTracePointWithChildAddresses(): TRTracePoint {
-        // Load tracepoint itself
-        val tracePoint = data.readTRTracePoint(context)
-        if (tracePoint !is TRContainerTracePoint) {
-            return tracePoint
-        }
-
-        val (start, _) = callTracepointChildren[tracePoint.eventId]
-            ?: error("Tracepoint ${tracePoint.eventId} is not known in index")
-
-        val checkFor = calculatePhysicalOffset(tracePoint.threadId, start)
-        check(data.position() == checkFor) {
-            "TRContainerTracePoint ${tracePoint.eventId} has wrong start position in index: $start / $checkFor, expected ${data.position()}"
-        }
-
-        // Read tracepoints truly shallow
-        loadTracePoints(
-            threadId = tracePoint.threadId,
-            maxRead = Integer.MAX_VALUE,
-            reader = this::readTracePointShallow,
-            registrator = { _, _, physicalOffset ->
-                tracePoint.addChildAddress(calculateLogicalOffset(tracePoint.threadId, physicalOffset))
-            }
-        )
-        // Kind is guaranteed by loadTracePoints()
-        tracePoint.loadFooter(data)
 
         return tracePoint
     }

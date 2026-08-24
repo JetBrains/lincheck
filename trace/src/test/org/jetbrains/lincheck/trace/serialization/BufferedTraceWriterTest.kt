@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.trace.TRWriteLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
-import org.jetbrains.lincheck.trace.printing.printRecorderTrace
+import org.jetbrains.lincheck.trace.printing.printTraceTree
 import org.jetbrains.lincheck.util.Logger
 import org.junit.Test
 import java.io.DataInputStream
@@ -127,9 +127,11 @@ class BufferedTraceWriterTest {
 
         collector.traceEnded()
 
-        val loadedTrace = loadRecordedTrace(traceFile.absolutePath)
-        printRecorderTrace(System.out, loadedTrace.context, loadedTrace.roots, verbose = true)
-        val blocks = collectSavedBlocks(loadedTrace.context, traceFile)
+        val loadedContext = LazyTraceReader(traceFile.absolutePath).use { reader ->
+            printTraceTree(System.out, reader, verbose = true)
+            reader.context
+        }
+        val blocks = collectSavedBlocks(loadedContext, traceFile)
         check(blocks.size == 2 && blocks.containsKey(tr1.threadId) && blocks.containsKey(tr2.threadId)) { "Expected 2 blocks for both threads, got thread ids: ${blocks.keys}" }
 
         val expectedClassDescriptorIds = setOf(0 /* SomeClass */)
@@ -216,9 +218,11 @@ class BufferedTraceWriterTest {
 
         collector.traceEnded()
 
-        val loadedTrace = loadRecordedTrace(traceFile.absolutePath)
-        printRecorderTrace(System.out, loadedTrace.context, loadedTrace.roots, verbose = true)
-        val blocks = collectSavedBlocks(loadedTrace.context, traceFile)
+        val loadedContext = LazyTraceReader(traceFile.absolutePath).use { reader ->
+            printTraceTree(System.out, reader, verbose = true)
+            reader.context
+        }
+        val blocks = collectSavedBlocks(loadedContext, traceFile)
         check(blocks.size == 2 && blocks.containsKey(tr1.threadId) && blocks.containsKey(tr2.threadId)) { "Expected 2 blocks for both threads, got thread ids: ${blocks.keys}" }
 
         val expectedClassDescriptorIds1 = setOf(0 /* SomeClass */)

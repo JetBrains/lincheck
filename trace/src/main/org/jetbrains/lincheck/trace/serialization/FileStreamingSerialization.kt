@@ -388,6 +388,8 @@ class FileStreamingTraceCollecting(
         }
     }
 
+    override fun openContainerTracePoint(container: TRContainerTracePoint) {}
+
     override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {
         val writer = writers[thread] ?: return
         try {

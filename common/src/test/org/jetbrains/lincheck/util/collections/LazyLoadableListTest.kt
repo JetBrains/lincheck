@@ -123,6 +123,29 @@ class LazyLoadableListTest {
             LazyLoadableList(size = 3, load = { it }, cacheFactory = { mutableListOf() })
         }
     }
+
+    @Test
+    fun `size is computed lazily and memoized`() {
+        var sizeCalls = 0
+        val list = LazyLoadableList(computeSize = { sizeCalls++; 3 }, load = { it * 10 })
+
+        assertEquals(0, sizeCalls)
+        assertEquals(3, list.size)
+        assertEquals(3, list.size)
+        assertEquals(1, sizeCalls)
+        assertFalse(list.isLoaded(0)) // size discovery materializes no elements
+    }
+
+    @Test
+    fun `element access discovers the size`() {
+        var sizeCalls = 0
+        val list = LazyLoadableList(computeSize = { sizeCalls++; 2 }, load = { it * 10 })
+
+        assertEquals(10, list[1])
+        assertEquals(1, sizeCalls)
+        assertEquals(2, list.size)
+        assertEquals(1, sizeCalls)
+    }
 }
 
 class BatchedLazyLoadableListTest {
@@ -187,6 +210,35 @@ class BatchedLazyLoadableListTest {
 
         assertEquals(1, list[0]) // access reloads the whole batch
         assertEquals(2, calls)
+    }
+
+    @Test
+    fun `isEmpty is answered by the provided computation without loading the batch`() {
+        var calls = 0
+        var isEmptyCalls = 0
+        val list = LazyLoadableList(
+            loadAll = { calls++; listOf(1, 2) },
+            computeIsEmpty = { isEmptyCalls++; false },
+        )
+
+        assertFalse(list.isEmpty())
+        assertTrue(list.isNotEmpty())
+        assertEquals(2, isEmptyCalls)
+        assertEquals(0, calls)
+
+        // Once the size is discovered, isEmpty is answered by the cache instead.
+        list.loadAll()
+        assertFalse(list.isEmpty())
+        assertEquals(2, isEmptyCalls)
+    }
+
+    @Test
+    fun `isEmpty without the provided computation loads the batch`() {
+        var calls = 0
+        val list = LazyLoadableList(loadAll = { calls++; emptyList<Int>() })
+
+        assertTrue(list.isEmpty())
+        assertEquals(1, calls)
     }
 
     @Test

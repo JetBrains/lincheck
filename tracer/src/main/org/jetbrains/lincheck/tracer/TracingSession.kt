@@ -11,9 +11,11 @@
 package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.trace.printing.printPostProcessedTrace
+import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.printing.printTraceTree
 import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.util.Logger
+import org.jetbrains.lincheck.util.tree.Tree
 import java.util.concurrent.atomic.AtomicReference
 
 class TracingSession(
@@ -153,10 +155,9 @@ class TracingSession(
         val traceWriteStartTime = System.currentTimeMillis()
 
         try {
-            val roots = eventTracker.getThreadRoots()
             when (mode) {
                 is TraceOutputMode.BinaryFileDump -> {
-                    saveRecorderTrace(traceDumpFilePath, context, roots)
+                    saveRecorderTrace(traceDumpFilePath, context, recordedTrees())
                     if (packTrace) {
                         packRecordedTrace(traceDumpFilePath, metaInfo)
                     }
@@ -175,7 +176,7 @@ class TracingSession(
                     error("Trace is streamed over WebSocket, no data stored to save into a file")
                 }
                 is TraceOutputMode.Text -> {
-                    printPostProcessedTrace(traceDumpFilePath, context, roots, verbose = mode.verbose)
+                    printTraceTree(traceDumpFilePath, context, recordedTrees(), verbose = mode.verbose)
                 }
                 TraceOutputMode.Null -> {}
             }
@@ -188,6 +189,13 @@ class TracingSession(
                 Logger.debug { "Trace written in ${System.currentTimeMillis() - traceWriteStartTime} ms" }
             }
         }
+    }
+
+    private fun recordedTrees(): List<Tree<TRTracePoint>> {
+        val strategy = checkNotNull(eventTracker.memoryStrategy) {
+            "Trace dump to a file requires the in-memory trace collecting strategy"
+        }
+        return strategy.getRecordedTrees()
     }
 
     private fun packRecordedTrace(baseFileName: String, metaInfo: TraceMetaInfo) {

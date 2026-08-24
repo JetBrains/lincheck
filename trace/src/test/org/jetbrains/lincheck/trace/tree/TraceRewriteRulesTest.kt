@@ -1,0 +1,212 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.jetbrains.lincheck.trace.tree
+
+import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
+import org.jetbrains.lincheck.trace.TRNull
+import org.jetbrains.lincheck.trace.TRString
+import org.jetbrains.lincheck.util.tree.node
+import org.jetbrains.lincheck.util.tree.rewrite
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+/**
+ * Tests for the rewrite rules in `TraceRewriteRules.kt`,
+ * one per `CompressingPostprocessor` step, each over a saved-and-reloaded lazy trace.
+ */
+class TraceRewriteRulesTest {
+
+    @Test
+    fun `default pairs are compressed into a single call`() {
+        withTraceTree(build = {
+            node(call("A", "main")) {
+                node(call("A", "callMe\$default", codeLocationId = codeLocation(23))) {
+                    node(call("A", "callMe", codeLocationId = codeLocation(27))) {
+                        node(call("A", "body"))
+                    }
+                }
+                // negative case: `$default` with two children is not a pair
+                node(call("A", "stay\$default")) {
+                    node(call("A", "stay"))
+                    node(call("A", "body2"))
+                }
+            }
+        }) { reader, tree ->
+            val view = tree.rewrite(compressDefaultPairsRule(reader.context))
+
+            assertEquals("main(callMe(body),stay\$default(stay,body2))", view.structure())
+
+            // The combined call keeps the child's identity but the parent's code location.
+            val defaultCall = tree.root!!.children[0].data as TRMethodCallTracePoint
+            val combined = view.root!!.children[0].data as TRMethodCallTracePoint
+            assertEquals("callMe", combined.methodName)
+            assertEquals(defaultCall.codeLocationId, combined.codeLocationId)
+        }
+    }
+
+    @Test
+    fun `access pairs are compressed into a single call`() {
+        withTraceTree(build = {
+            node(call("A", "main")) {
+                node(call("A", "access\$callMe")) {
+                    node(call("A", "callMe")) {
+                        node(call("A", "body"))
+                    }
+                }
+                // negative case: pair from different classes is kept
+                node(call("B", "access\$other")) {
+                    node(call("A", "other"))
+                }
+            }
+        }) { reader, tree ->
+            val view = tree.rewrite(compressAccessPairsRule(reader.context))
+
+            assertEquals("main(callMe(body),access\$other(other))", view.structure())
+        }
+    }
+
+    @Test
+    fun `synthetic field accesses are compressed into the field access`() {
+        withTraceTree(build = {
+            node(call("A", "main")) {
+                node(call("A", "access\$getValue\$p", codeLocationId = codeLocation(10))) {
+                    node(readVar("this"))
+                    node(readField("A", "value", TRString("hi")))
+                }
+                node(call("A", "access\$setValue\$p", codeLocationId = codeLocation(20))) {
+                    node(readVar("this"))
+                    node(writeVar("<set-?>"))
+                    node(writeField("A", "value", TRString("bye")))
+                }
+            }
+        }) { reader, tree ->
+            val view = tree.rewrite(compressSyntheticFieldAccessRule(reader.context))
+
+            assertEquals("main(read(value),write(value))", view.structure())
+
+            // Code locations are rewritten with the synthetic methods' ones.
+            val getCall = tree.root!!.children[0].data
+            val setCall = tree.root!!.children[1].data
+            assertEquals(getCall.codeLocationId, view.root!!.children[0].data.codeLocationId)
+            assertEquals(setCall.codeLocationId, view.root!!.children[1].data.codeLocationId)
+        }
+    }
+
+    @Test
+    fun `auto-generated field getters and setters are compressed into the field access`() {
+        withTraceTree(build = {
+            node(call("A", "main")) {
+                node(call("A", "getValue", returnType = Types.ObjectType("java.lang.String"))) {
+                    node(readField("A", "value", TRString("hi")))
+                }
+                node(call("A", "setValue")) {
+                    node(writeVar("<set-?>"))
+                    node(writeField("A", "value", TRString("bye")))
+                }
+                // negative case: getter whose return type does not match the read value is custom
+                node(call("A", "getName")) { // returns void
+                    node(readField("A", "name", TRString("n")))
+                }
+            }
+        }) { reader, tree ->
+            val view = tree.rewrite(compressAutoGeneratedFieldAccessRule(reader.context))
+
+            assertEquals("main(read(value),write(value),getName(read(name)))", view.structure())
+        }
+    }
+
+    @Test
+    fun `coverage instrumentation accesses are removed`() {
+        withTraceTree(build = {
+            node(call("A", "main")) {
+                node(writeVar("__\$coverage_local\$__"))
+                node(readField("A", "__\$hits\$__", TRNull))
+                node(readArray("__\$hits\$__"))
+                node(call("A", "body"))
+                node(writeVar("user"))
+            }
+        }) { _, tree ->
+            val view = tree.rewrite(removeCoverageInstructionsRule())
+
+            assertEquals("main(body,writeVar(user))", view.structure())
+        }
+    }
+
+    @Test
+    fun `empty last loop iteration is dropped`() {
+        withTraceTree(build = {
+            node(call("A", "main")) {
+                val l = loop(1)
+                node(l) {
+                    node(iteration(l)) { node(writeVar("a")) }
+                    node(iteration(l)) // empty
+                }
+                node(call("A", "body"))
+            }
+        }) { _, tree ->
+            val view = tree.rewrite(removeLastEmptyLoopIterationRule())
+
+            // The iteration count is fixed up by removeEmptyLoopOrUpdateIterationsRule, not here.
+            assertEquals("main(loop[2](iter1(writeVar(a))),body)", view.structure())
+        }
+    }
+
+    @Test
+    fun `loops are removed or their iteration count is updated`() {
+        withTraceTree(build = {
+            node(call("A", "main")) {
+                val l1 = loop(1)
+                node(l1) {
+                    node(iteration(l1)) { node(writeVar("a")) }
+                    node(iteration(l1)) // empty: iteration count must drop to 1
+                }
+                val l2 = loop(2)
+                node(l2) {
+                    node(iteration(l2)) // its only iteration is empty: the loop must disappear
+                }
+                node(call("A", "body"))
+            }
+        }) { reader, tree ->
+            val view = tree.rewrite(removeLastEmptyLoopIterationRule())
+                           .rewrite(removeEmptyLoopOrUpdateIterationsRule(reader.context))
+
+            assertEquals("main(loop[1](iter1(writeVar(a))),body)", view.structure())
+        }
+    }
+
+    @Test
+    fun `compressedView applies all rules over merged layers`() {
+        withTraceTree(build = {
+            node(call("A", "main")) {
+                node(call("A", "callMe\$default")) {
+                    node(call("A", "callMe")) {
+                        node(writeVar("__\$coverage_local\$__"))
+                        node(call("A", "body"))
+                    }
+                }
+                val l1 = loop(loopId = 1)
+                node(l1) {
+                    node(iteration(l1)) { node(writeVar("a")) }
+                    node(iteration(l1)) // empty: needs both loop rules cooperating across layers
+                }
+                val l2 = loop(loopId = 2)
+                node(l2) {
+                    node(iteration(l2)) // its only iteration is empty: the loop must disappear
+                }
+            }
+        }) { reader, tree ->
+            val view = tree.compressedView(reader.context)
+
+            assertEquals("main(callMe(body),loop[1](iter1(writeVar(a))))", view.structure())
+        }
+    }
+}
