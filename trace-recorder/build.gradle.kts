@@ -31,7 +31,7 @@ sourceSets {
         implementation(project(":common"))
         implementation(project(":jvm-agent"))
         implementation(project(":trace"))
-        implementation(project(":tracer"))
+        implementation(project(":tracing-agent"))
 
         api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
@@ -53,7 +53,7 @@ tasks {
         getAccessToInternalDefinitionsOf(
             project(":common"),
             project(":trace"),
-            project(":tracer")
+            project(":tracing-agent")
         )
     }
 }

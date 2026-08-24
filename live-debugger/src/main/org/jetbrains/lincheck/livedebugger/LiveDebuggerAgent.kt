@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.livedebugger
 
-import org.jetbrains.lincheck.tracer.TracerAgent
+import org.jetbrains.lincheck.tracer.TracingAgent
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
@@ -72,7 +72,7 @@ internal object LiveDebuggerAgent {
         ARGUMENT_SSL_TRUSTSTORE_PATH,
         ARGUMENT_SSL_TRUSTSTORE_PASSWORD,
     )
-    private val agent = object : TracerAgent() {
+    private val agent = object : TracingAgent() {
         override val modeSystemPropertyName: String = LIVE_DEBUGGER_MODE_PROPERTY
 
         override val instrumentationMode: InstrumentationMode = InstrumentationMode.LIVE_DEBUGGING

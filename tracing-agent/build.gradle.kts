@@ -43,5 +43,5 @@ tasks {
 }
 
 val jar = tasks.jar {
-    archiveFileName.set("tracer.jar")
+    archiveFileName.set("tracing-agent.jar")
 }

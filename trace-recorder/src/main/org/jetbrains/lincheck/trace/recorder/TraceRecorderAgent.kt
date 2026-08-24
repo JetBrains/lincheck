@@ -29,7 +29,7 @@ import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TracingEntryPoint
-import org.jetbrains.lincheck.tracer.TracerAgent
+import org.jetbrains.lincheck.tracer.TracingAgent
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
@@ -54,7 +54,7 @@ internal object TraceRecorderAgent {
         ARGUMENT_START_SERVER,
         ARGUMENT_SERVER_PORT,
     )
-    private val agent = object : TracerAgent() {
+    private val agent = object : TracingAgent() {
         override val modeSystemPropertyName: String = TRACE_RECORDER_MODE_PROPERTY
 
         override val instrumentationMode: InstrumentationMode = InstrumentationMode.TRACE_RECORDING

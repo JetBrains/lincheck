@@ -9,7 +9,7 @@ stack trace, local variables, and watch-expression values —
 without stopping any thread,
 and emits it as a trace point into the regular trace output.
 
-The agent is built on the [`tracer`](../tracer) engine
+The agent is built on the [`tracing-agent`](../tracing-agent) engine
 and runs the instrumentation in `InstrumentationMode.LIVE_DEBUGGING`.
 
 ## How breakpoints work
@@ -95,7 +95,7 @@ without a server or heartbeat, static attach starts whole-application tracing du
 
 ## Module dependencies
 
-`bootstrap` (compile-only), `common`, `jvm-agent`, `trace`, `tracer`.
+`bootstrap` (compile-only), `common`, `jvm-agent`, `trace`, `tracing-agent`.
 
 ## Publishing
 

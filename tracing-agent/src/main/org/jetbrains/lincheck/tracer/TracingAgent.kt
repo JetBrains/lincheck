@@ -38,7 +38,7 @@ sealed class TracingEntryPoint {
  * This class provides entry points for both statically and dynamically attached agents
  * and handles initialization procedures.
  */
-abstract class TracerAgent {
+abstract class TracingAgent {
 
     var server: TracingServer? = null
         protected set

@@ -35,7 +35,7 @@ include(":bootstrap")
 include(":jvm-agent")
 include(":common")
 include(":trace")
-include(":tracer")
+include(":tracing-agent")
 // Tests
 include(":integration-test")
 include(":integration-test:common")

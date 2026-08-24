@@ -1,6 +1,6 @@
-# AGENTS.md — Tracer
+# AGENTS.md — Tracing agent
 
-Module-specific guidance for [`lincheck/tracer/`](.).
+Module-specific guidance for [`lincheck/tracing-agent/`](.).
 Parent guidance: [`../AGENTS.md`](../AGENTS.md).
 
 The runtime tracing engine shared by the `trace-recorder` and `live-debugger` JVM agents.
@@ -12,14 +12,14 @@ The module builds on two siblings:
 [`jvm-agent`](../jvm-agent) — the bytecode-transformation machinery
 (`LincheckClassFileTransformer`, the ASM method transformers, `TraceAgentParameters` argument parsing) —
 and [`trace`](../trace) — the trace-point model and serialization strategies.
-Only `:trace-recorder` and `:live-debugger` depend on `:tracer`;
+Only `:trace-recorder` and `:live-debugger` depend on `:tracing-agent`;
 the Lincheck framework module (`:lincheck`) uses `:jvm-agent` directly and does not.
 
 ## How tracing works
 
 ### 1. Agent startup
 
-`TracerAgent` is the abstract base class subclassed by `TraceRecorderAgent` and `LiveDebuggerAgent`.
+`TracingAgent` is the abstract base class subclassed by `TraceRecorderAgent` and `LiveDebuggerAgent`.
 Its `premain`/`agentmain` perform, in order:
 
 1. set the agent's mode system property (`lincheck.traceRecorderMode` / `lincheck.liveDebuggerMode`);
@@ -80,7 +80,7 @@ All sources live in `src/main/org/jetbrains/lincheck/tracer/`:
 
 | File | Contents |
 |---|---|
-| `TracerAgent.kt` | `TracerAgent` base class, `TracingEntryPoint` |
+| `TracingAgent.kt` | `TracingAgent` base class, `TracingEntryPoint` |
 | `Tracer.kt` | `Tracer` — session-lifecycle entry points |
 | `TracingSession.kt` | `TracingSession` — state machine, dump-on-finish hooks |
 | `TraceOutputMode.kt` | `TraceOutputMode` — output-strategy selection and parsing |
@@ -89,7 +89,7 @@ All sources live in `src/main/org/jetbrains/lincheck/tracer/`:
 ## Gotchas
 
 - **Append `bootstrap.jar` right after attach.**
-  `TracerAgent` appends it before parsing arguments,
+  `TracingAgent` appends it before parsing arguments,
   because argument handling may already touch bootstrap-only classes
   (e.g. live-debugger breakpoint loading references `sun.nio.ch.lincheck.BreakpointStorage`).
   `LincheckInstrumentation.appendBootstrapJarToClassLoaderSearch` is idempotent;
