@@ -13,10 +13,6 @@ package org.jetbrains.kotlinx.lincheck_test.deterministicmethods
 import java.security.SecureRandom
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.util.JdkVersion
-import org.jetbrains.lincheck.util.jdkVersion
-import org.junit.Assume.assumeFalse
-import org.junit.Before
 import org.junit.Ignore
 
 /**
@@ -24,12 +20,6 @@ import org.junit.Ignore
  */
 @Ignore
 class SecureRandomTest : RandomTests() {
-    @Before
-    fun setUp() {
-        // https://github.com/JetBrains/lincheck/issues/564
-        assumeFalse(jdkVersion == JdkVersion.JDK_21 || jdkVersion == JdkVersion.JDK_20)
-    }
-    
     @Operation
     fun operation(): String {
         val secureRandom = SecureRandom()

@@ -144,6 +144,25 @@ enum class InstrumentationStrategy {
 }
 
 /**
+ * The state of the Lincheck instrumentation lifecycle.
+ *
+ * Transitions: [INACTIVE] --install--> [ACTIVE] --uninstall--> [UNINSTALLING] --> [INACTIVE].
+ */
+enum class InstrumentationState {
+    /** No instrumentation is installed. */
+    INACTIVE,
+
+    /** The instrumentation is installed; the transformer instruments matching classes. */
+    ACTIVE,
+
+    /**
+     * [LincheckInstrumentation.uninstall] is reverting the instrumentation:
+     * the transformer stays attached but hands the original class bytes back unchanged.
+     */
+    UNINSTALLING,
+}
+
+/**
  * [LincheckInstrumentation] implements the Lincheck bytecode instrumenting service.
  *
  * @property instrumentation The ByteBuddy instrumentation instance.
@@ -212,6 +231,16 @@ object LincheckInstrumentation {
      */
     val context = TraceContext()
 
+    /**
+     * The current state of the instrumentation lifecycle, see [InstrumentationState].
+     *
+     * While the state is [InstrumentationState.UNINSTALLING] the transformer stays attached and
+     * returns the original class bytes as-is, see [LincheckClassFileTransformer.transform] for the reasoning.
+     */
+    @Volatile
+    internal var instrumentationState = InstrumentationState.INACTIVE
+        private set
+
     fun attachJavaAgentStatically(instrumentation: Instrumentation) {
         check(javaAgentAttachType == null) {
             "Java agent was already attached" + when (javaAgentAttachType) {
@@ -259,6 +288,7 @@ object LincheckInstrumentation {
      */
     fun install(instrumentationMode: InstrumentationMode) {
         this.instrumentationMode = instrumentationMode
+        instrumentationState = InstrumentationState.ACTIVE
         setInstrumentationStrategy()
         setTransformationProfile()
 
@@ -328,6 +358,42 @@ object LincheckInstrumentation {
     }
 
     /**
+     * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
+     * the transformed classes to remove the Lincheck injections.
+     */
+    fun uninstall() {
+        // Keep the transformer attached until the re-transformation below is done;
+        // while the state is `UNINSTALLING` it returns the original class bytes unchanged,
+        // which strips the Lincheck injections just as detaching the transformer would,
+        // but additionally keeps the JVM's cache of the original class file alive on JDK 20+
+        // (see `LincheckClassFileTransformer.transform`).
+        instrumentationState = InstrumentationState.UNINSTALLING
+        try {
+            // Collect the set of instrumented classes.
+            val classes = if (instrumentationStrategy == InstrumentationStrategy.EAGER)
+                getLoadedClassesToInstrument()
+            else
+                getLoadedClassesToInstrument()
+                // Skip classes not transformed by Lincheck.
+                .filter { clazz ->
+                    val canonicalClassName = clazz.name
+                    canonicalClassName in instrumentedClasses
+                }
+            // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
+            // transformations of all agents that did not remove their transformers to this moment;
+            retransformClasses(classes)
+        } finally {
+            // Remove the Lincheck transformer.
+            instrumentation.removeTransformer(LincheckClassFileTransformer)
+            instrumentationState = InstrumentationState.INACTIVE
+        }
+        // Clear the set of instrumented classes.
+        instrumentedClasses.clear()
+        // Report statistics if requested.
+        reportStatistics()
+    }
+
+    /**
      * Decide transformation strategy for the current installation and store it into [instrumentationStrategy].
      *
      * Rules:
@@ -377,7 +443,8 @@ object LincheckInstrumentation {
         //    thus skipping and logging failing classes
         try {
             instrumentation.retransformClasses(*classes.toTypedArray())
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
+            Logger.warn(t) { "Failed to retransform ${classes.size} classes in bulk, retrying one by one" }
             classes.forEach { retransformClass(it) }
         }
     }
@@ -441,32 +508,6 @@ object LincheckInstrumentation {
         // The other order causes a class linkage error on double definition of `TransformationUtilsKt`
         // when it itself is passed as an argument to `canRetransformClass`.
         shouldTransform(clazz.name, instrumentationMode) && canRetransformClass(clazz)
-
-    /**
-     * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
-     * the transformed classes to remove the Lincheck injections.
-     */
-    fun uninstall() {
-        // Remove the Lincheck transformer.
-        instrumentation.removeTransformer(LincheckClassFileTransformer)
-        // Collect the set of instrumented classes.
-        val classes = if (instrumentationStrategy == InstrumentationStrategy.EAGER)
-            getLoadedClassesToInstrument()
-        else
-            getLoadedClassesToInstrument()
-            // Skip classes not transformed by Lincheck.
-            .filter { clazz ->
-                val canonicalClassName = clazz.name
-                canonicalClassName in instrumentedClasses
-            }
-        // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
-        // transformations of all agents that did not remove their transformers to this moment;
-        retransformClasses(classes)
-        // Clear the set of instrumented classes.
-        instrumentedClasses.clear()
-        // Report statistics if requested.
-        reportStatistics()
-    }
 
     fun reportStatistics() {
         if (collectTransformationStatistics) {

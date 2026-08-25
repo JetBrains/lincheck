@@ -12,23 +12,11 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.lincheck.datastructures.scenario
-import org.jetbrains.lincheck.util.JdkVersion
-import org.jetbrains.lincheck.util.jdkVersion
-import org.junit.Assume.assumeFalse
-import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 class LocksTest {
-
-    @Before
-    fun setUp() {
-        // currently these tests lead to hangs on JDK-21, apparently due to
-        // an unrelated bug with Kotlin stdlib arrays/collection util functions instrumentation,
-        // see https://github.com/JetBrains/lincheck/issues/564 for details
-        assumeFalse((jdkVersion == JdkVersion.JDK_21))
-    }
 
     @Test
     fun testSynchronizedIncrement2() {
