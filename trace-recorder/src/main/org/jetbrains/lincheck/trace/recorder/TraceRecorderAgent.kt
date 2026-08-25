@@ -33,6 +33,7 @@ import org.jetbrains.lincheck.tracer.TracingAgent
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.TRACE_RECORDER_MODE_PROPERTY
+import sun.nio.ch.lincheck.TracingInjections
 import java.lang.instrument.Instrumentation
 import java.net.InetSocketAddress
 
@@ -73,6 +74,10 @@ internal object TraceRecorderAgent {
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider?
             get() = if (tracingEntryPoint is TracingEntryPoint.MethodCall) ::TraceRecorderMethodTransformer else null
+
+        override fun postInstallInstrumentationSetup() {
+            TracingInjections.setHandler(TraceRecorderInjectionsHandler)
+        }
 
         override fun createTracingServer(): TracingServer? {
             try {

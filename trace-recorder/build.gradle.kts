@@ -25,7 +25,6 @@ sourceSets {
     dependencies {
         // main
         val asmVersion: String by project
-        val byteBuddyVersion: String by project
 
         compileOnly(project(":bootstrap"))
         implementation(project(":common"))
@@ -36,9 +35,16 @@ sourceSets {
         api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
         api("org.ow2.asm:asm-util:${asmVersion}")
-        api("net.bytebuddy:byte-buddy:${byteBuddyVersion}")
-        api("net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}")
     }
+}
+
+// byte-buddy is only used by `ByteBuddyAgent.install()` in `LincheckInstrumentation`,
+// the dynamic self-attach path taken when no `Instrumentation` instance is supplied --
+// unreachable here, since a `-javaagent` always receives one from `premain`.
+// It still arrives transitively as an `api` dependency of `:jvm-agent`,
+// and `runtimeClasspath` is what gets packed into `agent-payload.jar`, so exclude it explicitly.
+configurations.runtimeClasspath {
+    exclude(group = "net.bytebuddy")
 }
 
 tasks {

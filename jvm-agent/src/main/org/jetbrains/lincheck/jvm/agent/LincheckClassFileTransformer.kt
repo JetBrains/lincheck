@@ -90,7 +90,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         }
 
         // If the class should not be transformed, return immediately.
-        if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode)) {
+        if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode, loader)) {
             return null
         }
 
@@ -170,7 +170,11 @@ object LincheckClassFileTransformer : ClassFileTransformer {
     }
 
     @Suppress("SpellCheckingInspection")
-    fun shouldTransform(className: String, instrumentationMode: InstrumentationMode): Boolean {
+    fun shouldTransform(
+        className: String,
+        instrumentationMode: InstrumentationMode,
+        loader: ClassLoader?,
+    ): Boolean {
         // NEVER instrument the Lincheck classes.
         // Perform these checks FIRST to avoid potential class loading circularity errors.
         if (isInLincheckPackage(className)) return false

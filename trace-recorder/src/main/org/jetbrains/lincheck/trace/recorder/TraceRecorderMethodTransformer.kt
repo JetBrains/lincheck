@@ -18,6 +18,7 @@ import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Label
 import org.objectweb.asm.commons.AdviceAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
+import sun.nio.ch.lincheck.TracingInjections
 
 /**
  * Wraps method provided by User with Trace Recorder setup when trace recorder is used.
@@ -30,12 +31,12 @@ import org.objectweb.asm.commons.GeneratorAdapter
  * To:
  * ```kotlin
  * fun methodUnderTracing() {
- *  TraceRecorderInjections::startTraceRecorder()
+ *  TracingInjections::startTracing()
  *  try {
  *    /* code */
  *  }
  *  finally {
- *    TraceRecorderInjections::stopTraceRecorderAndDumpTrace()
+ *    TracingInjections::stopTracing()
  *  }
  * }
  * ```
@@ -66,7 +67,7 @@ internal class TraceRecorderMethodTransformer(
         val codeLocationId = context.codeLocationsPool.register(MethodCallCodeLocation(stackTraceElement, accessPath = null, argumentNames = null))
         push(codeLocationId)
 
-        invokeStatic(TraceRecorderInjections::startTraceRecorder)
+        invokeStatic(TracingInjections::startTracing)
         // Start the "try-finally" block here to add stop & dump in "finally"
         visitLabel(startLabel)
     }
@@ -74,7 +75,7 @@ internal class TraceRecorderMethodTransformer(
     override fun onMethodExit(opcode: Int) {
         super.onMethodExit(opcode)
         if (opcode == ATHROW) return
-        invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
+        invokeStatic(TracingInjections::stopTracing)
     }
 
     override fun visitMaxs(maxStack: Int, maxLocals: Int) {
@@ -82,7 +83,7 @@ internal class TraceRecorderMethodTransformer(
         visitLabel(endLabel)
         visitTryCatchBlock(startLabel, endLabel, endLabel, null)
         // Handler
-        invokeStatic(TraceRecorderInjections::stopTraceRecorderAndDumpTrace)
+        invokeStatic(TracingInjections::stopTracing)
         // STACK: Exception
         // This will call onMethodExit() too!
         visitInsn(ATHROW)

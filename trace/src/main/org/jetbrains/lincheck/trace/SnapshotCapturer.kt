@@ -16,6 +16,8 @@ import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.settings.RedactionMatch
 import org.jetbrains.lincheck.util.allDeclaredInstanceFields
 import org.jetbrains.lincheck.util.findArrayLength
+import org.jetbrains.lincheck.util.isKClass
+import org.jetbrains.lincheck.util.kClassReferencedName
 import org.jetbrains.lincheck.util.findElementsForArray
 import org.jetbrains.lincheck.util.findFieldsForObject
 import org.jetbrains.lincheck.util.readFieldSafely
@@ -235,8 +237,11 @@ internal class RedactingSnapshotCapturer(
                 content,
             )
         }
-        is Class<*> -> redactionForValue(value.name, Class::class.java.name) ?: TRJavaClass(value)
-        is KClass<*> -> redactionForValue(value.java.name, KClass::class.java.name) ?: TRKotlinClass(value)
+        is Class<*> ->
+            redactionForValue(value.name, Class::class.java.name) ?: TRJavaClass(value)
+        else if (value.isKClass) ->
+            redactionForValue(value.kClassReferencedName, KClass::class.java.name) ?: TRKotlinClass(value)
+
         else -> null
     }
 

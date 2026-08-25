@@ -341,7 +341,8 @@ object TraceAgentParameters {
         method: String = methodUnderTracing,
     ) {
         classUnderTracing =
-            runCatching { Class.forName(startClass) }.getOrNull()
+            runCatching { Class.forName(startClass, /* initialize = */ true, ClassLoader.getSystemClassLoader()) }
+                 .getOrNull()
                 ?.let { findDeclaringClassOrInterface(it, method) }
                 ?: startClass
     }
@@ -376,14 +377,6 @@ object TraceAgentParameters {
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
-    }
-
-    @JvmStatic
-    fun getClassAndMethod(): Pair<Class<*>, Method> {
-        val testClass = Class.forName(classUnderTracing)
-        val testMethod = testClass.methods.find { it.name == methodUnderTracing }
-            ?: error("Method \"${methodUnderTracing}\" was not found in class \"${classUnderTracing}\". Check that method exists and it is public.")
-        return testClass to testMethod
     }
 
     @TestOnly

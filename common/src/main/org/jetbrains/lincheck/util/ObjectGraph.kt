@@ -13,8 +13,6 @@ package org.jetbrains.lincheck.util
 import org.jetbrains.lincheck.util.collections.*
 import java.util.concurrent.atomic.*
 import java.lang.reflect.*
-import java.math.BigDecimal
-import java.math.BigInteger
 import java.util.*
 
 
@@ -247,26 +245,6 @@ internal data class ObjectGraphTraversalConfig(
     val traverseEnumObjects: Boolean = true,
     val promoteAtomicObjects: Boolean = false,
 )
-
-/**
- * Extension property to determine if an object is of an immutable type.
- */
-internal val Any?.isImmutable get() = when {
-    this.isPrimitive        -> true
-    this is Unit            -> true
-    this is String          -> true
-    this is BigInteger      -> true
-    this is BigDecimal      -> true
-    else                    -> false
-}
-
-/**
- * Extension property to determine if an object is of a primitive type.
- */
-internal val Any?.isPrimitive get() = when (this) {
-    is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
-    else -> false
-}
 
 internal fun getArraySize(arr: Any): Int {
     return when {

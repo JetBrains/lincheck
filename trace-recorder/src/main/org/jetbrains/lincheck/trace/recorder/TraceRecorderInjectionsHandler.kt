@@ -18,37 +18,20 @@ import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.TracingSession
 import org.jetbrains.lincheck.util.*
+import sun.nio.ch.lincheck.TracingInjections
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * This object is glue between bytecode injections into a method under tracing and actual trace recording code.
+ * Trace-recording code behind the bytecode injected into the method under tracing.
  *
- * Call to [startTraceRecorder] should be injected as a first instruction of the method under tracing.
- * Call to [stopTraceRecorderAndDumpTrace] should be injected on each exit point of the method under tracing
- * (for either normal exit via `return` or exceptional exit via `throw` or via propagated exception).
- *
- * This is effectively an implementation of the following Java code:
- *
- * ```java
- * methodInQuestion() {
- *   TraceRecorderInjections.startTraceRecorder(...);
- *   try {
- *     <original method code>
- *   } finally {
- *     TraceRecorderInjections.stopTraceRecorderAndDumpTrace();
- *   }
- * }
- * ```
- *
- * This class is used to avoid coupling between instrumented code and `bootstrap.jar`,
- * to enable very early instrumentation before `bootstrap.jar` is added to class.
+ * The injected calls target [sun.nio.ch.lincheck.TracingInjections], which forwards them here;
+ * see its documentation for the shape of the instrumented method.
  */
-internal object TraceRecorderInjections {
+internal object TraceRecorderInjectionsHandler : TracingInjections.Handler {
 
     private val startCount = AtomicInteger(0)
 
-    @JvmStatic
-    fun startTraceRecorder(startingCodeLocationId: Int) {
+    override fun startTracing(startingCodeLocationId: Int) {
         try {
             val className = TraceAgentParameters.classUnderTracing
             val methodName = TraceAgentParameters.methodUnderTracing
@@ -75,8 +58,7 @@ internal object TraceRecorderInjections {
         }
     }
 
-    @JvmStatic
-    fun stopTraceRecorderAndDumpTrace() {
+    override fun stopTracing() {
         // This method should never throw an exception, or tracer state is undetermined
         try {
             val className = TraceAgentParameters.classUnderTracing

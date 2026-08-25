@@ -121,7 +121,7 @@ val TRValue.classId: Int? get() = when (this) {
 fun TRValue(context: TraceContext, value: Any?): TRValue = when (value) {
     // special values
     null    -> TRNull
-    is Unit -> TRUnit
+    else if (value.isUnit) -> TRUnit
     else if (value === INJECTIONS_VOID_OBJECT) -> TRVoid
 
     // primitives
@@ -150,7 +150,7 @@ fun TRValue(context: TraceContext, value: Any?): TRValue = when (value) {
 
     // class objects
     is Class<*>  -> TRJavaClass(value)
-    is KClass<*> -> TRKotlinClass(value)
+    else if (value.isKClass) -> TRKotlinClass(value)
 
     // arrays
     is Array<*>     -> TRArray(context, value)
@@ -749,7 +749,7 @@ data class TRJavaClass internal constructor(val referencedClassName: String) : T
 data class TRKotlinClass internal constructor(val referencedClassName: String) : TRClassReference() {
     val className: String get() = KClass::class.java.name
 
-    constructor(kClass: KClass<*>) : this(kClass.java.name)
+    constructor(kClass: Any) : this(kClass.kClassReferencedName)
 
     override fun toString(): String = "$referencedClassName.kclass"
 }

@@ -487,7 +487,8 @@ internal class MethodCallTransformer(
             }
             else if originalName.endsWith($$"$default") -> {
                 val base = callRecursive(originalName.removeSuffix($$"$default"))
-                if (LincheckClassFileTransformer.shouldTransform(owner.toCanonicalClassName(), instrumentationMode)) {
+                val canonicalName = owner.toCanonicalClassName()
+                if (LincheckClassFileTransformer.shouldTransform(canonicalName, instrumentationMode, loader = null)) {
                     // will be excluded further by postprocessor
                     $$"$$base$default"
                 } else {

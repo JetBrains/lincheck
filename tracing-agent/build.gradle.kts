@@ -11,7 +11,6 @@ sourceSets {
 
     dependencies {
         val asmVersion: String by project
-        val byteBuddyVersion: String by project
 
         compileOnly(project(":bootstrap"))
         implementation(project(":common"))
@@ -21,8 +20,6 @@ sourceSets {
         api(kotlin("reflect"))
         api("org.ow2.asm:asm-commons:${asmVersion}")
         api("org.ow2.asm:asm-util:${asmVersion}")
-        api("net.bytebuddy:byte-buddy:${byteBuddyVersion}")
-        api("net.bytebuddy:byte-buddy-agent:${byteBuddyVersion}")
     }
 }
 
