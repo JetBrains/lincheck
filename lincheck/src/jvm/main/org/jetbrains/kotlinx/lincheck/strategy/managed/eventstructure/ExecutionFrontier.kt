@@ -105,11 +105,16 @@ inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: Lis
     }
 }
 
-// Pushes back the mutable frontier by removing events while they satisfy the given predicate
+// Pushes back the mutable frontier by removing events which satisfy the given predicate
 inline fun <E: ThreadEvent> MutableExecutionFrontier<E>.cut(pred: (ThreadEvent) -> Boolean) {
+    //NOTE: we need to invert pred removes events UNTIL the current event is satisfied
+    cutUntilTrue { !pred(it) }
+}
+
+// Pushes back the mutable frontier by removing events from each thread UNTIL the current is satisfied
+inline fun <E: ThreadEvent> MutableExecutionFrontier<E>.cutUntilTrue(pred: (ThreadEvent) -> Boolean) {
     threadMap.forEach { (tid, lastEvent) ->
-        //NOTE: we need to invert pred as it removes events UNTIL the current event is satisfied
-        val pred = lastEvent?.pred(inclusive = true) { !pred(it) }
+        val pred = lastEvent?.pred(inclusive = true) { pred(it) }
         @Suppress("UNCHECKED_CAST")
         set(tid, pred as? E)
     }
