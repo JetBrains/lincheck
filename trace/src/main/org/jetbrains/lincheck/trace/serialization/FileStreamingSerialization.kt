@@ -11,11 +11,13 @@
 package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.RUNTIME_JVM
 import org.jetbrains.lincheck.trace.TRContainerTracePoint
 import org.jetbrains.lincheck.trace.TRTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.collections.AtomicBitmap
+import java.io.DataOutputStream
 import java.io.OutputStream
 import java.nio.ByteBuffer
 import java.util.concurrent.ArrayBlockingQueue
@@ -109,7 +111,7 @@ internal class BufferedTraceWriter(
         bufferStream.mark()
     }
 
-    // Cut string to half a buffer size
+    // Cut the string to MAX_STRING_SIZE, so that a single string can never overflow the block buffer.
     override fun writeString(value: String?): Int {
         val trimmedValue = if ((value?.length ?: 0) > MAX_STRING_SIZE) value?.substring(0, MAX_STRING_SIZE) else value
         return super.writeString(trimmedValue)
@@ -196,8 +198,7 @@ private class FileStreamingThread(
     init {
         name = "TR-Block-Writer"
 
-        data.writeLong(TRACE_MAGIC)
-        data.writeLong(TRACE_VERSION)
+        DataOutputStream(data).writeTraceHeader(RUNTIME_JVM)
 
         index.writeLong(INDEX_MAGIC)
         index.writeLong(TRACE_VERSION)

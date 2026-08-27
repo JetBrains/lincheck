@@ -37,7 +37,7 @@ import kotlin.reflect.KClass
  * - trace points are streamed as a flat list (no tree structure).
  *
  * @param context the trace context containing descriptors and metadata
- * @param queueCapacity the maximum number of trace points to the buffer.
+ * @param queueCapacity the maximum number of trace points to buffer before the oldest ones are dropped.
  */
 class NetworkStreamingTraceCollecting(
     val context: TraceContext,
@@ -222,7 +222,7 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
  * both the lincheck tracing infrastructure and the control-plane can send trace points
  * without duplicating low-level protocol details.
  *
- * @param callbacks the TracinCallbacks instance to send binary data over
+ * @param callbacks the [TracingCallbacks] instance to send binary data over
  * @param context the trace context containing descriptors and metadata
  */
 class NetworkTracePointSender(
@@ -239,14 +239,14 @@ class NetworkTracePointSender(
     /**
      * Serializes and sends a single [TRSnapshotLineBreakpointTracePoint] over the WebSocket.
      *
-     * On the first call, the trace protocol header (magic number and version) is sent
+     * On the first call, the trace protocol header (magic number, version and runtime) is sent
      * automatically before the trace point data.
      */
     fun send(tracePoint: TRSnapshotLineBreakpointTracePoint) = lock.withLock {
         // Send header on first write
         if (!headerSent) {
             byteStream.reset()
-            outputStream.writeTraceHeader()
+            outputStream.writeTraceHeader(RUNTIME_JVM)
             outputStream.flush()
             callbacks.binaryTraceData(byteStream.toByteArray())
             headerSent = true
@@ -337,6 +337,10 @@ class NetworkTraceReader : Closeable {
 
     private var headerValidated = false
 
+    /** Runtime that produced the stream, as read from the header; `null` until the header arrives. */
+    var runtime: String? = null
+        private set
+
     /**
      * Signal that the data source has disconnected / reached EOF.
      * Transitions the reader to [State.Eof].
@@ -405,9 +409,9 @@ class NetworkTraceReader : Closeable {
 
         // First message should be the header
         if (!headerValidated) {
-            dataInput.checkTraceHeader()
+            runtime = dataInput.checkTraceHeader()
             headerValidated = true
-            Logger.info { "WebSocket trace header validated successfully" }
+            Logger.info { "WebSocket trace header validated successfully, runtime: $runtime" }
             return
         }
 

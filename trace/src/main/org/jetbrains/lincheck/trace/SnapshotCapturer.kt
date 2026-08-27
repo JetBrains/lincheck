@@ -133,7 +133,7 @@ internal class RedactingSnapshotCapturer(
             val descriptor = context.createAndRegisterClassDescriptor(nonNullValue.javaClass.name)
             return TRArraySnapshot(
                 descriptor,
-                System.identityHashCode(nonNullValue),
+                System.identityHashCode(nonNullValue).toLong(),
                 arraySize,
                 elements,
             )
@@ -142,7 +142,7 @@ internal class RedactingSnapshotCapturer(
         val fields = captureObjectFields(nonNullValue)
         return if (fields.isNotEmpty()) {
             val descriptor = context.createAndRegisterClassDescriptor(nonNullValue.javaClass.name)
-            TRObjectSnapshot(descriptor, System.identityHashCode(nonNullValue), fields)
+            TRObjectSnapshot(descriptor, System.identityHashCode(nonNullValue).toLong(), fields)
         } else {
             TRValue(context, nonNullValue)
         }
@@ -212,36 +212,35 @@ internal class RedactingSnapshotCapturer(
         is Float,
         is Double,
         is Char,
-        -> redactionForValue(value.toString(), value.javaClass.name) ?: TRPrimitive(value)
+        -> redactionForValue(value.toString(), value.javaClass.name) ?: TRScalar(value)
         is BigInteger -> {
             if (value.javaClass != BigInteger::class.java) {
                 null
             } else {
-                redactionForValue(value.toString(), BigInteger::class.java.name) ?: TRBigInteger(value)
+                redactionForValue(value.toString(), BigInteger::class.java.name) ?: TRArbitraryInteger(value)
             }
         }
         is BigDecimal -> {
             if (value.javaClass != BigDecimal::class.java) {
                 null
             } else {
-                redactionForValue(value.toString(), BigDecimal::class.java.name) ?: TRBigDecimal(value)
+                redactionForValue(value.toString(), BigDecimal::class.java.name) ?: TRArbitraryDecimal(value)
             }
         }
         is Enum<*> -> redactionForValue(value.name, value.javaClass.name) ?: TREnum(context, value)
         is CharSequence -> {
             val content = capturedCharSequenceContent(value, truncate = true)
             val className = value.javaClass.name
-            redactionForValue(content, className) ?: TRCharSequence(
+            redactionForValue(content, className) ?: TRTextSnapshot(
                 context.createAndRegisterClassDescriptor(className),
-                System.identityHashCode(value),
+                System.identityHashCode(value).toLong(),
                 content,
             )
         }
         is Class<*> ->
-            redactionForValue(value.name, Class::class.java.name) ?: TRJavaClass(value)
+            redactionForValue(value.name, Class::class.java.name) ?: TRTypeReference(value)
         else if (value.isKClass) ->
-            redactionForValue(value.kClassReferencedName, KClass::class.java.name) ?: TRKotlinClass(value)
-
+            redactionForValue(value.kClassReferencedName, KClass::class.java.name) ?: TRKotlinTypeReference(value)
         else -> null
     }
 
@@ -260,7 +259,7 @@ internal class RedactingSnapshotCapturer(
         }.getOrElse { emptyList() }
         return TRExceptionSnapshot(
             descriptor,
-            System.identityHashCode(throwable),
+            System.identityHashCode(throwable).toLong(),
             message,
             stackTrace,
         )

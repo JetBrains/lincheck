@@ -21,7 +21,7 @@ import org.jetbrains.lincheck.trace.TRLoopIterationTracePoint
 import org.jetbrains.lincheck.trace.TRLoopTracePoint
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
 import org.jetbrains.lincheck.trace.TRNull
-import org.jetbrains.lincheck.trace.TRPrimitive
+import org.jetbrains.lincheck.trace.TRScalar
 import org.jetbrains.lincheck.trace.TRReadArrayTracePoint
 import org.jetbrains.lincheck.trace.TRReadFieldTracePoint
 import org.jetbrains.lincheck.trace.TRReadLocalVariableTracePoint
@@ -106,7 +106,7 @@ internal class TraceBuilder {
                 AccessPath(LocalVariableAccessLocation(variable)),
             )
         )
-        return TRReadArrayTracePoint(context, 0, codeLocationId, TRNull, 0, TRPrimitive(1))
+        return TRReadArrayTracePoint(context, 0, codeLocationId, TRNull, 0, TRScalar(1))
     }
 
     fun loop(loopId: Int): TRLoopTracePoint =

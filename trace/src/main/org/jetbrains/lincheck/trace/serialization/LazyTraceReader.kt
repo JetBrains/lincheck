@@ -78,13 +78,24 @@ class LazyTraceReader private constructor(
     private val callTracepointChildren = RangeIndex.create()
     private val lock = ReentrantLock()
 
+    /**
+     * Runtime that produced the trace, as read from the header, e.g. `jvm`.
+     *
+     * Per-runtime conventions — code addressing and type-name spellings — follow from it.
+     */
+    val runtime: String
+
+    /** Offset of the first record: the header ends with a variable-length runtime string. */
+    private val dataStart: Long
+
     init {
         val channel = Files.newByteChannel(Path(input.dataFileName), StandardOpenOption.READ)
         dataStream = SeekableChannelBufferedInputStream(channel)
         data = SeekableDataInput(dataStream)
 
         try {
-            checkDataHeader(data)
+            runtime = checkDataHeader(data)
+            dataStart = data.position()
         } catch (t: Throwable) {
             data.close()
             input.close()
@@ -352,8 +363,8 @@ class LazyTraceReader private constructor(
             loadContextWithoutIndex()
         }
 
-        // Seek to start after magic and version
-        data.seek((Long.SIZE_BYTES * 2).toLong())
+        // Seek to start after the header
+        data.seek(dataStart)
     }
 
     private fun loadContextWithIndex(): Boolean {
@@ -426,8 +437,7 @@ class LazyTraceReader private constructor(
     }
 
     private fun loadContextWithoutIndex() {
-        // Two Longs is header
-        data.seek((Long.SIZE_BYTES * 2).toLong())
+        data.seek(dataStart)
         loadAllObjectsDeep(
             input = data,
             context = context,

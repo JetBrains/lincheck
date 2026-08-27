@@ -220,9 +220,9 @@ abstract class AbstractTRMethodCallTracePointPrinter() {
             when {
                 accessPath == null -> appendObject(parameter)
                 // Inline-renderable values (their toString reveals the full content) get the
-                // `name ➜ value` form. Identity-tracked objects/arrays render as `ClassName@hash`,
+                // `name ➜ value` form. Identity-tracked objects/arrays render as `ClassName@identity`,
                 // which adds no information over the name, so we just print the name.
-                parameter is TRValueLike || parameter is TRClassReference || parameter is TRCharSequence -> {
+                parameter is TRValueLike || parameter is TRTypeReference || parameter is TRTextSnapshot -> {
                     appendAccessPath(accessPath)
                     append(" ")
                     appendSpecialSymbol(READ_ACCESS_SYMBOL)

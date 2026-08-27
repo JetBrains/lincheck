@@ -330,9 +330,8 @@ internal fun loadCodeLocation(
     return id
 }
 
-internal fun checkDataHeader(input: DataInput) {
-    input.checkTraceHeader()
-}
+/** Validates the data-file prelude and returns the runtime that produced the trace. */
+internal fun checkDataHeader(input: DataInput): String = input.checkTraceHeader()
 
 const val FALLBACK_STRING = "<unknown>"
 internal const val INPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024

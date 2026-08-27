@@ -35,7 +35,7 @@ class TRExceptionTest {
         // pins that hierarchy contract: a TRException must always be reachable as
         // a TRReferenceLike when traversing the generic TRValue tree.
         val asReference: TRReferenceLike = captured
-        Assert.assertEquals(System.identityHashCode(throwable), asReference.identityHashCode)
+        Assert.assertEquals(System.identityHashCode(throwable).toLong(), asReference.identity)
         Assert.assertEquals(throwable.javaClass.name, asReference.className)
     }
 
@@ -52,7 +52,7 @@ class TRExceptionTest {
         // toString renders the adorned (simple) class name, like every other TRReferenceLike.
         Assert.assertEquals(
             "Plain TRException must render as Class@id with no inline message",
-            "IllegalStateException@" + captured.identityHashCode,
+            "IllegalStateException@" + captured.identity,
             captured.toString(),
         )
     }
@@ -110,7 +110,7 @@ class TRExceptionTest {
         val snapshot = TRExceptionSnapshot(context, throwable)
 
         Assert.assertEquals(plain.className, snapshot.className)
-        Assert.assertEquals(plain.identityHashCode, snapshot.identityHashCode)
+        Assert.assertEquals(plain.identity, snapshot.identity)
     }
 
     @Test
@@ -127,7 +127,7 @@ class TRExceptionTest {
         )
         Assert.assertTrue(
             "toString should include the identity hash code; got: $rendered",
-            rendered.contains(captured.identityHashCode.toString()),
+            rendered.contains(captured.identity.toString()),
         )
         Assert.assertTrue(
             "Plain TRException toString must not include the message; got: $rendered",
@@ -149,7 +149,7 @@ class TRExceptionTest {
         )
         Assert.assertTrue(
             "toString should include the identity hash code; got: $rendered",
-            rendered.contains(captured.identityHashCode.toString()),
+            rendered.contains(captured.identity.toString()),
         )
         Assert.assertTrue(
             "toString should include the message; got: $rendered",

@@ -760,8 +760,8 @@ class TraceCollectingEventTracker(
 
         val redactionPolicy = LincheckClassFileTransformer.liveDebuggerSettings.redactionRegistry.snapshot()
         val snapshotCapturer = SnapshotCapturer(context, redactionPolicy)
-        // Code-location class names are stored in ASM internal form; class- and package-scoped
-        // redaction rules are written in canonical form and would never match without this.
+        // Code-location class names are stored in ASM internal form, while class- and package-scoped
+        // redaction rules are written in canonical form, so convert before handing the name to matching.
         val declaringClassName = context.stackTrace(codeLocation).className.toCanonicalClassName()
         val activeLocals = context.activeLocals(codeLocation)
         // A slot-name/value count mismatch violates an instrumentation-layer invariant;

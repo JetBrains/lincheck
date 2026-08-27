@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.trace.network
 
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
+import org.jetbrains.lincheck.trace.RUNTIME_JVM
 import org.jetbrains.lincheck.trace.network.websocket.handleMessage
 import org.jetbrains.lincheck.trace.serialization.TRACE_VERSION
 import org.junit.Assert.assertEquals

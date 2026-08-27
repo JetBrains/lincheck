@@ -31,10 +31,10 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.trace.RUNTIME_JVM
 import org.jetbrains.lincheck.trace.network.AgentHelloMessage
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.PROTOCOL_VERSION
-import org.jetbrains.lincheck.trace.network.RUNTIME_JVM
 import org.jetbrains.lincheck.trace.network.TracingServer
 import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
 import org.jetbrains.lincheck.trace.serialization.TRACE_VERSION
@@ -168,8 +168,7 @@ internal object LiveDebuggerAgent {
         // `PROTOCOL_VERSION`: the wire protocol frames commands/notifications,
         // while this versions the binary payload of `binaryTraceData`.
         traceVersion = TRACE_VERSION,
-        // Clients refuse agents without this capability, so no unredacted capture stream
-        // ever reaches an IDE that expects capture-time redaction.
+        // Advertised so a client can tell the user whether captures are redacted before they arrive.
         attributes = mapOf(AgentHelloMessage.KEY_CAPABILITIES to AgentHelloMessage.CAPABILITY_REDACTION_V1),
     )
 

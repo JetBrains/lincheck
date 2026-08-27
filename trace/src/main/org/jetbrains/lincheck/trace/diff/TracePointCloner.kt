@@ -209,44 +209,49 @@ class TracePointCloner(
         is TRVoid -> this
         is TRUnit -> this
         is TRRedacted -> copy()
-        is TRPrimitive -> TRPrimitive(value)
+        is TRScalar -> TRScalar(value)
         is TRString -> TRString(value)
         is TREnum -> {
             val cd = context.createAndRegisterClassDescriptor(className)
             TREnum(cd, name)
         }
-        is TRBigInteger -> TRBigInteger(value)
-        is TRBigDecimal -> TRBigDecimal(value)
+        is TRArbitraryInteger -> TRArbitraryInteger(value)
+        is TRArbitraryDecimal -> TRArbitraryDecimal(value)
         is TRObject -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRObject(cd, identityHashCode)
+            TRObject(cd, identity)
         }
         is TRObjectSnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRObjectSnapshot(cd, identityHashCode, fields.clone())
+            TRObjectSnapshot(cd, identity, fields.clone())
         }
         is TRArray -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRArray(cd, identityHashCode, totalSize)
+            TRArray(cd, identity, totalSize)
         }
         is TRArraySnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRArraySnapshot(cd, identityHashCode, totalSize, capturedElements.clone())
+            TRArraySnapshot(cd, identity, totalSize, capturedElements.clone())
         }
-        is TRCharSequence -> {
+        is TRMapSnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRCharSequence(cd, identityHashCode, content)
+            val entries = capturedEntries.map { (key, value) -> key.clone() to value.clone() }
+            TRMapSnapshot(cd, identity, totalSize, entries)
+        }
+        is TRTextSnapshot -> {
+            val cd = context.createAndRegisterClassDescriptor(className)
+            TRTextSnapshot(cd, identity, content)
         }
         is TRException -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRException(cd, identityHashCode)
+            TRException(cd, identity)
         }
         is TRExceptionSnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRExceptionSnapshot(cd, identityHashCode, message, stackTrace)
+            TRExceptionSnapshot(cd, identity, message, stackTrace)
         }
-        is TRJavaClass -> TRJavaClass(referencedClassName)
-        is TRKotlinClass -> TRKotlinClass(referencedClassName)
+        is TRTypeReference -> TRTypeReference(referencedClassName, flavor)
+        is TRRenderedValue -> this
         is TRUnfinishedMethodResult -> this
         is TRUntrackedMethodResult -> this
     }

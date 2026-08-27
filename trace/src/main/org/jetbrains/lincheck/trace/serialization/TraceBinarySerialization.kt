@@ -27,7 +27,7 @@ import java.util.UUID
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
 /** Binary trace-format version this build produces and consumes. */
-const val TRACE_VERSION : Long = 28
+const val TRACE_VERSION : Long = 29
 
 // Buffer for saving trace in one piece
 internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -41,10 +41,24 @@ internal const val INDEX_CELL_SIZE: Int = Byte.SIZE_BYTES + Int.SIZE_BYTES + Lon
 
 // The trace data file and the index file each start with a magic-and-version pair: the data
 // file uses [TRACE_MAGIC], the index file uses [INDEX_MAGIC], both followed by [TRACE_VERSION].
+//
+// The data header then names the runtime that produced the trace (e.g. [RUNTIME_JVM]),
+// so a client of one runtime can read a trace made by another:
+// code addressing and type-name spellings are per-runtime conventions,
+// and a saved trace has no hello message to carry them.
+//
+// The index header carries no runtime: an index is only ever opened together with its data file,
+// and it holds ids and byte offsets, nothing whose meaning depends on the producer.
 
-internal fun DataOutput.writeTraceHeader() {
+/**
+ * Writes the data-file prelude, taking the producing runtime as a parameter because the header names it.
+ *
+ * Every writer in this module passes [RUNTIME_JVM]: they serve JVM producers only.
+ */
+internal fun DataOutput.writeTraceHeader(runtime: String) {
     writeLong(TRACE_MAGIC)
     writeLong(TRACE_VERSION)
+    writeString(runtime)
 }
 
 internal fun DataOutput.writeTraceIndexHeader() {
@@ -52,7 +66,12 @@ internal fun DataOutput.writeTraceIndexHeader() {
     writeLong(TRACE_VERSION)
 }
 
-internal fun DataInput.checkTraceHeader() {
+/**
+ * Validates the data-file prelude and returns the runtime that produced the trace.
+ *
+ * An unrecognised runtime is not an error: it is returned as read.
+ */
+internal fun DataInput.checkTraceHeader(): String {
     val magic = readLong()
     check(magic == TRACE_MAGIC) {
         "Wrong trace data magic 0x${magic.toString(16)}, expected 0x${TRACE_MAGIC.toString(16)}"
@@ -61,6 +80,7 @@ internal fun DataInput.checkTraceHeader() {
     check(version == TRACE_VERSION) {
         "Wrong trace data version $version, expected $TRACE_VERSION"
     }
+    return readString()
 }
 
 internal fun DataInput.checkTraceIndexHeader() {
@@ -452,8 +472,8 @@ private fun DataInput.readArrayElementByNameAccessLocation(context: TraceContext
 // ======== TR Values ========
 
 // The enum ordinal is the on-wire kind discriminator (byte). One entry per concrete `TRValue`
-// subclass — and one extra primitive entry per JVM primitive type because `TRPrimitive` is a
-// single Kotlin type that carries any of nine value shapes.
+// subclass, plus one per discriminated flavour where a single subclass carries several:
+// the eight `TRScalar` encodings, the two `TRTypeReference` flavours.
 //
 // If you reorder entries — remember to update `TRACE_VERSION` (kind numeration order is part of
 // the serialization format).
@@ -463,21 +483,21 @@ internal enum class TRValueKind {
     VOID,
     UNIT,
 
-    // JVM primitives
-    PRIMITIVE_BYTE,
-    PRIMITIVE_SHORT,
-    PRIMITIVE_INT,
-    PRIMITIVE_LONG,
-    PRIMITIVE_FLOAT,
-    PRIMITIVE_DOUBLE,
-    PRIMITIVE_CHAR,
-    PRIMITIVE_BOOLEAN,
+    // scalars
+    SCALAR_BYTE,
+    SCALAR_SHORT,
+    SCALAR_INT,
+    SCALAR_LONG,
+    SCALAR_FLOAT,
+    SCALAR_DOUBLE,
+    SCALAR_CHAR,
+    SCALAR_BOOLEAN,
 
     // value-like types
     STRING,
     ENUM,
-    BIG_INTEGER,
-    BIG_DECIMAL,
+    ARBITRARY_INTEGER,
+    ARBITRARY_DECIMAL,
 
     // reference-like types
     OBJECT,
@@ -486,7 +506,7 @@ internal enum class TRValueKind {
     ARRAY_SNAPSHOT,
 
     // char sequence
-    CHAR_SEQUENCE,
+    TEXT_SNAPSHOT,
 
     // exception (Throwable) — class descriptor + identity
     EXCEPTION,
@@ -501,8 +521,14 @@ internal enum class TRValueKind {
     UNFINISHED_METHOD_RESULT,
     UNTRACKED_METHOD_RESULT,
 
-    // capture-time redaction marker; appended to preserve existing ordinal assignments
+    // capture-time redaction marker
     REDACTED,
+
+    // pre-rendered leaf value from an agent that cannot capture the value structurally
+    RENDERED,
+
+    // key-value container
+    MAP_SNAPSHOT,
 }
 
 internal fun DataOutput.writeTRValueKind(value: TRValueKind) {
@@ -534,16 +560,21 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
             writeNullableString(value.templateName)
         }
 
-        // primitives
-        is TRPrimitive -> when (val v = value.value) {
-            is Byte    -> { writeTRValueKind(TRValueKind.PRIMITIVE_BYTE);       writeByte(v.toInt())  }
-            is Short   -> { writeTRValueKind(TRValueKind.PRIMITIVE_SHORT);      writeShort(v.toInt()) }
-            is Int     -> { writeTRValueKind(TRValueKind.PRIMITIVE_INT);        writeInt(v)           }
-            is Long    -> { writeTRValueKind(TRValueKind.PRIMITIVE_LONG);       writeLong(v)          }
-            is Float   -> { writeTRValueKind(TRValueKind.PRIMITIVE_FLOAT);      writeFloat(v)         }
-            is Double  -> { writeTRValueKind(TRValueKind.PRIMITIVE_DOUBLE);     writeDouble(v)        }
-            is Char    -> { writeTRValueKind(TRValueKind.PRIMITIVE_CHAR);       writeChar(v.code)     }
-            is Boolean -> { writeTRValueKind(TRValueKind.PRIMITIVE_BOOLEAN);    writeBoolean(v)       }
+        is TRRenderedValue -> {
+            writeTRValueKind(TRValueKind.RENDERED)
+            writeString(value.rendered)
+        }
+
+        // scalars
+        is TRScalar -> when (val v = value.value) {
+            is Byte    -> { writeTRValueKind(TRValueKind.SCALAR_BYTE);       writeByte(v.toInt())  }
+            is Short   -> { writeTRValueKind(TRValueKind.SCALAR_SHORT);      writeShort(v.toInt()) }
+            is Int     -> { writeTRValueKind(TRValueKind.SCALAR_INT);        writeInt(v)           }
+            is Long    -> { writeTRValueKind(TRValueKind.SCALAR_LONG);       writeLong(v)          }
+            is Float   -> { writeTRValueKind(TRValueKind.SCALAR_FLOAT);      writeFloat(v)         }
+            is Double  -> { writeTRValueKind(TRValueKind.SCALAR_DOUBLE);     writeDouble(v)        }
+            is Char    -> { writeTRValueKind(TRValueKind.SCALAR_CHAR);       writeChar(v.code)     }
+            is Boolean -> { writeTRValueKind(TRValueKind.SCALAR_BOOLEAN);    writeBoolean(v)       }
 
             else -> error("Unknown primitive value $v")
         }
@@ -558,12 +589,12 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
             writeInt(value.classDescriptor.id)
             writeNullableString(value.name)
         }
-        is TRBigInteger -> {
-            writeTRValueKind(TRValueKind.BIG_INTEGER)
+        is TRArbitraryInteger -> {
+            writeTRValueKind(TRValueKind.ARBITRARY_INTEGER)
             writeString(value.value)
         }
-        is TRBigDecimal -> {
-            writeTRValueKind(TRValueKind.BIG_DECIMAL)
+        is TRArbitraryDecimal -> {
+            writeTRValueKind(TRValueKind.ARBITRARY_DECIMAL)
             writeString(value.value)
         }
 
@@ -571,12 +602,12 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
         is TRObject -> {
             writeTRValueKind(TRValueKind.OBJECT)
             writeInt(value.classDescriptor.id)
-            writeInt(value.identityHashCode)
+            writeLong(value.identity)
         }
         is TRObjectSnapshot -> {
             writeTRValueKind(TRValueKind.OBJECT_SNAPSHOT)
             writeInt(value.classDescriptor.id)
-            writeInt(value.identityHashCode)
+            writeLong(value.identity)
             writeInt(value.fields.size)
             value.fields.forEach { (fieldName, fieldValue) ->
                 writeString(fieldName)
@@ -586,23 +617,34 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
         is TRArray -> {
             writeTRValueKind(TRValueKind.ARRAY)
             writeInt(value.classDescriptor.id)
-            writeInt(value.identityHashCode)
+            writeLong(value.identity)
             writeInt(value.totalSize)
         }
         is TRArraySnapshot -> {
             writeTRValueKind(TRValueKind.ARRAY_SNAPSHOT)
             writeInt(value.classDescriptor.id)
-            writeInt(value.identityHashCode)
+            writeLong(value.identity)
             writeInt(value.totalSize)
             writeInt(value.capturedElements.size)
             value.capturedElements.forEach { element -> this@writeTRValue.writeTRValue(element) }
         }
+        is TRMapSnapshot -> {
+            writeTRValueKind(TRValueKind.MAP_SNAPSHOT)
+            writeInt(value.classDescriptor.id)
+            writeLong(value.identity)
+            writeInt(value.totalSize)
+            writeInt(value.capturedEntries.size)
+            value.capturedEntries.forEach { (key, entryValue) ->
+                this@writeTRValue.writeTRValue(key)
+                this@writeTRValue.writeTRValue(entryValue)
+            }
+        }
 
         // char sequence
-        is TRCharSequence -> {
-            writeTRValueKind(TRValueKind.CHAR_SEQUENCE)
+        is TRTextSnapshot -> {
+            writeTRValueKind(TRValueKind.TEXT_SNAPSHOT)
             writeInt(value.classDescriptor.id)
-            writeInt(value.identityHashCode)
+            writeLong(value.identity)
             writeString(value.content)
         }
 
@@ -610,26 +652,27 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
         is TRException -> {
             writeTRValueKind(TRValueKind.EXCEPTION)
             writeInt(value.classDescriptor.id)
-            writeInt(value.identityHashCode)
+            writeLong(value.identity)
         }
 
         // exception snapshot
         is TRExceptionSnapshot -> {
             writeTRValueKind(TRValueKind.EXCEPTION_SNAPSHOT)
             writeInt(value.classDescriptor.id)
-            writeInt(value.identityHashCode)
+            writeLong(value.identity)
             writeTRValue(value.message)
             writeInt(value.stackTrace.size)
             value.stackTrace.forEach { writeString(it) }
         }
 
         // reflection class types
-        is TRJavaClass -> {
-            writeTRValueKind(TRValueKind.JAVA_CLASS)
-            writeString(value.referencedClassName)
-        }
-        is TRKotlinClass -> {
-            writeTRValueKind(TRValueKind.KOTLIN_CLASS)
+        is TRTypeReference -> {
+            writeTRValueKind(
+                when (value.flavor) {
+                    TypeFlavor.JAVA_CLASS -> TRValueKind.JAVA_CLASS
+                    TypeFlavor.KOTLIN_CLASS -> TRValueKind.KOTLIN_CLASS
+                }
+            )
             writeString(value.referencedClassName)
         }
 
@@ -649,32 +692,33 @@ internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readT
         templateUuid = if (readBoolean()) readUUID() else null,
         templateName = readNullableString(),
     )
+    TRValueKind.RENDERED -> TRRenderedValue(readString())
 
-    // primitives
-    TRValueKind.PRIMITIVE_BYTE    -> TRPrimitive(readByte())
-    TRValueKind.PRIMITIVE_SHORT   -> TRPrimitive(readShort())
-    TRValueKind.PRIMITIVE_INT     -> TRPrimitive(readInt())
-    TRValueKind.PRIMITIVE_LONG    -> TRPrimitive(readLong())
-    TRValueKind.PRIMITIVE_FLOAT   -> TRPrimitive(readFloat())
-    TRValueKind.PRIMITIVE_DOUBLE  -> TRPrimitive(readDouble())
-    TRValueKind.PRIMITIVE_CHAR    -> TRPrimitive(readChar())
-    TRValueKind.PRIMITIVE_BOOLEAN -> TRPrimitive(readBoolean())
+    // scalars
+    TRValueKind.SCALAR_BYTE    -> TRScalar(readByte())
+    TRValueKind.SCALAR_SHORT   -> TRScalar(readShort())
+    TRValueKind.SCALAR_INT     -> TRScalar(readInt())
+    TRValueKind.SCALAR_LONG    -> TRScalar(readLong())
+    TRValueKind.SCALAR_FLOAT   -> TRScalar(readFloat())
+    TRValueKind.SCALAR_DOUBLE  -> TRScalar(readDouble())
+    TRValueKind.SCALAR_CHAR    -> TRScalar(readChar())
+    TRValueKind.SCALAR_BOOLEAN -> TRScalar(readBoolean())
 
     // value-like types
     TRValueKind.STRING -> TRString(readString())
     TRValueKind.ENUM -> TREnum(context.classPool[readInt()], readNullableString())
-    TRValueKind.BIG_INTEGER -> TRBigInteger(readString())
-    TRValueKind.BIG_DECIMAL -> TRBigDecimal(readString())
+    TRValueKind.ARBITRARY_INTEGER -> TRArbitraryInteger(readString())
+    TRValueKind.ARBITRARY_DECIMAL -> TRArbitraryDecimal(readString())
 
     // reference-like types
     TRValueKind.OBJECT -> {
         val cd = context.classPool[readInt()]
-        val hash = readInt()
+        val hash = readLong()
         TRObject(cd, hash)
     }
     TRValueKind.OBJECT_SNAPSHOT -> {
         val cd = context.classPool[readInt()]
-        val hash = readInt()
+        val hash = readLong()
         val fieldsSize = readInt()
         val fields = buildMap {
             repeat(fieldsSize) {
@@ -687,38 +731,48 @@ internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readT
     }
     TRValueKind.ARRAY -> {
         val cd = context.classPool[readInt()]
-        val hash = readInt()
+        val hash = readLong()
         val totalSize = readInt()
         TRArray(cd, hash, totalSize)
     }
     TRValueKind.ARRAY_SNAPSHOT -> {
         val cd = context.classPool[readInt()]
-        val hash = readInt()
+        val hash = readLong()
         val totalSize = readInt()
         val capturedSize = readInt()
         val capturedElements = buildList { repeat(capturedSize) { add(readTRValue(context)) } }
         TRArraySnapshot(cd, hash, totalSize, capturedElements)
     }
+    TRValueKind.MAP_SNAPSHOT -> {
+        val cd = context.classPool[readInt()]
+        val hash = readLong()
+        val totalSize = readInt()
+        val capturedSize = readInt()
+        val capturedEntries = buildList {
+            repeat(capturedSize) { add(readTRValue(context) to readTRValue(context)) }
+        }
+        TRMapSnapshot(cd, hash, totalSize, capturedEntries)
+    }
 
     // char sequence
-    TRValueKind.CHAR_SEQUENCE -> {
+    TRValueKind.TEXT_SNAPSHOT -> {
         val cd = context.classPool[readInt()]
-        val hash = readInt()
+        val hash = readLong()
         val content = readString()
-        TRCharSequence(cd, hash, content)
+        TRTextSnapshot(cd, hash, content)
     }
 
     // exception
     TRValueKind.EXCEPTION -> {
         val cd = context.classPool[readInt()]
-        val hash = readInt()
+        val hash = readLong()
         TRException(cd, hash)
     }
 
     // exception snapshot
     TRValueKind.EXCEPTION_SNAPSHOT -> {
         val cd = context.classPool[readInt()]
-        val hash = readInt()
+        val hash = readLong()
         val message = readTRValue(context)
         val framesSize = readInt()
         val stackTrace = buildList { repeat(framesSize) { add(readString()) } }
@@ -726,8 +780,8 @@ internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readT
     }
 
     // reflection class types
-    TRValueKind.JAVA_CLASS -> TRJavaClass(readString())
-    TRValueKind.KOTLIN_CLASS -> TRKotlinClass(readString())
+    TRValueKind.JAVA_CLASS -> TRTypeReference(readString(), TypeFlavor.JAVA_CLASS)
+    TRValueKind.KOTLIN_CLASS -> TRTypeReference(readString(), TypeFlavor.KOTLIN_CLASS)
 
     // synthetic markers
     TRValueKind.UNFINISHED_METHOD_RESULT -> TRUnfinishedMethodResult

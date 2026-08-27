@@ -8,7 +8,7 @@ import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.TRContainerTracePoint
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
 import org.jetbrains.lincheck.trace.TRNull
-import org.jetbrains.lincheck.trace.TRPrimitive
+import org.jetbrains.lincheck.trace.TRScalar
 import org.jetbrains.lincheck.trace.TRTracePoint
 import org.jetbrains.lincheck.trace.TRWriteLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
@@ -24,43 +24,18 @@ import java.util.concurrent.CyclicBarrier
 import kotlin.concurrent.thread
 
 /**
- * Tests the buffered trace writer's behavior when multiple threads write trace data concurrently.
+ * How the buffered trace writer places shared descriptors when two threads write concurrently.
  *
- * This test class validates two critical scenarios in the trace collection system:
+ * One invariant per test:
+ * - `testDataSavedTwiceWhenNotInFileYet` — while neither thread's data block has reached the file,
+ *   each thread writes its own copy of every descriptor it references, shared ones included,
+ *   so a block stays self-contained and readable on its own.
+ *   The `CountDownLatch` and `CyclicBarrier` hold both blocks open until both have been appended.
+ * - `testDataDeduplicatedWhenSavedToFile` — once a block is on disk,
+ *   a thread that starts afterwards writes only the descriptors that block does not already carry.
+ *   The `CountDownLatch` plus a short sleep let the I/O thread reach the disk before the second thread starts.
  *
- * 1. **Duplicate Descriptor Storage** (`testDataSavedTwiceWhenNotInFileYet`):
- *    When two threads write trace data concurrently and both threads create trace points that reference
- *    the same descriptors (class descriptors, method descriptors, variable descriptors, etc.) before either
- *    thread's data is flushed to the file, each thread should save its own copy of these shared descriptors
- *    in their respective data blocks. This ensures data integrity even when threads write concurrently.
- *
- *    The test uses a CountDownLatch and CyclicBarrier to coordinate threads so that:
- *    - Thread 1 creates its trace points and waits
- *    - Thread 2 creates its trace points referencing the same descriptors
- *    - Both threads flush their data blocks simultaneously
- *
- *    Verification: Both thread blocks contain complete copies of shared descriptors (e.g., "SomeClass",
- *    "sharedMethod", "sharedVar") along with their unique descriptors.
- *
- * 2. **Descriptor Deduplication** (`testDataDeduplicatedWhenSavedToFile`):
- *    When one thread completes writing and flushing its trace data to the file, and then a second thread
- *    starts writing trace data that references some of the same descriptors, the second thread should NOT
- *    duplicate descriptors that are already present in the file. Instead, it should only write new descriptors
- *    that weren't already saved by the first thread.
- *
- *    The test uses a CountDownLatch and Thread.sleep() to ensure:
- *    - Thread 1 completes and flushes all its data to the file
- *    - A brief delay allows the I/O thread to finish writing to disk
- *    - Thread 2 then starts and should reuse already-saved descriptors
- *
- *    Verification: Thread 1's block contains all shared descriptors, while Thread 2's block only contains
- *    its unique descriptors (e.g., only "methodName2"), without duplicating shared ones already in the file.
- *
- * Both tests verify the correctness by:
- * - Creating trace points with shared and unique descriptors across multiple threads
- * - Loading the saved trace file and parsing it block-by-block
- * - Analyzing which descriptor IDs were saved in each thread's data block
- * - Asserting that the expected descriptor IDs match the actual saved IDs
+ * Both tests read the file back block-by-block and compare the descriptor ids each block saved.
  */
 class BufferedTraceWriterTest {
 
@@ -84,10 +59,8 @@ class BufferedTraceWriterTest {
             collector.registerCurrentThread(tr1.threadId)
             collector.tracePointCreated(parent = null, tr1)
 
-            // Add a variable assignment tracepoint
             collector.tracePointCreated(parent = tr1, varAssignment1)
 
-            // Add nested shared method call
             collector.tracePointCreated(parent = tr1, sharedCall1)
             collector.completeContainerTracePoint(Thread.currentThread(), sharedCall1)
 
@@ -181,10 +154,8 @@ class BufferedTraceWriterTest {
             collector.registerCurrentThread(tr1.threadId)
             collector.tracePointCreated(parent = null, tr1)
 
-            // Add a variable assignment tracepoint
             collector.tracePointCreated(parent = tr1, varAssignment1)
 
-            // Add nested shared method call
             collector.tracePointCreated(parent = tr1, sharedCall1)
             collector.completeContainerTracePoint(Thread.currentThread(), sharedCall1)
 
@@ -336,7 +307,7 @@ class BufferedTraceWriterTest {
             threadId,
             codeLocationId,
             localVariableId = vd.id,
-            value = TRPrimitive(42)
+            value = TRScalar(42)
         )
     }
 
@@ -347,13 +318,10 @@ class BufferedTraceWriterTest {
         check(dataFile.exists() && indexFile.exists()) { "Trace files not found!" }
         val dataInput = DataInputStream(dataFile.inputStream().buffered())
 
-        val magic = dataInput.readLong()
-        val version = dataInput.readLong()
+        val runtime = dataInput.checkTraceHeader()
 
-        Logger.info { "Magic: 0x${magic.toString(16)}" }
-        Logger.info { "Version: $version" }
+        Logger.info { "Runtime: $runtime" }
 
-        // Track what descriptors we found in each block
         val blocks = mutableMapOf<Int, BlockAnalysis>()
         var currentBlock: BlockAnalysis? = null
 

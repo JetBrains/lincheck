@@ -13,7 +13,7 @@ package org.jetbrains.lincheck.trace.diff
 import org.jetbrains.lincheck.trace.TRLoopIterationTracePoint
 import org.jetbrains.lincheck.trace.TRLoopTracePoint
 import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
-import org.jetbrains.lincheck.trace.TRPrimitive
+import org.jetbrains.lincheck.trace.TRScalar
 import org.jetbrains.lincheck.trace.TRReadFieldTracePoint
 import org.jetbrains.lincheck.trace.TRReadLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TRTracePoint
@@ -75,8 +75,8 @@ class TraceDiffTest {
     private fun TRTracePoint.label(): String = when (this) {
         is TRMethodCallTracePoint -> methodName
         is TRReadLocalVariableTracePoint -> "readVar($name)"
-        is TRReadFieldTracePoint -> "read($name=${(value as? TRPrimitive)?.value})"
-        is TRWriteFieldTracePoint -> "write($name=${(value as? TRPrimitive)?.value})"
+        is TRReadFieldTracePoint -> "read($name=${(value as? TRScalar)?.value})"
+        is TRWriteFieldTracePoint -> "write($name=${(value as? TRScalar)?.value})"
         is TRLoopTracePoint -> "loop[$iterations]"
         is TRLoopIterationTracePoint -> "iter$loopIteration"
         else -> this::class.simpleName!!
@@ -116,10 +116,10 @@ class TraceDiffTest {
               write(x=2) [EDITED_NEW]
             """,
             left = {
-                node(call("A", "root")) { node(writeField("A", "x", TRPrimitive(1))) }
+                node(call("A", "root")) { node(writeField("A", "x", TRScalar(1))) }
             },
             right = {
-                node(call("A", "root")) { node(writeField("A", "x", TRPrimitive(2))) }
+                node(call("A", "root")) { node(writeField("A", "x", TRScalar(2))) }
             },
         )
     }
@@ -184,7 +184,7 @@ class TraceDiffTest {
             },
             right = {
                 node(call("A", "root")) {
-                    node(call("A", "child").also { it.result = TRPrimitive(7) }) {
+                    node(call("A", "child").also { it.result = TRScalar(7) }) {
                         node(readVar("x"))
                     }
                 }
@@ -202,12 +202,12 @@ class TraceDiffTest {
                 readVar(x) [UNCHANGED]
             """,
             left = {
-                node(call("A", "root").also { it.result = TRPrimitive(1) }) {
+                node(call("A", "root").also { it.result = TRScalar(1) }) {
                     node(readVar("x"))
                 }
             },
             right = {
-                node(call("A", "root").also { it.result = TRPrimitive(2) }) {
+                node(call("A", "root").also { it.result = TRScalar(2) }) {
                     node(readVar("x"))
                 }
             },

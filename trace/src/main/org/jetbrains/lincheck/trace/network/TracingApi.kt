@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.trace.network
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.trace.RUNTIME_JVM
 import org.jetbrains.lincheck.trace.serialization.NetworkTraceReader
 import org.jetbrains.lincheck.trace.serialization.TRACE_VERSION
 import java.io.Closeable
@@ -22,12 +23,14 @@ import java.util.UUID
  * Version of the agent-client wire protocol implemented by this module.
  *
  * Advertised in [AgentHelloMessage.protocolVersion] so the client can gate protocol-dependent behavior.
- * Bump it on a backward-incompatible change to the framing or the set of commands/notifications.
+ * Bump it when the framing or the set of commands and notifications grows.
+ *
+ * A bump must stay additive. The hello travels agent to client only, so there is no channel on which to
+ * negotiate a version down, and a receiver ignores frames it does not recognize: a participant meets a
+ * higher-versioned peer by keeping to the semantics it knows, which only works while the newer version
+ * still understands them.
  */
 const val PROTOCOL_VERSION: Int = 1
-
-/** Well-known values for [AgentHelloMessage.runtime]; more may be added over time. */
-const val RUNTIME_JVM: String = "jvm"
 
 /**
  * Agent self-identification, sent by the agent to the client as the first frame after a
@@ -45,7 +48,7 @@ const val RUNTIME_JVM: String = "jvm"
  *
  * @property protocolVersion wire-protocol version the agent implements; see [PROTOCOL_VERSION].
  * @property runtime runtime the agent runs in, e.g. [RUNTIME_JVM].
- * @property runtimeVersion version of that runtime (e.g. the JRE or CPython version); free-form.
+ * @property runtimeVersion version of that runtime (e.g. the JRE version or others); free-form.
  * @property agentVersion version of the agent build; free-form.
  * @property timestamp agent-side wall-clock time (`System.currentTimeMillis()`) at which the hello was sent;
  *   travels in the frame's timestamp slot like every other notification, not in [encodeToPayload].
@@ -83,11 +86,21 @@ data class AgentHelloMessage(
     val capabilities: Set<String>
         get() = attributes[KEY_CAPABILITIES]?.split(',')?.filterTo(mutableSetOf()) { it.isNotEmpty() } ?: emptySet()
 
-    /** Whether this agent speaks the exact protocol/trace format of this build and redacts captures. */
+    /**
+     * Whether the agent's framing covers this build's, which holds from [PROTOCOL_VERSION] upwards
+     * because a bump is additive: a newer agent still answers the commands this build sends,
+     * and the notifications it adds are ignored as unrecognized.
+     */
+    val speaksCompatibleProtocol: Boolean
+        get() = protocolVersion >= PROTOCOL_VERSION
+
+    /** Whether the agent's binary trace reads against this build; `false` when it streams none. */
+    val streamsCompatibleTraceFormat: Boolean
+        get() = traceVersion == TRACE_VERSION
+
+    /** Whether the agent redacts captured values before they leave the target process. */
     val supportsRedactionV1: Boolean
-        get() = protocolVersion == PROTOCOL_VERSION &&
-            traceVersion == TRACE_VERSION &&
-            CAPABILITY_REDACTION_V1 in capabilities
+        get() = CAPABILITY_REDACTION_V1 in capabilities
 
     companion object {
         const val KEY_PROTOCOL: String = "protocol"
@@ -190,7 +203,7 @@ interface TracingCallbacks : Closeable {
  * Interface for sending commands to the tracing server.
  * This is implemented by the server (agent) or a client-side proxy.
  */
-// Control Plane -> Agent 
+// Control Plane -> Agent
 interface TracingCommands {
     fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean)
     fun startNetworkTracing()
@@ -236,7 +249,7 @@ interface TracingClient: TracingCallbacks, ConnectedAware {
 /**
  * A tracing server that accepts commands and sends notifications to the connected client.
  */
-// Control Plane -> Agent 
+// Control Plane -> Agent
 interface TracingServer: TracingCommands, ConnectedAware, Closeable {
     val connection: TracingCallbacks
 }

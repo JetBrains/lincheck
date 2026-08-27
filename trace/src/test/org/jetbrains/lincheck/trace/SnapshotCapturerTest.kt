@@ -68,7 +68,7 @@ class SnapshotCapturerTest {
         )
 
         assertEquals(TRString("password-shaped-but-no-policy"), captured[0])
-        assertEquals(TRPrimitive(42), captured[1])
+        assertEquals(TRScalar(42), captured[1])
     }
 
     @Test
@@ -171,8 +171,8 @@ class SnapshotCapturerTest {
 
         assertTrue(captured[0] is TRRedacted)
         assertTrue(captured[1] is TRRedacted)
-        assertEquals(TRPrimitive(42), captured[2])
-        assertEquals(TRPrimitive(false), captured[3])
+        assertEquals(TRScalar(42), captured[2])
+        assertEquals(TRScalar(false), captured[3])
     }
 
     @Test
@@ -332,8 +332,8 @@ class SnapshotCapturerTest {
 
     @Test
     fun `big-number values are matched and stored untruncated`() {
-        // Truncating a BigInteger's textual form would corrupt the stored value (parse-back),
-        // so unlike strings its full representation is used for both matching and storage.
+        // A BigInteger's textual form has to survive parse-back, so unlike a string it is
+        // matched and stored in full rather than at the string-capture bound.
         // Both fixtures exceed the string-capture bound: an anchored match on the secret's
         // 70th digit can only succeed against the untruncated representation.
         val secret = BigInteger("1" + "2".repeat(69))
@@ -352,7 +352,7 @@ class SnapshotCapturerTest {
         ).single()
 
         assertTrue(redacted is TRRedacted)
-        assertEquals(TRBigInteger(other), kept)
+        assertEquals(TRArbitraryInteger(other), kept)
     }
 
     @Test

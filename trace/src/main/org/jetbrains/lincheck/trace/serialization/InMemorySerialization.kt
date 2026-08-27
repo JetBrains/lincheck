@@ -10,6 +10,7 @@
 
 package org.jetbrains.lincheck.trace.serialization
 
+import org.jetbrains.lincheck.trace.RUNTIME_JVM
 import org.jetbrains.lincheck.trace.TRContainerTracePoint
 import org.jetbrains.lincheck.trace.TRTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
@@ -56,7 +57,7 @@ internal class DirectTraceWriter(
     override val writerId: Int get() = currentWriterId
 
     init {
-        dataOutput.writeTraceHeader()
+        dataOutput.writeTraceHeader(RUNTIME_JVM)
         index.writeTraceIndexHeader()
         indexBytes += Long.SIZE_BYTES * 2
     }
@@ -216,7 +217,8 @@ class MemoryTraceCollecting(
 }
 
 /**
- * Top-level function to save full-depth recorded trace old-style (all in once)
+ * Saves a full-depth recorded trace in one pass,
+ * into the data-and-index file pair named after [baseFileName].
  */
 fun saveRecorderTrace(baseFileName: String, context: TraceContext, trees: List<Tree<TRTracePoint>>) {
     val (data, index) = openNewStandardDataAndIndex(baseFileName)

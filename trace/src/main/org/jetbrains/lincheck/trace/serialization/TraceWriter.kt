@@ -58,7 +58,9 @@ internal interface TraceWriter : DataOutput, Closeable {
     fun endWriteLeafTracepoint()
 
     /**
-     * Mark the end of the container tracepoint's header (now only TRMethodCallTracepoint, TRLoopTracePoint, and TRLoopIterationTracePoint are container ones).
+     * Mark the end of the container tracepoint's header.
+     *
+     * The container tracepoints are [TRMethodCallTracePoint], [TRLoopTracePoint], and [TRLoopIterationTracePoint].
      */
     fun endWriteContainerTracepointHeader(id: Int)
 
@@ -103,7 +105,7 @@ internal interface TraceWriter : DataOutput, Closeable {
     fun writeVariableDescriptor(id: Int)
 
     /**
-     * Write [StackTraceElement] from context referred by given code location `id`, if needed.
+     * Write [CodeLocation] from context referred by given code location `id`, if needed.
      * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used code locations.
      */
     fun writeCodeLocation(id: Int)
@@ -266,6 +268,13 @@ internal abstract class ContextAwareTraceWriter(
         }
         if (value is TRArraySnapshot) {
             value.capturedElements.forEach { capturedElement -> preWriteTRValue(capturedElement) }
+        }
+        // Both halves of an entry are arbitrary values, so a key needs registering just like a value.
+        if (value is TRMapSnapshot) {
+            value.capturedEntries.forEach { (key, entryValue) ->
+                preWriteTRValue(key)
+                preWriteTRValue(entryValue)
+            }
         }
     }
 
