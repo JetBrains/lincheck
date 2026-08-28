@@ -197,6 +197,12 @@ private class FileStreamingThread(
 
     init {
         name = "TR-Block-Writer"
+        // Must be a daemon: the only thing that stops this thread is `exit()`, driven by the tracing
+        // shutdown hook — and a shutdown hook never runs while a non-daemon thread is still alive.
+        // A traced app whose `main` returns would otherwise hang forever instead of exiting.
+        // The flush is not at risk: `exit()` drains the queue and joins before the hook returns,
+        // and daemons are only abandoned once every hook has completed.
+        isDaemon = true
 
         DataOutputStream(data).writeTraceHeader(RUNTIME_JVM)
 
