@@ -573,6 +573,10 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
             trackArrayElementWrites = true
 
             interceptReadResults = true
+
+            trackLoops = true
+            trackIrreducibleLoops = true
+            trackAwaitLoops = true
         }
     }
 }
