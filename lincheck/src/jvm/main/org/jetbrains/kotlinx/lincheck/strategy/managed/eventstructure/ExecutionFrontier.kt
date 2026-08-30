@@ -99,15 +99,22 @@ inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(events: Lis
         // find the program-order latest event, not observing any of the cut events
         // TODO: optimize --- transform events into vector clock
         // TODO: optimize using binary search
-        (it is E) && !events.any { cutEvent ->
+        (it !is E) || events.any { cutEvent ->
             it.causalityClock.observes(cutEvent.threadId, cutEvent.threadPosition)
         }
     }
 }
 
-fun <E: ThreadEvent> MutableExecutionFrontier<E>.cut(pred: (ThreadEvent) -> Boolean) {
+// Pushes back the mutable frontier by removing events which satisfy the given predicate
+inline fun <E: ThreadEvent> MutableExecutionFrontier<E>.cut(pred: (ThreadEvent) -> Boolean) {
+    //NOTE: we need to invert pred removes events UNTIL the current event is satisfied
+    cutUntilTrue { !pred(it) }
+}
+
+// Pushes back the mutable frontier by removing events from each thread UNTIL the current is satisfied
+inline fun <E: ThreadEvent> MutableExecutionFrontier<E>.cutUntilTrue(pred: (ThreadEvent) -> Boolean) {
     threadMap.forEach { (tid, lastEvent) ->
-        val pred = lastEvent?.pred(inclusive = true, pred)
+        val pred = lastEvent?.pred(inclusive = true) { pred(it) }
         @Suppress("UNCHECKED_CAST")
         set(tid, pred as? E)
     }
@@ -132,7 +139,11 @@ fun<E : ThreadEvent> ExecutionFrontier<E>.copy(): MutableExecutionFrontier<E> {
 
 private class ExecutionFrontierImpl<E : ThreadEvent>(
     override val threadMap: MutableThreadMap<E?>
-): MutableExecutionFrontier<E>
+): MutableExecutionFrontier<E> {
+    override fun toString(): String {
+        return threadMap.entries.map { (tid, event) -> "$event" }.joinToString(" | ")
+    }
+}
 
 inline fun<reified E : ThreadEvent> ExecutionFrontier<E>.toExecution(): Execution<E> =
     toMutableExecution()

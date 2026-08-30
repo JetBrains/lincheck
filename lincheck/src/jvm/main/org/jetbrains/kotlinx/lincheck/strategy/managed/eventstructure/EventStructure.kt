@@ -298,8 +298,12 @@ internal class EventStructure(
         // which always pass in a parent
         check((event.label !is InitializationLabel) implies (event.parent != null)) { "Backtracked event must have a parent: $event" }
 
+        // We need to skip creating a backtracking point if any of the conflicts are pinned
+        // as they will be removed.
+        if (conflicts.any { it in pinnedEvents}) return
+
+        val causalityFrontier = execution.calculateFrontier(event.causalityClock)
         val newPinnedEvents = pinnedEvents.copy().apply {
-            val causalityFrontier = execution.calculateFrontier(event.causalityClock)
             merge(causalityFrontier)
             cut(conflicts)
             cut(getDanglingRequests())
@@ -311,11 +315,17 @@ internal class EventStructure(
             // or are observed by the event, a la GenMC
             cut(conflicts)
             cut { cutEvent ->
-                (
-                    // This is safe because of the check at the beginning of the function
-                    cutEvent.id <= event.parent!!.id  ||
-                    newPinnedEvents.contains(cutEvent)
+                val shouldCut = (
+                    // Deleted events are with id greater than the parent request event and
+                    // events which are not in the causality frontier of the event we are backtracking.
+                    // The null check is safe because of the check at the beginning of the function
+                    cutEvent.id > event.parent!!.id &&
+                    !causalityFrontier.contains(cutEvent)
                 )
+                // Bail out of the entire backtracking point function
+                // if one of the events we want to delete is pinned
+                if (shouldCut && pinnedEvents.contains(cutEvent)) return
+                shouldCut
             }
             // NOTE: this can break some tests when locks and monitors are introduced again.
             addUnblockingResponses(conflicts)
@@ -393,6 +403,27 @@ internal class EventStructure(
                         && event.locksFrom == unlock) {
                         conflicts.add(event)
                     }
+                }
+            }
+            label is ReadAccessLabel && label.isResponse && label.isExclusive -> run {
+                // NOTE: we assume that the first write dependency is the write that this read reads from.
+                // So this should work just like the [AtomicThreadEvent.readsFrom] method.
+                // As we do not have an event, but just a label and a list of dependencies, we do it manually.
+                val write = dependencies.find { it.label.isWriteAccess() }!! as AtomicThreadEvent
+                val writeLabel = write.label
+                val location = label.location
+                check(writeLabel.isWriteAccess())
+                // We check if there are any other successful RMW events that read from the same write event
+                // as the write event this read reads from.
+                // In that case they are the conflicting events.
+                for (readEvent in execution.memoryAccessEventIndex.getWriteReadResponses(write, location)) {
+                    check(readEvent.readsFrom == write)
+                    val otherLabel = readEvent.label
+                    // Make sure the read is exclusive
+                    otherLabel.refine<ReadAccessLabel> { isExclusive } ?: continue
+                    // Make sure that it is successful by checking that the next event for the thread is a rmw write
+                    execution.getExclusiveWriteForReadResponse(readEvent) ?: continue
+                    conflicts.add(readEvent)
                 }
             }
             // wait-response synchronizing with our notify is conflict

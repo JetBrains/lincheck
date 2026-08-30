@@ -83,7 +83,12 @@ interface ThreadEvent : Event {
     fun predNth(n: Int): ThreadEvent?
 }
 
-fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (ThreadEvent) -> Boolean): ThreadEvent? {
+
+/**
+ * Returns the first predecessor of the given event that satisfies the given [predicate]
+ * @param [inclusive] If we include the current thread event in the search.
+ */
+inline fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (ThreadEvent) -> Boolean): ThreadEvent? {
     if (inclusive && predicate(this))
         return this
     var event: ThreadEvent? = parent
