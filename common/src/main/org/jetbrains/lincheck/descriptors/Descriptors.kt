@@ -27,6 +27,11 @@ interface Descriptor {
     abstract class Key
 
     val id: Int
+
+    /**
+     * *Note*: [key] field cannot depend on any information from [TraceContext], because this field should be
+     * available for accessing during context building, so its value must be accessible with incomplete trace context as well.
+     */
     val key: Key
 
     companion object {
