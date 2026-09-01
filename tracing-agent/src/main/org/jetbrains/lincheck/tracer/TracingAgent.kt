@@ -17,7 +17,6 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
 import org.jetbrains.lincheck.trace.network.TracingServer
-import org.jetbrains.lincheck.util.Logger
 import java.lang.instrument.Instrumentation
 
 /**
@@ -44,27 +43,8 @@ abstract class TracingAgent {
     var server: TracingServer? = null
         protected set
 
-    // Set once `premain` runs on this agent instance (each shipped agent delegates to its own singleton).
-    // The guard is deliberately instance-local, not based on the global `LincheckInstrumentation` attach state:
-    // a *different* Lincheck-based agent listed alongside this one must still reach the conflict check
-    // in `attachJavaAgentStatically` instead of being silently ignored.
-    private var premainExecuted = false
-
     // entry point for a statically attached java agent
     fun premain(agentArgs: String?, inst: Instrumentation) {
-        // The JVM runs `premain` once per `-javaagent` occurrence on the command line, and the same agent
-        // can legitimately be listed twice: IntelliJ IDEA duplicates every VM parameter when it delegates
-        // an Application run configuration to Gradle
-        // (`GradleBaseApplicationEnvironmentProvider.configureParameters` re-adds `runProfile.vmParameters`
-        // on top of what `JavaParametersUtil.configureConfiguration` already added).
-        // Running the setup twice would abort the target JVM outright — an exception out of `premain` is fatal —
-        // so a repeated static attach of the same agent is a no-op instead.
-        if (premainExecuted) {
-            Logger.warn { "Tracing agent is already attached statically, ignoring the repeated attach" }
-            return
-        }
-        premainExecuted = true
-
         setupMode()
 
         // Attach first then append `bootstrap.jar` to the bootstrap classloader's search path before
