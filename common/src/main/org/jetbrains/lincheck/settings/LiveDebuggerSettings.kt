@@ -24,6 +24,12 @@ import java.util.*
 const val LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR = "LIVE_DEBUGGER_CONTROL_PLANE_URL"
 
 /**
+ * Name of the environment variable carrying the API token presented to the control plane
+ * named by [LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR].
+ */
+const val LIVE_DEBUGGER_CONTROL_PLANE_TOKEN_ENV_VAR = "LIVE_DEBUGGER_CONTROL_PLANE_TOKEN"
+
+/**
  * Internal simple integer-based identifiers for breakpoints.
  * These identifiers are only used internally within javaagent ---
  * external clients should identify breakpoints by [UUID] instead.
