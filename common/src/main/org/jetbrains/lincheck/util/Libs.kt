@@ -236,6 +236,15 @@ fun isJavaLambdaClass(className: String): Boolean =
     className.contains("\$\$Lambda")
 
 /**
+ * Test if the given class name corresponds to a hidden class (`Lookup.defineHiddenClass`).
+ *
+ * The JVM appends `/<identity>` to the name of such a class, which cannot appear in a name
+ * written in source, so the separator alone identifies them.
+ */
+fun isHiddenClass(className: String): Boolean =
+    className.contains('/')
+
+/**
  * Extracts and returns the enclosing class name of a Java lambda class.
  */
 internal fun getJavaLambdaEnclosingClass(className: String): String {

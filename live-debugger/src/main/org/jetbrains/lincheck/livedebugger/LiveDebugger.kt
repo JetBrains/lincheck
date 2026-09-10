@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.livedebugger
 
 import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.SourceFileClassIndex
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
 import org.jetbrains.lincheck.settings.BlocklistFileParser
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
@@ -237,19 +238,27 @@ internal object LiveDebugger {
     }
 
     /**
-     * Retransforms the classes that contain the given breakpoints.
+     * Retransforms the loaded classes compiled from the given breakpoints' source files.
      *
-     * `Class.getName` returns a canonical name, so we use the class-only
-     * [SnapshotBreakpoint.isApplicableTo] overload — at this point we don't have the
-     * source file for each loaded class, and the retransformation pipeline does the
-     * file-aware narrowing in `buildClassInformation` anyway.
+     * The classes are looked up in the agent-side [SourceFileClassIndex] by the breakpoint's
+     * file name — the class name the IDE resolved is not consulted here. The retransformation
+     * pipeline then does the per-breakpoint narrowing in `buildClassInformation`.
      */
     private fun retransformBreakpointClasses(breakpoints: Collection<SnapshotBreakpoint>) {
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
             .filter { loadedClass ->
-                breakpoints.any { it.isApplicableTo(loadedClass.name) }
+                breakpoints.any { it.isApplicableTo(loadedClass) }
             }
         LincheckInstrumentation.retransformClasses(classesToRetransform)
+    }
+
+    private fun SnapshotBreakpoint.isApplicableTo(clazz: Class<*>): Boolean {
+        // Optimization for the case when `className` was passed along with other breakpoint info ---
+        // in this case we can avoid the source file index lookup and just use the provided class name.
+        if (className.isNotEmpty()) {
+            return this.isApplicableTo(clazz.name)
+        }
+        return SourceFileClassIndex.sourceFileContains(fileName, clazz)
     }
 
     /** Guard ensuring the hit-limit callback is registered exactly once. */

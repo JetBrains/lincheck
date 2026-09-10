@@ -126,6 +126,11 @@ val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) 
     else -> false
 }
 
+val InstrumentationMode.maintainsSourceFileIndex: Boolean get() = when (this) {
+    LIVE_DEBUGGING -> true
+    else -> false
+}
+
 enum class InstrumentationStrategy {
     /**
      * Lazy transformation: instrument classes only when we actually call them.
@@ -305,6 +310,16 @@ object LincheckInstrumentation {
         // Add the Lincheck bytecode transformer to this JVM instance,
         // allowing already loaded classes re-transformation.
         instrumentation.addTransformer(LincheckClassFileTransformer, true)
+
+        // If requested by the instrumentation mode, index the classes that were already loaded —
+        // the ones the transformer will never see.
+        // Everything loaded from now on reaches the index through it.
+        // Must run after the transformer is registered: the index's fallback re-transformation
+        // relies on it being there to receive the bytes.
+        if (instrumentationMode.maintainsSourceFileIndex) {
+            SourceFileClassIndex.indexClasses(getLoadedClassesToIndex())
+        }
+
         // The transformation logic depends on the testing strategy.
         when {
             // In the stress testing mode, we use an additional optimization.
@@ -387,6 +402,9 @@ object LincheckInstrumentation {
             instrumentation.removeTransformer(LincheckClassFileTransformer)
             instrumentationState = InstrumentationState.INACTIVE
         }
+        // With no transformer attached, classes load unobserved, so the source-file index would
+        // silently go incomplete; drop it and let the next installation rebuild it.
+        SourceFileClassIndex.clear()
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
         // Report statistics if requested.
@@ -433,21 +451,34 @@ object LincheckInstrumentation {
         )
     }
 
+    /**
+     * Re-transforms [classes], in batches, skipping and logging the ones that fail.
+     *
+     * Batched because a `retransformClasses` call runs as a single VM operation:
+     * passing an unbounded list would mean an unbounded safepoint pause.
+     * A batch is also the unit the failure fallback degrades,
+     * so one bad class does not force every other class one by one.
+     */
     fun retransformClasses(classes: List<Class<*>>) {
         // for some reason, trying to call `retransformClasses` on an empty list can throw NPE on JVM 8
         if (classes.isEmpty()) return
 
-        // failsafe guardrails:
-        // 1. first try to retransform all classes in one bulk
-        // 2. if transformation fails for some class => retransform classes one by one,
-        //    thus skipping and logging failing classes
-        try {
-            instrumentation.retransformClasses(*classes.toTypedArray())
-        } catch (t: Throwable) {
-            Logger.warn(t) { "Failed to retransform ${classes.size} classes in bulk, retrying one by one" }
-            classes.forEach { retransformClass(it) }
+        for (batch in classes.chunked(RETRANSFORM_BATCH_SIZE)) {
+            // failsafe guardrails:
+            // 1. first try to retransform the whole batch in one bulk
+            // 2. if transformation fails for some class => retransform classes one by one,
+            //    thus skipping and logging failing classes
+            try {
+                instrumentation.retransformClasses(*batch.toTypedArray())
+            } catch (t: Throwable) {
+                Logger.warn(t) { "Failed to retransform classes in batch of size ${batch.size}, retrying one by one" }
+                batch.forEach { retransformClass(it) }
+            }
         }
     }
+
+    /** How many classes [retransformClasses] hands to the JVM per VM operation. */
+    private const val RETRANSFORM_BATCH_SIZE = 512
 
     private fun retransformClass(clazz: Class<*>) {
         try {
@@ -496,11 +527,44 @@ object LincheckInstrumentation {
     private fun getLoadedClassesToInstrument(): List<Class<*>> =
         instrumentation.allLoadedClasses.filter { shouldTransform(it, instrumentationMode) }
 
-    private fun canRetransformClass(clazz: Class<*>): Boolean =
-        instrumentation.isModifiableClass(clazz) &&
-        // java lambda classes are special case --- they are not retransformed themselves,
-        // rather their enclosing class is retransformed, see below
-        !isJavaLambdaClass(clazz.name)
+    private fun getLoadedClassesToIndex(): List<Class<*>> =
+        instrumentation.allLoadedClasses.filter { isIndexedClass(it) }
+
+    /**
+     * Checks whether the given [clazz] is indexable.
+     */
+    internal fun isIndexedClass(clazz: Class<*>): Boolean =
+        !clazz.isPrimitive && !clazz.isArray && isIndexedClassName(clazz.name)
+
+    /**
+     * Checks whether a class named [className] is indexable.
+     */
+    internal fun isIndexedClassName(className: String): Boolean =
+        // The Lincheck-package test stays first, so that the re-transformability test below
+        // never sees one of our own classes --- see the ordering note on `shouldTransform`.
+        !isInLincheckPackage(className) &&
+        !isRecognizedUninstrumentedStandardLibraryClass(className) &&
+        canRetransformClass(className)
+
+    /**
+     * Checks whether the given [clazz] can be re-transformed.
+     */
+    internal fun canRetransformClass(clazz: Class<*>): Boolean =
+        instrumentation.isModifiableClass(clazz) && canRetransformClass(clazz.name)
+
+    /**
+     * Checks whether a class named [className] can be re-transformed, judged by its name alone.
+     *
+     * Approximate: with no [Class] object precise check is impossible,
+     * so this only rules out the kinds the JVM never re-transforms whatever their state:
+     * - java lambda classes, which are a special case in that they are not retransformed themselves,
+     *   rather their enclosing class is;
+     * - hidden classes, which have no class file to hand back (determined by heuristic class name check).
+     *
+     * Prefer the [Class] overload wherever the object is available, as it returns the precise decision.
+     */
+    internal fun canRetransformClass(className: String): Boolean =
+        !isJavaLambdaClass(className) && !isHiddenClass(className)
 
     private fun shouldTransform(clazz: Class<*>, instrumentationMode: InstrumentationMode): Boolean =
         // Filtering is done in the following order to hide lincheck source classes from

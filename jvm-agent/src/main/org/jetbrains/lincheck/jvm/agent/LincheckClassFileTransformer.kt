@@ -89,6 +89,19 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             return if (classBeingRedefined != null) classBytes else null
         }
 
+        // If requested by the instrumentation mode, index every class the transformer sees by its source file —
+        // including classes that are not instrumented now: a breakpoint in their source file may
+        // arrive later, and the index is how their `Class` objects are found for re-transformation.
+        if (instrumentationMode.maintainsSourceFileIndex &&
+            LincheckInstrumentation.isIndexedClassName(internalClassName.toCanonicalClassName())
+        ) {
+            SourceFileClassIndex.registerClass(
+                loader = loader,
+                className = internalClassName.toCanonicalClassName(),
+                classBytes = classBytes,
+            )
+        }
+
         // If the class should not be transformed, return immediately.
         if (!shouldTransform(internalClassName.toCanonicalClassName(), instrumentationMode, loader)) {
             return null
