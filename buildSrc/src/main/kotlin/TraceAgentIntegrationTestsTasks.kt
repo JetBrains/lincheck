@@ -96,6 +96,29 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
 }
 
 /**
+ * Directory names, under `integration-test/test-projects`, of the applications that ship their own,
+ * agent-incompatible copy of one of the agent's own dependencies.
+ */
+private val classpathClashTestProjects = listOf(
+    "kotlin-classpath-clash",
+    "asm-classpath-clash",
+)
+
+/**
+ * Stages the `*-classpath-clash` projects next to the downloaded integration-test projects.
+ *
+ * The projects are shared by the trace-recorder and live-debugger classpath-isolation tests,
+ * so they live in `integration-test/test-projects` rather than in either consumer.
+ */
+fun Project.copyClasspathClashTestProjects(): List<TaskProvider<Copy>> =
+    classpathClashTestProjects.map { projectName ->
+        tasks.register<Copy>("${projectName}_copyTestProject") {
+            from(rootProject.layout.projectDirectory.dir("integration-test/test-projects/$projectName"))
+            into(layout.buildDirectory.dir("integrationTestProjects/$projectName"))
+        }
+    }
+
+/**
  * This function is required to copy `trace-recorder-fat.jar` file from
  * the corresponding project into the lincheck's build directory. This allows integration tests to see
  * the fat-jar and add a path to it via `-javaagent` VM flag.

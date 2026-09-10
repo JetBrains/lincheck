@@ -21,8 +21,7 @@ import java.lang.invoke.MethodType
 fun isInLincheckPackage(className: String) =
     className.startsWith(LINCHECK_PACKAGE_NAME) ||
     className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME) ||
-    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME) ||
-    className.startsWith(LINCHECK_RELOCATED_PACKAGE_PREFIX)
+    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME)
 
 val StackTraceElement.isLincheckInternals get() =
     this.className.startsWith(LINCHECK_PACKAGE_NAME) ||
@@ -32,7 +31,6 @@ internal const val LINCHECK_PACKAGE_NAME             = "org.jetbrains.lincheck."
 internal const val LINCHECK_KOTLINX_PACKAGE_NAME     = "org.jetbrains.kotlinx.lincheck."
 internal const val LINCHECK_RUNNER_PACKAGE_NAME      = "org.jetbrains.kotlinx.lincheck.runner."
 internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME   = "sun.nio.ch.lincheck."
-internal const val LINCHECK_RELOCATED_PACKAGE_PREFIX = "org.jetbrains.lincheck.shadow."
 
 
 // ========================================================
@@ -79,16 +77,13 @@ fun isRecognizedUninstrumentedStandardLibraryClass(className: String) =
 // ========================================================
 
 fun isAsmClass(className: String): Boolean =
-    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
-    className.startsWith(listOf("org", "objectweb", "asm").joinToString("."))
+    className.startsWith("org.objectweb.asm")
 
 fun isByteBuddyClass(className: String): Boolean =
-    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
-    className.startsWith(listOf("net", "bytebuddy").joinToString("."))
+    className.startsWith("net.bytebuddy")
 
 fun isJavaWebSocketClass(className: String): Boolean =
-    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
-    className.startsWith(listOf("org", "java_websocket").joinToString("."))
+    className.startsWith("org.java_websocket")
 
 /**
  * Checks whether the given class name belongs to the Gradle framework.
@@ -114,8 +109,7 @@ fun isRecognizedTestingLibraryClass(className: String) =
  * Checks if the given class name corresponds to a recognized logging library class.
  */
 fun isRecognizedLoggingLibraryClass(className: String) =
-    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
-    className.startsWith(listOf("org", "slf4j").joinToString(".") + ".")
+    className.startsWith("org.slf4j.")
 
 /**
  * Determines whether a given class name belongs to a recognized Apache library.

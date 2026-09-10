@@ -67,13 +67,13 @@ Both legs keep hostname verification on, so the certificate has to name the host
 
 The fat jar (see `registerTraceAgentTasks` in `buildSrc/src/main/kotlin/TraceAgentTasks.kt`):
 
-- relocates `org.objectweb.asm`, `net.bytebuddy`, `org.java_websocket`, and `org.slf4j`
-  under `org.jetbrains.lincheck.shadow.*` to avoid classpath collisions with the target app;
-- embeds `bootstrap.jar` as a nested resource, installed on the bootstrap classloader at attach;
-- sets `Premain-Class`/`Agent-Class` to `org.jetbrains.lincheck.livedebugger.LiveDebuggerAgent`.
+- exposes only the dependency-free `AgentWrapper` at the root;
+- embeds `bootstrap.jar` and the unshaded `agent-payload.jar` as nested resources;
+- sets `Premain-Class`/`Agent-Class` to the wrapper,
+  which loads the payload with the platform classloader as parent and invokes `LiveDebuggerAgent` reflectively.
 
 `liveDebuggerFatJarVerify` asserts the packaging invariants
-(class-package whitelist; nested — never unpacked — `bootstrap.jar`)
+(wrapper-only class whitelist; nested — never unpacked — bootstrap and payload jars)
 and runs automatically after the fat jar and as part of `check`.
 `liveDebuggerFatJarNoDeps` builds a dependency-free jar for debugging.
 
@@ -102,7 +102,8 @@ without a server or heartbeat, static attach starts whole-application tracing du
 
 ## Module dependencies
 
-`bootstrap` (compile-only), `common`, `jvm-agent`, `trace`, `tracing-agent`.
+`bootstrap` (compile-only), `common`, `jvm-agent`, `trace`, `tracing-agent`;
+all runtime dependencies stay inside the isolated payload.
 
 ## Publishing
 

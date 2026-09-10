@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.agentClassLoader
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationStrategy
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClasses
@@ -191,6 +192,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // NEVER instrument the Lincheck classes.
         // Perform these checks FIRST to avoid potential class loading circularity errors.
         if (isInLincheckPackage(className)) return false
+        if (agentClassLoader != null && loader === agentClassLoader) return false
 
         // Under lazy strategy instrument eagerly instrumented classes early-on.
         if (instrumentationStrategy == InstrumentationStrategy.LAZY && isEagerlyInstrumentedClass(className))

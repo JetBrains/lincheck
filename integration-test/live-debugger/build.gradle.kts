@@ -25,6 +25,7 @@ sourceSets {
 }
 
 enum class LiveDebuggerIntegrationTestSuite {
+    Basic,
     KotlinxImmutableCollections,
     KotlinxImmutableCollectionsMultipleBreakpointsOnSameLine,
     Ktor,
@@ -39,10 +40,13 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
+    val copyClasspathClashProjects = copyClasspathClashTestProjects()
+
     val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar")
 
     val integrationTestSuite: String? by project
     val integrationTestSuiteType: LiveDebuggerIntegrationTestSuite? = when (integrationTestSuite?.lowercase()) {
+        "basic" -> LiveDebuggerIntegrationTestSuite.Basic
         "ktor" -> LiveDebuggerIntegrationTestSuite.Ktor
         "kotlinximmutablecollections" -> LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections
         "kotlinximmutablecollectionsmultiplebreakpointsonsameline" ->
@@ -67,6 +71,13 @@ tasks {
                 include("**/*KotlinxImmutableCollectionsMultipleBreakpointsOnSameLineLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.All -> {}
+            // Everything that is not one of the (heavy) external-project suites above.
+            LiveDebuggerIntegrationTestSuite.Basic -> exclude(
+                "**/*KtorLiveDebuggerJsonIntegrationTests*",
+                "**/*KotlinxImmutableCollectionsLiveDebuggerJsonIntegrationTests*",
+                "**/*KotlinxImmutableCollectionsMultipleBreakpointsOnSameLineLiveDebuggerJsonIntegrationTests*",
+                "**/*KotlinCompilerLiveDebuggerJsonIntegrationTests*",
+            )
             // Unrecognized suite (e.g. a value meant for another integration-test module): run nothing.
             null -> {
                 exclude("**/*")
@@ -79,6 +90,7 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyLiveDebuggerFatJar)
+        copyClasspathClashProjects.forEach { dependsOn(it) }
     }
 
     // Regenerates the `…/impl/generated/*GeneratedTests.kt` files from the `*Tests.json` data.

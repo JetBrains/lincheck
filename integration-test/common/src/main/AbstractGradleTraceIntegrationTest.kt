@@ -94,9 +94,22 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
         val pathToOutput = fileToDump.absolutePath.escape().escape()
         val agentArgs = buildAgentArgs(testClassName, testMethodName, pathToOutput, extraAgentArgs)
         return """
-            gradle.taskGraph.whenReady {
+            // Init scripts apply to every build in the invocation -- buildSrc and the included builds
+            // resolving settings plugins (e.g. kotlin's `internal-gradle-setup`, ktor's `build-settings-logic`).
+            // The requested task paths can only match in the invoked root build, so both the instrumentation
+            // and the not-attached check below are scoped to it.
+            if (gradle.parent == null) gradle.taskGraph.whenReady {
                 val gradleCommands = listOf(${gradleCommands.joinToString(",") { "\"$it\"" }})
                 val jvmTasks = allTasks.filter { task -> task is JavaForkOptions && gradleCommands.contains(task.path) }
+                // Task paths are absolute, so a relative command ("test" instead of ":test") matches nothing
+                // and the build silently runs without the agent -- surfacing only as an empty trace file,
+                // which is indistinguishable from the agent having failed. Fail on the mismatch instead.
+                if (jvmTasks.isEmpty()) {
+                    error(
+                        "Trace agent not attached: none of " + gradleCommands + " is a JVM task of this build. " +
+                        "JVM tasks in the graph: " + allTasks.filter { it is JavaForkOptions }.map { it.path }
+                    )
+                }
                 jvmTasks.forEach { task ->
                     task.doFirst {
                         val options = task as JavaForkOptions

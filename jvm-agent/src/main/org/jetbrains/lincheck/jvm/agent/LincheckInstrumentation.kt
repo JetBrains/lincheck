@@ -174,6 +174,10 @@ enum class InstrumentationState {
  * @property instrumentationMode The instrumentation mode, see [InstrumentationMode] for details.
  */
 object LincheckInstrumentation {
+    /** Isolated payload loader used by the standalone tracing agents; null for the Lincheck framework. */
+    @JvmStatic
+    var agentClassLoader: ClassLoader? = null
+
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
      *
@@ -504,11 +508,10 @@ object LincheckInstrumentation {
      * some code paths may reference bootstrap classes *before* [install] runs.
      * Those callers need to invoke this method explicitly right after attach.
      * [install] still calls it as a safety net to guarantee correct behavior for clients that
-     * don not call [appendBootstrapJarToClassLoaderSearch] themself in advance.
+    * don not call [appendBootstrapJarToClassLoaderSearch] themself in advance.
      */
     fun appendBootstrapJarToClassLoaderSearch() {
-        // Atomic guard: the first thread to flip false -> true does the append; others bail.
-        if (!isBootstrapJarAddedToClasspath.compareAndSet(false, true)) return
+        if (isBootstrapJarAddedToClasspath.get()) return
 
         // The "bootstrap" module is packed to "bootstrap.jar", which is in this JAR's
         // resources. We can't instantiate a `File` for a path inside a JAR, so we copy
@@ -521,7 +524,20 @@ object LincheckInstrumentation {
                 input!!.copyTo(fileOut)
             }
         }
-        instrumentation.appendToBootstrapClassLoaderSearch(JarFile(tempBootstrapJarFile))
+        appendBootstrapJarToClassLoaderSearch(instrumentation, JarFile(tempBootstrapJarFile))
+    }
+
+    /**
+     * Appends a wrapper-provided `bootstrap.jar` to the bootstrap classloader's search path.
+     *
+     * This overload lets the client supply `bootstrap.jar` file
+     * instead of looking-up it in the current jar resouces.
+     */
+    @JvmStatic
+    fun appendBootstrapJarToClassLoaderSearch(instrumentation: Instrumentation, bootstrapJar: JarFile) {
+        // Atomic guard: the first thread to flip false -> true does the append; others bail.
+        if (!isBootstrapJarAddedToClasspath.compareAndSet(false, true)) return
+        instrumentation.appendToBootstrapClassLoaderSearch(bootstrapJar)
     }
 
     private fun getLoadedClassesToInstrument(): List<Class<*>> =

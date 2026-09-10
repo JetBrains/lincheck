@@ -32,6 +32,7 @@ include(":trace-recorder")
 include(":live-debugger")
 // Common modules
 include(":bootstrap")
+include(":jvm-agent-wrapper")
 include(":jvm-agent")
 include(":common")
 include(":trace")

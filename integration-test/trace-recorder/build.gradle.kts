@@ -35,6 +35,8 @@ tasks {
 
     registerTraceAgentIntegrationTestsPrerequisites()
 
+    val copyClasspathClashProjects = copyClasspathClashTestProjects()
+
     val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
 
     val integrationTestSuite: String? by project
@@ -115,6 +117,7 @@ tasks {
         outputs.upToDateWhen { false } // Always run tests when called
         dependsOn(traceAgentIntegrationTestsPrerequisites)
         dependsOn(copyTraceRecorderFatJar)
+        copyClasspathClashProjects.forEach { dependsOn(it) }
     }
 
     // Regenerates the `…/impl/generated/*GeneratedTests.kt` files from the `*Tests.json` data.
@@ -133,4 +136,3 @@ tasks {
         )
     }
 }
-

@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    // 1.3.72 is the newest Kotlin whose stdlib the agent cannot link against:
+    // `kotlin.jvm.internal.FunctionReferenceImpl.<init>(int, Class, String, String, int)` --
+    // emitted by the Kotlin compiler for every function reference in the agent -- only exists from 1.4.
+    // Without classloader isolation the agent resolves that class from here (the application
+    // class path wins over the appended `-javaagent` jar) and dies in `premain`.
+    // Anything from 1.4 on links fine and would make this test vacuous.
+    testImplementation 'org.jetbrains.kotlin:kotlin-stdlib:1.3.72'
+}
+
+test {
+    useJUnit()
+}

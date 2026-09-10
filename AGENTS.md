@@ -8,6 +8,7 @@ Follows the [agents.md](https://agents.md/) convention; `CLAUDE.md` just imports
 | Module | Purpose |
 |---|---|
 | [`bootstrap/`](bootstrap/) | Java classes loaded into `sun.nio.ch.lincheck` so they're visible from any classloader. JDK 8-compatible. |
+| [`jvm-agent-wrapper/`](jvm-agent-wrapper/) | Dependency-free Java 8 wrapper that loads nested agent payloads through an isolated classloader. |
 | [`common/`](common/) | ASM helpers, `LoggingLevel`, shared utilities. |
 | [`trace/`](trace/) | Binary trace format + reader/writer (eager + lazy). |
 | [`tracing-agent/`](tracing-agent/) | Runtime tracing engine shared by the agents: `premain`/`agentmain` scaffolding, tracing sessions, event tracking ([AGENTS.md](tracing-agent/AGENTS.md)). |

@@ -23,8 +23,7 @@ the Lincheck framework module (`:lincheck`) uses `:jvm-agent` directly and does 
 Its `premain`/`agentmain` perform, in order:
 
 1. set the agent's mode system property (`lincheck.traceRecorderMode` / `lincheck.liveDebuggerMode`);
-2. attach the `Instrumentation` instance to `LincheckInstrumentation`
-   and append the embedded `bootstrap.jar` to the bootstrap classloader search path;
+2. attach the `Instrumentation` instance to `LincheckInstrumentation`;
 3. parse and validate agent arguments (`TraceAgentParameters`);
 4. select the `TracingEntryPoint`:
    `MethodCall` (trace one method), `ApplicationStart` (trace the whole run), or `ExternalRequest` (server-driven);
@@ -45,7 +44,7 @@ under the active `InstrumentationMode`.
 
 The transformers inject static calls to `sun.nio.ch.lincheck.Injections`
 (e.g. `Injections::onMethodCall`, `Injections::onMethodCallReturn`).
-`Injections` lives in the [`bootstrap`](../bootstrap) module whose jar is appended to the bootstrap classloader,
+`Injections` lives in the [`bootstrap`](../bootstrap) module whose jar the wrapper appends to the bootstrap classloader,
 so the injected calls resolve from every classloader, including classes of `java.base`.
 
 ### 3. Trace collection (this module)
@@ -88,15 +87,21 @@ All sources live in `src/main/org/jetbrains/lincheck/tracer/`:
 
 ## Gotchas
 
-- **Append `bootstrap.jar` right after attach.**
-  `TracingAgent` appends it before parsing arguments,
-  because argument handling may already touch bootstrap-only classes
+- **The wrapper installs `bootstrap.jar` before loading the payload.**
+  Argument handling may already touch bootstrap-only classes
   (e.g. live-debugger breakpoint loading references `sun.nio.ch.lincheck.BreakpointStorage`).
-  `LincheckInstrumentation.appendBootstrapJarToClassLoaderSearch` is idempotent;
-  `install` invokes it again as a safety net.
+  The framework's standalone path still uses
+  `LincheckInstrumentation.appendBootstrapJarToClassLoaderSearch`.
+- **Agent dependencies live in an isolated payload loader.**
+  The outer javaagent jar exposes only the dependency-free wrapper;
+  `agent-payload.jar` is loaded with the platform classloader as parent.
+  The wrapper restores the attaching thread's context classloader after startup,
+  while agent-created threads inherit the payload loader.
 - **Lincheck's own classes are never instrumented.**
   `LincheckClassFileTransformer.shouldTransform` rejects them first (`isInLincheckPackage`)
   to avoid class-loading circularity.
+  Standalone agents additionally reject classes owned by the isolated payload loader by identity;
+  this check is disabled on the in-process framework path.
 - **Transformed bytecode is cached per `InstrumentationMode`** —
   except `LIVE_DEBUGGING`, which disables the cache
   so re-transformations pick up breakpoint additions and removals.
