@@ -141,6 +141,7 @@ class ModelCheckingCTestConfiguration(
             useClocks = UseClocks.ALWAYS
         )
         if (useExperimentalModelChecking) {
+            // TODO: does memory model actually get passed here?
             return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
                 runner.initializeStrategy(it)
             }

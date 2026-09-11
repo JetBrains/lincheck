@@ -37,6 +37,9 @@ interface MutableVectorClock : VectorClock {
 fun VectorClock.observes(tid: ThreadId, timestamp: Int): Boolean =
     timestamp <= get(tid)
 
+fun VectorClock.threadIds() : Iterable<Int> =
+    (-1 until maxThreadId() + 1)
+
 fun MutableVectorClock.increment(tid: ThreadId) {
     increment(tid, 1)
 }
