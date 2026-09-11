@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.toMemoryModel
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
@@ -70,6 +71,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             stdLibAnalysisEnabled = stdLibAnalysisEnabled,
             awaitLoopsAnalysisEnabled = awaitLoopsAnalysisEnabled,
             experimentalModelChecking = experimentalModelChecking,
+            memoryModel = memoryModel,
         )
     }
 }
@@ -99,6 +101,7 @@ class ModelCheckingCTestConfiguration(
     stdLibAnalysisEnabled: Boolean,
     awaitLoopsAnalysisEnabled: Boolean,
     experimentalModelChecking: Boolean,
+    memoryModel: MemoryModel,
 ) : ManagedCTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -125,6 +128,9 @@ class ModelCheckingCTestConfiguration(
     internal val useExperimentalModelChecking =
         experimentalModelChecking || System.getProperty("lincheck.useExperimentalModelChecking")?.toBoolean() ?: false
 
+    val memoryModel: MemoryModel =
+        memoryModel ?: System.getProperty("lincheck.memoryModel")?.toMemoryModel() ?: MemoryModel.SequentialConsistency
+
     override val instrumentationMode: InstrumentationMode get() =
         if (useExperimentalModelChecking) InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING else MODEL_CHECKING
 
@@ -142,7 +148,7 @@ class ModelCheckingCTestConfiguration(
         )
         if (useExperimentalModelChecking) {
             // TODO: does memory model actually get passed here?
-            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context, memoryModel).also {
                 runner.initializeStrategy(it)
             }
         } else {
