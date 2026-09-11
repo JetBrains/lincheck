@@ -769,6 +769,11 @@ private val atomicMethods = mapOf(
     // getAndSet
     "getAndSet" to AtomicMethodDescriptor(GET_AND_SET, ATOMIC_OBJECT, VOLATILE),
 
+    // compareAndExchange
+    "compareAndExchange"        to AtomicMethodDescriptor(COMPARE_AND_EXCHANGE, ATOMIC_OBJECT, VOLATILE),
+    "compareAndExchangeAcquire" to AtomicMethodDescriptor(COMPARE_AND_EXCHANGE, ATOMIC_OBJECT, ACQUIRE),
+    "compareAndExchangeRelease" to AtomicMethodDescriptor(COMPARE_AND_EXCHANGE, ATOMIC_OBJECT, RELEASE),
+
     // compareAndSet
     "compareAndSet" to AtomicMethodDescriptor(COMPARE_AND_SET, ATOMIC_OBJECT, VOLATILE),
 
