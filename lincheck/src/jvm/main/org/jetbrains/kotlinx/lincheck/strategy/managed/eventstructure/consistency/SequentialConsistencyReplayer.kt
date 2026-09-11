@@ -131,6 +131,7 @@ internal data class SequentialConsistencyReplayer(
             label is CoroutineLabel -> this
             label is ActorLabel -> this
             label is RandomLabel -> this
+            label is FenceLabel -> this
 
             else -> unreachable()
 

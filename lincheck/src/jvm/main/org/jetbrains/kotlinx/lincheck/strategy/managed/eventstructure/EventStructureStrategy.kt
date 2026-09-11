@@ -748,6 +748,12 @@ private class EventStructureMemoryTracker(
         }
     }
 
+    //TODO: code location not needed
+    override fun beforeFence(iThread: Int, codeLocation: Int, memoryOrder: MemoryOrdering) {
+        eventStructure.addFenceEvent(iThread, codeLocation, memoryOrder)
+    }
+
+
     override fun reset() {}
 
 }
