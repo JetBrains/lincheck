@@ -46,48 +46,6 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
      */
     val memoryAccessEventIndex : AtomicMemoryAccessEventIndex
 
-    /**
-     * The read-modify-write order of the execution.
-     *
-     * @see ReadModifyWriteOrder
-     */
-    val readModifyWriteOrder: Relation<AtomicThreadEvent>
-
-    /**
-     * The writes-before (wb) order of the execution.
-     *
-     * @see WritesBeforeOrder
-     */
-    val writesBeforeOrder: Relation<AtomicThreadEvent>
-
-    /**
-     * The coherence (co) order of the execution
-     *
-     * @see CoherenceOrder
-     */
-    val coherenceOrder: Relation<AtomicThreadEvent>
-
-    /**
-     * The extended coherence (eco) relation of the execution
-     *
-     * @see ExtendedCoherenceOrder
-     */
-    val extendedCoherence: Relation<AtomicThreadEvent>
-
-    /**
-     * The sequential consistency order (sc) of the execution.
-     *
-     * @see MemoryModelConsistencyOrder
-     */
-    val memoryModelConsistencyOrder: Relation<AtomicThreadEvent>
-
-    /**
-     * The execution order (xo) of the execution.
-     *
-     * @see ExecutionOrder
-     */
-    val executionOrder: Relation<AtomicThreadEvent>
-
     val inconsistency: Inconsistency?
 }
 
@@ -102,18 +60,6 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
 interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicThreadEvent> {
 
     override val memoryAccessEventIndex: MutableAtomicMemoryAccessEventIndex
-
-    val readModifyWriteOrderComputable: ComputableNode<ReadModifyWriteOrder>
-
-    val writesBeforeOrderComputable: ComputableNode<WritesBeforeOrder>
-
-    val coherenceOrderComputable: ComputableNode<CoherenceOrder>
-
-    val extendedCoherenceComputable: ComputableNode<ExtendedCoherenceOrder>
-
-    val memoryModelConsistencyOrderComputable: ComputableNode<MemoryModelConsistencyOrder>
-
-    val executionOrderComputable: ComputableNode<ExecutionOrder>
 
     /**
      * Resets the mutable execution to contain the new set of events
@@ -141,15 +87,6 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     val execution: ResettableExecution,
     val memoryModel: MemoryModel,
 ) : MutableExtendedExecution, MutableExecution<AtomicThreadEvent> by execution {
-
-    val coherenceCausalOrder : Relation<AtomicThreadEvent>
-        get() {
-            return when (memoryModel) {
-                MemoryModel.SequentialConsistency -> happensBeforeOrder
-                MemoryModel.ReleaseAcquire -> happensBeforeSameLocationOrder
-                MemoryModel.JAM21 -> TODO()
-            }
-        }
 
     override val memoryAccessEventIndex =
         MutableAtomicMemoryAccessEventIndex().apply { index(execution) }
