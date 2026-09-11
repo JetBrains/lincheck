@@ -1736,7 +1736,7 @@ internal abstract class ManagedStrategy(
         val methodDescriptor = context.methodPool[methodId]
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
-        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
+        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.className, methodDescriptor.methodName)
         // process method effect on the static memory snapshot
         processMethodEffectOnStaticSnapshot(receiver, params, atomicMethodDescriptor)
         val threadId = threadScheduler.getCurrentThreadId()
@@ -1751,7 +1751,7 @@ internal abstract class ManagedStrategy(
         }
 
         var shouldInterceptAtomicMethod: Boolean = false
-        if (memoryTracker != null && atomicMethodDescriptor != null && receiver != null) {
+        if (memoryTracker != null && atomicMethodDescriptor != null) {
             val location = objectTracker.getAtomicAccessMemoryLocation(
                 context,
                 methodDescriptor.className,
@@ -1912,7 +1912,7 @@ internal abstract class ManagedStrategy(
 
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
-        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
+        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.className, methodDescriptor.methodName)
         // get method's analysis section type
         val methodSection = methodAnalysisSectionType(
             receiver,
@@ -1981,7 +1981,7 @@ internal abstract class ManagedStrategy(
 
         // check if the called method is an atomics API method
         // (e.g., Atomic classes, AFU, VarHandle memory access API, etc.)
-        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.methodName)
+        val atomicMethodDescriptor = getAtomicMethodDescriptor(receiver, methodDescriptor.className, methodDescriptor.methodName)
         // get method's analysis section type
         val methodSection = methodAnalysisSectionType(
             receiver,
