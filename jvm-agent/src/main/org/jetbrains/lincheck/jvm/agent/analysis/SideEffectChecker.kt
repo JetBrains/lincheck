@@ -377,13 +377,20 @@ object SideEffectChecker {
             "${info.bootstrapOwner}.${info.bootstrapName}" !in SAFE_DYNAMIC_INVOCATIONS
         }
 
-        // A static field read is safe when it cannot trigger a side-effecting `<clinit>`:
-        //   - same class as the method under analysis - `<clinit>` is already running,
-        //   - stdlib class - `<clinit>` likely already fired by the time user code runs;
-        //     a workaround for the caller's `isClassLoaded` typically missing bootstrap-loaded
-        //     classes (their `Class.classLoader` is `null`),
-        //   - class already loaded by the JVM (per caller-supplied `isClassLoaded`) -
-        //     `<clinit>` has already fired.
+        /* A static field read is safe when it cannot trigger a side-effecting `<clinit>`:
+         *   - same class as the method under analysis - `<clinit>` is already running,
+         *   - stdlib class - `<clinit>` likely already fired by the time user code runs;
+         *   - class already loaded by the JVM (per caller-supplied `isClassLoaded`) -
+         *     `<clinit>` has already fired.
+         *
+         * TODO: can remove stdlib workaround now that `isClassLoaded` correctly handles bootstrap-loaded classes?
+         * TODO: side-effect analysis asks whether a class is *initialized*, and loaded is a weaker answer:
+         *   a `GETSTATIC` on a loaded-but-uninitialized class still triggers its `<clinit>`.
+         *   Sound ways to tighten this: derive it from a live instance (its class and superclasses,
+         *   plus superinterfaces declaring default methods, are provably initialized),
+         *   query `Unsafe.shouldBeInitialized` where that method is still present,
+         *   or use JVMTI agent `GetClassStatus` API.
+         */
         val analyzerIsSafeStaticFieldRead: StaticFieldReadPredicate = { info ->
             info.owner == classNode.name ||
             isStandardLibraryClass(info.owner) ||
@@ -733,6 +740,16 @@ internal val SAFE_STATIC_METHODS = setOf(
     "kotlin/jvm/internal/Intrinsics.compare",
     "kotlin/jvm/internal/Intrinsics.checkNotNull",
     "kotlin/jvm/internal/Intrinsics.checkNotNullParameter",
+
+    // java.util.UUID — pure parser, used by watch expressions in UI tests.
+    "java/util/UUID.fromString",
+
+    // java.time factories — pure object constructors, used by watch expressions in UI tests.
+    "java/time/LocalDate.of",
+    "java/time/LocalTime.of",
+    "java/time/LocalDateTime.of",
+    "java/time/Instant.ofEpochSecond",
+    "java/time/Duration.ofSeconds",
 )
 
 // Whitelist of safe instance methods on final classes (cannot be overridden, no side effects)

@@ -131,6 +131,12 @@ internal object TracePointComparator {
         is TRArbitraryInteger -> add("TRArbitraryInteger").add(obj.value.hashCode())
         is TRArbitraryDecimal -> add("TRArbitraryDecimal").add(obj.value.hashCode())
         is TRTextSnapshot -> add(obj.className.adornedClassNameRepresentation()).add(obj.content.hashCode())
+        is TRObject ->
+            add(obj.className.adornedClassNameRepresentation())
+                .add(obj.rendered ?: "")
+        is TRObjectSnapshot ->
+            add(obj.className.adornedClassNameRepresentation())
+                .add(obj.rendered ?: "")
         is TRReferenceLike -> add(obj.className.adornedClassNameRepresentation())
         is TRTypeReference -> add("TRTypeReference").add(obj.flavor.name).add(obj.referencedClassName.hashCode())
         is TRRenderedValue -> add("TRRenderedValue").add(obj.rendered.hashCode())

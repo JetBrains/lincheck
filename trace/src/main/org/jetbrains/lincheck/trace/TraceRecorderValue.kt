@@ -142,8 +142,10 @@ val TRValue.classId: Int? get() = when (this) {
  *
  * Registers the [ClassDescriptor] of [value] in [context] when the value carries class identity
  * and the descriptor is not registered yet.
+ *
+ * When [captureToString] is `true`, captures the textual rendering of generic objects when safe.
  */
-fun TRValue(context: TraceContext, value: Any?): TRValue = when (value) {
+fun TRValue(context: TraceContext, value: Any?, captureToString: Boolean = false): TRValue = when (value) {
     // special values
     null    -> TRNull
     else if (value.isUnit) -> TRUnit
@@ -189,7 +191,7 @@ fun TRValue(context: TraceContext, value: Any?): TRValue = when (value) {
     is BooleanArray -> TRArray(context, value)
 
     // generic object
-    else -> TRObject(context, value)
+    else -> TRObject(context, value, captureToString)
 }
 
 // ======== TRNull, TRVoid, TRUnit ========
@@ -432,25 +434,34 @@ sealed class TRReferenceLike : TRValue() {
  * Objects of this class are tied to a specific tracing context,
  * meaning the [classDescriptor] refers to a class registered within the related [TraceContext].
  *
+ * @property classDescriptor the registered descriptor of the object's runtime class.
+ * @property identity the object's `System.identityHashCode` value.
+ * @property rendered the safe textual rendering captured from `toString()`, if requested and available.
  * @see TRReferenceLike
  */
 @ConsistentCopyVisibility
 data class TRObject internal constructor(
     override val classDescriptor: ClassDescriptor,
     override val identity: Long,
+    val rendered: String?,
 ) : TRReferenceLike() {
 
-    override fun toString(): String =
-        className.adornedClassNameRepresentation() + "@$identity"
+    override fun toString(): String {
+        val objectLabel = className.adornedClassNameRepresentation() + "@$identity"
+        return if (rendered != null) "$objectLabel \"${rendered.escape()}\"" else objectLabel
+    }
 }
 
 /**
  * Captures a live JVM object by its class and `System.identityHashCode`,
  * registering its [ClassDescriptor] in [context] if needed.
+ * Also captures — if [SafeToStringCapturer] deems it safe —
+ * a textual rendering produced by `obj.toString()`.
  */
-fun TRObject(context: TraceContext, obj: Any): TRObject {
+fun TRObject(context: TraceContext, obj: Any, captureToString: Boolean = false): TRObject {
     val classDescriptor = context.createAndRegisterClassDescriptor(obj.javaClass.name)
-    return TRObject(classDescriptor, System.identityHashCode(obj).toLong())
+    val rendered = if (captureToString) SafeToStringCapturer.captureToString(obj) else null
+    return TRObject(classDescriptor, System.identityHashCode(obj).toLong(), rendered)
 }
 
 
@@ -460,16 +471,24 @@ fun TRObject(context: TraceContext, obj: Any): TRObject {
  * Represents a snapshot of a traced object captured during runtime.
  * Unlike [TRObject] captures not only the class and identity of the object itself,
  * but also a snapshot of its fields' values at the moment of capturing.
+ *
+ * @property classDescriptor the registered descriptor of the object's runtime class.
+ * @property identity the object's `System.identityHashCode` value.
+ * @property rendered the safe textual rendering captured from `toString()`, if requested and available.
+ * @property fields captured field values, keyed by field name.
  */
 @ConsistentCopyVisibility
 data class TRObjectSnapshot internal constructor(
     override val classDescriptor: ClassDescriptor,
     override val identity: Long,
+    val rendered: String?,
     val fields: Map<String, TRValue>,
 ) : TRReferenceLike() {
 
-    override fun toString(): String =
-        className.adornedClassNameRepresentation() + "@$identity"
+    override fun toString(): String {
+        val objectLabel = className.adornedClassNameRepresentation() + "@$identity"
+        return if (rendered != null) "$objectLabel \"${rendered.escape()}\"" else objectLabel
+    }
 }
 
 /**
@@ -477,10 +496,20 @@ data class TRObjectSnapshot internal constructor(
  *
  * Registers the [ClassDescriptor] of [obj] and of every field value in [context] if needed.
  */
-fun TRObjectSnapshot(context: TraceContext, obj: Any, fields: Map<String, Any?>): TRObjectSnapshot {
+fun TRObjectSnapshot(
+    context: TraceContext,
+    obj: Any,
+    fields: Map<String, Any?>,
+    captureToString: Boolean = false,
+): TRObjectSnapshot {
     val classDescriptor = context.createAndRegisterClassDescriptor(obj.javaClass.name)
-    val trObjectMap = fields.mapValues { (_, value) -> TRValue(context, value) }
-    return TRObjectSnapshot(classDescriptor, System.identityHashCode(obj).toLong(), trObjectMap)
+    val trObjectMap = fields.mapValues { (_, value) -> TRValue(context, value, captureToString) }
+    return TRObjectSnapshot(
+        classDescriptor,
+        System.identityHashCode(obj).toLong(),
+        if (captureToString) SafeToStringCapturer.captureToString(obj) else null,
+        trObjectMap,
+    )
 }
 
 
@@ -543,9 +572,15 @@ data class TRArraySnapshot internal constructor(
  * @param size the array's full length, which exceeds `elements.size` when the caller capped how many
  *   elements it read.
  */
-fun TRArraySnapshot(context: TraceContext, array: Any, size: Int, elements: List<Any?>): TRArraySnapshot {
+fun TRArraySnapshot(
+    context: TraceContext,
+    array: Any,
+    size: Int,
+    elements: List<Any?>,
+    captureToString: Boolean = false,
+): TRArraySnapshot {
     val classDescriptor = context.createAndRegisterClassDescriptor(array.javaClass.name)
-    val elementsAsTRValues = elements.map { value -> TRValue(context, value) }
+    val elementsAsTRValues = elements.map { value -> TRValue(context, value, captureToString) }
     return TRArraySnapshot(classDescriptor, System.identityHashCode(array).toLong(), size, elementsAsTRValues)
 }
 

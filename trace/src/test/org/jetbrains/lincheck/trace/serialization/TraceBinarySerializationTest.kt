@@ -935,6 +935,7 @@ class TraceBinarySerializationTest {
         val value: TRValue = TRObjectSnapshot(
             cd,
             1_140_234_871,
+            rendered = null,
             linkedMapOf("status" to TRRenderedValue("'up'"), "n_pings" to TRRenderedValue("42")),
         )
         assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
@@ -979,7 +980,7 @@ class TraceBinarySerializationTest {
         val value: TRValue = TRMapSnapshot(
             mapClass, 5, totalSize = 1,
             capturedEntries = listOf(
-                TRObjectSnapshot(keyClass, 6, linkedMapOf("id" to TRScalar(1))) to
+                TRObjectSnapshot(keyClass, 6, rendered = null, linkedMapOf("id" to TRScalar(1))) to
                     TRArraySnapshot(valueClass, 7, totalSize = 1, capturedElements = listOf(TRString("x"))),
             ),
         )
@@ -1017,7 +1018,7 @@ class TraceBinarySerializationTest {
                     mapClass, 1, totalSize = 1,
                     // The only class descriptor below the map lives on the *key* half of the entry.
                     capturedEntries = listOf(
-                        TRObjectSnapshot(keyClass, 2, linkedMapOf("id" to TRScalar(1))) to TRString("v")
+                        TRObjectSnapshot(keyClass, 2, rendered = null, linkedMapOf("id" to TRScalar(1))) to TRString("v")
                     ),
                 )
             ),
@@ -1141,6 +1142,7 @@ class TraceBinarySerializationTest {
         val emptyObject = TRObject(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xDEADL,
+            rendered = null,
         )
         assertRoundTrip(emptyObject, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
     }
@@ -1152,6 +1154,7 @@ class TraceBinarySerializationTest {
         val singleField = TRObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xCAFEL,
+            rendered = null,
             fields = mapOf("x" to TRScalar(1)),
         )
         assertRoundTrip(singleField, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
@@ -1164,11 +1167,13 @@ class TraceBinarySerializationTest {
         val nestedChild = TRObject(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xDEADL,
+            rendered = null,
         )
         // mix of scalar, string, Unit, null, and nested-object field values
         val mixedFields = TRObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xBEEFL,
+            rendered = null,
             fields = mapOf(
                 "i" to TRScalar(1),
                 "s" to TRString("hi"),
@@ -1188,16 +1193,19 @@ class TraceBinarySerializationTest {
         val grandchild = TRObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x11L,
+            rendered = null,
             fields = mapOf("leaf" to TRScalar(true)),
         )
         val child = TRObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x22L,
+            rendered = null,
             fields = mapOf("grandchild" to grandchild),
         )
         val root = TRObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x33L,
+            rendered = null,
             fields = mapOf("child" to child),
         )
         assertRoundTrip(root, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
@@ -1256,6 +1264,7 @@ class TraceBinarySerializationTest {
         val nestedObject = TRObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xCAFEL,
+            rendered = null,
             fields = mapOf("x" to TRScalar(7)),
         )
         // captured.size < totalSize — the runtime array was larger than what was captured
@@ -1318,12 +1327,76 @@ class TraceBinarySerializationTest {
         val owner = TRObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xDDDL,
+            rendered = null,
             fields = mapOf(
                 "name" to TRString("foo"),
                 "buckets" to arrayField,
             ),
         )
         assertRoundTrip(owner, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+    }
+
+    @Test
+    fun trValueObjectWithToStringValue() {
+        val context = TraceContext()
+        val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
+        val obj = TRObject(
+            classDescriptor = context.classPool[fooClassId],
+            identity = 0xDEADL,
+            rendered = "Owner{id=1}",
+        )
+        assertRoundTrip(obj, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+    }
+
+    @Test
+    fun trValueObjectSnapshotWithToStringValue() {
+        val context = TraceContext()
+        val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
+        val snap = TRObjectSnapshot(
+            classDescriptor = context.classPool[fooClassId],
+            identity = 0xBEEFL,
+            rendered = "Snap[a=1, b=2]",
+            fields = mapOf("a" to TRScalar(1), "b" to TRScalar(2)),
+        )
+        assertRoundTrip(snap, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+    }
+
+    @Test
+    fun trValueObjectWithToStringValueNullRoundTrips() {
+        // Confirms the null bit on `writeNullableString` / `readNullableString` is wired correctly.
+        val context = TraceContext()
+        val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
+        val obj = TRObject(
+            classDescriptor = context.classPool[fooClassId],
+            identity = 0xCAFEL,
+            rendered = null,
+        )
+        assertRoundTrip(obj, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+    }
+
+    @Test
+    fun trValueNestedObjectSnapshotCarriesToStringPerLevel() {
+        val context = TraceContext()
+        val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
+        val grandchild = TRObjectSnapshot(
+            classDescriptor = context.classPool[fooClassId],
+            identity = 0x11L,
+            rendered = "g",
+            fields = mapOf("leaf" to TRScalar(true)),
+        )
+        val child = TRObjectSnapshot(
+            classDescriptor = context.classPool[fooClassId],
+            identity = 0x22L,
+            rendered = "c",
+            fields = mapOf("grandchild" to grandchild),
+        )
+        val root = TRObjectSnapshot(
+            classDescriptor = context.classPool[fooClassId],
+            identity = 0x33L,
+            rendered = "r",
+            fields = mapOf("child" to child),
+        )
+        assertRoundTrip(root, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
     }
 
     // ======== Diff Status ========
@@ -1863,6 +1936,7 @@ class TraceBinarySerializationTest {
         val exception = TRObject(
             classDescriptor = context.classPool[classId],
             identity = 0xDEADL,
+            rendered = null,
         )
         val original = TRThrowTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
@@ -1889,6 +1963,7 @@ class TraceBinarySerializationTest {
         val exception = TRObject(
             classDescriptor = context.classPool[classId],
             identity = 0xFACEL,
+            rendered = null,
         )
         val original = TRCatchTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,

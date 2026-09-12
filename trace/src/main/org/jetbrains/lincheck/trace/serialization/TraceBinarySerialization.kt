@@ -27,7 +27,7 @@ import java.util.UUID
 internal const val TRACE_MAGIC : Long = 0x706e547124ee5f70L
 internal const val INDEX_MAGIC : Long = TRACE_MAGIC.inv()
 /** Binary trace-format version this build produces and consumes. */
-const val TRACE_VERSION : Long = 29
+const val TRACE_VERSION : Long = 30
 
 // Buffer for saving trace in one piece
 internal const val OUTPUT_BUFFER_SIZE: Int = 16 * 1024 * 1024
@@ -603,11 +603,13 @@ internal fun DataOutput.writeTRValue(value: TRValue) {
             writeTRValueKind(TRValueKind.OBJECT)
             writeInt(value.classDescriptor.id)
             writeLong(value.identity)
+            writeNullableString(value.rendered)
         }
         is TRObjectSnapshot -> {
             writeTRValueKind(TRValueKind.OBJECT_SNAPSHOT)
             writeInt(value.classDescriptor.id)
             writeLong(value.identity)
+            writeNullableString(value.rendered)
             writeInt(value.fields.size)
             value.fields.forEach { (fieldName, fieldValue) ->
                 writeString(fieldName)
@@ -713,12 +715,14 @@ internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readT
     // reference-like types
     TRValueKind.OBJECT -> {
         val cd = context.classPool[readInt()]
-        val hash = readLong()
-        TRObject(cd, hash)
+        val identity = readLong()
+        val toStr = readNullableString()
+        TRObject(cd, identity, toStr)
     }
     TRValueKind.OBJECT_SNAPSHOT -> {
         val cd = context.classPool[readInt()]
-        val hash = readLong()
+        val identity = readLong()
+        val toStr = readNullableString()
         val fieldsSize = readInt()
         val fields = buildMap {
             repeat(fieldsSize) {
@@ -727,7 +731,7 @@ internal fun DataInput.readTRValue(context: TraceContext): TRValue = when (readT
                 put(fieldName, fieldValue)
             }
         }
-        TRObjectSnapshot(cd, hash, fields)
+        TRObjectSnapshot(cd, identity, toStr, fields)
     }
     TRValueKind.ARRAY -> {
         val cd = context.classPool[readInt()]

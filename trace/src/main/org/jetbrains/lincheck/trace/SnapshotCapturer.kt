@@ -70,27 +70,35 @@ internal class PlainSnapshotCapturer(private val context: TraceContext) : Snapsh
     override fun captureValue(value: Any?): TRValue = when {
         value == null -> TRNull
 
-        value is Enum<*> -> TRValue(context, value)
+        value is Enum<*> -> TRValue(context, value, captureToString = true)
         value is Throwable -> TRExceptionSnapshot(context, value)
 
         value::class.java.isArray -> {
             val arraySize = findArrayLength(value)
             val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
             val elements = findElementsForArray(value, elementsToRead)
-            TRArraySnapshot(context, value, arraySize, elements)
+            TRArraySnapshot(context, value, arraySize, elements, captureToString = true)
         }
 
         else -> {
             val objectFields = findFieldsForObject(value)
             when {
-                objectFields.isNotEmpty() -> TRObjectSnapshot(context, value, objectFields)
-                else -> TRValue(context, value)
+                objectFields.isNotEmpty() -> TRObjectSnapshot(context, value, objectFields, captureToString = true)
+                else -> TRValue(context, value, captureToString = true)
             }
         }
     }
 }
 
-/** Capture that enforces one immutable redaction-policy snapshot on every captured slot. */
+/**
+ * Capture that enforces one immutable redaction-policy snapshot on every captured slot.
+ *
+ * Never stores a `toString()` rendering ([SafeToStringCapturer] is not consulted):
+ * the text is opaque to the policy — it may spell out a field a name rule redacts,
+ * here or in a nested object the capture never reads,
+ * and a value rule anchored to one scalar cannot be evaluated against a composite string.
+ * Objects keep the identity-only render under redaction.
+ */
 internal class RedactingSnapshotCapturer(
     private val context: TraceContext,
     private val policy: CompiledRedactionPolicy,
@@ -142,9 +150,9 @@ internal class RedactingSnapshotCapturer(
         val fields = captureObjectFields(nonNullValue)
         return if (fields.isNotEmpty()) {
             val descriptor = context.createAndRegisterClassDescriptor(nonNullValue.javaClass.name)
-            TRObjectSnapshot(descriptor, System.identityHashCode(nonNullValue).toLong(), fields)
+            TRObjectSnapshot(descriptor, System.identityHashCode(nonNullValue).toLong(), rendered = null, fields)
         } else {
-            TRValue(context, nonNullValue)
+            TRValue(context, nonNullValue, captureToString = false)
         }
     }
 
@@ -180,7 +188,7 @@ internal class RedactingSnapshotCapturer(
     private fun captureLeafValue(value: Any?): TRValue {
         return try {
             captureScalar(value)
-                ?: if (value is Throwable) captureException(value) else TRValue(context, value)
+                ?: if (value is Throwable) captureException(value) else TRValue(context, value, captureToString = false)
         } catch (_: Throwable) {
             unattributedRedaction(value)
         }

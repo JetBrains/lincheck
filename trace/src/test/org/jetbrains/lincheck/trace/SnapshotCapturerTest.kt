@@ -55,6 +55,9 @@ private class ExplodingMessageException : IllegalStateException() {
 
 private class ExplodingField(val password: Throwable)
 
+/** A field-less object ([Any] has no instance fields) next to a redacted one: both leaves of a snapshot. */
+private class ToStringFields(val password: String, val plain: Any)
+
 class SnapshotCapturerTest {
     @Test
     fun `an empty policy selects the plain capturer and captures values unchanged`() {
@@ -415,12 +418,61 @@ class SnapshotCapturerTest {
         )
     }
 
-    private fun capturer(vararg rules: RedactionRule): SnapshotCapturer {
+    @Test
+    fun `an active policy never stores a toString rendering`() {
+        val context = TraceContext()
+        val holder = ToStringFields(password = "TOSTRING_SECRET_551372", plain = java.util.UUID(0, 1))
+
+        val plain = SnapshotCapturer(context, CompiledRedactionPolicy.EMPTY).captureValue(holder) as TRObjectSnapshot
+        assertEquals("00000000-0000-0000-0000-000000000001", (plain.fields.getValue("plain") as TRObject).rendered)
+
+        val redacted = capturer(context, RedactionRule.ByName("password"))
+            .captureNamedExpressionValues(
+                values = arrayOf(holder, Any()),
+                names = listOf("holder", "bare"),
+                declaringClassName = "example.Controller",
+            )
+        val snapshot = redacted[0] as TRObjectSnapshot
+        assertEquals(null, snapshot.rendered)
+        assertTrue(snapshot.fields.getValue("password") is TRRedacted)
+        assertEquals(null, (snapshot.fields.getValue("plain") as TRObject).rendered)
+        assertEquals(null, (redacted[1] as TRObject).rendered)
+    }
+
+    @Test
+    fun `raw serialized values contain no toString bytes under an active policy`() {
+        val secret = "UNIQUE_TOSTRING_SECRET_407318"
+        val context = TraceContext()
+        val captured = capturer(context, RedactionRule.ByValue(secret)).captureNamedExpressionValues(
+            values = arrayOf(
+                RedactionFields(password = secret, nonSecret = "visible", repeatedSecret = secret),
+                ToStringFields(password = secret, plain = Any()),
+                Any(),
+            ),
+            names = listOf("fields", "holder", "bare"),
+            declaringClassName = "example.Controller",
+        )
+        val bytes = ByteArrayOutputStream().use { byteStream ->
+            DataOutputStream(byteStream).use { output ->
+                captured.forEach(output::writeTRValue)
+            }
+            byteStream.toByteArray()
+        }
+
+        assertTrue(
+            "A toString() rendering must not enter serialized trace values under redaction",
+            !bytes.containsSubsequence(secret.toByteArray(Charsets.UTF_8)),
+        )
+    }
+
+    private fun capturer(vararg rules: RedactionRule): SnapshotCapturer = capturer(TraceContext(), *rules)
+
+    private fun capturer(context: TraceContext, vararg rules: RedactionRule): SnapshotCapturer {
         val template = RedactionTemplate.of("test policy", rules.toList())
         val policy = RedactionTemplateRegistry().apply {
             replace(PolicyOwner.STARTUP_FILE, listOf(template))
         }.snapshot()
-        return SnapshotCapturer(TraceContext(), policy)
+        return SnapshotCapturer(context, policy)
     }
 }
 

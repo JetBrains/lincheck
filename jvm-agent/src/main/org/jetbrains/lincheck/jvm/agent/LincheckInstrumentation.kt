@@ -769,21 +769,31 @@ object LincheckInstrumentation {
      * Checks if a class with the given canonical name has already been loaded by the JVM.
      *
      * @param canonicalClassName The canonical class name (e.g., "java.lang.String")
+     * @param classLoader Only classes defined by a loader visible from this one count as loaded:
+     *   its delegation chain plus the bootstrap loader it bottoms out at.
      * @return true if the class is loaded, false otherwise or if instrumentation is not initialized
      */
     fun isClassLoaded(canonicalClassName: String, classLoader: ClassLoader): Boolean {
         if (!isInitialized) {
             return false
         }
-        val expectedClassLoaders = Collections.newSetFromMap<ClassLoader>(IdentityHashMap())
+        val visibleClassLoaders = Collections.newSetFromMap<ClassLoader>(IdentityHashMap())
         var loader: ClassLoader? = classLoader
         while (loader != null) {
-            expectedClassLoaders.add(loader)
+            visibleClassLoaders.add(loader)
             loader = loader.parent
         }
-        return instrumentation.allLoadedClasses.any {
-            it.name == canonicalClassName && expectedClassLoaders.contains(it.classLoader)
+        for (clazz in instrumentation.allLoadedClasses) {
+            if (clazz.name != canonicalClassName) continue
+            val definingClassLoader = clazz.classLoader
+
+            // Delegation bottoms out at the bootstrap loader, which is represented by `null`
+            // and so never appears in the parent chain walked above:
+            // a bootstrap-loaded class is visible from every class loader.
+            if (definingClassLoader == null) return true
+            if (visibleClassLoaders.contains(definingClassLoader)) return true
         }
+        return false
     }
 
     /**

@@ -219,11 +219,11 @@ class TracePointCloner(
         is TRArbitraryDecimal -> TRArbitraryDecimal(value)
         is TRObject -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRObject(cd, identity)
+            TRObject(cd, identity, rendered)
         }
         is TRObjectSnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRObjectSnapshot(cd, identity, fields.clone())
+            TRObjectSnapshot(cd, identity, rendered, fields.clone())
         }
         is TRArray -> {
             val cd = context.createAndRegisterClassDescriptor(className)
