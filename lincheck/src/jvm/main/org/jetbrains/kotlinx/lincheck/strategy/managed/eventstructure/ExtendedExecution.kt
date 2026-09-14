@@ -22,12 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.util.ComputableNode
-import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.collections.SortedList
-import org.jetbrains.lincheck.util.computable
-import org.jetbrains.lincheck.util.dependsOn
-import org.jetbrains.lincheck.util.union
 
 
 /**
