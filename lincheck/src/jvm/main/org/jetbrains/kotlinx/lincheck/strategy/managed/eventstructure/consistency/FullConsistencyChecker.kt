@@ -22,18 +22,20 @@ import org.jetbrains.lincheck.util.MemoryOrdering
 import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.collections.SortedArrayList
 import org.jetbrains.lincheck.util.collections.SortedMutableList
-import org.jetbrains.lincheck.util.collections.binarySearch
 import org.jetbrains.lincheck.util.collections.cartesianProduct
 import org.jetbrains.lincheck.util.unreachable
 
-class WritesBeforeChecker(val execution: Execution<AtomicThreadEvent>, val memoryAccessEventIndex: AtomicMemoryAccessEventIndex, val memoryModel: MemoryModel): ExtendedExecutionTracker {
+// TODO: this is a bad name.
+//  This class uses a writes before approximation and also checks consistency for either JAM21 or SC
+class FullConsistencyChecker(val execution: Execution<AtomicThreadEvent>, val memoryAccessEventIndex: AtomicMemoryAccessEventIndex, val memoryModel: MemoryModel): ExtendedExecutionTracker {
 
+    val hbChildrenTracker = HBChildrenTracker()
+    val writesBeforeTracker = WritesBeforeTracker(memoryAccessEventIndex, hbChildrenTracker)
     private val volatileEventEnumerator = MutableEventEnumerator()
-    val writesHBTracker = WritesHBTracker()
-    val writesBeforeTracker = WritesBeforeTrackerImpl(memoryAccessEventIndex, writesHBTracker)
-    val exclusiveWrites = mutableListOf<AtomicThreadEvent>()
 
-    var stale: Boolean = true
+    val causalityTracker = SCCausalityTracker(execution, memoryAccessEventIndex)
+
+    var stale: Boolean = true // Used for caching the consistencyResult
     var consistencyResult : Inconsistency? = null
 
     val allEventEnumerator = MutableEventEnumerator()
@@ -45,45 +47,38 @@ class WritesBeforeChecker(val execution: Execution<AtomicThreadEvent>, val memor
 
     override fun onAdd(event: AtomicThreadEvent) {
         allEventEnumerator.add(event)
+        causalityTracker.add(event)
         val label = event.label as? MemoryAccessLabel ?: return
         // If not write or read response, then we skip
         if (!(label.isWrite || label.isResponse)) return
-        writesHBTracker.addMemoryAccessEvent(event)
+        hbChildrenTracker.addMemoryAccessEvent(event)
 
         //  Make sure that the cached result is not stale
         stale = true
-        if(label.isExclusive) trackRMWEvent(event)
-        if(label.memoryOrdering == MemoryOrdering.VOLATILE) trackVolaitleEvent(event)
+        if (label.memoryOrdering == MemoryOrdering.VOLATILE) trackVolaitleEvent(event)
 
         writesBeforeTracker.addEvent(event)
     }
 
 
-    private fun trackVolaitleEvent(event: AtomicThreadEvent) { volatileEventEnumerator.add(event) }
-
-    private fun trackRMWEvent(event: AtomicThreadEvent) {
-        val label = event.label
-        // Track the exclusive writes for consistency checking
-        if(label is WriteAccessLabel)  {
-            exclusiveWrites.add(event)
-            return
-        }
+    private fun trackVolaitleEvent(event: AtomicThreadEvent) {
+        volatileEventEnumerator.add(event)
     }
+
 
     override fun onReset(execution: MutableExtendedExecution) {
         stale = true
-        // Update the volatiles and exclusive writes
-        exclusiveWrites.clear()
+        // TODO: this is a major slow point, ideally we can skip some of the work that we do here
         volatileEventEnumerator.clear()
-        writesHBTracker.clear()
+        hbChildrenTracker.clear()
         allEventEnumerator.clear()
+        causalityTracker.clear()
         execution.forEach { event ->
             allEventEnumerator.add(event)
+            causalityTracker.add(event)
             if(!eventIsMemoryAccessLabel(event)) return@forEach
             val label = event.label as MemoryAccessLabel
-            writesHBTracker.addMemoryAccessEvent(event)
-
-            if(label.isExclusive) trackRMWEvent(event)
+            hbChildrenTracker.addMemoryAccessEvent(event)
             if(label.memoryOrdering == MemoryOrdering.VOLATILE) trackVolaitleEvent(event)
         }
 
@@ -101,13 +96,12 @@ class WritesBeforeChecker(val execution: Execution<AtomicThreadEvent>, val memor
 
     fun _completeCheck() : Inconsistency? {
         val hasCycle = writesBeforeTracker.hasCycle()
-        if(hasCycle) {
-            // TODO: actually add a nicer class
-            return ReleaseAcquireViolation()
+        if (hasCycle) {
+            return ReadModifyWriteAtomicityViolation()
         }
 
-        if(memoryModel == MemoryModel.SequentialConsistency) return checkSequentialConsistency()
-        if(memoryModel == MemoryModel.JAM21) return doCheckWithTotalOrders()
+        if (memoryModel == MemoryModel.SequentialConsistency) return checkSequentialConsistency()
+        if (memoryModel == MemoryModel.JAM21) return doCheckWithTotalOrders()
 
         return null
     }
@@ -115,306 +109,96 @@ class WritesBeforeChecker(val execution: Execution<AtomicThreadEvent>, val memor
     private fun checkSequentialConsistency(): Inconsistency? {
         if (volatileEventEnumerator.list.isEmpty()) return null
 
-
-        val scGraph = SCGraph(execution, allEventEnumerator.list, allEventEnumerator, memoryAccessEventIndex);
-        scGraph.initializeCausalOrder(happensBeforeOrder)
-        forEachCoherenceOrderSc().forEach { coherenceOrder ->
+        writesBeforeTracker.coherenceOrders().forEach { coherenceOrder ->
             // Check sequential Consistency
-            scGraph.setCoherenceOrder(coherenceOrder)
-            val hasCycle = scGraph.hasCycle()
+            causalityTracker.setCoherenceOrder(coherenceOrder)
+            val hasCycle = topologicalSorting(causalityTracker) == null
             if(!hasCycle) return null
         }
         return CoherenceViolation()
     }
 
-    private fun forEachCoherenceOrderSc(): Sequence<CoherenceRelation> {
-        val sortings = writesBeforeTracker.writesBeforeGraphs.entries.filter{
-            !it.value.isSingleton()  && !memoryAccessEventIndex.isWriteWriteRaceFree(it.key)
-        }.map {
-            topologicalSortings(it.value)
-        }.toList()
-
-        if(sortings.isEmpty()) {
-            return sequenceOf(CoherenceRelation(emptyList()))
-        }
-
-        return sortings.cartesianProduct().map{
-            CoherenceRelation(it)
-        }
-    }
-
     private fun doCheckWithTotalOrders() : Inconsistency? {
         // No need to compute the graph if there are no volatile events
         if (volatileEventEnumerator.list.isEmpty()) return null
-        writesBeforeTracker.forEachCoherenceOrder().forEach { coherenceOrder ->
+
+
+        writesBeforeTracker.coherenceOrders().forEach { coherenceOrder ->
             // Check sequential Consistency
             val graph = SCBRelation(coherenceOrder).toGraph(volatileEventEnumerator.list, volatileEventEnumerator)
             val sorting = topologicalSorting(graph)
             if(sorting != null) return null
         }
-        return JamSequentialConsistencyViolation()
+        return CoherenceViolation()
     }
 }
 
-class FastGraph(
-    val execution: Execution<AtomicThreadEvent>,
-    val events: List<AtomicThreadEvent>,
-    val eventEnumerator: Enumerator<AtomicThreadEvent>
-) {
+// Incrementally tracks all RF-edges
+class SCCausalityTracker(val execution: Execution<AtomicThreadEvent>, val memoryAccessEventIndex: AtomicMemoryAccessEventIndex): Graph<AtomicThreadEvent> {
 
-    val N = events.size
-    val eventMapCapacity = execution.maxThreadId + 2
-    val eventMapLastIndex = eventMapCapacity - 1
-    val SIZE_IDX = eventMapLastIndex
-    val graph: Array<IntArray> = Array(N) { IntArray(execution.maxThreadId + 2) }
+    // Empty set means that the node is there it just has no children
+    // TODO: Maps are slow. Use arrays instead.
+    val graph: MutableMap<AtomicThreadEvent, MutableSet<AtomicThreadEvent>> = mutableMapOf()
+    val coherenceOrderGraph: MutableMap<AtomicThreadEvent, MutableSet<AtomicThreadEvent>> = mutableMapOf()
 
-    fun addChild(event: AtomicThreadEvent, childEvent: AtomicThreadEvent) {
-        val eventId = eventEnumerator[event]
-        val childId = eventEnumerator[childEvent]
-        val freeIndex = graph[eventId][SIZE_IDX]++
-        check(freeIndex < eventMapLastIndex) // To prevent overflow
-        graph[eventId][freeIndex] += childId
-    }
+    override val nodes: Collection<AtomicThreadEvent>
+        get() = graph.keys
 
-
-    inline fun forEachChildId(eventId: Int, block: (childId: Int) -> Unit) {
-        val childIds = graph[eventId]
-        val size = childIds[SIZE_IDX]
-        for(i in 0 until size) {
-            block(childIds[i])
+    // TODO: possible optimization: we just keep the events with or if events that someone depends on
+    fun add(event: AtomicThreadEvent) {
+        if (event !in graph) graph[event] = mutableSetOf()
+        // NOTE: this is copied over from causalityOrder definition.
+        //   Ideally for SC we just track outgoing reads from edges
+        //   We cannot use memoryAccessEvent index's read responses for write,
+        //   as it most notably does not include thread forks and joins, which are important for the causal order
+        event.dependencies.forEach {
+            graph.getOrPut(it as AtomicThreadEvent) { mutableSetOf() }.add(event)
         }
-    }
-
-    inline fun forEachChild(event: AtomicThreadEvent, block: (childId: AtomicThreadEvent) -> Unit) {
-        val eventId = eventEnumerator[event]
-        val childIds = graph[eventId]
-        val size = childIds[SIZE_IDX]
-        for(i in 0 until size) {
-            val child = eventEnumerator[childIds[i]]
-            block(child)
-        }
-    }
-
-    fun clear() {
-        for(i in 0 until N) { graph[i][SIZE_IDX] = 0 }
-    }
-
-}
-
-class TIDGraph(
-    val execution: Execution<AtomicThreadEvent>,
-    val events: List<AtomicThreadEvent>,
-    val eventEnumerator: Enumerator<AtomicThreadEvent>
-) {
-
-    val N = events.size
-    val eventMapCapacity = execution.maxThreadId + 2
-    val graph: Array<IntArray> = Array(N) { IntArray(eventMapCapacity) }
-
-    val EMPTY = -1
-    fun addChild(event: AtomicThreadEvent, childEvent: AtomicThreadEvent) {
-        val eventId = eventEnumerator[event]
-        val threadIdx = childEvent.threadId + 1
-        val threadPosition = childEvent.threadPosition
-        val value = graph[eventId][threadIdx]
-        if(value == EMPTY) graph[eventId][threadIdx] = threadPosition
-        graph[eventId][threadIdx] = minOf(value, threadPosition)
-    }
-
-
-    inline fun forEachChildId(eventId: Int, block: (childId: Int) -> Unit) {
-        val childIds = graph[eventId]
-        for(i in 0 until eventMapCapacity) {
-            val pos = childIds[i]
-            if(pos != EMPTY) {
-                val tid = i - 1;
-                val childevent = execution[tid, pos]!!
-                val childId = eventEnumerator[childevent]
-                block(childId)
-            }
-        }
-    }
-
-    inline fun forEachChild(event: AtomicThreadEvent, block: (childId: AtomicThreadEvent) -> Unit) {
-        val eventId = eventEnumerator[event]
-        val childIds = graph[eventId]
-        for(i in 0 until eventMapCapacity) {
-            val pos = childIds[i]
-            if(pos != EMPTY) {
-                val tid = i - 1;
-                val childRvent = execution[tid, pos]!!
-                block(childRvent)
-            }
-        }
-    }
-
-    fun clear() {
-        for(i in 0 until N) {
-            graph[i].fill(EMPTY)
-        }
-    }
-}
-
-class SCGraph(
-    val execution: Execution<AtomicThreadEvent>,
-    val events: List<AtomicThreadEvent>,
-    val eventEnumerator: Enumerator<AtomicThreadEvent>,
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-) {
-
-    val N = events.size
-    val causalGraph = FastGraph(execution, events, eventEnumerator)
-    val ecoGraph = TIDGraph(execution, events, eventEnumerator)
-
-    val cycleState = ByteArray(N)
-    val dsfStack = IntStack(N) // At least N elements
-    val CYCLE_EMPTY: Byte = 0
-    val CYCLE_SEEN: Byte = 1
-    val CYCLE_DONE: Byte = 2
-    val DONE_MASK: Int = (1 shl 30)
-
-    fun initializeCausalOrder(causalOrder: Relation<AtomicThreadEvent>) {
-        for(tid in -1 until execution.maxThreadId) {
-            val threadEvents = execution[tid] ?: continue
-            outer@ for(tid2 in -1 until execution.maxThreadId) {
-                val threadEvents2 = execution[tid2] ?: continue
-                var maxID = threadEvents2.size - 1
-                for(tPos in (threadEvents.size - 1) downTo  0) {
-                    val event = threadEvents[tPos]
-                    val eIdx = eventEnumerator[event]
-
-                    var tPos2 = threadEvents2.binarySearch(0, maxID + 1) { causalOrder(event, it) }
-                    if (event.label is InitializationLabel && tid2 != tid) tPos2 = 0
-                    val otherEvent = threadEvents2.getOrNull(tPos2) ?: continue@outer // We can skip with outer as
-                    maxID = tPos2
-                    causalGraph.addChild(event, otherEvent)
-                }
-            }
-        }
-    }
-
-
-    private fun resetCycleState() {
-        cycleState.fill(CYCLE_EMPTY)
-        dsfStack.clear()
     }
 
     fun setCoherenceOrder(coherenceOrder: CoherenceRelation) {
-        ecoGraph.clear()
-
-        for(location in memoryAccessEventIndex.locations) {
-            for(write1 in memoryAccessEventIndex.getWrites(location)) {
-                // Add WW
-                for(write2 in memoryAccessEventIndex.getWrites(location)) {
-                    if(coherenceOrder(write1, write2)) ecoGraph.addChild(write1, write2)
+        // We add the co and rb edges from the eco relation, to the graphs before doing the causal checks
+        // These are we only need to add these single edges as the rest will be handled transitively thanks to the causal cycles
+        coherenceOrderGraph.clear()
+        coherenceOrder.locationMap.entries.forEach { (location, events) ->
+            events.windowed(2).forEach { (write1,write2) ->
+                coherenceOrderGraph.getOrPut(write1) { mutableSetOf() }.add(write2)
+                memoryAccessEventIndex.getWriteReadResponses(write1, location).forEach { read1 ->
+                    coherenceOrderGraph.getOrPut(read1) { mutableSetOf() }.add(write2)
                 }
-                // Add WR
-                for(read2 in memoryAccessEventIndex.getReadResponses(location)) {
-                    val write2 = read2.readsFrom
-                    if(coherenceOrder(write1, write2)) ecoGraph.addChild(write1, write2)
-                }
-            }
-            for(read1 in memoryAccessEventIndex.getReadResponses(location)) {
-                val write1 = read1.readsFrom
-                // Add RW
-                for(write2 in memoryAccessEventIndex.getWrites(location)) {
-                    if(coherenceOrder(write1, write2)) ecoGraph.addChild(write1, write2)
-                }
-                // We do not need to add RR edges!
             }
         }
-    }
-
-    fun hasCycle(): Boolean {
-        resetCycleState()
-        val rootIdx = 0
-        dsfStack.push(rootIdx)
-
-        while (!dsfStack.isEmpty) {
-            val queueEntry = dsfStack.pop()
-            val isDone = (queueEntry and DONE_MASK) != 0
-            val eventIdx = queueEntry and (DONE_MASK).inv()
-
-            if (isDone) {
-                check(cycleState[eventIdx] == CYCLE_SEEN)
-                cycleState[eventIdx] = CYCLE_DONE
-                continue
-            }
-            // Cycle found
-            if (cycleState[eventIdx] == CYCLE_SEEN) {
-                return true
-            }
-            cycleState[eventIdx] = CYCLE_SEEN
-
-            val doneEntry = eventIdx or DONE_MASK
-            check(doneEntry xor DONE_MASK == eventIdx)
-            check(doneEntry and DONE_MASK != 0)
-            dsfStack.push(doneEntry)
-
-            // Go over each of the neighbours
-            val handleChild  = handleChild@{ childIdx: Int ->
-                if (cycleState[childIdx] == CYCLE_DONE) return@handleChild
-                check(childIdx and (DONE_MASK).inv() == childIdx)
-                check(childIdx and DONE_MASK == 0)
-                dsfStack.push(childIdx)
-            }
-            ecoGraph.forEachChildId(eventIdx, handleChild)
-            causalGraph.forEachChildId(eventIdx, handleChild)
-        }
-        // We are done so no cycle is found
-        return false
-    }
-}
-
-class IntStack constructor(initialCapacity: Int = 16) {
-
-    private var data: IntArray = IntArray(initialCapacity)
-    private var top: Int = -1
-
-    fun push(value: Int) {
-        if (top == data.size - 1) resize()
-        data[++top] = value
-    }
-
-    fun pop(): Int {
-        check(!this.isEmpty) { "Stack is empty" }
-        return data[top--]
-    }
-
-    fun peek(): Int {
-        check(!this.isEmpty) { "Stack is empty" }
-        return data[top]
-    }
-
-    val isEmpty: Boolean
-        get() = top == -1
-
-    fun size(): Int {
-        return top + 1
-    }
-
-    private fun resize() {
-        val newData = IntArray(data.size * 2)
-        System.arraycopy(data, 0, newData, 0, data.size)
-        data = newData
     }
 
     fun clear() {
-        top = -1
+        graph.clear()
+        coherenceOrderGraph.clear()
     }
+
+    override fun adjacent(node: AtomicThreadEvent): List<AtomicThreadEvent> {
+        val adjacent = (graph[node] ?: emptyList()).toList()
+        val adjacent2 = (coherenceOrderGraph[node] ?: emptyList()).toList()
+        val succ = execution[node.threadId, node.threadPosition + 1]
+        if(succ != null) return listOf(succ) + adjacent + adjacent2
+        return adjacent + adjacent2
+    }
+
 }
 
+// Represents the SCB relation from the RC11 memory model
+// Currently we use the following formula = [Vol] (co \/ rb \/ po \/ hbloc \/ po;hb;po ) [Vol]
 class SCBRelation(val coherenceOrder: Relation<AtomicThreadEvent>) : Relation<AtomicThreadEvent> {
 
     override fun invoke(
         x: AtomicThreadEvent,
         y: AtomicThreadEvent
     ): Boolean {
+        // Coerce the elements the corresponding writes
         val writeX = getWrite(x)
         val writeY = getWrite(y)
-        // For the CO and Rb part we actually need to make sure that the location is the same
+        // Check CO and RB both at once
+        // For the CO and RB part we actually need to make sure that the location is the same
         val location = getLocationForSameLocationAccesses(x, y)
-        // CO and RB both at once
         if(location != null && !(x != writeX && writeY != y) && coherenceOrder(writeX, writeY)) return true // eco
         if (x.threadId == y.threadId && x.threadPosition < y.threadPosition) return true // po
         if (happensBeforeSameLocationOrder(x, y)) return true // hbloc
@@ -425,40 +209,14 @@ class SCBRelation(val coherenceOrder: Relation<AtomicThreadEvent>) : Relation<At
     }
 }
 
-class SCBSimpleRelation(val coherenceOrder: Relation<AtomicThreadEvent>) : Relation<AtomicThreadEvent> {
 
-    override fun invoke(
-        x: AtomicThreadEvent,
-        y: AtomicThreadEvent
-    ): Boolean {
-        val writeX = getWrite(x)
-        val writeY = getWrite(y)
-        // For the CO and Rb part we actually need to make sure that the location is the same
-        val location = getLocationForSameLocationAccesses(x, y)
-        // CO and RB both at once
-        if(location != null && !(x != writeX && writeY != y) && coherenceOrder(writeX, writeY)) return true // eco
-        if (happensBeforeOrder(x, y)) return true // hb
-        return false
-    }
-}
-
-interface WritesBeforeTracker {
-    fun hasCycle(): Boolean
-    fun addEvent(event: AtomicThreadEvent)
-    fun onReset(execution: Execution<AtomicThreadEvent>)
-}
-
-fun WritesBeforeTracker(
-    memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-    writesHBTracker: WritesHBTracker
-): WritesBeforeTracker
-    = WritesBeforeTrackerImpl(memoryAccessEventIndex, writesHBTracker)
-
-class WritesBeforeTrackerImpl(val memoryAccessEventIndex: AtomicMemoryAccessEventIndex, val writesHBTracker: WritesHBTracker) : WritesBeforeTracker {
+// Incrementally keeps track of the writes before relation for all memory locations, adding events one-by-one
+// NOTE: Not sure how good of an idea this is
+class WritesBeforeTracker(val memoryAccessEventIndex: AtomicMemoryAccessEventIndex, val hbChildrenTracker: HBChildrenTracker) {
 
     val writesBeforeGraphs: MutableMap<MemoryLocation, WritesBeforeGraph> = mutableMapOf()
 
-    fun _setWritesBefore(
+    private fun _setWritesBefore(
         write1: AtomicThreadEvent,
         write2: AtomicThreadEvent,
         location: MemoryLocation,
@@ -469,7 +227,7 @@ class WritesBeforeTrackerImpl(val memoryAccessEventIndex: AtomicMemoryAccessEven
         graph.setChild(write1, write2)
     }
 
-    override fun hasCycle(): Boolean {
+    fun hasCycle(): Boolean {
         for (location in writesBeforeGraphs.keys) {
             val graph = writesBeforeGraphs[location]!!
             if(graph.hasCycle()) {
@@ -479,12 +237,12 @@ class WritesBeforeTrackerImpl(val memoryAccessEventIndex: AtomicMemoryAccessEven
         return false
     }
 
-    override fun onReset(execution: Execution<AtomicThreadEvent>) {
+    fun onReset(execution: Execution<AtomicThreadEvent>) {
         writesBeforeGraphs.clear()
         execution.sorted().forEach { if(eventIsMemoryAccessLabel(it)) addEvent(it) }
     }
 
-    fun forEachCoherenceOrder(): Sequence<CoherenceRelation> {
+    fun coherenceOrders(): Sequence<CoherenceRelation> {
         val sortings = writesBeforeGraphs.values.filter{
             !it.isSingleton()
         }.map {
@@ -500,7 +258,7 @@ class WritesBeforeTrackerImpl(val memoryAccessEventIndex: AtomicMemoryAccessEven
         }
     }
 
-    override fun addEvent(event: AtomicThreadEvent) {
+    fun addEvent(event: AtomicThreadEvent) {
         check(eventIsMemoryAccessLabel(event))
         val label = event.label as MemoryAccessLabel
         val location = label.location
@@ -512,13 +270,14 @@ class WritesBeforeTrackerImpl(val memoryAccessEventIndex: AtomicMemoryAccessEven
         graph.add(writeEvent)
 
 
-        for(write in writesHBTracker.getWritesBeforeCandidateWrites(event)) {
+        for(write in hbChildrenTracker.getWritesBeforeCandidateWrites(event)) {
             _setWritesBefore(write, writeEvent, location)
         }
-
     }
 }
 
+// Handles the writes before relation for a single memory location
+// Most crucial is the setChild(e1, e2) method, which updates
 class WritesBeforeGraph: Graph<AtomicThreadEvent> {
 
     val nonExclusiveChildren: MutableMap<AtomicThreadEvent, MutableSet<AtomicThreadEvent>> = mutableMapOf()
@@ -561,7 +320,7 @@ class WritesBeforeGraph: Graph<AtomicThreadEvent> {
     }
 
     private fun _add(event: AtomicThreadEvent) {
-        // Internal add funtions assumes that root handling is already done.
+        // Internal add function, which assumes that root handling is already done.
         // Function should be idempotent
 
         // Skip if already added
@@ -572,6 +331,8 @@ class WritesBeforeGraph: Graph<AtomicThreadEvent> {
         }
         // Add it to structures
         _nodes.add(event)
+        // TODO: Why not just use get or default and skip this silly initialization?
+        //   or just remove _nodes, as it seems that when we add to _nodes we also add to the map?
         nonExclusiveChildren[event] = mutableSetOf()
     }
 
@@ -583,12 +344,13 @@ class WritesBeforeGraph: Graph<AtomicThreadEvent> {
 
         if(write1 == write2) return
 
-        // We need
+        // We need to follow the rmw chain, if write1 has exclusive children.
+        // In that case we add the children to the end of the chain
         var parent = write1
         while(exclusiveChildren[parent] != null) {
-            check(nonExclusiveChildren[parent]!!.size == 0) // Double-check that if we have an excludive child, then we have no other children
+            check(nonExclusiveChildren[parent]!!.isEmpty()) // Double-check that if we have an exclusive child, then we have no other children
             parent = exclusiveChildren[parent]!!
-            if(parent == write2) return // IF we encounter write2 along the way then we need to skip
+            if(parent == write2) return // If we encounter write2 along the way then we need to skip, as it has already been added
         }
 
         nonExclusiveChildren[parent]!!.add(write2) // Add the child to the actual parent
@@ -630,14 +392,14 @@ class WritesBeforeGraph: Graph<AtomicThreadEvent> {
         setChild(root!!, write)
 
         val label = write.label
-        // In the case of an exclusive write, we need to handle the
+        // In the case of an exclusive write, we need to handle it
         if(label is WriteAccessLabel && label.isExclusive) {
             val readsFrom = write.exclusiveReadPart.readsFrom
-            _setExclusiveChild(readsFrom, write)
+            setExclusiveChild(readsFrom, write)
         }
     }
 
-    fun _setExclusiveChild(write1: AtomicThreadEvent, write2: AtomicThreadEvent) {
+    private fun setExclusiveChild(write1: AtomicThreadEvent, write2: AtomicThreadEvent) {
         // This should get called only immediately after the write2 event is added!
         check(isWriteEvent(write1))
         check(isWriteEvent(write2))
@@ -645,22 +407,22 @@ class WritesBeforeGraph: Graph<AtomicThreadEvent> {
         check(write2 in nodes) { "Write event $write2 - $root is not in the graph" }
         check(write1 != write2) { "Exclusive write reads from itself!"}
 
-        val chain = exclusiveChildren[write1]
+        val existingExclusiveChild = exclusiveChildren[write1]
         // If we have already added this, then we skip
-        if(chain == write2) {
+        if(existingExclusiveChild == write2) {
             check(nonExclusiveChildren[write1]!!.size == 0)
             return
         };
 
-        // If we have another event already, then we for sure have an rmw cycle and give up on life
-        if (chain != null) {
+        // If we have another event already, then we have an rmw cycle and give up on life
+        if (existingExclusiveChild != null) {
             // We just give up with proper tracking and declare that a cycle has been found
             rmwCycle = true
             return
         }
 
         exclusiveChildren[write1] = write2
-        // Extend the set of children of write2 to include the children of write 2
+        // Extend the set of children of write2 to include the children of write 1
         nonExclusiveChildren[write2]!! += nonExclusiveChildren[write1]!!.filter { it != write2 }
         // Clear all children of write1, as they must appear after write2
         nonExclusiveChildren[write1]!!.clear()
@@ -675,17 +437,22 @@ class WritesBeforeGraph: Graph<AtomicThreadEvent> {
 
 }
 
+// An instance of co ordering. It is constructed by having a list of lists,
+// with one list for memory location with more than one write event.
 class CoherenceRelation : Relation<AtomicThreadEvent> {
 
-    val map: Map<AtomicThreadEvent, Int>
+    val posMap: Map<AtomicThreadEvent, Int>
+    val locationMap: MutableMap<MemoryLocation, List<AtomicThreadEvent>> = mutableMapOf()
 
     constructor(coherenceLists: List<List<AtomicThreadEvent>>) {
-        map = mutableMapOf()
+        posMap = mutableMapOf()
         for (coherenceList in coherenceLists) {
             if(coherenceList.isEmpty()) continue
-            check(coherenceList.getLocationForSameLocationWriteAccesses() != null)
+            val loc = coherenceList.getLocationForSameLocationWriteAccesses()
+            check(loc != null)
+            locationMap[loc] = coherenceList
             for((i,write) in coherenceList.withIndex()) {
-                map[write] = i
+                posMap[write] = i
             }
         }
     }
@@ -695,42 +462,13 @@ class CoherenceRelation : Relation<AtomicThreadEvent> {
         y: AtomicThreadEvent
     ): Boolean {
         val location = getLocationForSameLocationAccesses(x, y) ?: return false
-        val orderX = map[x] ?: return false
-        val orderY = map[y] ?: return false
+        val orderX = posMap[x] ?: return false
+        val orderY = posMap[y] ?: return false
         return orderX < orderY
     }
-
-    fun isDirectlyAfter(x: AtomicThreadEvent, y: AtomicThreadEvent) : Boolean {
-        val location = getLocationForSameLocationAccesses(x, y) ?: return false
-        val orderX = map[x]!!
-        val orderY = map[y]!!
-        return orderX + 1 == orderY
-    }
 }
 
-private fun eventIsMemoryLocationAccess(event: AtomicThreadEvent) : Boolean {
-    when(event.label) {
-        is WriteAccessLabel, is ObjectAllocationLabel, is InitializationLabel -> return true
-        is ReadAccessLabel -> return event.label.isResponse
-        else -> return false
-    }
-}
-
-private fun eventIsMemoryAccessLabel(event: AtomicThreadEvent) : Boolean {
-    val label = event.label
-    return (label is MemoryAccessLabel && (label.isWrite || label.isResponse))
-}
-
-private fun getWrite(event: AtomicThreadEvent): AtomicThreadEvent {
-    check(eventIsMemoryLocationAccess(event)) { event }
-    val label = event.label
-    return when(label) {
-        is WriteAccessLabel, is ObjectAllocationLabel, is InitializationLabel -> event
-        is ReadAccessLabel -> event.readsFrom
-        else -> unreachable()
-    }
-}
-
+// Stupid implementation of enumerator with incrementally added events
 class MutableEventEnumerator: Enumerator<AtomicThreadEvent> {
 
     private val map = mutableMapOf<AtomicThreadEvent, Int>()
@@ -757,26 +495,15 @@ class MutableEventEnumerator: Enumerator<AtomicThreadEvent> {
     }
 }
 
-private fun isWriteEvent(event: AtomicThreadEvent ) : Boolean {
-    return event.label is WriteAccessLabel || event.label is ObjectAllocationLabel || event.label is InitializationLabel
-}
 
-class ReleaseAcquireViolation : Inconsistency() {
-    override fun toString(): String {
-        // TODO: Add information about the cycle if we care about that
-        return "Release acquire violation!"
-    }
-}
-
-class JamSequentialConsistencyViolation : Inconsistency() {
-    override fun toString(): String {
-        // TODO: Include the SCB cycle as well
-        return "JAM SC violation"
-    }
-}
-
-
-class WritesHBTracker {
+// The goal of this class is to provide a faster way to get potential writes before candidates for a given event,
+// by giving the [getWritesBeforeCandidateWrites] method
+// The problem that we want to solve with this function is that whenever an event is added to the execution,
+// we need to find all of its hb-parents
+// To do that we take the event's happensBefore clock and
+// by keeping track in each thread of the thread positions of events for a given memory location,
+// we can use binary search to quickly find out the most recent event that is observed by the clock.
+class HBChildrenTracker {
 
     class WritesHBTrackerLocation {
         val positions: MutableThreadMap<SortedMutableList<Int>> = mutableThreadMapOf()
@@ -794,6 +521,8 @@ class WritesHBTracker {
         }
 
         fun frontierObservedByClock(eventThreadId: Int, clock: VectorClock): Iterable<AtomicThreadEvent> {
+            // For each thread, use binary search on the positionList to find the most recent event that is observed
+            // by the given clock
             return clock.threadIds().mapNotNull { tid ->
                 val positionList = positions[tid]
                 if (positionList == null) return@mapNotNull null
@@ -801,7 +530,9 @@ class WritesHBTracker {
 
                 var observedThreadPosition = clock[tid]
                 if (observedThreadPosition == -1) return@mapNotNull null
-                if (eventThreadId == tid) observedThreadPosition-- // Note: weird decrement so we do not see the write that was added right now
+                // Note: weird and hacky decrement so we do not see the write that was added right now,
+                // since the clock includes the event itself
+                if (eventThreadId == tid) observedThreadPosition--
 
                 var eventIdx = positionList.binarySearch(observedThreadPosition)
                 if (eventIdx < 0)  eventIdx = -eventIdx - 2
@@ -817,6 +548,8 @@ class WritesHBTracker {
     }
 
     val locationMap: MutableMap<MemoryLocation, WritesHBTrackerLocation> = mutableMapOf()
+    // TODO: This allocationAdded can be removed, if we just used the keys of the location map
+    //  The invariant should be that if there is something in the map then the allocation is also there
     var allocationAdded : MutableSet<MemoryLocation>  = mutableSetOf()
 
     fun addMemoryAccessEvent(event: AtomicThreadEvent) {
@@ -826,7 +559,7 @@ class WritesHBTracker {
         val location = (label as MemoryAccessLabel).location
         val map = locationMap.getOrPut(location) { WritesHBTrackerLocation() }
 
-
+        // Don't forget to add the allocation write as well!
         val allocation = event.allocation!!
         if(location !in allocationAdded) {
             map.add(allocation.threadId, allocation.threadPosition, allocation)
@@ -858,3 +591,32 @@ class WritesHBTracker {
         allocationAdded.clear()
     }
 }
+
+// Some utility functions
+private fun eventIsMemoryLocationAccess(event: AtomicThreadEvent) : Boolean {
+    when(event.label) {
+        is WriteAccessLabel, is ObjectAllocationLabel, is InitializationLabel -> return true
+        is ReadAccessLabel -> return event.label.isResponse
+        else -> return false
+    }
+}
+
+private fun eventIsMemoryAccessLabel(event: AtomicThreadEvent) : Boolean {
+    val label = event.label
+    return (label is MemoryAccessLabel && (label.isWrite || label.isResponse))
+}
+
+private fun getWrite(event: AtomicThreadEvent): AtomicThreadEvent {
+    check(eventIsMemoryLocationAccess(event)) { event }
+    val label = event.label
+    return when(label) {
+        is WriteAccessLabel, is ObjectAllocationLabel, is InitializationLabel -> event
+        is ReadAccessLabel -> event.readsFrom
+        else -> unreachable()
+    }
+}
+
+private fun isWriteEvent(event: AtomicThreadEvent ) : Boolean {
+    return event.label is WriteAccessLabel || event.label is ObjectAllocationLabel || event.label is InitializationLabel
+}
+

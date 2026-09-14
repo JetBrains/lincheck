@@ -86,7 +86,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     override val memoryAccessEventIndex =
         MutableAtomicMemoryAccessEventIndex().apply { index(execution) }
 
-    private val consistencyChecker = WritesBeforeChecker(this, memoryAccessEventIndex, memoryModel)
+    private val consistencyChecker = FullConsistencyChecker(this, memoryAccessEventIndex, memoryModel)
 
     private val trackers = listOf(
         memoryAccessEventIndex.incrementalTracker(),
