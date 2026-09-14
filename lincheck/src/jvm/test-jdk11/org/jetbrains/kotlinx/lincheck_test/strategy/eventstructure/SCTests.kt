@@ -225,6 +225,9 @@ class SCTests {
 //        |           | set(y, 11) | get(y)   | get(y)     |
 //        |           |            |          | set(y, 13) |
 //        | ---------------------------------------------- |
+//  This test showcases a completeness issue for the JAM21 memory model
+//  In filterReadSynchronization candidates, we pick a candidate that leads to an invalid exeuction,
+//  breaking our pinned events assumption, and leading to the skipped execution outcome that is in the test. SAD!
         compareScenarios {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
