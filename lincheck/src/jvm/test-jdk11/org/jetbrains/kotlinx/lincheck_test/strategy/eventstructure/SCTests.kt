@@ -15,15 +15,9 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.isValid
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.execution.tryMinimize
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
-import org.jetbrains.kotlinx.lincheck.util.CancelledResult
-import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.kotlinx.lincheck.util.LincheckResult
-import org.jetbrains.kotlinx.lincheck.util.ResumedResult
-import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
 import org.jetbrains.kotlinx.lincheck.util.ValueResult
-import org.jetbrains.kotlinx.lincheck.util.VoidResult
 import org.jetbrains.lincheck.datastructures.actor
 import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.Test
@@ -32,6 +26,8 @@ import kotlin.collections.indices
 import kotlin.concurrent.thread
 import kotlin.random.Random
 
+// Test which compare SC-checking of the SC JAMRC11 memory models.
+// If all events are volatile, then we should get identical results for the two memory models
 class SCTests {
 
     internal inline fun<reified Outcome> compareScenarios (crossinline scenario: () -> Outcome) {
@@ -220,7 +216,7 @@ class SCTests {
     }
 
     @Test
-    fun testExample() {
+    fun testCompletenessIssue() {
 //        | ---------------------------------------------- |
 //        | Thread 1  |  Thread 2  | Thread 3 |  Thread 4  |
 //        | ---------------------------------------------- |
