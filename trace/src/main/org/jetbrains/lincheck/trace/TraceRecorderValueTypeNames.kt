@@ -5,23 +5,19 @@ import java.math.BigInteger
 import kotlin.reflect.KClass
 
 /**
- * The type name for this value in [runtime]'s own language,
- * or `null` when [runtime] has no name for this value's wire kind.
+ * The type name for this value, with the descriptor-less wire kinds spelled by [spellings].
  *
  * A value captured structurally carries the type its producing runtime reported ([TRValue.className]),
- * which reads the same whichever runtime consumes it.
+ * which reads the same whichever runtime consumes it, so [spellings] is not consulted for those.
  * The kinds that carry no class descriptor — scalars, strings, arbitrary-precision numbers,
- * type references — are identified by their wire kind alone,
- * so each runtime spells them in its own language and the spelling comes from a per-runtime table.
+ * type references — are identified by their wire kind alone and have no name of their own on the wire.
  *
- * A runtime with no table yields `null` for those kinds, since no other language's name describes them
- * correctly, and because runtimes may be added without a protocol bump an unrecognised one degrades quietly.
- *
- * JVM bytecode and descriptor logic passes [RUNTIME_JVM] whatever produced the value:
- * it needs the JVM reading, and a foreign class name then fails to match a JVM descriptor
- * rather than matching one by coincidence.
+ * Pass [JvmTypeSpellings] to read a value as the JVM would, which is what bytecode and descriptor
+ * logic needs: a foreign class name then fails to match a JVM descriptor rather than matching one by
+ * coincidence. A client that decodes another runtime's stream resolves its own table once — from the
+ * handshake that names the runtime — and passes it down.
  */
-fun TRValue.typeName(runtime: String): String? = when (this) {
+fun TRValue.typeName(spellings: TypeSpellings): String? = when (this) {
     // Structurally captured: the producer already named the type.
     is TRReferenceLike,
     is TREnum,
@@ -41,17 +37,17 @@ fun TRValue.typeName(runtime: String): String? = when (this) {
     is TRString,
     is TRArbitraryNumber,
     is TRTypeReference
-        -> spellings(runtime)?.of(this)
+        -> spellings.of(this)
 }
 
 /**
  * How one runtime spells the wire kinds that carry no class descriptor.
  *
- * A `null` member is a kind the runtime has no name for.
- * A runtime is added by implementing this and registering it in [spellings],
- * which leaves the value model itself unchanged.
+ * A `null` member is a kind that runtime has no name for.
+ * This module implements the JVM ([JvmTypeSpellings]); a client that decodes a foreign runtime's
+ * stream supplies that runtime's table, so no runtime this module does not implement is named here.
  */
-private interface TypeSpellings {
+interface TypeSpellings {
     val string: String
     val boolean: String
     val byte: String?
@@ -65,11 +61,6 @@ private interface TypeSpellings {
     val arbitraryDecimal: String?
     val javaClass: String?
     val kotlinClass: String?
-}
-
-private fun spellings(runtime: String): TypeSpellings? = when (runtime) {
-    RUNTIME_JVM -> JvmTypeSpellings
-    else -> null
 }
 
 private fun TypeSpellings.of(value: TRValue): String? = when (value) {
@@ -98,7 +89,8 @@ private fun TypeSpellings.of(value: TRValue): String? = when (value) {
     else -> null
 }
 
-private object JvmTypeSpellings : TypeSpellings {
+/** The JVM's spellings — the runtime this module implements. */
+object JvmTypeSpellings : TypeSpellings {
     override val string: String get() = String::class.java.name
     override val boolean: String get() = java.lang.Boolean::class.java.name
     override val byte: String get() = java.lang.Byte::class.java.name
