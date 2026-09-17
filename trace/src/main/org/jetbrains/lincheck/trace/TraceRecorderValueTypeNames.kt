@@ -12,10 +12,10 @@ import kotlin.reflect.KClass
  * The kinds that carry no class descriptor — scalars, strings, arbitrary-precision numbers,
  * type references — are identified by their wire kind alone and have no name of their own on the wire.
  *
- * Pass [JvmTypeSpellings] to read a value as the JVM would, which is what bytecode and descriptor
- * logic needs: a foreign class name then fails to match a JVM descriptor rather than matching one by
- * coincidence. A client that decodes another runtime's stream resolves its own table once — from the
- * handshake that names the runtime — and passes it down.
+ * The name is for display: it is the vocabulary a reader of that runtime expects.
+ * Pass [JvmTypeSpellings] to read a value as the JVM would, which is what a JVM-only surface wants;
+ * a client that decodes another runtime's stream resolves its own table once — from the handshake
+ * that names the runtime — and passes it down.
  */
 fun TRValue.typeName(spellings: TypeSpellings): String? = when (this) {
     // Structurally captured: the producer already named the type.

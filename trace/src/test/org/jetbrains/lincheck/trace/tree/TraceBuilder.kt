@@ -72,21 +72,30 @@ internal class TraceBuilder {
         ).also { it.result = TRUnit }
     }
 
-    private fun fieldId(className: String, fieldName: String): Int = context
+    private fun fieldId(className: String, fieldName: String, type: Types.Type): Int = context
         .createAndRegisterFieldDescriptor(
             className, fieldName,
-            type = Types.ObjectType("java.lang.String"),
+            type = type,
             fieldKind = FieldKind.INSTANCE,
             isFinal = false,
             isVolatile = false,
         )
         .id
 
-    fun readField(className: String, fieldName: String, value: TRValue): TRReadFieldTracePoint =
-        TRReadFieldTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, fieldId(className, fieldName), TRNull, value)
+    /** @param type the field's *declared* type, which [value] may be narrower than. */
+    fun readField(
+        className: String,
+        fieldName: String,
+        value: TRValue,
+        type: Types.Type = Types.ObjectType("java.lang.String"),
+    ): TRReadFieldTracePoint =
+        TRReadFieldTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, fieldId(className, fieldName, type), TRNull, value)
 
     fun writeField(className: String, fieldName: String, value: TRValue): TRWriteFieldTracePoint =
-        TRWriteFieldTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, fieldId(className, fieldName), TRNull, value)
+        TRWriteFieldTracePoint(
+            context, 0, UNKNOWN_CODE_LOCATION_ID,
+            fieldId(className, fieldName, Types.ObjectType("java.lang.String")), TRNull, value,
+        )
 
     private fun variableId(name: String): Int = context
         .createAndRegisterVariableDescriptor(name, Types.ObjectType("java.lang.Object"))
