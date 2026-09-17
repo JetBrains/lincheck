@@ -29,7 +29,7 @@ and a hit limit.
   classes loaded before a dynamic attach.
   `SnapshotBreakpointTransformer` (in [`jvm-agent`](../jvm-agent)) injects the capture code,
   which calls back through `sun.nio.ch.lincheck.Injections.onSnapshotLineBreakpoint`.
-- Each hit produces a `TRSnapshotLineBreakpointTracePoint`
+- Each hit produces a `TraceSnapshotLineBreakpointTracePoint`
   with the captured stack trace, locals, watches, and timestamp.
 - Hit limits are enforced via `sun.nio.ch.lincheck.BreakpointStorage`;
   reaching the limit disables the breakpoint and notifies the client.

@@ -22,7 +22,7 @@ interface TraceCollectingStrategy {
      * @param parent Current top of the call stack, if exists.
      * @param created New tracepoint
      */
-    fun tracePointCreated(parent: TRContainerTracePoint?, created: TRTracePoint)
+    fun tracePointCreated(parent: TraceContainerTracePoint?, created: TracePoint)
 
     /**
      * Must be called when a created container trace point is opened,
@@ -32,7 +32,7 @@ interface TraceCollectingStrategy {
      *
      * @param container the opened container trace point.
      */
-    fun openContainerTracePoint(container: TRContainerTracePoint)
+    fun openContainerTracePoint(container: TraceContainerTracePoint)
 
     /**
      * Must be called when the container trace point is ended and popped from the trace tree.
@@ -40,7 +40,7 @@ interface TraceCollectingStrategy {
      * @param thread thread of the [container] trace point.
      * @param container the completed container trace point.
      */
-    fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint)
+    fun completeContainerTracePoint(thread: Thread, container: TraceContainerTracePoint)
 
     /**
      * Must be called when the trace is finished

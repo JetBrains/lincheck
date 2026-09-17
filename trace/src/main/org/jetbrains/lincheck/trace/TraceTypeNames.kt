@@ -7,7 +7,7 @@ import kotlin.reflect.KClass
 /**
  * The type name for this value, with the descriptor-less wire kinds spelled by [spellings].
  *
- * A value captured structurally carries the type its producing runtime reported ([TRValue.className]),
+ * A value captured structurally carries the type its producing runtime reported ([TraceValue.className]),
  * which reads the same whichever runtime consumes it, so [spellings] is not consulted for those.
  * The kinds that carry no class descriptor — scalars, strings, arbitrary-precision numbers,
  * type references — are identified by their wire kind alone and have no name of their own on the wire.
@@ -17,26 +17,26 @@ import kotlin.reflect.KClass
  * a client that decodes another runtime's stream resolves its own table once — from the handshake
  * that names the runtime — and passes it down.
  */
-fun TRValue.typeName(spellings: TypeSpellings): String? = when (this) {
+fun TraceValue.typeName(spellings: TypeSpellings): String? = when (this) {
     // Structurally captured: the producer already named the type.
-    is TRReferenceLike,
-    is TREnum,
-    is TRRedacted
+    is TraceReferenceLike,
+    is TraceEnum,
+    is TraceRedacted
         -> className
 
     // No value at all, or no type by design.
-    is TRNull,
-    is TRVoid,
-    is TRUnit,
-    is TRMarker,
-    is TRRenderedValue
+    is TraceNull,
+    is TraceVoid,
+    is TraceUnit,
+    is TraceMarker,
+    is TraceRenderedValue
         -> null
 
     // Identified by wire kind: the spelling is the runtime's.
-    is TRScalar,
-    is TRString,
-    is TRArbitraryNumber,
-    is TRTypeReference
+    is TraceScalar,
+    is TraceString,
+    is TraceArbitraryNumber,
+    is TraceTypeReference
         -> spellings.of(this)
 }
 
@@ -63,12 +63,12 @@ interface TypeSpellings {
     val kotlinClass: String?
 }
 
-private fun TypeSpellings.of(value: TRValue): String? = when (value) {
-    is TRString -> string
-    is TRArbitraryInteger -> arbitraryInteger
-    is TRArbitraryDecimal -> arbitraryDecimal
+private fun TypeSpellings.of(value: TraceValue): String? = when (value) {
+    is TraceString -> string
+    is TraceArbitraryInteger -> arbitraryInteger
+    is TraceArbitraryDecimal -> arbitraryDecimal
 
-    is TRScalar -> when (value.value) {
+    is TraceScalar -> when (value.value) {
         is Boolean -> boolean
         is Byte -> byte
         is Short -> short
@@ -77,11 +77,11 @@ private fun TypeSpellings.of(value: TRValue): String? = when (value) {
         is Long -> long
         is Float -> float
         is Double -> double
-        // TRScalar's constructor rejects anything else, so this is unreachable.
+        // TraceScalar's constructor rejects anything else, so this is unreachable.
         else -> null
     }
 
-    is TRTypeReference -> when (value.flavor) {
+    is TraceTypeReference -> when (value.flavor) {
         TypeFlavor.JAVA_CLASS -> javaClass
         TypeFlavor.KOTLIN_CLASS -> kotlinClass
     }

@@ -66,25 +66,25 @@ class TracePointCloner(
     /**
      * Clone tracepoint from "left" source trace, add provided "right" event id to id map.
      */
-    fun cloneLeftTracePoint(tracePoint: TRTracePoint, rightId: Int): TRTracePoint =
+    fun cloneLeftTracePoint(tracePoint: TracePoint, rightId: Int): TracePoint =
         cloneTracePoint(tracePoint, tracePoint.eventId, rightId, leftCodeLocationMap)
 
     /**
      * Clone tracepoint from "right" source trace, add provided "left" event id to id map.
      */
-    fun cloneRightTracePoint(tracePoint: TRTracePoint, leftId: Int): TRTracePoint =
+    fun cloneRightTracePoint(tracePoint: TracePoint, leftId: Int): TracePoint =
         cloneTracePoint(tracePoint, leftId, tracePoint.eventId, rightCodeLocationMap)
 
     private fun cloneTracePoint(
-        tracePoint: TRTracePoint,
+        tracePoint: TracePoint,
         leftId: Int,
         rightId: Int,
         codeLocationMap: MutableList<Int>
-    ): TRTracePoint {
+    ): TracePoint {
         idMapOutput.writeInt(leftId)
         idMapOutput.writeInt(rightId)
         return when (tracePoint) {
-            is TRReadArrayTracePoint -> TRReadArrayTracePoint(
+            is TraceReadArrayTracePoint -> TraceReadArrayTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -94,7 +94,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRWriteArrayTracePoint -> TRWriteArrayTracePoint(
+            is TraceWriteArrayTracePoint -> TraceWriteArrayTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -104,7 +104,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRReadFieldTracePoint -> TRReadFieldTracePoint(
+            is TraceReadFieldTracePoint -> TraceReadFieldTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -114,7 +114,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRWriteFieldTracePoint -> TRWriteFieldTracePoint(
+            is TraceWriteFieldTracePoint -> TraceWriteFieldTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -124,7 +124,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRReadLocalVariableTracePoint -> TRReadLocalVariableTracePoint(
+            is TraceReadLocalVariableTracePoint -> TraceReadLocalVariableTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -133,7 +133,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRWriteLocalVariableTracePoint -> TRWriteLocalVariableTracePoint(
+            is TraceWriteLocalVariableTracePoint -> TraceWriteLocalVariableTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -142,7 +142,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRLoopTracePoint -> TRLoopTracePoint(
+            is TraceLoopTracePoint -> TraceLoopTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -150,7 +150,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRLoopIterationTracePoint -> TRLoopIterationTracePoint(
+            is TraceLoopIterationTracePoint -> TraceLoopIterationTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -159,7 +159,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRMethodCallTracePoint -> TRMethodCallTracePoint(
+            is TraceMethodCallTracePoint -> TraceMethodCallTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -173,7 +173,7 @@ class TracePointCloner(
                 it.exceptionClassName = tracePoint.exceptionClassName
             }
 
-            is TRSnapshotLineBreakpointTracePoint -> TRSnapshotLineBreakpointTracePoint(
+            is TraceSnapshotLineBreakpointTracePoint -> TraceSnapshotLineBreakpointTracePoint(
                 context = context,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
                 threadId = threadId,
@@ -186,7 +186,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRThrowTracePoint -> TRThrowTracePoint(
+            is TraceThrowTracePoint -> TraceThrowTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -194,7 +194,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TRCatchTracePoint -> TRCatchTracePoint(
+            is TraceCatchTracePoint -> TraceCatchTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -204,56 +204,56 @@ class TracePointCloner(
         }
     }
 
-    private fun TRValue.clone(): TRValue = when (this) {
-        is TRNull -> this
-        is TRVoid -> this
-        is TRUnit -> this
-        is TRRedacted -> copy()
-        is TRScalar -> TRScalar(value)
-        is TRString -> TRString(value)
-        is TREnum -> {
+    private fun TraceValue.clone(): TraceValue = when (this) {
+        is TraceNull -> this
+        is TraceVoid -> this
+        is TraceUnit -> this
+        is TraceRedacted -> copy()
+        is TraceScalar -> TraceScalar(value)
+        is TraceString -> TraceString(value)
+        is TraceEnum -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TREnum(cd, name)
+            TraceEnum(cd, name)
         }
-        is TRArbitraryInteger -> TRArbitraryInteger(value)
-        is TRArbitraryDecimal -> TRArbitraryDecimal(value)
-        is TRObject -> {
+        is TraceArbitraryInteger -> TraceArbitraryInteger(value)
+        is TraceArbitraryDecimal -> TraceArbitraryDecimal(value)
+        is TraceObject -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRObject(cd, identity, rendered)
+            TraceObject(cd, identity, rendered)
         }
-        is TRObjectSnapshot -> {
+        is TraceObjectSnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRObjectSnapshot(cd, identity, rendered, fields.clone())
+            TraceObjectSnapshot(cd, identity, rendered, fields.clone())
         }
-        is TRArray -> {
+        is TraceArray -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRArray(cd, identity, totalSize)
+            TraceArray(cd, identity, totalSize)
         }
-        is TRArraySnapshot -> {
+        is TraceArraySnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRArraySnapshot(cd, identity, totalSize, capturedElements.clone())
+            TraceArraySnapshot(cd, identity, totalSize, capturedElements.clone())
         }
-        is TRMapSnapshot -> {
+        is TraceMapSnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
             val entries = capturedEntries.map { (key, value) -> key.clone() to value.clone() }
-            TRMapSnapshot(cd, identity, totalSize, entries)
+            TraceMapSnapshot(cd, identity, totalSize, entries)
         }
-        is TRTextSnapshot -> {
+        is TraceTextSnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRTextSnapshot(cd, identity, content)
+            TraceTextSnapshot(cd, identity, content)
         }
-        is TRException -> {
+        is TraceException -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRException(cd, identity)
+            TraceException(cd, identity)
         }
-        is TRExceptionSnapshot -> {
+        is TraceExceptionSnapshot -> {
             val cd = context.createAndRegisterClassDescriptor(className)
-            TRExceptionSnapshot(cd, identity, message, stackTrace)
+            TraceExceptionSnapshot(cd, identity, message, stackTrace)
         }
-        is TRTypeReference -> TRTypeReference(referencedClassName, flavor)
-        is TRRenderedValue -> this
-        is TRUnfinishedMethodResult -> this
-        is TRUntrackedMethodResult -> this
+        is TraceTypeReference -> TraceTypeReference(referencedClassName, flavor)
+        is TraceRenderedValue -> this
+        is TraceUnfinishedMethodResult -> this
+        is TraceUntrackedMethodResult -> this
     }
 
     private fun VariableDescriptor.clone(): Int =
@@ -269,9 +269,9 @@ class TracePointCloner(
             className, methodName, methodSignature.methodType
         ).id
 
-    private fun List<TRValue>.clone(): List<TRValue> = map { it.clone() }
+    private fun List<TraceValue>.clone(): List<TraceValue> = map { it.clone() }
 
-    private fun <T> Map<T, TRValue>.clone(): Map<T, TRValue> = mapValues { (_, value) -> value.clone() }
+    private fun <T> Map<T, TraceValue>.clone(): Map<T, TraceValue> = mapValues { (_, value) -> value.clone() }
 
     private fun AccessLocation.clone(): AccessLocation =
         when (this) {
@@ -283,10 +283,10 @@ class TracePointCloner(
             else -> throw IllegalArgumentException("Unsupported access location $this")
         }
 
-    private fun cloneCodeLocation(tracePoint: TRTracePoint, codeLocationMap: MutableList<Int>): Int =
+    private fun cloneCodeLocation(tracePoint: TracePoint, codeLocationMap: MutableList<Int>): Int =
         cloneCodeLocation(tracePoint, tracePoint.codeLocationId, codeLocationMap)
 
-    private fun cloneCodeLocation(tracePoint: TRTracePoint, srcId: Int, codeLocationMap: MutableList<Int>): Int {
+    private fun cloneCodeLocation(tracePoint: TracePoint, srcId: Int, codeLocationMap: MutableList<Int>): Int {
         if (srcId == UNKNOWN_CODE_LOCATION_ID) return UNKNOWN_CODE_LOCATION_ID
         if (srcId < codeLocationMap.size && codeLocationMap[srcId] != UNKNOWN_CODE_LOCATION_ID) return codeLocationMap[srcId]
         val dstLoc = when (val srcLoc = tracePoint.context.codeLocationsPool[srcId]) {
@@ -306,7 +306,7 @@ class TracePointCloner(
         return AccessPath(list)
     }
 
-    private fun cloneCodeLocationsByIds(tracePoint: TRTracePoint, codeLocationMap: MutableList<Int>, codeLocations: List<Int>): List<Int> {
+    private fun cloneCodeLocationsByIds(tracePoint: TracePoint, codeLocationMap: MutableList<Int>, codeLocations: List<Int>): List<Int> {
         val result = mutableListOf<Int>()
         codeLocations.forEach { srcId -> result.add(cloneCodeLocation(tracePoint, srcId, codeLocationMap)) }
         return result

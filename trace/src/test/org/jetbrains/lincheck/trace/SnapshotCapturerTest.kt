@@ -15,7 +15,7 @@ import org.jetbrains.lincheck.settings.PolicyOwner
 import org.jetbrains.lincheck.settings.RedactionRule
 import org.jetbrains.lincheck.settings.RedactionTemplate
 import org.jetbrains.lincheck.settings.RedactionTemplateRegistry
-import org.jetbrains.lincheck.trace.serialization.writeTRValue
+import org.jetbrains.lincheck.trace.serialization.writeTraceValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -70,8 +70,8 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         )
 
-        assertEquals(TRString("password-shaped-but-no-policy"), captured[0])
-        assertEquals(TRScalar(42), captured[1])
+        assertEquals(TraceString("password-shaped-but-no-policy"), captured[0])
+        assertEquals(TraceScalar(42), captured[1])
     }
 
     @Test
@@ -94,9 +94,9 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         )
 
-        assertTrue(captured[0] is TRRedacted)
+        assertTrue(captured[0] is TraceRedacted)
         assertEquals(RedactionFields::class.java.name, captured[0].className)
-        assertEquals(TRString("control"), captured[1])
+        assertEquals(TraceString("control"), captured[1])
     }
 
     @Test
@@ -114,11 +114,11 @@ class SnapshotCapturerTest {
             ),
             names = listOf("customer"),
             declaringClassName = "example.Controller",
-        ).single() as TRObjectSnapshot
+        ).single() as TraceObjectSnapshot
 
-        assertTrue(captured.fields["password"] is TRRedacted)
-        assertEquals(TRString("visible"), captured.fields["nonSecret"])
-        assertEquals(TRString("other"), captured.fields["repeatedSecret"])
+        assertTrue(captured.fields["password"] is TraceRedacted)
+        assertEquals(TraceString("visible"), captured.fields["nonSecret"])
+        assertEquals(TraceString("other"), captured.fields["repeatedSecret"])
     }
 
     @Test
@@ -129,13 +129,13 @@ class SnapshotCapturerTest {
             values = arrayOf(ScalarSecretFields(secretPin = 1234, secretFlag = true, nonSecret = "visible")),
             names = listOf("holder"),
             declaringClassName = "example.Controller",
-        ).single() as TRObjectSnapshot
+        ).single() as TraceObjectSnapshot
 
-        val pin = captured.fields.getValue("secretPin") as TRRedacted
-        val flag = captured.fields.getValue("secretFlag") as TRRedacted
+        val pin = captured.fields.getValue("secretPin") as TraceRedacted
+        val flag = captured.fields.getValue("secretFlag") as TraceRedacted
         assertEquals("int", pin.capturedClassName)
         assertEquals("boolean", flag.capturedClassName)
-        assertEquals(TRString("visible"), captured.fields["nonSecret"])
+        assertEquals(TraceString("visible"), captured.fields["nonSecret"])
     }
 
     @Test
@@ -147,19 +147,19 @@ class SnapshotCapturerTest {
             ),
             names = listOf("customer"),
             declaringClassName = "example.Controller",
-        ).single() as TRObjectSnapshot
+        ).single() as TraceObjectSnapshot
         val array = capturer.captureNamedExpressionValues(
             values = arrayOf(arrayOf("fixture-secret", "visible", "fixture-secret")),
             names = listOf("values"),
             declaringClassName = "example.Controller",
-        ).single() as TRArraySnapshot
+        ).single() as TraceArraySnapshot
 
-        assertTrue(fields.fields["password"] is TRRedacted)
-        assertTrue(fields.fields["repeatedSecret"] is TRRedacted)
-        assertEquals(TRString("visible"), fields.fields["nonSecret"])
-        assertTrue(array.capturedElements[0] is TRRedacted)
-        assertEquals(TRString("visible"), array.capturedElements[1])
-        assertTrue(array.capturedElements[2] is TRRedacted)
+        assertTrue(fields.fields["password"] is TraceRedacted)
+        assertTrue(fields.fields["repeatedSecret"] is TraceRedacted)
+        assertEquals(TraceString("visible"), fields.fields["nonSecret"])
+        assertTrue(array.capturedElements[0] is TraceRedacted)
+        assertEquals(TraceString("visible"), array.capturedElements[1])
+        assertTrue(array.capturedElements[2] is TraceRedacted)
     }
 
     @Test
@@ -172,10 +172,10 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         )
 
-        assertTrue(captured[0] is TRRedacted)
-        assertTrue(captured[1] is TRRedacted)
-        assertEquals(TRScalar(42), captured[2])
-        assertEquals(TRScalar(false), captured[3])
+        assertTrue(captured[0] is TraceRedacted)
+        assertTrue(captured[1] is TraceRedacted)
+        assertEquals(TraceScalar(42), captured[2])
+        assertEquals(TraceScalar(false), captured[3])
     }
 
     @Test
@@ -193,8 +193,8 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         )
 
-        assertTrue(captured[0] is TRRedacted)
-        assertEquals(TRString("no address in here"), captured[1])
+        assertTrue(captured[0] is TraceRedacted)
+        assertEquals(TraceString("no address in here"), captured[1])
     }
 
     @Test
@@ -213,9 +213,9 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         )
 
-        assertTrue(captured[0] is TRRedacted)
-        assertTrue(captured[1] is TRRedacted)
-        assertEquals(TRString("room 12"), captured[2])
+        assertTrue(captured[0] is TraceRedacted)
+        assertTrue(captured[1] is TraceRedacted)
+        assertEquals(TraceString("room 12"), captured[2])
     }
 
     @Test
@@ -227,9 +227,9 @@ class SnapshotCapturerTest {
             values = arrayOf(throwable),
             names = listOf("failure"),
             declaringClassName = "example.Controller",
-        ).single() as TRExceptionSnapshot
+        ).single() as TraceExceptionSnapshot
 
-        assertTrue(captured.message is TRRedacted)
+        assertTrue(captured.message is TraceRedacted)
         assertEquals(IllegalStateException::class.java.name, captured.className)
         assertTrue(captured.stackTrace.isNotEmpty())
     }
@@ -250,10 +250,10 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         )
 
-        val redacted = missingNameMetadata.single() as TRRedacted
+        val redacted = missingNameMetadata.single() as TraceRedacted
         assertEquals("java.lang.String", redacted.capturedClassName)
         assertEquals(null, redacted.templateUuid)
-        assertEquals(TRString("visible"), valueOnlyPolicy.single())
+        assertEquals(TraceString("visible"), valueOnlyPolicy.single())
     }
 
     @Test
@@ -272,7 +272,7 @@ class SnapshotCapturerTest {
     }
 
     @Test
-    fun `CharSequence is matched before a content-bearing TRValue is constructed`() {
+    fun `CharSequence is matched before a content-bearing TraceValue is constructed`() {
         val capturer = capturer(RedactionRule.ByValue("fixture-secret"))
 
         val captured = capturer.captureNamedExpressionValues(
@@ -281,7 +281,7 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         ).single()
 
-        assertTrue(captured is TRRedacted)
+        assertTrue(captured is TraceRedacted)
         assertEquals(StringBuilder::class.java.name, captured.className)
     }
 
@@ -305,7 +305,7 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         )
 
-        assertTrue(captured.all { it is TRRedacted })
+        assertTrue(captured.all { it is TraceRedacted })
         assertEquals(
             listOf(
                 Int::class.javaObjectType.name,
@@ -329,7 +329,7 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         ).single()
 
-        assertEquals(TRString("$prefix..."), captured)
+        assertEquals(TraceString("$prefix..."), captured)
         assertTrue("Content beyond the capture bound must not be stored", "TAIL_SECRET" !in captured.toString())
     }
 
@@ -354,8 +354,8 @@ class SnapshotCapturerTest {
             declaringClassName = "example.Controller",
         ).single()
 
-        assertTrue(redacted is TRRedacted)
-        assertEquals(TRArbitraryInteger(other), kept)
+        assertTrue(redacted is TraceRedacted)
+        assertEquals(TraceArbitraryInteger(other), kept)
     }
 
     @Test
@@ -366,8 +366,8 @@ class SnapshotCapturerTest {
             values = arrayOf(ExplodingField(ExplodingMessageException())),
             names = listOf("holder"),
             declaringClassName = "example.Controller",
-        ).single() as TRObjectSnapshot
-        val password = captured.fields.getValue("password") as TRRedacted
+        ).single() as TraceObjectSnapshot
+        val password = captured.fields.getValue("password") as TraceRedacted
 
         assertEquals(Throwable::class.java.name, password.capturedClassName)
         assertEquals("test policy", password.templateName)
@@ -386,9 +386,9 @@ class SnapshotCapturerTest {
             values = arrayOf(ChildHiddenField()),
             names = listOf("holder"),
             declaringClassName = "example.Controller",
-        ).single() as TRObjectSnapshot
+        ).single() as TraceObjectSnapshot
 
-        assertTrue(captured.fields.getValue("hiddenSecret") is TRRedacted)
+        assertTrue(captured.fields.getValue("hiddenSecret") is TraceRedacted)
     }
 
     @Test
@@ -407,7 +407,7 @@ class SnapshotCapturerTest {
         )
         val bytes = ByteArrayOutputStream().use { byteStream ->
             DataOutputStream(byteStream).use { output ->
-                captured.forEach(output::writeTRValue)
+                captured.forEach(output::writeTraceValue)
             }
             byteStream.toByteArray()
         }
@@ -423,8 +423,8 @@ class SnapshotCapturerTest {
         val context = TraceContext()
         val holder = ToStringFields(password = "TOSTRING_SECRET_551372", plain = java.util.UUID(0, 1))
 
-        val plain = SnapshotCapturer(context, CompiledRedactionPolicy.EMPTY).captureValue(holder) as TRObjectSnapshot
-        assertEquals("00000000-0000-0000-0000-000000000001", (plain.fields.getValue("plain") as TRObject).rendered)
+        val plain = SnapshotCapturer(context, CompiledRedactionPolicy.EMPTY).captureValue(holder) as TraceObjectSnapshot
+        assertEquals("00000000-0000-0000-0000-000000000001", (plain.fields.getValue("plain") as TraceObject).rendered)
 
         val redacted = capturer(context, RedactionRule.ByName("password"))
             .captureNamedExpressionValues(
@@ -432,11 +432,11 @@ class SnapshotCapturerTest {
                 names = listOf("holder", "bare"),
                 declaringClassName = "example.Controller",
             )
-        val snapshot = redacted[0] as TRObjectSnapshot
+        val snapshot = redacted[0] as TraceObjectSnapshot
         assertEquals(null, snapshot.rendered)
-        assertTrue(snapshot.fields.getValue("password") is TRRedacted)
-        assertEquals(null, (snapshot.fields.getValue("plain") as TRObject).rendered)
-        assertEquals(null, (redacted[1] as TRObject).rendered)
+        assertTrue(snapshot.fields.getValue("password") is TraceRedacted)
+        assertEquals(null, (snapshot.fields.getValue("plain") as TraceObject).rendered)
+        assertEquals(null, (redacted[1] as TraceObject).rendered)
     }
 
     @Test
@@ -454,7 +454,7 @@ class SnapshotCapturerTest {
         )
         val bytes = ByteArrayOutputStream().use { byteStream ->
             DataOutputStream(byteStream).use { output ->
-                captured.forEach(output::writeTRValue)
+                captured.forEach(output::writeTraceValue)
             }
             byteStream.toByteArray()
         }

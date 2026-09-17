@@ -24,7 +24,7 @@ import java.io.PrintStream
  * Saves [trees] into a temporary trace file and prints it back
  * with the tree-based printer (see the reader-based [printTraceTree] overload).
  */
-fun printTraceTree(outputFileName: String?, context: TraceContext, trees: List<Tree<TRTracePoint>>, verbose: Boolean) {
+fun printTraceTree(outputFileName: String?, context: TraceContext, trees: List<Tree<TracePoint>>, verbose: Boolean) {
     val input = File.createTempFile("lincheck-trace", ".tmp")
     saveRecorderTrace(input.absolutePath, context, trees)
     LazyTraceReader(input.absolutePath).use { reader ->
@@ -36,7 +36,7 @@ fun printTraceTree(outputFileName: String?, context: TraceContext, trees: List<T
 
 /**
  * Prints the trace read by [reader] by traversing it through the
- * [org.jetbrains.lincheck.trace.tree.LazyLoadableTraceTree] API instead of manipulating [TRTracePoint] children directly.
+ * [org.jetbrains.lincheck.trace.tree.LazyLoadableTraceTree] API instead of manipulating [TracePoint] children directly.
  *
  * The `CompressingPostprocessor` modifications are applied as rewrite rules over the tree (see [compressedView]).
  * The tree path reads trace points shallowly and never invokes the reader's postprocessor.
@@ -53,7 +53,7 @@ fun printTraceTree(outputStream: OutputStream, reader: LazyTraceReader, verbose:
     }
 }
 
-private fun printTraceTreeNode(output: PrintStream, node: Tree.Node<TRTracePoint>, depth: Int, verbose: Boolean) {
+private fun printTraceTreeNode(output: PrintStream, node: Tree.Node<TracePoint>, depth: Int, verbose: Boolean) {
     output.print(" ".repeat(depth * 2))
     output.println(node.data.toText(verbose, node.parent?.data))
     node.children.forEach { child ->

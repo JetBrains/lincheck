@@ -29,23 +29,23 @@ import java.io.OutputStream
  * Each default `writeTR<Type>TracePoint` implementation:
  *   1. pre-registers prerequisite descriptors and values (memoized by the writer),
  *   2. calls [startWriteAnyTracepoint],
- *   3. calls [writeTRTracePoint] — the top-level dispatcher in `TraceBinarySerialization.kt`
+ *   3. calls [writeTraceTracePoint] — the top-level dispatcher in `TraceBinarySerialization.kt`
  *      that emits the kind byte, common header, and the subclass-specific body bytes
  *      (including children diff-statuses for containers),
  *   4. calls [endWriteLeafTracepoint] or [endWriteContainerTracepointHeader].
  */
 internal interface TraceWriter : DataOutput, Closeable {
     /**
-     * Saves dependencies of [TRValue], if needed.
-     * This must be called before [startWriteAnyTracepoint] for all used [TRValue]s.
+     * Saves dependencies of [TraceValue], if needed.
+     * This must be called before [startWriteAnyTracepoint] for all used [TraceValue]s.
      */
-    fun preWriteTRValue(value: TRValue)
+    fun preWriteTraceValue(value: TraceValue)
 
     /**
-     * Saves [TRValue] itself.
+     * Saves [TraceValue] itself.
      * Must be called after [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter].
      */
-    fun writeTRValue(value: TRValue)
+    fun writeTraceValue(value: TraceValue)
 
     /**
      * Marks the beginning of a tracepoint (before the first byte of tracepoint is written).
@@ -60,7 +60,7 @@ internal interface TraceWriter : DataOutput, Closeable {
     /**
      * Mark the end of the container tracepoint's header.
      *
-     * The container tracepoints are [TRMethodCallTracePoint], [TRLoopTracePoint], and [TRLoopIterationTracePoint].
+     * The container tracepoints are [TraceMethodCallTracePoint], [TraceLoopTracePoint], and [TraceLoopIterationTracePoint].
      */
     fun endWriteContainerTracepointHeader(id: Int)
 
@@ -113,16 +113,16 @@ internal interface TraceWriter : DataOutput, Closeable {
     /**
      * Writes a tracepoint of any type by dispatching to its type-specific `writeTR<Type>TracePoint` method.
      */
-    fun writeTracePoint(tracePoint: TRTracePoint) {
+    fun writeTracePoint(tracePoint: TracePoint) {
         when (tracePoint) {
-            is TRMethodCallTracePoint             -> writeTRMethodCallTracePoint(tracePoint)
-            is TRLoopTracePoint                   -> writeTRLoopTracePoint(tracePoint)
-            is TRLoopIterationTracePoint          -> writeTRLoopIterationTracePoint(tracePoint)
-            is TRFieldTracePoint                  -> writeTRFieldTracePoint(tracePoint)
-            is TRArrayTracePoint                  -> writeTRArrayTracePoint(tracePoint)
-            is TRLocalVariableTracePoint          -> writeTRLocalVariableTracePoint(tracePoint)
-            is TRExceptionProcessingTracePoint    -> writeTRExceptionProcessingTracePoint(tracePoint)
-            is TRSnapshotLineBreakpointTracePoint -> writeTRSnapshotLineBreakpointTracePoint(tracePoint)
+            is TraceMethodCallTracePoint             -> writeTraceMethodCallTracePoint(tracePoint)
+            is TraceLoopTracePoint                   -> writeTraceLoopTracePoint(tracePoint)
+            is TraceLoopIterationTracePoint          -> writeTraceLoopIterationTracePoint(tracePoint)
+            is TraceFieldTracePoint                  -> writeTraceFieldTracePoint(tracePoint)
+            is TraceArrayTracePoint                  -> writeTraceArrayTracePoint(tracePoint)
+            is TraceLocalVariableTracePoint          -> writeTraceLocalVariableTracePoint(tracePoint)
+            is TraceExceptionProcessingTracePoint    -> writeTraceExceptionProcessingTracePoint(tracePoint)
+            is TraceSnapshotLineBreakpointTracePoint -> writeTraceSnapshotLineBreakpointTracePoint(tracePoint)
         }
     }
 
@@ -130,98 +130,98 @@ internal interface TraceWriter : DataOutput, Closeable {
      * Writes a footer of a container tracepoint of any type
      * by dispatching to its type-specific `writeTR<Type>TracePointFooter` method.
      */
-    fun writeTracePointFooter(tracePoint: TRContainerTracePoint) {
+    fun writeTracePointFooter(tracePoint: TraceContainerTracePoint) {
         when (tracePoint) {
-            is TRMethodCallTracePoint    -> writeTRMethodCallTracePointFooter(tracePoint)
-            is TRLoopTracePoint          -> writeTRLoopTracePointFooter(tracePoint)
-            is TRLoopIterationTracePoint -> writeTRLoopIterationTracePointFooter(tracePoint)
+            is TraceMethodCallTracePoint    -> writeTraceMethodCallTracePointFooter(tracePoint)
+            is TraceLoopTracePoint          -> writeTraceLoopTracePointFooter(tracePoint)
+            is TraceLoopIterationTracePoint -> writeTraceLoopIterationTracePointFooter(tracePoint)
         }
     }
 
-    fun writeTRMethodCallTracePoint(tracePoint: TRMethodCallTracePoint) {
+    fun writeTraceMethodCallTracePoint(tracePoint: TraceMethodCallTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeMethodDescriptor(tracePoint.methodId)
-        preWriteTRValue(tracePoint.obj)
-        tracePoint.parameters.forEach { preWriteTRValue(it) }
+        preWriteTraceValue(tracePoint.obj)
+        tracePoint.parameters.forEach { preWriteTraceValue(it) }
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTRLoopTracePoint(tracePoint: TRLoopTracePoint) {
+    fun writeTraceLoopTracePoint(tracePoint: TraceLoopTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTRLoopIterationTracePoint(tracePoint: TRLoopIterationTracePoint) {
+    fun writeTraceLoopIterationTracePoint(tracePoint: TraceLoopIterationTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTRFieldTracePoint(tracePoint: TRFieldTracePoint) {
+    fun writeTraceFieldTracePoint(tracePoint: TraceFieldTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeFieldDescriptor(tracePoint.fieldId)
-        preWriteTRValue(tracePoint.obj)
-        preWriteTRValue(tracePoint.value)
+        preWriteTraceValue(tracePoint.obj)
+        preWriteTraceValue(tracePoint.value)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRArrayTracePoint(tracePoint: TRArrayTracePoint) {
+    fun writeTraceArrayTracePoint(tracePoint: TraceArrayTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
-        preWriteTRValue(tracePoint.array)
-        preWriteTRValue(tracePoint.value)
+        preWriteTraceValue(tracePoint.array)
+        preWriteTraceValue(tracePoint.value)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRLocalVariableTracePoint(tracePoint: TRLocalVariableTracePoint) {
+    fun writeTraceLocalVariableTracePoint(tracePoint: TraceLocalVariableTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeVariableDescriptor(tracePoint.localVariableId)
-        preWriteTRValue(tracePoint.value)
+        preWriteTraceValue(tracePoint.value)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRExceptionProcessingTracePoint(tracePoint: TRExceptionProcessingTracePoint) {
+    fun writeTraceExceptionProcessingTracePoint(tracePoint: TraceExceptionProcessingTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
-        preWriteTRValue(tracePoint.exception)
+        preWriteTraceValue(tracePoint.exception)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRSnapshotLineBreakpointTracePoint(tracePoint: TRSnapshotLineBreakpointTracePoint) {
+    fun writeTraceSnapshotLineBreakpointTracePoint(tracePoint: TraceSnapshotLineBreakpointTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         tracePoint.stackTraceCodeLocationIds.forEach { writeCodeLocation(it) }
-        tracePoint.locals.forEach { preWriteTRValue(it) }
-        tracePoint.watches.forEach { preWriteTRValue(it) }
+        tracePoint.locals.forEach { preWriteTraceValue(it) }
+        tracePoint.watches.forEach { preWriteTraceValue(it) }
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRMethodCallTracePointFooter(tracePoint: TRMethodCallTracePoint) {
-        preWriteTRValue(tracePoint.result)
+    fun writeTraceMethodCallTracePointFooter(tracePoint: TraceMethodCallTracePoint) {
+        preWriteTraceValue(tracePoint.result)
         startWriteContainerTracepointFooter()
         writeMethodCallTracePointFooter(tracePoint)
         endWriteContainerTracepointFooter(tracePoint.eventId)
     }
 
-    fun writeTRLoopTracePointFooter(tracePoint: TRLoopTracePoint) {
+    fun writeTraceLoopTracePointFooter(tracePoint: TraceLoopTracePoint) {
         startWriteContainerTracepointFooter()
         writeLoopTracePointFooter(tracePoint)
         endWriteContainerTracepointFooter(tracePoint.eventId)
     }
 
-    fun writeTRLoopIterationTracePointFooter(tracePoint: TRLoopIterationTracePoint) {
+    fun writeTraceLoopIterationTracePointFooter(tracePoint: TraceLoopIterationTracePoint) {
         // No footer body bytes for this kind — only container bookkeeping.
         startWriteContainerTracepointFooter()
         endWriteContainerTracepointFooter(tracePoint.eventId)
     }
 }
 
-private fun TraceWriter.writeLeafTracepoint(tracePoint: TRTracePoint) {
+private fun TraceWriter.writeLeafTracepoint(tracePoint: TracePoint) {
     startWriteAnyTracepoint()
-    writeTRTracePoint(tracePoint)
+    writeTraceTracePoint(tracePoint)
     endWriteLeafTracepoint()
 }
 
 // Marks the tracepoint as a container which could have children and will have a footer.
-private fun TraceWriter.writeContainerTracepointHeader(tracePoint: TRContainerTracePoint) {
+private fun TraceWriter.writeContainerTracepointHeader(tracePoint: TraceContainerTracePoint) {
     startWriteAnyTracepoint()
-    writeTRTracePoint(tracePoint)
+    writeTraceTracePoint(tracePoint)
     endWriteContainerTracepointHeader(tracePoint.eventId)
 }
 
@@ -256,31 +256,31 @@ internal abstract class ContextAwareTraceWriter(
         writeIndexCell(ObjectKind.EOF,-1, -1, -1)
     }
 
-    override fun preWriteTRValue(value: TRValue) {
-        check(!inTracepointBody) { "Cannot write TRObject dependency into tracepoint body" }
+    override fun preWriteTraceValue(value: TraceValue) {
+        check(!inTracepointBody) { "Cannot write TraceObject dependency into tracepoint body" }
         // Only types that carry a real [ClassDescriptor] need pre-registration on the wire;
-        // [TRValue.classId] returns `null` for sentinels, primitives, strings, etc.
+        // [TraceValue.classId] returns `null` for sentinels, primitives, strings, etc.
         val classId = value.classId ?: return
         writeClassDescriptor(classId)
         // Recursively register class descriptors for all field values.
-        if (value is TRObjectSnapshot) {
-            value.fields.values.forEach { fieldValue -> preWriteTRValue(fieldValue) }
+        if (value is TraceObjectSnapshot) {
+            value.fields.values.forEach { fieldValue -> preWriteTraceValue(fieldValue) }
         }
-        if (value is TRArraySnapshot) {
-            value.capturedElements.forEach { capturedElement -> preWriteTRValue(capturedElement) }
+        if (value is TraceArraySnapshot) {
+            value.capturedElements.forEach { capturedElement -> preWriteTraceValue(capturedElement) }
         }
         // Both halves of an entry are arbitrary values, so a key needs registering just like a value.
-        if (value is TRMapSnapshot) {
+        if (value is TraceMapSnapshot) {
             value.capturedEntries.forEach { (key, entryValue) ->
-                preWriteTRValue(key)
-                preWriteTRValue(entryValue)
+                preWriteTraceValue(key)
+                preWriteTraceValue(entryValue)
             }
         }
     }
 
-    override fun writeTRValue(value: TRValue) {
-        check(inTracepointBody) { "Cannot write TRObject outside tracepoint body" }
-        dataOutput.writeTRValue(value)
+    override fun writeTraceValue(value: TraceValue) {
+        check(inTracepointBody) { "Cannot write TraceObject outside tracepoint body" }
+        dataOutput.writeTraceValue(value)
     }
 
     override fun startWriteAnyTracepoint() {

@@ -11,10 +11,10 @@
 package org.jetbrains.lincheck.trace.tree
 
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
-import org.jetbrains.lincheck.trace.TRNull
-import org.jetbrains.lincheck.trace.TRScalar
-import org.jetbrains.lincheck.trace.TRString
+import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.TraceNull
+import org.jetbrains.lincheck.trace.TraceScalar
+import org.jetbrains.lincheck.trace.TraceString
 import org.jetbrains.lincheck.util.tree.node
 import org.jetbrains.lincheck.util.tree.rewrite
 import org.junit.Assert.assertEquals
@@ -47,8 +47,8 @@ class TraceRewriteRulesTest {
             assertEquals("main(callMe(body),stay\$default(stay,body2))", view.structure())
 
             // The combined call keeps the child's identity but the parent's code location.
-            val defaultCall = tree.root!!.children[0].data as TRMethodCallTracePoint
-            val combined = view.root!!.children[0].data as TRMethodCallTracePoint
+            val defaultCall = tree.root!!.children[0].data as TraceMethodCallTracePoint
+            val combined = view.root!!.children[0].data as TraceMethodCallTracePoint
             assertEquals("callMe", combined.methodName)
             assertEquals(defaultCall.codeLocationId, combined.codeLocationId)
         }
@@ -81,12 +81,12 @@ class TraceRewriteRulesTest {
             node(call("A", "main")) {
                 node(call("A", "access\$getValue\$p", codeLocationId = codeLocation(10))) {
                     node(readVar("this"))
-                    node(readField("A", "value", TRString("hi")))
+                    node(readField("A", "value", TraceString("hi")))
                 }
                 node(call("A", "access\$setValue\$p", codeLocationId = codeLocation(20))) {
                     node(readVar("this"))
                     node(writeVar("<set-?>"))
-                    node(writeField("A", "value", TRString("bye")))
+                    node(writeField("A", "value", TraceString("bye")))
                 }
             }
         }) { reader, tree ->
@@ -107,15 +107,15 @@ class TraceRewriteRulesTest {
         withTraceTree(build = {
             node(call("A", "main")) {
                 node(call("A", "getValue", returnType = Types.ObjectType("java.lang.String"))) {
-                    node(readField("A", "value", TRString("hi")))
+                    node(readField("A", "value", TraceString("hi")))
                 }
                 node(call("A", "setValue")) {
                     node(writeVar("<set-?>"))
-                    node(writeField("A", "value", TRString("bye")))
+                    node(writeField("A", "value", TraceString("bye")))
                 }
                 // negative case: a getter whose return type differs from the field's declared type is custom
                 node(call("A", "getName")) { // returns void
-                    node(readField("A", "name", TRString("n")))
+                    node(readField("A", "name", TraceString("n")))
                 }
             }
         }) { reader, tree ->
@@ -135,15 +135,15 @@ class TraceRewriteRulesTest {
             node(call("A", "main")) {
                 // `Object value = "hi"`: the field and its getter are Object, the value a String
                 node(call("A", "getValue", returnType = Types.ObjectType("java.lang.Object"))) {
-                    node(readField("A", "value", TRString("hi"), type = Types.ObjectType("java.lang.Object")))
+                    node(readField("A", "value", TraceString("hi"), type = Types.ObjectType("java.lang.Object")))
                 }
                 // a null read takes its match from the declared type alone
                 node(call("A", "getLabel", returnType = Types.ObjectType("java.lang.String"))) {
-                    node(readField("A", "label", TRNull))
+                    node(readField("A", "label", TraceNull))
                 }
                 // a primitive field: the wire boxes the captured scalar, the descriptor keeps the primitive
                 node(call("A", "getCount", returnType = Types.INT_TYPE)) {
-                    node(readField("A", "count", TRScalar(3), type = Types.INT_TYPE))
+                    node(readField("A", "count", TraceScalar(3), type = Types.INT_TYPE))
                 }
             }
         }) { reader, tree ->
@@ -158,7 +158,7 @@ class TraceRewriteRulesTest {
         withTraceTree(build = {
             node(call("A", "main")) {
                 node(writeVar("__\$coverage_local\$__"))
-                node(readField("A", "__\$hits\$__", TRNull))
+                node(readField("A", "__\$hits\$__", TraceNull))
                 node(readArray("__\$hits\$__"))
                 node(call("A", "body"))
                 node(writeVar("user"))

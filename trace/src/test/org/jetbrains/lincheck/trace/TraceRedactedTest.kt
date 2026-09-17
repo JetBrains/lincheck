@@ -15,12 +15,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.util.UUID
 
-class TRRedactedTest {
+class TraceRedactedTest {
     private val context = TraceContext()
 
     @Test
     fun `representation contains only type and safe policy attribution`() {
-        val marker = TRRedacted(
+        val marker = TraceRedacted(
             classDescriptor = context.createAndRegisterClassDescriptor("java.lang.String"),
             templateUuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
             templateName = "GDPR defaults",
@@ -33,7 +33,7 @@ class TRRedactedTest {
     @Test
     fun `unattributed marker remains typed`() {
         val integer = context.createAndRegisterClassDescriptor("java.lang.Integer")
-        assertEquals("[redacted: Integer]", TRRedacted(integer, null, null).toString())
-        assertEquals("[redacted: unknown]", TRRedacted(null, null, null).toString())
+        assertEquals("[redacted: Integer]", TraceRedacted(integer, null, null).toString())
+        assertEquals("[redacted: unknown]", TraceRedacted(null, null, null).toString())
     }
 }

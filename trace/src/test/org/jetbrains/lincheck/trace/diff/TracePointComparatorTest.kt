@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck.trace.diff
 
-import org.jetbrains.lincheck.trace.TRObject
-import org.jetbrains.lincheck.trace.TRObjectSnapshot
-import org.jetbrains.lincheck.trace.TRSnapshotLineBreakpointTracePoint
-import org.jetbrains.lincheck.trace.TRValue
+import org.jetbrains.lincheck.trace.TraceObject
+import org.jetbrains.lincheck.trace.TraceObjectSnapshot
+import org.jetbrains.lincheck.trace.TraceSnapshotLineBreakpointTracePoint
+import org.jetbrains.lincheck.trace.TraceValue
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.lincheck.trace.createAndRegisterClassDescriptor
@@ -24,7 +24,7 @@ import java.util.UUID
 
 /**
  * Covers the `rendered` discriminator on [TracePointComparator]'s
- * `TRObject` / `TRObjectSnapshot` branches — JBRes-9536 addendum §B.
+ * `TraceObject` / `TraceObjectSnapshot` branches — JBRes-9536 addendum §B.
  */
 class TracePointComparatorTest {
 
@@ -33,43 +33,43 @@ class TracePointComparatorTest {
     private val bpUuid: UUID = UUID(0x1234L, 0x5678L)
 
     @Test
-    fun `two TRObjectSnapshots with same identity but different rendered are not strict-equal`() {
-        val left = wrap(TRObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
-        val right = wrap(TRObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=2", fields = emptyMap()))
+    fun `two TraceObjectSnapshots with same identity but different rendered are not strict-equal`() {
+        val left = wrap(TraceObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
+        val right = wrap(TraceObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=2", fields = emptyMap()))
         assertFalse(TracePointComparator.strictEqual(left, right))
     }
 
     @Test
-    fun `two TRObjectSnapshots with same identity and same rendered are strict-equal`() {
-        val left = wrap(TRObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
-        val right = wrap(TRObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
+    fun `two TraceObjectSnapshots with same identity and same rendered are strict-equal`() {
+        val left = wrap(TraceObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
+        val right = wrap(TraceObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
         assertTrue(TracePointComparator.strictEqual(left, right))
     }
 
     @Test
-    fun `two TRObjects with same identity but different rendered are not strict-equal`() {
-        val left = wrap(TRObject(ownerCd, identity = 0x16309L, rendered = "v=1"))
-        val right = wrap(TRObject(ownerCd, identity = 0x16309L, rendered = "v=2"))
+    fun `two TraceObjects with same identity but different rendered are not strict-equal`() {
+        val left = wrap(TraceObject(ownerCd, identity = 0x16309L, rendered = "v=1"))
+        val right = wrap(TraceObject(ownerCd, identity = 0x16309L, rendered = "v=2"))
         assertFalse(TracePointComparator.strictEqual(left, right))
     }
 
     @Test
     fun `null and non-null rendered are distinguished`() {
-        val nullSide = wrap(TRObjectSnapshot(ownerCd, identity = 0x16309L, rendered = null, fields = emptyMap()))
-        val present = wrap(TRObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
+        val nullSide = wrap(TraceObjectSnapshot(ownerCd, identity = 0x16309L, rendered = null, fields = emptyMap()))
+        val present = wrap(TraceObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
         assertFalse(TracePointComparator.strictEqual(nullSide, present))
     }
 
     @Test
-    fun `two TRObjectSnapshots that differ only in rendered remain edit-independent-equal`() {
+    fun `two TraceObjectSnapshots that differ only in rendered remain edit-independent-equal`() {
         // editIndependentHash skips per-tracepoint locals payload — so a rendered
         // change alone must NOT desync the trace-diff structural pass.
-        val left = wrap(TRObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
-        val right = wrap(TRObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=2", fields = emptyMap()))
+        val left = wrap(TraceObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=1", fields = emptyMap()))
+        val right = wrap(TraceObjectSnapshot(ownerCd, identity = 0x16309L, rendered = "v=2", fields = emptyMap()))
         assertTrue(TracePointComparator.editIndependentEqual(left, right))
     }
 
-    private fun wrap(value: TRValue): TRSnapshotLineBreakpointTracePoint = TRSnapshotLineBreakpointTracePoint(
+    private fun wrap(value: TraceValue): TraceSnapshotLineBreakpointTracePoint = TraceSnapshotLineBreakpointTracePoint(
         context = ctx,
         codeLocationId = UNKNOWN_CODE_LOCATION_ID,
         threadId = 0,

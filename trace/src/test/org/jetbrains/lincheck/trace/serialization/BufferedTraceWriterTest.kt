@@ -5,12 +5,12 @@ import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TRContainerTracePoint
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
-import org.jetbrains.lincheck.trace.TRNull
-import org.jetbrains.lincheck.trace.TRScalar
-import org.jetbrains.lincheck.trace.TRTracePoint
-import org.jetbrains.lincheck.trace.TRWriteLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.TraceContainerTracePoint
+import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.TraceNull
+import org.jetbrains.lincheck.trace.TraceScalar
+import org.jetbrains.lincheck.trace.TracePoint
+import org.jetbrains.lincheck.trace.TraceWriteLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
@@ -265,7 +265,7 @@ class BufferedTraceWriterTest {
         threadId: Int,
         className: String,
         methodName: String
-    ): TRMethodCallTracePoint {
+    ): TraceMethodCallTracePoint {
         val methodType = Types.MethodType(Types.OBJECT_TYPE)
         val md = context.createAndRegisterMethodDescriptor(className, methodName, methodType)
         val codeLocationId = context.codeLocationsPool.register(
@@ -275,12 +275,12 @@ class BufferedTraceWriterTest {
                 argumentNames = null
             )
         )
-        val tracepoint = TRMethodCallTracePoint(
+        val tracepoint = TraceMethodCallTracePoint(
             context,
             threadId,
             codeLocationId,
             methodId = md.id,
-            obj = TRNull,
+            obj = TraceNull,
             parameters = listOf()
         )
         return tracepoint
@@ -290,7 +290,7 @@ class BufferedTraceWriterTest {
         context: TraceContext,
         threadId: Int,
         variableName: String
-    ): TRWriteLocalVariableTracePoint {
+    ): TraceWriteLocalVariableTracePoint {
         val vd = context.createAndRegisterVariableDescriptor(variableName, Types.INT_TYPE)
 
         // Create an access path for the variable
@@ -302,12 +302,12 @@ class BufferedTraceWriterTest {
                 accessPath = accessPath
             )
         )
-        return TRWriteLocalVariableTracePoint(
+        return TraceWriteLocalVariableTracePoint(
             context,
             threadId,
             codeLocationId,
             localVariableId = vd.id,
-            value = TRScalar(42)
+            value = TraceScalar(42)
         )
     }
 
@@ -326,7 +326,7 @@ class BufferedTraceWriterTest {
         var currentBlock: BlockAnalysis? = null
 
         dataInput.use { dataInput ->
-            val tracePointsStack = mutableListOf<TRTracePoint>()
+            val tracePointsStack = mutableListOf<TracePoint>()
             while (true) {
                 when (val kind = dataInput.readKind()) {
                     ObjectKind.BLOCK_START -> {
@@ -396,10 +396,10 @@ class BufferedTraceWriterTest {
                     }
 
                     ObjectKind.TRACEPOINT -> {
-                        val tr = dataInput.readTRTracePoint(loadedContext)
+                        val tr = dataInput.readTraceTracePoint(loadedContext)
                         Logger.info { "  Tracepoint: ${tr.toText(verbose = true)}" }
 
-                        if (tr is TRContainerTracePoint) {
+                        if (tr is TraceContainerTracePoint) {
                             tracePointsStack.add(tr)
                         }
                     }
@@ -416,7 +416,7 @@ class BufferedTraceWriterTest {
 
                     ObjectKind.TRACEPOINT_FOOTER -> {
                         check(tracePointsStack.isNotEmpty()) { "Tracepoint footer without container trace point" }
-                        val back = tracePointsStack.removeLast() as TRContainerTracePoint
+                        val back = tracePointsStack.removeLast() as TraceContainerTracePoint
                         back.loadFooter(dataInput)
                     }
 

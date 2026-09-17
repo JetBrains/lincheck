@@ -19,12 +19,12 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import kotlin.use
 
-private typealias TraceTree = MutableList<TRContainerTracePoint>
+private typealias TraceTree = MutableList<TraceContainerTracePoint>
 private typealias TracePointReader = (DataInput, TraceContext) -> Boolean
 
 internal interface TracepointConsumer {
-    fun tracePointRead(parent: TRContainerTracePoint?, tracePoint: TRTracePoint)
-    fun footerStarted(tracePoint: TRContainerTracePoint) {}
+    fun tracePointRead(parent: TraceContainerTracePoint?, tracePoint: TracePoint)
+    fun footerStarted(tracePoint: TraceContainerTracePoint) {}
 }
 
 internal interface BlockConsumer {
@@ -64,7 +64,7 @@ internal fun loadAllObjectsDeep(
     tracepointConsumer: TracepointConsumer,
     blockConsumer: BlockConsumer
 ) {
-    val trees = mutableMapOf<Int, MutableList<TRContainerTracePoint>>()
+    val trees = mutableMapOf<Int, MutableList<TraceContainerTracePoint>>()
     var seenEOF = false
 
     while (input.available() > 0) {
@@ -125,9 +125,9 @@ internal fun loadTracePointDeep(
     consumer: TracepointConsumer
 ): Boolean {
     // Load tracepoint itself
-    val tracePoint = input.readTRTracePoint(context)
+    val tracePoint = input.readTraceTracePoint(context)
     consumer.tracePointRead(tree.lastOrNull(), tracePoint)
-    if (tracePoint !is TRContainerTracePoint) {
+    if (tracePoint !is TraceContainerTracePoint) {
         return true
     }
     // We need to load all children

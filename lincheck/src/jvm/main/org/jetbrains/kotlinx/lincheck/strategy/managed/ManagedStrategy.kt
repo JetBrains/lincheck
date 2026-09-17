@@ -22,7 +22,8 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import sun.nio.ch.lincheck.*

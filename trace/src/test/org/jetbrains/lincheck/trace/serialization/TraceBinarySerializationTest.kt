@@ -25,41 +25,41 @@ import org.jetbrains.lincheck.descriptors.StaticFieldAccessLocation
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.trace.DiffStatus
-import org.jetbrains.lincheck.trace.TRArray
-import org.jetbrains.lincheck.trace.TRArraySnapshot
-import org.jetbrains.lincheck.trace.TRCatchTracePoint
-import org.jetbrains.lincheck.trace.TRLoopIterationTracePoint
-import org.jetbrains.lincheck.trace.TRLoopTracePoint
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
-import org.jetbrains.lincheck.trace.TRObject
-import org.jetbrains.lincheck.trace.TRMapSnapshot
-import org.jetbrains.lincheck.trace.TRObjectSnapshot
-import org.jetbrains.lincheck.trace.TRScalar
-import org.jetbrains.lincheck.trace.TRReadArrayTracePoint
-import org.jetbrains.lincheck.trace.TRTextSnapshot
-import org.jetbrains.lincheck.trace.TRTypeReference
+import org.jetbrains.lincheck.trace.TraceArray
+import org.jetbrains.lincheck.trace.TraceArraySnapshot
+import org.jetbrains.lincheck.trace.TraceCatchTracePoint
+import org.jetbrains.lincheck.trace.TraceLoopIterationTracePoint
+import org.jetbrains.lincheck.trace.TraceLoopTracePoint
+import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.TraceObject
+import org.jetbrains.lincheck.trace.TraceMapSnapshot
+import org.jetbrains.lincheck.trace.TraceObjectSnapshot
+import org.jetbrains.lincheck.trace.TraceScalar
+import org.jetbrains.lincheck.trace.TraceReadArrayTracePoint
+import org.jetbrains.lincheck.trace.TraceTextSnapshot
+import org.jetbrains.lincheck.trace.TraceTypeReference
 import org.jetbrains.lincheck.trace.TypeFlavor
-import org.jetbrains.lincheck.trace.TRNull
-import org.jetbrains.lincheck.trace.TRString
-import org.jetbrains.lincheck.trace.TRArbitraryDecimal
-import org.jetbrains.lincheck.trace.TRArbitraryInteger
-import org.jetbrains.lincheck.trace.TRException
-import org.jetbrains.lincheck.trace.TRExceptionSnapshot
-import org.jetbrains.lincheck.trace.TRReadLocalVariableTracePoint
-import org.jetbrains.lincheck.trace.TRReadFieldTracePoint
-import org.jetbrains.lincheck.trace.TRRedacted
-import org.jetbrains.lincheck.trace.TRSnapshotLineBreakpointTracePoint
-import org.jetbrains.lincheck.trace.TRThrowTracePoint
-import org.jetbrains.lincheck.trace.TRTracePoint
-import org.jetbrains.lincheck.trace.TRUnfinishedMethodResult
-import org.jetbrains.lincheck.trace.TRUntrackedMethodResult
-import org.jetbrains.lincheck.trace.TRRenderedValue
-import org.jetbrains.lincheck.trace.TRValue
-import org.jetbrains.lincheck.trace.TRUnit
-import org.jetbrains.lincheck.trace.TRVoid
-import org.jetbrains.lincheck.trace.TRWriteArrayTracePoint
-import org.jetbrains.lincheck.trace.TRWriteLocalVariableTracePoint
-import org.jetbrains.lincheck.trace.TRWriteFieldTracePoint
+import org.jetbrains.lincheck.trace.TraceNull
+import org.jetbrains.lincheck.trace.TraceString
+import org.jetbrains.lincheck.trace.TraceArbitraryDecimal
+import org.jetbrains.lincheck.trace.TraceArbitraryInteger
+import org.jetbrains.lincheck.trace.TraceException
+import org.jetbrains.lincheck.trace.TraceExceptionSnapshot
+import org.jetbrains.lincheck.trace.TraceReadLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.TraceReadFieldTracePoint
+import org.jetbrains.lincheck.trace.TraceRedacted
+import org.jetbrains.lincheck.trace.TraceSnapshotLineBreakpointTracePoint
+import org.jetbrains.lincheck.trace.TraceThrowTracePoint
+import org.jetbrains.lincheck.trace.TracePoint
+import org.jetbrains.lincheck.trace.TraceUnfinishedMethodResult
+import org.jetbrains.lincheck.trace.TraceUntrackedMethodResult
+import org.jetbrains.lincheck.trace.TraceRenderedValue
+import org.jetbrains.lincheck.trace.TraceValue
+import org.jetbrains.lincheck.trace.TraceUnit
+import org.jetbrains.lincheck.trace.TraceVoid
+import org.jetbrains.lincheck.trace.TraceWriteArrayTracePoint
+import org.jetbrains.lincheck.trace.TraceWriteLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.TraceWriteFieldTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterClassDescriptor
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
@@ -742,84 +742,84 @@ class TraceBinarySerializationTest {
     fun trValueJvmPrimitives() {
         val context = TraceContext()
         // Every scalar encoding, at the bounds of the JVM primitive that backs it.
-        val cases: List<TRValue> = listOf(
-            TRScalar(0.toByte()),
-            TRScalar(Byte.MIN_VALUE),
-            TRScalar(Byte.MAX_VALUE),
+        val cases: List<TraceValue> = listOf(
+            TraceScalar(0.toByte()),
+            TraceScalar(Byte.MIN_VALUE),
+            TraceScalar(Byte.MAX_VALUE),
 
-            TRScalar(1234.toShort()),
-            TRScalar(Short.MIN_VALUE),
-            TRScalar(Short.MAX_VALUE),
+            TraceScalar(1234.toShort()),
+            TraceScalar(Short.MIN_VALUE),
+            TraceScalar(Short.MAX_VALUE),
 
-            TRScalar(0),
-            TRScalar(42),
-            TRScalar(Int.MIN_VALUE),
-            TRScalar(Int.MAX_VALUE),
+            TraceScalar(0),
+            TraceScalar(42),
+            TraceScalar(Int.MIN_VALUE),
+            TraceScalar(Int.MAX_VALUE),
 
-            TRScalar(0L),
-            TRScalar(Long.MIN_VALUE),
-            TRScalar(Long.MAX_VALUE),
+            TraceScalar(0L),
+            TraceScalar(Long.MIN_VALUE),
+            TraceScalar(Long.MAX_VALUE),
 
-            TRScalar(3.14f),
-            TRScalar(Float.MIN_VALUE),
-            TRScalar(Float.MAX_VALUE),
+            TraceScalar(3.14f),
+            TraceScalar(Float.MIN_VALUE),
+            TraceScalar(Float.MAX_VALUE),
 
-            TRScalar(2.71828),
-            TRScalar(Double.MIN_VALUE),
-            TRScalar(Double.MAX_VALUE),
+            TraceScalar(2.71828),
+            TraceScalar(Double.MIN_VALUE),
+            TraceScalar(Double.MAX_VALUE),
 
-            TRScalar('A'),
-            TRScalar('ж'), // non-ASCII
-            TRScalar(' '),
+            TraceScalar('A'),
+            TraceScalar('ж'), // non-ASCII
+            TraceScalar(' '),
 
-            TRScalar(true),
-            TRScalar(false),
+            TraceScalar(true),
+            TraceScalar(false),
         )
 
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
     @Test
     fun trValueString() {
         val context = TraceContext()
-        val cases: List<TRValue> = listOf(
-            TRString("hello"),
-            TRString(""),
-            TRString("Юникод 🎉"),
+        val cases: List<TraceValue> = listOf(
+            TraceString("hello"),
+            TraceString(""),
+            TraceString("Юникод 🎉"),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
     @Test
     fun trValueBigNumber() {
         val context = TraceContext()
-        val cases: List<TRValue> = listOf(
-            TRArbitraryInteger("12345"),
-            TRArbitraryInteger(""),
-            TRArbitraryDecimal("3.14"),
+        val cases: List<TraceValue> = listOf(
+            TraceArbitraryInteger("12345"),
+            TraceArbitraryInteger(""),
+            TraceArbitraryDecimal("3.14"),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
     @Test
     fun trValueClassReference() {
         val context = TraceContext()
-        val cases: List<TRValue> = listOf(
-            TRTypeReference("MyClass.class", TypeFlavor.JAVA_CLASS),
-            TRTypeReference("java.lang.String.class", TypeFlavor.JAVA_CLASS),
-            TRTypeReference("", TypeFlavor.JAVA_CLASS),
-            TRTypeReference("MyClass.kclass", TypeFlavor.KOTLIN_CLASS),
-            TRTypeReference("kotlin.String.kclass", TypeFlavor.KOTLIN_CLASS),
-            TRTypeReference("", TypeFlavor.KOTLIN_CLASS),
+        val cases: List<TraceValue> = listOf(
+            TraceTypeReference("MyClass.class", TypeFlavor.JAVA_CLASS),
+            TraceTypeReference("java.lang.String.class", TypeFlavor.JAVA_CLASS),
+            TraceTypeReference("", TypeFlavor.JAVA_CLASS),
+            TraceTypeReference("MyClass.kclass", TypeFlavor.KOTLIN_CLASS),
+            TraceTypeReference("kotlin.String.kclass", TypeFlavor.KOTLIN_CLASS),
+            TraceTypeReference("", TypeFlavor.KOTLIN_CLASS),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
@@ -828,13 +828,13 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         val sbCd = context.createAndRegisterClassDescriptor("java.lang.StringBuilder")
         val cbCd = context.createAndRegisterClassDescriptor("java.nio.CharBuffer")
-        val cases: List<TRValue> = listOf(
-            TRTextSnapshot(sbCd, 0xCAFE, "builder contents"),
-            TRTextSnapshot(sbCd, 0, ""),
-            TRTextSnapshot(cbCd, 0xBEEF, "buffer text"),
+        val cases: List<TraceValue> = listOf(
+            TraceTextSnapshot(sbCd, 0xCAFE, "builder contents"),
+            TraceTextSnapshot(sbCd, 0, ""),
+            TraceTextSnapshot(cbCd, 0xBEEF, "buffer text"),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
@@ -842,13 +842,13 @@ class TraceBinarySerializationTest {
     fun trValueException() {
         val context = TraceContext()
         val cd = context.createAndRegisterClassDescriptor("java.lang.IllegalStateException")
-        val cases: List<TRValue> = listOf(
-            // Plain TRException — the trace-recorder shape: class descriptor + identity only.
-            TRException(cd, 0),
-            TRException(cd, 0xCAFE),
+        val cases: List<TraceValue> = listOf(
+            // Plain TraceException — the trace-recorder shape: class descriptor + identity only.
+            TraceException(cd, 0),
+            TraceException(cd, 0xCAFE),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
@@ -856,29 +856,29 @@ class TraceBinarySerializationTest {
     fun trValueExceptionSnapshot() {
         val context = TraceContext()
         val cd = context.createAndRegisterClassDescriptor("java.lang.IllegalStateException")
-        val cases: List<TRValue> = listOf(
+        val cases: List<TraceValue> = listOf(
             // No message, no frames — minimum-shape snapshot.
-            TRExceptionSnapshot(cd, 0, message = TRNull, stackTrace = emptyList()),
+            TraceExceptionSnapshot(cd, 0, message = TraceNull, stackTrace = emptyList()),
             // Typical shape — message present, a couple of rendered frames.
-            TRExceptionSnapshot(
+            TraceExceptionSnapshot(
                 cd, 0xCAFE,
-                message = TRString("boom"),
+                message = TraceString("boom"),
                 stackTrace = listOf(
                     "com.example.Foo.bar(Foo.java:42)",
                     "com.example.Foo.main(Foo.java:7)",
                 ),
             ),
             // Empty-string message and one frame — exercises non-null empty path.
-            TRExceptionSnapshot(
+            TraceExceptionSnapshot(
                 cd,
                 1234,
-                message = TRString(""),
+                message = TraceString(""),
                 stackTrace = listOf("com.example.Foo.tail(Foo.java:1)"),
             ),
-            TRExceptionSnapshot(
+            TraceExceptionSnapshot(
                 cd,
                 5678,
-                message = TRRedacted(
+                message = TraceRedacted(
                     classDescriptor = context.createAndRegisterClassDescriptor("java.lang.String"),
                     templateUuid = UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
                     templateName = "GDPR defaults",
@@ -887,30 +887,30 @@ class TraceBinarySerializationTest {
             ),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
     @Test
     fun trValueUnit() {
         val context = TraceContext()
-        assertRoundTrip(TRUnit, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(TraceUnit, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueRedacted() {
         val context = TraceContext()
         val cases = listOf(
-            TRRedacted(
+            TraceRedacted(
                 context.createAndRegisterClassDescriptor("java.lang.String"),
                 UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
                 "GDPR defaults",
             ),
-            TRRedacted(context.createAndRegisterClassDescriptor("int"), null, null),
-            TRRedacted(null, null, null),
+            TraceRedacted(context.createAndRegisterClassDescriptor("int"), null, null),
+            TraceRedacted(null, null, null),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
@@ -918,13 +918,13 @@ class TraceBinarySerializationTest {
     fun trValueRendered() {
         val context = TraceContext()
         val cases = listOf(
-            TRRenderedValue("<Check: backups>"),
-            TRRenderedValue(""),
-            TRRenderedValue("a:b;c=d|e,f"),
-            TRRenderedValue("Ünïcødé ✓"),
+            TraceRenderedValue("<Check: backups>"),
+            TraceRenderedValue(""),
+            TraceRenderedValue("a:b;c=d|e,f"),
+            TraceRenderedValue("Ünïcødé ✓"),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
@@ -932,69 +932,69 @@ class TraceBinarySerializationTest {
     fun trValueRenderedIsALeafInsideAnObjectSnapshot() {
         val context = TraceContext()
         val cd = context.createAndRegisterClassDescriptor("hc.api.models.Check")
-        val value: TRValue = TRObjectSnapshot(
+        val value: TraceValue = TraceObjectSnapshot(
             cd,
             1_140_234_871,
             rendered = null,
-            linkedMapOf("status" to TRRenderedValue("'up'"), "n_pings" to TRRenderedValue("42")),
+            linkedMapOf("status" to TraceRenderedValue("'up'"), "n_pings" to TraceRenderedValue("42")),
         )
-        assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueMapSnapshot() {
         val context = TraceContext()
         val cd = context.createAndRegisterClassDescriptor("java.util.LinkedHashMap")
-        val cases: List<TRValue> = listOf(
+        val cases: List<TraceValue> = listOf(
             // Empty, and truncated: totalSize larger than what was captured.
-            TRMapSnapshot(cd, 1, totalSize = 0, capturedEntries = emptyList()),
-            TRMapSnapshot(cd, 2, totalSize = 99, capturedEntries = listOf(TRString("k") to TRString("v"))),
+            TraceMapSnapshot(cd, 1, totalSize = 0, capturedEntries = emptyList()),
+            TraceMapSnapshot(cd, 2, totalSize = 99, capturedEntries = listOf(TraceString("k") to TraceString("v"))),
             // Non-string keys are the reason this shape exists: a map keyed by anything else
             // cannot be expressed as an object snapshot's named fields.
-            TRMapSnapshot(
+            TraceMapSnapshot(
                 cd, 3, totalSize = 2,
                 capturedEntries = listOf(
-                    TRScalar(7) to TRString("seven"),
-                    TRRenderedValue("(1, 2)") to TRScalar(true),
+                    TraceScalar(7) to TraceString("seven"),
+                    TraceRenderedValue("(1, 2)") to TraceScalar(true),
                 ),
             ),
             // Duplicate keys stay distinct rows: entries are a list, not a Map.
-            TRMapSnapshot(
+            TraceMapSnapshot(
                 cd, 4, totalSize = 2,
-                capturedEntries = listOf(TRString("dup") to TRScalar(1), TRString("dup") to TRScalar(2)),
+                capturedEntries = listOf(TraceString("dup") to TraceScalar(1), TraceString("dup") to TraceScalar(2)),
             ),
         )
         for (value in cases) {
-            assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+            assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
         }
     }
 
     @Test
     fun trValueMapSnapshotNestsSnapshotsOnBothSidesOfAnEntry() {
-        // A key may itself carry a class descriptor, so `preWriteTRValue` recurses over both
+        // A key may itself carry a class descriptor, so `preWriteTraceValue` recurses over both
         // halves of an entry.
         val context = TraceContext()
         val mapClass = context.createAndRegisterClassDescriptor("java.util.HashMap")
         val keyClass = context.createAndRegisterClassDescriptor("org.example.Key")
         val valueClass = context.createAndRegisterClassDescriptor("org.example.Value")
-        val value: TRValue = TRMapSnapshot(
+        val value: TraceValue = TraceMapSnapshot(
             mapClass, 5, totalSize = 1,
             capturedEntries = listOf(
-                TRObjectSnapshot(keyClass, 6, rendered = null, linkedMapOf("id" to TRScalar(1))) to
-                    TRArraySnapshot(valueClass, 7, totalSize = 1, capturedElements = listOf(TRString("x"))),
+                TraceObjectSnapshot(keyClass, 6, rendered = null, linkedMapOf("id" to TraceScalar(1))) to
+                    TraceArraySnapshot(valueClass, 7, totalSize = 1, capturedElements = listOf(TraceString("x"))),
             ),
         )
-        assertRoundTrip(value, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(value, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueMapSnapshotKeepsItsWireOrdinal() {
-        assertEquals(28, TRValueKind.MAP_SNAPSHOT.ordinal)
+        assertEquals(28, TraceValueKind.MAP_SNAPSHOT.ordinal)
     }
 
     /**
      * Drives a real [TraceWriter] into a reader with its own empty context, so a class descriptor
-     * that `preWriteTRValue` failed to register surfaces as a missing-pool-entry failure.
+     * that `preWriteTraceValue` failed to register surfaces as a missing-pool-entry failure.
      * The plain codec round-trip above cannot catch that: it reuses the writer's context.
      */
     @Test
@@ -1006,7 +1006,7 @@ class TraceBinarySerializationTest {
         )
         val mapClass = context.createAndRegisterClassDescriptor("java.util.HashMap")
         val keyClass = context.createAndRegisterClassDescriptor("org.example.Key")
-        val tracePoint = TRSnapshotLineBreakpointTracePoint(
+        val tracePoint = TraceSnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = location,
             threadId = 0,
@@ -1014,11 +1014,11 @@ class TraceBinarySerializationTest {
             stackTraceCodeLocationIds = emptyList(),
             currentTimeMillis = 1L,
             locals = listOf(
-                TRMapSnapshot(
+                TraceMapSnapshot(
                     mapClass, 1, totalSize = 1,
                     // The only class descriptor below the map lives on the *key* half of the entry.
                     capturedEntries = listOf(
-                        TRObjectSnapshot(keyClass, 2, rendered = null, linkedMapOf("id" to TRScalar(1))) to TRString("v")
+                        TraceObjectSnapshot(keyClass, 2, rendered = null, linkedMapOf("id" to TraceScalar(1))) to TraceString("v")
                     ),
                 )
             ),
@@ -1043,23 +1043,23 @@ class TraceBinarySerializationTest {
         out.flush()
 
         val reader = NetworkTraceReader()
-        val received = mutableListOf<TRSnapshotLineBreakpointTracePoint>()
+        val received = mutableListOf<TraceSnapshotLineBreakpointTracePoint>()
         reader.addTracePointListener { received += it }
         reader.start()
         reader.processMessage(header)
         reader.processMessage(bytes.toByteArray())
 
         assertEquals(1, received.size)
-        val map = received.single().locals.single() as TRMapSnapshot
-        val key = map.capturedEntries.single().first as TRObjectSnapshot
+        val map = received.single().locals.single() as TraceMapSnapshot
+        val key = map.capturedEntries.single().first as TraceObjectSnapshot
         assertEquals("org.example.Key", key.className)
         assertEquals("java.util.HashMap", map.className)
     }
 
     /**
-     * Same empty-context setup as the map test above, for a [TRRedacted] carrying a class descriptor.
+     * Same empty-context setup as the map test above, for a [TraceRedacted] carrying a class descriptor.
      * A redacted value spells its class *inline as a name* rather than as a class-pool id,
-     * so it stays resolvable even though `preWriteTRValue` registers no descriptor for it.
+     * so it stays resolvable even though `preWriteTraceValue` registers no descriptor for it.
      */
     @Test
     fun redactedValueGetsItsClassDescriptorRegistered() {
@@ -1069,7 +1069,7 @@ class TraceBinarySerializationTest {
             LineCodeLocation(StackTraceElement("org.example.Svc", "handle", "Svc.kt", 10), emptyList())
         )
         val secretClass = context.createAndRegisterClassDescriptor("org.example.Secret")
-        val tracePoint = TRSnapshotLineBreakpointTracePoint(
+        val tracePoint = TraceSnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = location,
             threadId = 0,
@@ -1077,7 +1077,7 @@ class TraceBinarySerializationTest {
             stackTraceCodeLocationIds = emptyList(),
             currentTimeMillis = 1L,
             locals = listOf(
-                TRRedacted(
+                TraceRedacted(
                     classDescriptor = secretClass,
                     templateUuid = UUID.fromString("33333333-3333-3333-3333-333333333333"),
                     templateName = "Credentials",
@@ -1104,85 +1104,85 @@ class TraceBinarySerializationTest {
         out.flush()
 
         val reader = NetworkTraceReader()
-        val received = mutableListOf<TRSnapshotLineBreakpointTracePoint>()
+        val received = mutableListOf<TraceSnapshotLineBreakpointTracePoint>()
         reader.addTracePointListener { received += it }
         reader.start()
         reader.processMessage(header)
         reader.processMessage(bytes.toByteArray())
 
         assertEquals(1, received.size)
-        val redacted = received.single().locals.single() as TRRedacted
+        val redacted = received.single().locals.single() as TraceRedacted
         assertEquals("org.example.Secret", redacted.capturedClassName)
         assertEquals("Credentials", redacted.templateName)
     }
 
     @Test
     fun trValueRenderedKeepsItsWireOrdinal() {
-        assertEquals(27, TRValueKind.RENDERED.ordinal)
+        assertEquals(27, TraceValueKind.RENDERED.ordinal)
     }
 
     @Test
     fun trValueNull() {
         val context = TraceContext()
-        // [TRNull] denotes a captured `null` reference; it round-trips through `TRValueKind.NULL`.
-        assertRoundTrip(TRNull, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        // [TraceNull] denotes a captured `null` reference; it round-trips through `TraceValueKind.NULL`.
+        assertRoundTrip(TraceNull, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueVoid() {
         val context = TraceContext()
-        assertRoundTrip(TRVoid, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(TraceVoid, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueObjectWithoutFields() {
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
-        // A plain TRObject reference: class descriptor and identity, no captured fields.
-        val emptyObject = TRObject(
+        // A plain TraceObject reference: class descriptor and identity, no captured fields.
+        val emptyObject = TraceObject(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xDEADL,
             rendered = null,
         )
-        assertRoundTrip(emptyObject, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(emptyObject, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueObjectWithSingleField() {
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
-        val singleField = TRObjectSnapshot(
+        val singleField = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xCAFEL,
             rendered = null,
-            fields = mapOf("x" to TRScalar(1)),
+            fields = mapOf("x" to TraceScalar(1)),
         )
-        assertRoundTrip(singleField, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(singleField, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueObjectWithMultipleMixedFields() {
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
-        val nestedChild = TRObject(
+        val nestedChild = TraceObject(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xDEADL,
             rendered = null,
         )
         // mix of scalar, string, Unit, null, and nested-object field values
-        val mixedFields = TRObjectSnapshot(
+        val mixedFields = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xBEEFL,
             rendered = null,
             fields = mapOf(
-                "i" to TRScalar(1),
-                "s" to TRString("hi"),
-                "u" to TRUnit,
+                "i" to TraceScalar(1),
+                "s" to TraceString("hi"),
+                "u" to TraceUnit,
                 "child" to nestedChild,
-                "missing" to TRNull,
+                "missing" to TraceNull,
             ),
         )
-        assertRoundTrip(mixedFields, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(mixedFields, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
@@ -1190,25 +1190,25 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
         // 3-level nested chain: root → child → grandchild → primitive leaf
-        val grandchild = TRObjectSnapshot(
+        val grandchild = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x11L,
             rendered = null,
-            fields = mapOf("leaf" to TRScalar(true)),
+            fields = mapOf("leaf" to TraceScalar(true)),
         )
-        val child = TRObjectSnapshot(
+        val child = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x22L,
             rendered = null,
             fields = mapOf("grandchild" to grandchild),
         )
-        val root = TRObjectSnapshot(
+        val root = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x33L,
             rendered = null,
             fields = mapOf("child" to child),
         )
-        assertRoundTrip(root, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(root, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
@@ -1216,12 +1216,12 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         val arrayClassId = context.createAndRegisterClassDescriptor("[Ljava.lang.Object;").id
         // captured elements is empty AND totalSize == 0 (genuinely empty array)
-        val genuinelyEmpty = TRArray(
+        val genuinelyEmpty = TraceArray(
             classDescriptor = context.classPool[arrayClassId],
             identity = 0xF00DL,
             totalSize = 0,
         )
-        assertRoundTrip(genuinelyEmpty, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(genuinelyEmpty, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
@@ -1229,12 +1229,12 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         val arrayClassId = context.createAndRegisterClassDescriptor("[Ljava.lang.Object;").id
         // captured elements is empty but totalSize > 0 (array had elements at runtime, none captured)
-        val noneCaptured = TRArray(
+        val noneCaptured = TraceArray(
             classDescriptor = context.classPool[arrayClassId],
             identity = 0xFACEL,
             totalSize = 50,
         )
-        assertRoundTrip(noneCaptured, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(noneCaptured, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
@@ -1242,18 +1242,18 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         val arrayClassId = context.createAndRegisterClassDescriptor("[Ljava.lang.Object;").id
         val elements = listOf(
-            TRScalar(1),
-            TRNull,
-            TRString("elem"),
+            TraceScalar(1),
+            TraceNull,
+            TraceString("elem"),
         )
         // captured.size == totalSize — every element of the runtime array is captured
-        val fullyCaptured = TRArraySnapshot(
+        val fullyCaptured = TraceArraySnapshot(
             classDescriptor = context.classPool[arrayClassId],
             identity = 0xFACEL,
             totalSize = elements.size,
             capturedElements = elements,
         )
-        assertRoundTrip(fullyCaptured, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(fullyCaptured, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
@@ -1261,104 +1261,104 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
         val arrayClassId = context.createAndRegisterClassDescriptor("[Ljava.lang.Object;").id
-        val nestedObject = TRObjectSnapshot(
+        val nestedObject = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xCAFEL,
             rendered = null,
-            fields = mapOf("x" to TRScalar(7)),
+            fields = mapOf("x" to TraceScalar(7)),
         )
         // captured.size < totalSize — the runtime array was larger than what was captured
-        val truncated = TRArraySnapshot(
+        val truncated = TraceArraySnapshot(
             classDescriptor = context.classPool[arrayClassId],
             identity = 0xBEEFL,
             totalSize = 100,
             capturedElements = listOf(
-                TRScalar(1),
-                TRNull,
-                TRString("elem"),
+                TraceScalar(1),
+                TraceNull,
+                TraceString("elem"),
                 nestedObject,
             ),
         )
-        assertRoundTrip(truncated, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(truncated, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueArrayNestedInArray() {
-        // Array-of-arrays — exercises the recursive `writeTRValue` path through a
-        // captured element that is itself a `TRArray`.
+        // Array-of-arrays — exercises the recursive `writeTraceValue` path through a
+        // captured element that is itself a `TraceArray`.
         val context = TraceContext()
         val outerClassId = context.createAndRegisterClassDescriptor("[[I").id
         val innerClassId = context.createAndRegisterClassDescriptor("[I").id
-        val inner = TRArraySnapshot(
+        val inner = TraceArraySnapshot(
             classDescriptor = context.classPool[innerClassId],
             identity = 0xAAAL,
             totalSize = 2,
             capturedElements = listOf(
-                TRScalar(1),
-                TRScalar(2),
+                TraceScalar(1),
+                TraceScalar(2),
             ),
         )
-        val outer = TRArraySnapshot(
+        val outer = TraceArraySnapshot(
             classDescriptor = context.classPool[outerClassId],
             identity = 0xBBBL,
             totalSize = 1,
             capturedElements = listOf(inner),
         )
-        assertRoundTrip(outer, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(outer, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueObjectWithArrayField() {
-        // Object whose field value is a `TRArray` — exercises the recursive
-        // `writeTRValue` path through a field of an object.
+        // Object whose field value is a `TraceArray` — exercises the recursive
+        // `writeTraceValue` path through a field of an object.
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
         val arrayClassId = context.createAndRegisterClassDescriptor("[I").id
-        val arrayField = TRArraySnapshot(
+        val arrayField = TraceArraySnapshot(
             classDescriptor = context.classPool[arrayClassId],
             identity = 0xCCCL,
             totalSize = 3,
             capturedElements = listOf(
-                TRScalar(10),
-                TRScalar(20),
-                TRScalar(30),
+                TraceScalar(10),
+                TraceScalar(20),
+                TraceScalar(30),
             ),
         )
-        val owner = TRObjectSnapshot(
+        val owner = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xDDDL,
             rendered = null,
             fields = mapOf(
-                "name" to TRString("foo"),
+                "name" to TraceString("foo"),
                 "buckets" to arrayField,
             ),
         )
-        assertRoundTrip(owner, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(owner, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueObjectWithToStringValue() {
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
-        val obj = TRObject(
+        val obj = TraceObject(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xDEADL,
             rendered = "Owner{id=1}",
         )
-        assertRoundTrip(obj, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(obj, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueObjectSnapshotWithToStringValue() {
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
-        val snap = TRObjectSnapshot(
+        val snap = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xBEEFL,
             rendered = "Snap[a=1, b=2]",
-            fields = mapOf("a" to TRScalar(1), "b" to TRScalar(2)),
+            fields = mapOf("a" to TraceScalar(1), "b" to TraceScalar(2)),
         )
-        assertRoundTrip(snap, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(snap, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
@@ -1366,37 +1366,37 @@ class TraceBinarySerializationTest {
         // Confirms the null bit on `writeNullableString` / `readNullableString` is wired correctly.
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
-        val obj = TRObject(
+        val obj = TraceObject(
             classDescriptor = context.classPool[fooClassId],
             identity = 0xCAFEL,
             rendered = null,
         )
-        assertRoundTrip(obj, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(obj, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     @Test
     fun trValueNestedObjectSnapshotCarriesToStringPerLevel() {
         val context = TraceContext()
         val fooClassId = context.createAndRegisterClassDescriptor("com.example.Foo").id
-        val grandchild = TRObjectSnapshot(
+        val grandchild = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x11L,
             rendered = "g",
-            fields = mapOf("leaf" to TRScalar(true)),
+            fields = mapOf("leaf" to TraceScalar(true)),
         )
-        val child = TRObjectSnapshot(
+        val child = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x22L,
             rendered = "c",
             fields = mapOf("grandchild" to grandchild),
         )
-        val root = TRObjectSnapshot(
+        val root = TraceObjectSnapshot(
             classDescriptor = context.classPool[fooClassId],
             identity = 0x33L,
             rendered = "r",
             fields = mapOf("child" to child),
         )
-        assertRoundTrip(root, writer = { writeTRValue(it) }, reader = { readTRValue(context) })
+        assertRoundTrip(root, writer = { writeTraceValue(it) }, reader = { readTraceValue(context) })
     }
 
     // ======== Diff Status ========
@@ -1443,20 +1443,20 @@ class TraceBinarySerializationTest {
 
     @Test
     fun tracePointKind() {
-        for (kind in TRTracePointKind.entries) {
-            assertRoundTrip(kind, DataOutput::writeTRTracePointKind, DataInput::readTRTracePointKind)
+        for (kind in TracePointKind.entries) {
+            assertRoundTrip(kind, DataOutput::writeTraceTracePointKind, DataInput::readTraceTracePointKind)
         }
     }
 
     @Test
-    fun readTRTracePointKindRejectsOutOfRangeOrdinal() {
+    fun readTraceTracePointKindRejectsOutOfRangeOrdinal() {
         val bytes = encodeBytes { writeByte(100) }
         val exception = assertThrows(IOException::class.java) {
-            DataInputStream(ByteArrayInputStream(bytes)).use { it.readTRTracePointKind() }
+            DataInputStream(ByteArrayInputStream(bytes)).use { it.readTraceTracePointKind() }
         }
         assertTrue(
-            "expected 'TRTracePointKind' in message but was: ${exception.message}",
-            exception.message!!.contains("TRTracePointKind"),
+            "expected 'TracePointKind' in message but was: ${exception.message}",
+            exception.message!!.contains("TracePointKind"),
         )
     }
 
@@ -1464,7 +1464,7 @@ class TraceBinarySerializationTest {
 
     @Test
     fun tracePointDiffStatusRoundTrip() {
-        // `diffStatus` is part of the common header `writeTRTracePoint` / `readTRTracePoint`
+        // `diffStatus` is part of the common header `writeTraceTracePoint` / `readTraceTracePoint`
         // emit for every kind. Exercise both a leaf (no `childrenDiffStatuses` follow-up byte)
         // and a container (children-diff-statuses set written immediately after).
         val context = TraceContext()
@@ -1473,23 +1473,23 @@ class TraceBinarySerializationTest {
         val cases: List<DiffStatus?> = listOf(null) + DiffStatus.entries
 
         for (status in cases) {
-            val leaf = TRReadLocalVariableTracePoint(
+            val leaf = TraceReadLocalVariableTracePoint(
                 context = context, threadId = 0, codeLocationId = 0,
-                localVariableId = variableId, value = TRNull, eventId = 0,
+                localVariableId = variableId, value = TraceNull, eventId = 0,
             ).also { if (status != null) it.diffStatus = status }
             assertRoundTrip(
                 value = leaf,
-                writer = { writeTRTracePoint(it) },
-                reader = { readTRTracePoint(context) as TRReadLocalVariableTracePoint },
+                writer = { writeTraceTracePoint(it) },
+                reader = { readTraceTracePoint(context) as TraceReadLocalVariableTracePoint },
             ) { a, b -> assertEquals(a.diffStatus, b.diffStatus) }
 
-            val container = TRLoopTracePoint(
+            val container = TraceLoopTracePoint(
                 context = context, threadId = 0, codeLocationId = 0, loopId = 0,
             ).also { if (status != null) it.diffStatus = status }
             assertRoundTrip(
                 value = container,
-                writer = { writeTRTracePoint(it) },
-                reader = { readTRTracePoint(context) as TRLoopTracePoint },
+                writer = { writeTraceTracePoint(it) },
+                reader = { readTraceTracePoint(context) as TraceLoopTracePoint },
             ) { a, b -> assertEquals(a.diffStatus, b.diffStatus) }
         }
     }
@@ -1506,13 +1506,13 @@ class TraceBinarySerializationTest {
             EnumSet.of(DiffStatus.UNCHANGED, DiffStatus.REMOVED, DiffStatus.ADDED, DiffStatus.EDITED_OLD, DiffStatus.EDITED_NEW),
         )
         for (statuses in cases) {
-            val container = TRLoopTracePoint(
+            val container = TraceLoopTracePoint(
                 context = context, threadId = 0, codeLocationId = 0, loopId = 0,
             ).also { it.childrenDiffStatuses = statuses }
             assertRoundTrip(
                 value = container,
-                writer = { writeTRTracePoint(it) },
-                reader = { readTRTracePoint(context) as TRLoopTracePoint },
+                writer = { writeTraceTracePoint(it) },
+                reader = { readTraceTracePoint(context) as TraceLoopTracePoint },
             ) { a, b -> assertEquals(a.childrenDiffStatuses, b.childrenDiffStatuses) }
         }
     }
@@ -1529,19 +1529,19 @@ class TraceBinarySerializationTest {
         val fieldId = context.fieldPool.register(
             FieldDescriptor(context, classId, "x", Types.INT_TYPE, FieldKind.INSTANCE, isFinal = false, isVolatile = false)
         )
-        val original = TRWriteFieldTracePoint(
+        val original = TraceWriteFieldTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
             fieldId = fieldId,
-            obj = TRNull,
-            value = TRScalar(7),
+            obj = TraceNull,
+            value = TraceScalar(7),
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRWriteFieldTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceWriteFieldTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.fieldId, b.fieldId)
@@ -1560,19 +1560,19 @@ class TraceBinarySerializationTest {
         val fieldId = context.fieldPool.register(
             FieldDescriptor(context, classId, "x", Types.INT_TYPE, FieldKind.INSTANCE, isFinal = false, isVolatile = false)
         )
-        val original = TRReadFieldTracePoint(
+        val original = TraceReadFieldTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
             fieldId = fieldId,
-            obj = TRScalar(1),
-            value = TRScalar(42),
+            obj = TraceScalar(1),
+            value = TraceScalar(42),
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRReadFieldTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceReadFieldTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.fieldId, b.fieldId)
@@ -1590,23 +1590,23 @@ class TraceBinarySerializationTest {
         val codeLocationId = 9
         val eventId = 401
         val arrayClassId = context.createAndRegisterClassDescriptor("[I").id
-        val array = TRArraySnapshot(
+        val array = TraceArraySnapshot(
             classDescriptor = context.classPool[arrayClassId],
             identity = 0xBEEFL,
             totalSize = 1,
-            capturedElements = listOf(TRScalar(0)),
+            capturedElements = listOf(TraceScalar(0)),
         )
-        val original = TRWriteArrayTracePoint(
+        val original = TraceWriteArrayTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             array = array,
             index = 0,
-            value = TRScalar(7),
+            value = TraceScalar(7),
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRWriteArrayTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceWriteArrayTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.array, b.array)
@@ -1622,27 +1622,27 @@ class TraceBinarySerializationTest {
         val codeLocationId = 9
         val eventId = 400
         val arrayClassId = context.createAndRegisterClassDescriptor("[I").id
-        val array = TRArraySnapshot(
+        val array = TraceArraySnapshot(
             classDescriptor = context.classPool[arrayClassId],
             identity = 0xCAFEL,
             totalSize = 3,
             capturedElements = listOf(
-                TRScalar(1),
-                TRScalar(2),
-                TRScalar(3),
+                TraceScalar(1),
+                TraceScalar(2),
+                TraceScalar(3),
             ),
         )
-        val original = TRReadArrayTracePoint(
+        val original = TraceReadArrayTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             array = array,
             index = 1,
-            value = TRScalar(2),
+            value = TraceScalar(2),
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRReadArrayTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceReadArrayTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.array, b.array)
@@ -1660,16 +1660,16 @@ class TraceBinarySerializationTest {
         val codeLocationId = 9
         val eventId = 301
         val variableId = context.variablePool.register(VariableDescriptor(context, "counter", Types.INT_TYPE))
-        val original = TRWriteLocalVariableTracePoint(
+        val original = TraceWriteLocalVariableTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             localVariableId = variableId,
-            value = TRScalar(99),
+            value = TraceScalar(99),
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRWriteLocalVariableTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceWriteLocalVariableTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.localVariableId, b.localVariableId)
@@ -1684,16 +1684,16 @@ class TraceBinarySerializationTest {
         val codeLocationId = 9
         val eventId = 300
         val variableId = context.variablePool.register(VariableDescriptor(context, "counter", Types.INT_TYPE))
-        val original = TRReadLocalVariableTracePoint(
+        val original = TraceReadLocalVariableTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             localVariableId = variableId,
-            value = TRScalar(42),
+            value = TraceScalar(42),
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRReadLocalVariableTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceReadLocalVariableTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.localVariableId, b.localVariableId)
@@ -1713,20 +1713,20 @@ class TraceBinarySerializationTest {
         val methodId = context.methodPool.register(
             MethodDescriptor(context, classId, MethodSignature("foo", Types.MethodType(Types.INT_TYPE, Types.OBJECT_TYPE)))
         )
-        val original = TRMethodCallTracePoint(
+        val original = TraceMethodCallTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
             methodId = methodId,
-            obj = TRScalar(99),
-            parameters = listOf(TRString("arg"), TRNull),
+            obj = TraceScalar(99),
+            parameters = listOf(TraceString("arg"), TraceNull),
             flags = 1,
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRMethodCallTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceMethodCallTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.methodId, b.methodId)
@@ -1744,18 +1744,18 @@ class TraceBinarySerializationTest {
         val methodId = context.methodPool.register(
             MethodDescriptor(context, classId, MethodSignature("noArgs", Types.MethodType(Types.VOID_TYPE)))
         )
-        val original = TRMethodCallTracePoint(
+        val original = TraceMethodCallTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = 0,
             methodId = methodId,
-            obj = TRScalar(1),
+            obj = TraceScalar(1),
             parameters = emptyList(),
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRMethodCallTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceMethodCallTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.methodId, b.methodId)
@@ -1766,25 +1766,25 @@ class TraceBinarySerializationTest {
 
     @Test
     fun methodCallTracePointStaticReceiver() {
-        // Static method call (`obj = null`) — exercises the `null` branch of TRValue
+        // Static method call (`obj = null`) — exercises the `null` branch of TraceValue
         // serialization for the method-receiver slot.
         val context = TraceContext()
         val classId = context.createAndRegisterClassDescriptor("com.example.Foo").id
         val methodId = context.methodPool.register(
             MethodDescriptor(context, classId, MethodSignature("staticFoo", Types.MethodType(Types.VOID_TYPE)))
         )
-        val original = TRMethodCallTracePoint(
+        val original = TraceMethodCallTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = 0,
             methodId = methodId,
-            obj = TRNull,
-            parameters = listOf(TRScalar(42)),
+            obj = TraceNull,
+            parameters = listOf(TraceScalar(42)),
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRMethodCallTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceMethodCallTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.methodId, b.methodId)
@@ -1800,23 +1800,23 @@ class TraceBinarySerializationTest {
         val methodId = context.methodPool.register(
             MethodDescriptor(context, classId, MethodSignature("foo", Types.MethodType(Types.VOID_TYPE)))
         )
-        fun makeTracePoint() = TRMethodCallTracePoint(
+        fun makeTracePoint() = TraceMethodCallTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = 0,
             methodId = methodId,
-            obj = TRNull,
+            obj = TraceNull,
             parameters = emptyList(),
         )
-        val assertFooterEquality: (TRMethodCallTracePoint, TRMethodCallTracePoint) -> Unit = { a, b ->
+        val assertFooterEquality: (TraceMethodCallTracePoint, TraceMethodCallTracePoint) -> Unit = { a, b ->
             assertEquals(a.result, b.result)
             assertEquals(a.exceptionClassName, b.exceptionClassName)
         }
 
         fun roundTripFooter(
-            result: TRValue,
+            result: TraceValue,
             exceptionClassName: String?,
-            target: TRMethodCallTracePoint = makeTracePoint(),
+            target: TraceMethodCallTracePoint = makeTracePoint(),
         ) {
             val source = makeTracePoint().also {
                 it.result = result
@@ -1832,23 +1832,23 @@ class TraceBinarySerializationTest {
 
         // Populated result + exception class name.
         roundTripFooter(
-            result = TRScalar(42),
+            result = TraceScalar(42),
             exceptionClassName = "java.lang.IllegalStateException",
         )
 
         // Void result — the common case for void-return methods.
-        roundTripFooter(result = TRVoid, exceptionClassName = null)
+        roundTripFooter(result = TraceVoid, exceptionClassName = null)
 
         // Sentinel results that mark unfinished / untracked method tracing.
-        roundTripFooter(result = TRUnfinishedMethodResult, exceptionClassName = null)
-        roundTripFooter(result = TRUntrackedMethodResult, exceptionClassName = null)
+        roundTripFooter(result = TraceUnfinishedMethodResult, exceptionClassName = null)
+        roundTripFooter(result = TraceUntrackedMethodResult, exceptionClassName = null)
 
-        // TRNull result, null exception class name — the reader must clear a pre-populated target.
+        // TraceNull result, null exception class name — the reader must clear a pre-populated target.
         val dirtyTarget = makeTracePoint().also {
-            it.result = TRScalar(999)
+            it.result = TraceScalar(999)
             it.exceptionClassName = "leftover"
         }
-        roundTripFooter(result = TRNull, exceptionClassName = null, target = dirtyTarget)
+        roundTripFooter(result = TraceNull, exceptionClassName = null, target = dirtyTarget)
     }
 
     // ======== Loop Trace Points ========
@@ -1860,7 +1860,7 @@ class TraceBinarySerializationTest {
         val codeLocationId = 17
         val eventId = 100
         val loopId = 5
-        val original = TRLoopTracePoint(
+        val original = TraceLoopTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
@@ -1869,8 +1869,8 @@ class TraceBinarySerializationTest {
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRLoopTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceLoopTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.loopId, b.loopId)
@@ -1881,10 +1881,10 @@ class TraceBinarySerializationTest {
     fun loopTracePointFooter() {
         val context = TraceContext()
         for (iterations in listOf(0, 1, 100, Int.MAX_VALUE)) {
-            val source = TRLoopTracePoint(context, threadId = 0, codeLocationId = 0, loopId = 0).also {
+            val source = TraceLoopTracePoint(context, threadId = 0, codeLocationId = 0, loopId = 0).also {
                 it.iterations = iterations
             }
-            val target = TRLoopTracePoint(context, threadId = 0, codeLocationId = 0, loopId = 0)
+            val target = TraceLoopTracePoint(context, threadId = 0, codeLocationId = 0, loopId = 0)
             assertRoundTrip(
                 value = source,
                 writer = { writeLoopTracePointFooter(it) },
@@ -1905,7 +1905,7 @@ class TraceBinarySerializationTest {
         val eventId = 101
         val loopId = 7
         val loopIteration = 42
-        val original = TRLoopIterationTracePoint(
+        val original = TraceLoopIterationTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
@@ -1915,8 +1915,8 @@ class TraceBinarySerializationTest {
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRLoopIterationTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceLoopIterationTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.loopId, b.loopId)
@@ -1933,20 +1933,20 @@ class TraceBinarySerializationTest {
         val codeLocationId = 9
         val eventId = 500
         val classId = context.createAndRegisterClassDescriptor("java.lang.RuntimeException").id
-        val exception = TRObject(
+        val exception = TraceObject(
             classDescriptor = context.classPool[classId],
             identity = 0xDEADL,
             rendered = null,
         )
-        val original = TRThrowTracePoint(
+        val original = TraceThrowTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             exception = exception,
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRThrowTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceThrowTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.exception, b.exception)
@@ -1960,20 +1960,20 @@ class TraceBinarySerializationTest {
         val codeLocationId = 9
         val eventId = 501
         val classId = context.createAndRegisterClassDescriptor("java.io.IOException").id
-        val exception = TRObject(
+        val exception = TraceObject(
             classDescriptor = context.classPool[classId],
             identity = 0xFACEL,
             rendered = null,
         )
-        val original = TRCatchTracePoint(
+        val original = TraceCatchTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             exception = exception,
             eventId = eventId,
         )
         assertRoundTrip(
             value = original,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRCatchTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceCatchTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.exception, b.exception)
@@ -1987,7 +1987,7 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         val threadId = 1
         val codeLocationId = 9
-        val assertFieldsEquality: (TRSnapshotLineBreakpointTracePoint, TRSnapshotLineBreakpointTracePoint) -> Unit = { a, b ->
+        val assertFieldsEquality: (TraceSnapshotLineBreakpointTracePoint, TraceSnapshotLineBreakpointTracePoint) -> Unit = { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.breakpointUuid, b.breakpointUuid)
             assertEquals(a.stackTraceCodeLocationIds, b.stackTraceCodeLocationIds)
@@ -1999,7 +1999,7 @@ class TraceBinarySerializationTest {
 
         // Populated case.
         val eventIdPopulated = 600
-        val populated = TRSnapshotLineBreakpointTracePoint(
+        val populated = TraceSnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = codeLocationId,
             threadId = threadId,
@@ -2007,27 +2007,27 @@ class TraceBinarySerializationTest {
             stackTraceCodeLocationIds = listOf(1, 2, 3),
             currentTimeMillis = 1_700_000_000_000L,
             locals = listOf(
-                TRScalar(1),
-                TRNull,
-                TRString("hi"),
+                TraceScalar(1),
+                TraceNull,
+                TraceString("hi"),
             ),
             watches = listOf(
-                TRString("watch"),
-                TRScalar(42),
+                TraceString("watch"),
+                TraceScalar(42),
             ),
             traceId = "trace-abc-123",
             eventId = eventIdPopulated,
         )
         assertRoundTrip(
             value = populated,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRSnapshotLineBreakpointTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceSnapshotLineBreakpointTracePoint },
             assertEquality = assertFieldsEquality,
         )
 
         // Null-traceId / empty-stack / empty-locals case.
         val eventIdEmpty = 601
-        val empty = TRSnapshotLineBreakpointTracePoint(
+        val empty = TraceSnapshotLineBreakpointTracePoint(
             context = context, codeLocationId = codeLocationId, threadId = threadId,
             breakpointUuid = UUID(0L, 0L),
             stackTraceCodeLocationIds = emptyList(),
@@ -2039,8 +2039,8 @@ class TraceBinarySerializationTest {
         )
         assertRoundTrip(
             value = empty,
-            writer = { writeTRTracePoint(it) },
-            reader = { readTRTracePoint(context) as TRSnapshotLineBreakpointTracePoint },
+            writer = { writeTraceTracePoint(it) },
+            reader = { readTraceTracePoint(context) as TraceSnapshotLineBreakpointTracePoint },
             assertEquality = assertFieldsEquality,
         )
     }
@@ -2079,12 +2079,12 @@ private inline fun encodeBytes(block: DataOutput.() -> Unit): ByteArray {
 }
 
 /**
- * Asserts equality of the four common-header fields that `writeTRTracePoint` / `readTRTracePoint`
- * emit for every tracepoint kind: [codeLocationId][TRTracePoint.codeLocationId],
- * [threadId][TRTracePoint.threadId], [eventId][TRTracePoint.eventId], and
- * [diffStatus][TRTracePoint.diffStatus].
+ * Asserts equality of the four common-header fields that `writeTraceTracePoint` / `readTraceTracePoint`
+ * emit for every tracepoint kind: [codeLocationId][TracePoint.codeLocationId],
+ * [threadId][TracePoint.threadId], [eventId][TracePoint.eventId], and
+ * [diffStatus][TracePoint.diffStatus].
  */
-private fun assertCommonHeaderEqual(a: TRTracePoint, b: TRTracePoint) {
+private fun assertCommonHeaderEqual(a: TracePoint, b: TracePoint) {
     assertEquals(a.codeLocationId, b.codeLocationId)
     assertEquals(a.threadId, b.threadId)
     assertEquals(a.eventId, b.eventId)

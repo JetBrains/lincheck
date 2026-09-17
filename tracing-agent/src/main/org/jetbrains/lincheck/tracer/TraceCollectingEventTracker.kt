@@ -17,8 +17,8 @@ import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.trace.*
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint.Companion.SUPER_CONSTRUCTOR_CALL_FLAG
+import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
+import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint.Companion.SUPER_CONSTRUCTOR_CALL_FLAG
 import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.*
@@ -32,41 +32,41 @@ private class ThreadData(
     var pointsCollected = 0
 
     data class StackFrame(
-        val call: TRMethodCallTracePoint,
+        val call: TraceMethodCallTracePoint,
         val shadow: ShadowStackFrame,
         val loopStack: MutableList<LoopStackElement>, // stack of currently running loops
         val isInline: Boolean,
     )
 
     data class LoopStackElement(
-        val header: TRLoopTracePoint,
-        val iterations: MutableList<TRLoopIterationTracePoint>,
+        val header: TraceLoopTracePoint,
+        val iterations: MutableList<TraceLoopIterationTracePoint>,
     )
 
-    var rootCall: TRMethodCallTracePoint? = null
+    var rootCall: TraceMethodCallTracePoint? = null
         private set
 
     private val stack: MutableList<StackFrame> = arrayListOf()
     private val analysisSectionStack: MutableList<AnalysisSectionType> = arrayListOf()
 
-    fun setRootCall(rootCall: TRMethodCallTracePoint) {
+    fun setRootCall(rootCall: TraceMethodCallTracePoint) {
         check(this.rootCall == null) { "Root call tracepoint can be set only once" }
         this.rootCall = rootCall
     }
 
-    fun currentMethodCallTracePoint(): TRMethodCallTracePoint? =
+    fun currentMethodCallTracePoint(): TraceMethodCallTracePoint? =
         stack.lastOrNull()?.call
 
     fun isCurrentMethodCallInline(): Boolean =
         stack.last().isInline
 
-    fun currentLoopTracePoint(): TRLoopTracePoint? =
+    fun currentLoopTracePoint(): TraceLoopTracePoint? =
         stack.lastOrNull()?.loopStack?.lastOrNull()?.header
 
-    fun currentLoopIterationTracePoint(): TRLoopIterationTracePoint? =
+    fun currentLoopIterationTracePoint(): TraceLoopIterationTracePoint? =
         stack.lastOrNull()?.loopStack?.lastOrNull()?.iterations?.lastOrNull()
 
-    fun currentTopTracePoint(): TRContainerTracePoint? {
+    fun currentTopTracePoint(): TraceContainerTracePoint? {
         val stackElement = stack.lastOrNull() ?: return null
         if (stackElement.loopStack.isEmpty()) {
             return stackElement.call
@@ -78,7 +78,7 @@ private class ThreadData(
         return loopElement.iterations.last()
     }
 
-    fun pushStackFrame(tracePoint: TRMethodCallTracePoint, instance: Any?, isInline: Boolean) {
+    fun pushStackFrame(tracePoint: TraceMethodCallTracePoint, instance: Any?, isInline: Boolean) {
         val stackFrame = ShadowStackFrame(instance)
         stack.add(StackFrame(
             call = tracePoint,
@@ -88,20 +88,20 @@ private class ThreadData(
         ))
     }
 
-    fun popStackFrame(): TRMethodCallTracePoint {
+    fun popStackFrame(): TraceMethodCallTracePoint {
         val frame = stack.removeLast()
         return frame.call
     }
 
     fun getStack(): List<StackFrame> = stack
 
-    fun enterLoop(loopTracePoint: TRLoopTracePoint) {
+    fun enterLoop(loopTracePoint: TraceLoopTracePoint) {
         val frame = stack.last()
         val loop = LoopStackElement(loopTracePoint, mutableListOf())
         frame.loopStack.add(loop)
     }
 
-    fun addLoopIteration(loopIterationTracePoint: TRLoopIterationTracePoint) {
+    fun addLoopIteration(loopIterationTracePoint: TraceLoopIterationTracePoint) {
         val frame = stack.last()
         val loop = frame.loopStack.last()
         loop.iterations.add(loopIterationTracePoint)
@@ -274,14 +274,14 @@ class TraceCollectingEventTracker(
             strategy.registerCurrentThread(threadData.threadId)
 
             if (layout.isTree()) {
-                val tracePoint = TRMethodCallTracePoint(
+                val tracePoint = TraceMethodCallTracePoint(
                     context = context,
                     threadId = threadData.threadId,
                     codeLocationId = -1,
                     methodId = context.createAndRegisterMethodDescriptor(
                         "Thread", "run", Types.MethodType(Types.VOID_TYPE)
                     ).id,
-                    obj = TRValue(context, thread),
+                    obj = TraceValue(context, thread),
                     parameters = emptyList()
                 )
                 rootTracePointCreated(threadData, tracePoint)
@@ -293,7 +293,7 @@ class TraceCollectingEventTracker(
 
     override fun afterThreadRunReturn(threadDescriptor: ThreadDescriptor) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        completeInvokedMethodCalls(Thread.currentThread(), threadData) { _, tp -> tp.result = TRUntrackedMethodResult }
+        completeInvokedMethodCalls(Thread.currentThread(), threadData) { _, tp -> tp.result = TraceUntrackedMethodResult }
         threadDescriptor.disableAnalysis()
     }
 
@@ -400,13 +400,13 @@ class TraceCollectingEventTracker(
         value: Any?
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        val tracePoint = TRReadFieldTracePoint(
+        val tracePoint = TraceReadFieldTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             fieldId = fieldId,
-            obj = TRValue(context, obj),
-            value = TRValue(context, value)
+            obj = TraceValue(context, obj),
+            value = TraceValue(context, value)
         )
         tracePointCreated(threadData, tracePoint)
     }
@@ -420,13 +420,13 @@ class TraceCollectingEventTracker(
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        val tracePoint = TRReadArrayTracePoint(
+        val tracePoint = TraceReadArrayTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            array = TRValue(context, array),
+            array = TraceValue(context, array),
             index = index,
-            value = TRValue(context, value)
+            value = TraceValue(context, value)
         )
         tracePointCreated(threadData, tracePoint)
     }
@@ -445,13 +445,13 @@ class TraceCollectingEventTracker(
         }
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        val tracePoint = TRWriteFieldTracePoint(
+        val tracePoint = TraceWriteFieldTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             fieldId = fieldId,
-            obj = TRValue(context, obj),
-            value = TRValue(context, value)
+            obj = TraceValue(context, obj),
+            value = TraceValue(context, value)
         )
         tracePointCreated(threadData, tracePoint)
     }
@@ -465,13 +465,13 @@ class TraceCollectingEventTracker(
     ): Unit = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        val tracePoint = TRWriteArrayTracePoint(
+        val tracePoint = TraceWriteArrayTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            array = TRValue(context, array),
+            array = TraceValue(context, array),
             index = index,
-            value = TRValue(context, value)
+            value = TraceValue(context, value)
         )
         tracePointCreated(threadData, tracePoint)
     }
@@ -485,12 +485,12 @@ class TraceCollectingEventTracker(
         value: Any?
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        val tracePoint = TRReadLocalVariableTracePoint(
+        val tracePoint = TraceReadLocalVariableTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             localVariableId = variableId,
-            value = TRValue(context, value)
+            value = TraceValue(context, value)
         )
         tracePointCreated(threadData, tracePoint)
     }
@@ -502,12 +502,12 @@ class TraceCollectingEventTracker(
         value: Any?
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        val tracePoint = TRWriteLocalVariableTracePoint(
+        val tracePoint = TraceWriteLocalVariableTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             localVariableId = variableId,
-            value = TRValue(context, value)
+            value = TraceValue(context, value)
         )
         tracePointCreated(threadData, tracePoint)
     }
@@ -531,13 +531,13 @@ class TraceCollectingEventTracker(
             return
         }
 
-        val tracePoint = TRMethodCallTracePoint(
+        val tracePoint = TraceMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
-            obj = TRValue(context, receiver),
-            parameters = params.map { TRValue(context, it) },
+            obj = TraceValue(context, receiver),
+            parameters = params.map { TraceValue(context, it) },
             flags = (if (receiver === Injections.UNINITIALIZED_THIS) SUPER_CONSTRUCTOR_CALL_FLAG else 0).toShort(),
         )
         tracePointCreated(threadData, tracePoint)
@@ -591,7 +591,7 @@ class TraceCollectingEventTracker(
             }
         }
 
-        tracePoint.result = TRValue(context, result)
+        tracePoint.result = TraceValue(context, result)
         strategy.completeContainerTracePoint(thread, tracePoint)
 
         threadData.leaveAnalysisSection(methodSection)
@@ -656,12 +656,12 @@ class TraceCollectingEventTracker(
     ): Unit = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
 
-        val tracePoint = TRMethodCallTracePoint(
+        val tracePoint = TraceMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
             methodId = methodId,
-            obj = TRValue(context, owner),
+            obj = TraceValue(context, owner),
             parameters = emptyList(),
         )
         tracePointCreated(threadData, tracePoint)
@@ -683,7 +683,7 @@ class TraceCollectingEventTracker(
                 "but on stack ${tracePoint.methodId} ${tracePoint.className}.${tracePoint.methodName}"
             }
         }
-        tracePoint.result = TRVoid
+        tracePoint.result = TraceVoid
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint)
     }
 
@@ -787,7 +787,7 @@ class TraceCollectingEventTracker(
             return
         }
         
-        val tracePoint = TRSnapshotLineBreakpointTracePoint(
+        val tracePoint = TraceSnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = codeLocation,
             threadId = threadData.threadId,
@@ -811,7 +811,7 @@ class TraceCollectingEventTracker(
 
         // create a new loop if required
         if (loopId != threadData.currentLoopTracePoint()?.loopId) {
-            val tracePoint = TRLoopTracePoint(
+            val tracePoint = TraceLoopTracePoint(
                 context = context,
                 threadId = threadData.threadId,
                 codeLocationId = codeLocation,
@@ -828,7 +828,7 @@ class TraceCollectingEventTracker(
             strategy.completeContainerTracePoint(Thread.currentThread(), previousIteration)
         }
 
-        val tracePoint = TRLoopIterationTracePoint(
+        val tracePoint = TraceLoopIterationTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
@@ -878,11 +878,11 @@ class TraceCollectingEventTracker(
         exception: Throwable
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        val tracePoint = TRThrowTracePoint(
+        val tracePoint = TraceThrowTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            exception = TRValue(context, exception)
+            exception = TraceValue(context, exception)
         )
         tracePointCreated(threadData, tracePoint)
     }
@@ -893,11 +893,11 @@ class TraceCollectingEventTracker(
         exception: Throwable
     ) = threadDescriptor.runInsideInjectedCode {
         val threadData = threadDescriptor.eventTrackerData as? ThreadData? ?: return
-        val tracePoint = TRCatchTracePoint(
+        val tracePoint = TraceCatchTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocation,
-            exception = TRValue(context, exception)
+            exception = TraceValue(context, exception)
         )
         tracePointCreated(threadData, tracePoint)
     }
@@ -954,14 +954,14 @@ class TraceCollectingEventTracker(
         strategy.registerCurrentThread(threadData.threadId)
 
         if (layout.isTree()) {
-            val tracePoint = TRMethodCallTracePoint(
+            val tracePoint = TraceMethodCallTracePoint(
                 context = context,
                 threadId = threadData.threadId,
                 codeLocationId = codeLocationId,
                 methodId = context.createAndRegisterMethodDescriptor(
                     className, methodName, Types.MethodType(Types.VOID_TYPE)
                 ).id,
-                obj = TRNull,
+                obj = TraceNull,
                 parameters = emptyList()
             )
             rootTracePointCreated(threadData, tracePoint)
@@ -974,15 +974,15 @@ class TraceCollectingEventTracker(
     private fun pushMethodCall(
         thread: Thread,
         threadData: ThreadData,
-        obj: TRValue,
+        obj: TraceValue,
         className: String,
         methodName: String,
         methodType: Types.MethodType,
         codeLocationId: Int,
-        params: List<TRValue> = emptyList()
+        params: List<TraceValue> = emptyList()
     ) {
         val parentTracePoint = threadData.currentMethodCallTracePoint()
-        val methodCall = TRMethodCallTracePoint(
+        val methodCall = TraceMethodCallTracePoint(
             context = context,
             threadId = threadData.threadId,
             codeLocationId = codeLocationId,
@@ -1013,7 +1013,7 @@ class TraceCollectingEventTracker(
             ) continue
 
             pushMethodCall(thread, threadData,
-                obj = TRNull,
+                obj = TraceNull,
                 className = frame.className,
                 methodName = frame.methodName,
                 methodType = UNKNOWN_METHOD_TYPE,
@@ -1031,7 +1031,7 @@ class TraceCollectingEventTracker(
         thread: Thread,
         threadData: ThreadData,
         loopsCompletionExpected: Boolean = true,
-        onMethodCallCompletion: (stackLevel: Int, tracePoint: TRMethodCallTracePoint) -> Unit
+        onMethodCallCompletion: (stackLevel: Int, tracePoint: TraceMethodCallTracePoint) -> Unit
     ) {
         // End all method calls, for which we did not track the method return
         while (threadData.getStack().isNotEmpty()) {
@@ -1061,7 +1061,7 @@ class TraceCollectingEventTracker(
             val frame = stack.last()
             // we need to set the result to the thrown exception manually,
             // but only if it hasn't been set yet (i.e. the call is still in its initial "unfinished" state)
-            if (frame.call.result is TRUnfinishedMethodResult) {
+            if (frame.call.result is TraceUnfinishedMethodResult) {
                 frame.call.setExceptionResult(t)
             }
             // also, we have to remove them from the stack before reaching the first method
@@ -1082,7 +1082,7 @@ class TraceCollectingEventTracker(
         // Early exit because we must skip `strategy.completeThread(thread)` for this thread too.
         if (threadData.getStack().isEmpty()) return
 
-        completeInvokedMethodCalls(thread, threadData) { _, tp -> tp.result = TRUnfinishedMethodResult }
+        completeInvokedMethodCalls(thread, threadData) { _, tp -> tp.result = TraceUnfinishedMethodResult }
     }
 
     private fun completeCurrentThread(thread: Thread, threadDescriptor: ThreadDescriptor) {
@@ -1103,7 +1103,7 @@ class TraceCollectingEventTracker(
             if (stackLevel != 0) {
                 overflowStack.add("${tp.className}.${tp.methodName}")
             }
-            tp.result = if (stackLevel == 0) TRVoid else TRUnfinishedMethodResult
+            tp.result = if (stackLevel == 0) TraceVoid else TraceUnfinishedMethodResult
         }
 
         // Report error if stack was too deep
@@ -1146,13 +1146,13 @@ class TraceCollectingEventTracker(
         collectedPoints = totalPointsCollected
     }
 
-    private fun rootTracePointCreated(threadData: ThreadData,  created: TRContainerTracePoint) {
+    private fun rootTracePointCreated(threadData: ThreadData,  created: TraceContainerTracePoint) {
         threadData.pointsCollected++
         strategy.tracePointCreated(null, created)
         strategy.openContainerTracePoint(created)
     }
 
-    private fun tracePointCreated(threadData: ThreadData, created: TRTracePoint, parent: TRContainerTracePoint? = null) {
+    private fun tracePointCreated(threadData: ThreadData, created: TracePoint, parent: TraceContainerTracePoint? = null) {
         threadData.pointsCollected++
         strategy.tracePointCreated(parent ?: threadData.currentTopTracePoint(), created)
     }

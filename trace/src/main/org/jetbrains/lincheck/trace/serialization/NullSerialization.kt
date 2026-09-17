@@ -23,13 +23,13 @@ class NullTraceCollecting(private val context: TraceContext): TraceCollectingStr
     override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
-        parent: TRContainerTracePoint?,
-        created: TRTracePoint
+        parent: TraceContainerTracePoint?,
+        created: TracePoint
     ) {}
 
-    override fun openContainerTracePoint(container: TRContainerTracePoint) {}
+    override fun openContainerTracePoint(container: TraceContainerTracePoint) {}
 
-    override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {}
+    override fun completeContainerTracePoint(thread: Thread, container: TraceContainerTracePoint) {}
 
     /**
      * Do nothing.

@@ -80,7 +80,7 @@ enum class DiffStatus {
         }
 }
 
-sealed class TRTracePoint(
+sealed class TracePoint(
     internal val context: TraceContext,
     val threadId: Int,
     val codeLocationId: Int,
@@ -98,10 +98,10 @@ sealed class TRTracePoint(
             field = value
         }
 
-    internal fun copyDiffStatus(other: TRTracePoint) {
+    internal fun copyDiffStatus(other: TracePoint) {
         check(diffStatus == null) { "Diff status can be changed only once" }
         if (other.diffStatus == null) return
-        if (this is TRContainerTracePoint) {
+        if (this is TraceContainerTracePoint) {
             diffStatus = other.diffStatus
         } else {
             diffStatus = other.diffStatus?.toLeaf()
@@ -116,23 +116,23 @@ sealed class TRTracePoint(
      * Renders this trace point as text, with [parent] — this point's parent in the trace tree —
      * providing the context for parent-dependent rendering decisions.
      */
-    fun toText(verbose: Boolean, parent: TRTracePoint? = null): String {
+    fun toText(verbose: Boolean, parent: TracePoint? = null): String {
         val sb = StringBuilder()
         toText(DefaultTRTextAppendable(sb, verbose), parent)
         return sb.toString()
     }
 
-    open fun toText(appendable: TRAppendable, parent: TRTracePoint?): Unit = toText(appendable)
+    open fun toText(appendable: TraceAppendable, parent: TracePoint?): Unit = toText(appendable)
 
-    abstract fun toText(appendable: TRAppendable)
+    abstract fun toText(appendable: TraceAppendable)
 }
 
-sealed class TRContainerTracePoint(
+sealed class TraceContainerTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     eventId: Int
-) : TRTracePoint(context, threadId, codeLocationId, eventId) {
+) : TracePoint(context, threadId, codeLocationId, eventId) {
     internal var childrenDiffStatuses: EnumSet<DiffStatus>? = null
 
     val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: SUBTREE_STATUS_UNCHANGED
@@ -144,17 +144,17 @@ sealed class TRContainerTracePoint(
     }
 }
 
-class TRMethodCallTracePoint(
+class TraceMethodCallTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val methodId: Int,
-    val obj: TRValue,
-    val parameters: List<TRValue>,
+    val obj: TraceValue,
+    val parameters: List<TraceValue>,
     val flags: Short = 0,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(context, threadId, codeLocationId, eventId) {
-    var result: TRValue = TRUnfinishedMethodResult
+) : TraceContainerTracePoint(context, threadId, codeLocationId, eventId) {
+    var result: TraceValue = TraceUnfinishedMethodResult
     var exceptionClassName: String? = null
 
     // TODO Make parametrized
@@ -168,7 +168,7 @@ class TRMethodCallTracePoint(
     val argumentTypes: List<Types.Type> get() = methodDescriptor.argumentTypes
     val returnType: Types.Type get() = methodDescriptor.returnType
 
-    fun isStatic(): Boolean = obj is TRNull
+    fun isStatic(): Boolean = obj is TraceNull
 
     fun isConstructor(): Boolean = methodName == "<init>"
 
@@ -178,7 +178,7 @@ class TRMethodCallTracePoint(
      * [parentCall] is this call's parent in the trace tree.
      */
     fun isCalledFromDefiningClass(
-        parentCall: TRMethodCallTracePoint? = null,
+        parentCall: TraceMethodCallTracePoint? = null,
     ): Boolean {
         val parent = parentCall ?: return false
         return className.let {
@@ -195,13 +195,13 @@ class TRMethodCallTracePoint(
      * @return `true` if tracing of the thread was ended before this method returned its value, `false` otherwise.
      */
     fun isMethodUnfinished(): Boolean =
-        result is TRUnfinishedMethodResult
+        result is TraceUnfinishedMethodResult
 
     /**
      * Returns `true` if method completion was not tracked and its return value is unknown, `false` otherwise.
      */
     fun isMethodResultUntracked(): Boolean =
-        result is TRUntrackedMethodResult
+        result is TraceUntrackedMethodResult
 
     /**
      * @return `true` if tracing of the thread was started after this method call and there some missing tracepoints, `false` otherwise.
@@ -216,12 +216,12 @@ class TRMethodCallTracePoint(
         inp.readMethodCallTracePointFooter(context, this)
     }
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 
-    override fun toText(appendable: TRAppendable, parent: TRTracePoint?) {
-        appendable.append(tracePoint = this, parentCall = parent as? TRMethodCallTracePoint)
+    override fun toText(appendable: TraceAppendable, parent: TracePoint?) {
+        appendable.append(tracePoint = this, parentCall = parent as? TraceMethodCallTracePoint)
     }
 
     companion object {
@@ -232,13 +232,13 @@ class TRMethodCallTracePoint(
     }
 }
 
-class TRLoopTracePoint(
+class TraceLoopTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val loopId: Int,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(context, threadId, codeLocationId, eventId) {
+) : TraceContainerTracePoint(context, threadId, codeLocationId, eventId) {
 
     internal constructor(
         context: TraceContext,
@@ -265,36 +265,36 @@ class TRLoopTracePoint(
         inp.readLoopTracePointFooter(this)
     }
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 }
 
-class TRLoopIterationTracePoint(
+class TraceLoopIterationTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val loopId: Int,
     val loopIteration: Int,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRContainerTracePoint(context, threadId, codeLocationId, eventId) {
+) : TraceContainerTracePoint(context, threadId, codeLocationId, eventId) {
 
     override fun loadFooter(inp: DataInput) {}
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 }
 
-sealed class TRFieldTracePoint(
+sealed class TraceFieldTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val fieldId: Int,
-    val obj: TRValue,
-    val value: TRValue,
+    val obj: TraceValue,
+    val value: TraceValue,
     eventId: Int
-) : TRTracePoint(context, threadId, codeLocationId, eventId) {
+) : TracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
@@ -308,45 +308,45 @@ sealed class TRFieldTracePoint(
     val isStatic: Boolean get() = fieldDescriptor.isStatic
     val isFinal: Boolean get() = fieldDescriptor.isFinal
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 }
 
-class TRReadFieldTracePoint(
+class TraceReadFieldTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
-    obj: TRValue,
-    value: TRValue,
+    obj: TraceValue,
+    value: TraceValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
+) : TraceFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 }
 
-class TRWriteFieldTracePoint(
+class TraceWriteFieldTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     fieldId: Int,
-    obj: TRValue,
-    value: TRValue,
+    obj: TraceValue,
+    value: TraceValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
+) : TraceFieldTracePoint(context, threadId, codeLocationId,  fieldId, obj, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 }
 
-sealed class TRLocalVariableTracePoint(
+sealed class TraceLocalVariableTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     val localVariableId: Int,
-    val value: TRValue,
+    val value: TraceValue,
     eventId: Int
-) : TRTracePoint(context, threadId, codeLocationId, eventId) {
+) : TracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
@@ -354,47 +354,47 @@ sealed class TRLocalVariableTracePoint(
     val variableDescriptor: VariableDescriptor get() = context.variablePool[localVariableId]
     val name: String get() = variableDescriptor.name
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 }
 
-class TRReadLocalVariableTracePoint(
+class TraceReadLocalVariableTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
-    value: TRValue,
+    value: TraceValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
+) : TraceLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 }
 
-class TRWriteLocalVariableTracePoint(
+class TraceWriteLocalVariableTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
     localVariableId: Int,
-    value: TRValue,
+    value: TraceValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
+) : TraceLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 }
 
-class TRSnapshotLineBreakpointTracePoint(
+class TraceSnapshotLineBreakpointTracePoint(
     context: TraceContext,
     codeLocationId: Int,
     threadId: Int,
     val breakpointUuid: UUID,
     val stackTraceCodeLocationIds: List<Int>,
     val currentTimeMillis: Long,
-    val locals: List<TRValue>,
-    val watches: List<TRValue> = emptyList(),
+    val locals: List<TraceValue>,
+    val watches: List<TraceValue> = emptyList(),
     val traceId: String?,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-): TRTracePoint(context, threadId, codeLocationId, eventId) {
+): TracePoint(context, threadId, codeLocationId, eventId) {
 
     val threadName: String
         get() = context.getThreadName(threadId)
@@ -402,85 +402,85 @@ class TRSnapshotLineBreakpointTracePoint(
     val stackTrace: List<StackTraceElement>
         get() = stackTraceCodeLocationIds.map { context.stackTrace(it) }
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 }
 
-sealed class TRArrayTracePoint(
+sealed class TraceArrayTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    val array: TRValue,
+    val array: TraceValue,
     val index: Int,
-    val value: TRValue,
+    val value: TraceValue,
     eventId: Int
-) : TRTracePoint(context, threadId, codeLocationId, eventId) {
+) : TracePoint(context, threadId, codeLocationId, eventId) {
 
     internal abstract fun accessSymbol(): String
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 }
 
-class TRReadArrayTracePoint(
+class TraceReadArrayTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    array: TRValue,
+    array: TraceValue,
     index: Int,
-    value: TRValue,
+    value: TraceValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
+) : TraceArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 
     override fun accessSymbol(): String = READ_ACCESS_SYMBOL
 }
 
-class TRWriteArrayTracePoint(
+class TraceWriteArrayTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    array: TRValue,
+    array: TraceValue,
     index: Int,
-    value: TRValue,
+    value: TraceValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
+) : TraceArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId) {
 
     override fun accessSymbol(): String = WRITE_ACCESS_SYMBOL
 }
 
-sealed class TRExceptionProcessingTracePoint(
+sealed class TraceExceptionProcessingTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    val exception: TRValue,
+    val exception: TraceValue,
     eventId: Int
-) : TRTracePoint(context, threadId, codeLocationId, eventId)
+) : TracePoint(context, threadId, codeLocationId, eventId)
 
-class TRThrowTracePoint(
+class TraceThrowTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    exception: TRValue,
+    exception: TraceValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRExceptionProcessingTracePoint(context, threadId, codeLocationId, exception, eventId) {
+) : TraceExceptionProcessingTracePoint(context, threadId, codeLocationId, exception, eventId) {
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 
 }
 
-class TRCatchTracePoint(
+class TraceCatchTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    exception: TRValue,
+    exception: TraceValue,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TRExceptionProcessingTracePoint(context, threadId, codeLocationId, exception, eventId) {
+) : TraceExceptionProcessingTracePoint(context, threadId, codeLocationId, exception, eventId) {
 
-    override fun toText(appendable: TRAppendable) {
+    override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 

@@ -10,7 +10,7 @@
 
 import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
-import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.tree.compressedView
 import org.jetbrains.lincheck.trace.tree.readTraceTrees
 import org.jetbrains.lincheck.util.tree.Tree
@@ -188,7 +188,7 @@ abstract class AbstractTraceIntegrationTest {
 
             if (traceShouldContain.isEmpty()) return
 
-            fun traceFind(node: Tree.Node<TRTracePoint>, query: String): Boolean {
+            fun traceFind(node: Tree.Node<TracePoint>, query: String): Boolean {
                 if (node.data.toText(true).contains(query)) return true
                 val found = node.children.any { child -> traceFind(child, query) }
                 // Keep only the current path materialized to bound memory on large traces.

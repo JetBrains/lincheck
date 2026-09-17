@@ -18,7 +18,7 @@ import java.math.BigDecimal
 import java.math.BigInteger
 
 /**
- * `TRValue.typeName(spellings)`.
+ * `TraceValue.typeName(spellings)`.
  *
  * A descriptor-backed value reads the same whichever table is passed — the producer already named
  * the type. A descriptor-less wire kind is spelled by the table, and a table that declines a kind
@@ -52,40 +52,40 @@ class TraceRecorderValueTypeNamesTest {
     }
 
     /** The kinds [ForeignSpellings] declines, so `typeName` must report no type for them. */
-    private val declinedByForeignSpellings: List<TRValue> get() = listOf(
-        TRScalar(1.toByte()),
-        TRScalar(2.toShort()),
-        TRScalar('c'),
-        TRArbitraryDecimal(BigDecimal("3.14")),
-        TRTypeReference(String::class.java),
-        TRKotlinTypeReference(String::class),
+    private val declinedByForeignSpellings: List<TraceValue> get() = listOf(
+        TraceScalar(1.toByte()),
+        TraceScalar(2.toShort()),
+        TraceScalar('c'),
+        TraceArbitraryDecimal(BigDecimal("3.14")),
+        TraceTypeReference(String::class.java),
+        TraceKotlinTypeReference(String::class),
     )
 
     // ======== JVM spellings of the descriptor-less wire kinds ========
 
     @Test
     fun `JVM spells a string and the arbitrary-precision numbers as their boxed classes`() {
-        assertEquals("java.lang.String", TRString("hello").typeName(JvmTypeSpellings))
-        assertEquals("java.math.BigInteger", TRArbitraryInteger(BigInteger("42")).typeName(JvmTypeSpellings))
-        assertEquals("java.math.BigDecimal", TRArbitraryDecimal(BigDecimal("3.14")).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.String", TraceString("hello").typeName(JvmTypeSpellings))
+        assertEquals("java.math.BigInteger", TraceArbitraryInteger(BigInteger("42")).typeName(JvmTypeSpellings))
+        assertEquals("java.math.BigDecimal", TraceArbitraryDecimal(BigDecimal("3.14")).typeName(JvmTypeSpellings))
     }
 
     @Test
     fun `JVM spells each of the eight scalar encodings as its boxed class`() {
-        assertEquals("java.lang.Boolean", TRScalar(true).typeName(JvmTypeSpellings))
-        assertEquals("java.lang.Byte", TRScalar(1.toByte()).typeName(JvmTypeSpellings))
-        assertEquals("java.lang.Short", TRScalar(2.toShort()).typeName(JvmTypeSpellings))
-        assertEquals("java.lang.Character", TRScalar('c').typeName(JvmTypeSpellings))
-        assertEquals("java.lang.Integer", TRScalar(3).typeName(JvmTypeSpellings))
-        assertEquals("java.lang.Long", TRScalar(4L).typeName(JvmTypeSpellings))
-        assertEquals("java.lang.Float", TRScalar(5.0f).typeName(JvmTypeSpellings))
-        assertEquals("java.lang.Double", TRScalar(6.0).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Boolean", TraceScalar(true).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Byte", TraceScalar(1.toByte()).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Short", TraceScalar(2.toShort()).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Character", TraceScalar('c').typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Integer", TraceScalar(3).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Long", TraceScalar(4L).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Float", TraceScalar(5.0f).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Double", TraceScalar(6.0).typeName(JvmTypeSpellings))
     }
 
     @Test
     fun `JVM spells a type reference by its flavour`() {
-        assertEquals("java.lang.Class", TRTypeReference(String::class.java).typeName(JvmTypeSpellings))
-        assertEquals("kotlin.reflect.KClass", TRKotlinTypeReference(String::class).typeName(JvmTypeSpellings))
+        assertEquals("java.lang.Class", TraceTypeReference(String::class.java).typeName(JvmTypeSpellings))
+        assertEquals("kotlin.reflect.KClass", TraceKotlinTypeReference(String::class).typeName(JvmTypeSpellings))
     }
 
     @Test
@@ -94,24 +94,24 @@ class TraceRecorderValueTypeNamesTest {
         // shows the string and no type. Reading a null here as "unknown" and printing it is the bug
         // this pins (`getDebuggerVariableType` used to render the literal text `null`).
         for (spellings in listOf(ForeignSpellings, JvmTypeSpellings)) {
-            assertNull(TRRenderedValue("<Api object at 0x7f2a>").typeName(spellings))
+            assertNull(TraceRenderedValue("<Api object at 0x7f2a>").typeName(spellings))
         }
     }
 
     // ======== Coverage gate ========
 
     /**
-     * Every [TRValue] subtype is claimed by one of the three representative-instance lists,
+     * Every [TraceValue] subtype is claimed by one of the three representative-instance lists,
      * so the per-kind expectations in this class speak for the whole hierarchy.
      *
      * The [subtypeTag] `when` is exhaustive, so a new subtype breaks compilation here until someone
      * decides whether it is descriptor-less, descriptor-backed, or a sentinel, and adds an instance.
      */
     @Test
-    fun `every TRValue subtype has a representative instance`() {
+    fun `every TraceValue subtype has a representative instance`() {
         val values = descriptorLessValues + descriptorBackedValues.map { it.first } + sentinelValues
         assertEquals(
-            "every TRValue subtype needs a representative instance",
+            "every TraceValue subtype needs a representative instance",
             allSubtypeTags,
             values.map { it.subtypeTag() }.toSet(),
         )
@@ -148,11 +148,11 @@ class TraceRecorderValueTypeNamesTest {
 
     @Test
     fun `a foreign table supplies the slots every runtime must have`() {
-        assertEquals("foreign-string", TRString("hello").typeName(ForeignSpellings))
-        assertEquals("foreign-bool", TRScalar(true).typeName(ForeignSpellings))
-        assertEquals("foreign-int", TRScalar(3).typeName(ForeignSpellings))
-        assertEquals("foreign-float", TRScalar(6.0).typeName(ForeignSpellings))
-        assertEquals("foreign-int", TRArbitraryInteger(BigInteger("42")).typeName(ForeignSpellings))
+        assertEquals("foreign-string", TraceString("hello").typeName(ForeignSpellings))
+        assertEquals("foreign-bool", TraceScalar(true).typeName(ForeignSpellings))
+        assertEquals("foreign-int", TraceScalar(3).typeName(ForeignSpellings))
+        assertEquals("foreign-float", TraceScalar(6.0).typeName(ForeignSpellings))
+        assertEquals("foreign-int", TraceArbitraryInteger(BigInteger("42")).typeName(ForeignSpellings))
     }
 
     @Test
@@ -167,39 +167,39 @@ class TraceRecorderValueTypeNamesTest {
     // ======== Representative instances ========
 
     /** Values identified by their wire kind alone, one per spelling a runtime has to supply itself. */
-    private val descriptorLessValues: List<TRValue> get() = listOf(
-        TRString("hello"),
-        TRScalar(true),
-        TRScalar(1.toByte()),
-        TRScalar(2.toShort()),
-        TRScalar('c'),
-        TRScalar(3),
-        TRScalar(4L),
-        TRScalar(5.0f),
-        TRScalar(6.0),
-        TRArbitraryInteger(BigInteger("42")),
-        TRArbitraryDecimal(BigDecimal("3.14")),
-        TRTypeReference(String::class.java),
-        TRKotlinTypeReference(String::class),
+    private val descriptorLessValues: List<TraceValue> get() = listOf(
+        TraceString("hello"),
+        TraceScalar(true),
+        TraceScalar(1.toByte()),
+        TraceScalar(2.toShort()),
+        TraceScalar('c'),
+        TraceScalar(3),
+        TraceScalar(4L),
+        TraceScalar(5.0f),
+        TraceScalar(6.0),
+        TraceArbitraryInteger(BigInteger("42")),
+        TraceArbitraryDecimal(BigDecimal("3.14")),
+        TraceTypeReference(String::class.java),
+        TraceKotlinTypeReference(String::class),
     )
 
     /** Values whose type the producing runtime already named, paired with the name it reported. */
-    private val descriptorBackedValues: List<Pair<TRValue, String>> get() = listOf(
-        TRObject(context, Any()) to "java.lang.Object",
-        TRObjectSnapshot(context, ArrayList<String>(), mapOf("size" to 0)) to "java.util.ArrayList",
-        TRArray(context, intArrayOf(1, 2, 3)) to "[I",
-        TRArraySnapshot(context, arrayOf<Any?>("a"), size = 1, elements = listOf("a")) to "[Ljava.lang.Object;",
-        TRMapSnapshot(
+    private val descriptorBackedValues: List<Pair<TraceValue, String>> get() = listOf(
+        TraceObject(context, Any()) to "java.lang.Object",
+        TraceObjectSnapshot(context, ArrayList<String>(), mapOf("size" to 0)) to "java.util.ArrayList",
+        TraceArray(context, intArrayOf(1, 2, 3)) to "[I",
+        TraceArraySnapshot(context, arrayOf<Any?>("a"), size = 1, elements = listOf("a")) to "[Ljava.lang.Object;",
+        TraceMapSnapshot(
             context.createAndRegisterClassDescriptor("java.util.LinkedHashMap"),
             identity = 1L,
             totalSize = 1,
-            capturedEntries = listOf(TRString("k") to TRString("v")),
+            capturedEntries = listOf(TraceString("k") to TraceString("v")),
         ) to "java.util.LinkedHashMap",
-        TRTextSnapshot(context, StringBuilder("hi")) to "java.lang.StringBuilder",
-        TRException(context, IllegalStateException("boom")) to "java.lang.IllegalStateException",
-        TRExceptionSnapshot(context, IllegalStateException("boom")) to "java.lang.IllegalStateException",
-        TREnum(context, Season.SUMMER) to Season::class.java.name,
-        TRRedacted(
+        TraceTextSnapshot(context, StringBuilder("hi")) to "java.lang.StringBuilder",
+        TraceException(context, IllegalStateException("boom")) to "java.lang.IllegalStateException",
+        TraceExceptionSnapshot(context, IllegalStateException("boom")) to "java.lang.IllegalStateException",
+        TraceEnum(context, Season.SUMMER) to Season::class.java.name,
+        TraceRedacted(
             classDescriptor = context.createAndRegisterClassDescriptor("java.lang.String"),
             templateUuid = null,
             templateName = null,
@@ -207,68 +207,68 @@ class TraceRecorderValueTypeNamesTest {
     )
 
     /** No value at all, or no type by design. */
-    private val sentinelValues: List<TRValue> get() = listOf(
-        TRNull,
-        TRVoid,
-        TRUnit,
-        TRUnfinishedMethodResult,
-        TRUntrackedMethodResult,
-        TRRenderedValue("<Check: backups>"),
+    private val sentinelValues: List<TraceValue> get() = listOf(
+        TraceNull,
+        TraceVoid,
+        TraceUnit,
+        TraceUnfinishedMethodResult,
+        TraceUntrackedMethodResult,
+        TraceRenderedValue("<Check: backups>"),
     )
 }
 
 private enum class Season { SUMMER }
 
 /**
- * Names the [TRValue] subtype for coverage bookkeeping and assertion messages.
+ * Names the [TraceValue] subtype for coverage bookkeeping and assertion messages.
  *
  * Exhaustive by construction: a new subtype fails to compile here.
  */
-private fun TRValue.subtypeTag(): String = when (this) {
-    is TRNull -> "TRNull"
-    is TRVoid -> "TRVoid"
-    is TRUnit -> "TRUnit"
-    is TRScalar -> "TRScalar"
-    is TRString -> "TRString"
-    is TREnum -> "TREnum"
-    is TRArbitraryInteger -> "TRArbitraryInteger"
-    is TRArbitraryDecimal -> "TRArbitraryDecimal"
-    is TRObject -> "TRObject"
-    is TRObjectSnapshot -> "TRObjectSnapshot"
-    is TRArray -> "TRArray"
-    is TRArraySnapshot -> "TRArraySnapshot"
-    is TRMapSnapshot -> "TRMapSnapshot"
-    is TRTextSnapshot -> "TRTextSnapshot"
-    is TRException -> "TRException"
-    is TRExceptionSnapshot -> "TRExceptionSnapshot"
-    is TRTypeReference -> "TRTypeReference"
-    is TRRedacted -> "TRRedacted"
-    is TRRenderedValue -> "TRRenderedValue"
-    is TRUnfinishedMethodResult -> "TRUnfinishedMethodResult"
-    is TRUntrackedMethodResult -> "TRUntrackedMethodResult"
+private fun TraceValue.subtypeTag(): String = when (this) {
+    is TraceNull -> "TraceNull"
+    is TraceVoid -> "TraceVoid"
+    is TraceUnit -> "TraceUnit"
+    is TraceScalar -> "TraceScalar"
+    is TraceString -> "TraceString"
+    is TraceEnum -> "TraceEnum"
+    is TraceArbitraryInteger -> "TraceArbitraryInteger"
+    is TraceArbitraryDecimal -> "TraceArbitraryDecimal"
+    is TraceObject -> "TraceObject"
+    is TraceObjectSnapshot -> "TraceObjectSnapshot"
+    is TraceArray -> "TraceArray"
+    is TraceArraySnapshot -> "TraceArraySnapshot"
+    is TraceMapSnapshot -> "TraceMapSnapshot"
+    is TraceTextSnapshot -> "TraceTextSnapshot"
+    is TraceException -> "TraceException"
+    is TraceExceptionSnapshot -> "TraceExceptionSnapshot"
+    is TraceTypeReference -> "TraceTypeReference"
+    is TraceRedacted -> "TraceRedacted"
+    is TraceRenderedValue -> "TraceRenderedValue"
+    is TraceUnfinishedMethodResult -> "TraceUnfinishedMethodResult"
+    is TraceUntrackedMethodResult -> "TraceUntrackedMethodResult"
 }
 
 /** Every tag [subtypeTag] can produce; the coverage gate asserts the representative instances cover all of them. */
 private val allSubtypeTags = setOf(
-    "TRNull",
-    "TRVoid",
-    "TRUnit",
-    "TRScalar",
-    "TRString",
-    "TREnum",
-    "TRArbitraryInteger",
-    "TRArbitraryDecimal",
-    "TRObject",
-    "TRObjectSnapshot",
-    "TRArray",
-    "TRArraySnapshot",
-    "TRMapSnapshot",
-    "TRTextSnapshot",
-    "TRException",
-    "TRExceptionSnapshot",
-    "TRTypeReference",
-    "TRRedacted",
-    "TRRenderedValue",
-    "TRUnfinishedMethodResult",
-    "TRUntrackedMethodResult",
+    "TraceNull",
+    "TraceVoid",
+    "TraceUnit",
+    "TraceScalar",
+    "TraceString",
+    "TraceEnum",
+    "TraceArbitraryInteger",
+    "TraceArbitraryDecimal",
+    "TraceObject",
+    "TraceObjectSnapshot",
+    "TraceArray",
+    "TraceArraySnapshot",
+    "TraceMapSnapshot",
+    "TraceTextSnapshot",
+    "TraceException",
+    "TraceExceptionSnapshot",
+    "TraceTypeReference",
+    "TraceRedacted",
+    "TraceRenderedValue",
+    "TraceUnfinishedMethodResult",
+    "TraceUntrackedMethodResult",
 )

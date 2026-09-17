@@ -13,8 +13,8 @@ package org.jetbrains.lincheck.trace.serialization
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
-import org.jetbrains.lincheck.trace.TRNull
+import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.TraceNull
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.junit.Assert.assertEquals
@@ -48,12 +48,12 @@ class TraceFileHeaderTest {
                 argumentNames = null,
             )
         )
-        val tracePoint = TRMethodCallTracePoint(
+        val tracePoint = TraceMethodCallTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = codeLocationId,
             methodId = methodDescriptor.id,
-            obj = TRNull,
+            obj = TraceNull,
             parameters = emptyList(),
         )
 

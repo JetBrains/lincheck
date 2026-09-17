@@ -12,8 +12,8 @@ package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
-import org.jetbrains.lincheck.trace.TRContainerTracePoint
-import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.TraceContainerTracePoint
+import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.collections.AtomicBitmap
@@ -380,8 +380,8 @@ class FileStreamingTraceCollecting(
     }
 
     override fun tracePointCreated(
-        parent: TRContainerTracePoint?,
-        created: TRTracePoint
+        parent: TraceContainerTracePoint?,
+        created: TracePoint
     ) {
         val writer = writers[Thread.currentThread()] ?: return
         try {
@@ -395,9 +395,9 @@ class FileStreamingTraceCollecting(
         }
     }
 
-    override fun openContainerTracePoint(container: TRContainerTracePoint) {}
+    override fun openContainerTracePoint(container: TraceContainerTracePoint) {}
 
-    override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {
+    override fun completeContainerTracePoint(thread: Thread, container: TraceContainerTracePoint) {
         val writer = writers[thread] ?: return
         try {
             writer.mark()

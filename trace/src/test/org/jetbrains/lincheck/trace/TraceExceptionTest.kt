@@ -4,68 +4,68 @@ import org.junit.Assert
 import org.junit.Test
 
 /**
- * JBRes-7777: `TRException` — the plain `TRReferenceLike` subclass that captures only a
+ * JBRes-7777: `TraceException` — the plain `TraceReferenceLike` subclass that captures only a
  * [Throwable]'s class and identity (the trace-recorder shape) — and its richer sibling
- * `TRExceptionSnapshot`, which additionally captures the message and full stack trace
+ * `TraceExceptionSnapshot`, which additionally captures the message and full stack trace
  * (the live-debugger snapshot shape).
  */
-class TRExceptionTest {
+class TraceExceptionTest {
 
     @Test
-    fun `TRValue routes a Throwable to the plain TRException`() {
+    fun `TraceValue routes a Throwable to the plain TraceException`() {
         val context = TraceContext()
         val throwable = makeDeepStack(8)
 
-        val value = TRValue(context, throwable)
+        val value = TraceValue(context, throwable)
 
         Assert.assertTrue(
-            "TRValue(Throwable) should produce a plain TRException, got ${value::class.simpleName}",
-            value is TRException,
+            "TraceValue(Throwable) should produce a plain TraceException, got ${value::class.simpleName}",
+            value is TraceException,
         )
     }
 
     @Test
-    fun `TRException is a TRReferenceLike — identity hash code is preserved`() {
+    fun `TraceException is a TraceReferenceLike — identity hash code is preserved`() {
         val context = TraceContext()
         val throwable = IllegalStateException("boom")
 
-        val captured = TRValue(context, throwable) as TRException
+        val captured = TraceValue(context, throwable) as TraceException
 
-        // The cast above relies on TRException : TRReferenceLike — this assertion
-        // pins that hierarchy contract: a TRException must always be reachable as
-        // a TRReferenceLike when traversing the generic TRValue tree.
-        val asReference: TRReferenceLike = captured
+        // The cast above relies on TraceException : TraceReferenceLike — this assertion
+        // pins that hierarchy contract: a TraceException must always be reachable as
+        // a TraceReferenceLike when traversing the generic TraceValue tree.
+        val asReference: TraceReferenceLike = captured
         Assert.assertEquals(System.identityHashCode(throwable).toLong(), asReference.identity)
         Assert.assertEquals(throwable.javaClass.name, asReference.className)
     }
 
     @Test
-    fun `plain TRException carries neither message nor stack trace`() {
+    fun `plain TraceException carries neither message nor stack trace`() {
         val context = TraceContext()
         val throwable = IllegalStateException("boom")
 
-        // The plain TRException is the trace-recorder route — class + identity only,
+        // The plain TraceException is the trace-recorder route — class + identity only,
         // so it renders as `Class@id` exactly like any other reference object.
-        val captured = TRValue(context, throwable) as TRException
+        val captured = TraceValue(context, throwable) as TraceException
 
         Assert.assertEquals("java.lang.IllegalStateException", captured.className)
-        // toString renders the adorned (simple) class name, like every other TRReferenceLike.
+        // toString renders the adorned (simple) class name, like every other TraceReferenceLike.
         Assert.assertEquals(
-            "Plain TRException must render as Class@id with no inline message",
+            "Plain TraceException must render as Class@id with no inline message",
             "IllegalStateException@" + captured.identity,
             captured.toString(),
         )
     }
 
     @Test
-    fun `TRExceptionSnapshot captures message and full stack trace`() {
+    fun `TraceExceptionSnapshot captures message and full stack trace`() {
         val context = TraceContext()
         val throwable = makeDeepStack(8)
         val expectedFrames = throwable.stackTrace.map { it.toString() }
 
-        val captured = TRExceptionSnapshot(context, throwable)
+        val captured = TraceExceptionSnapshot(context, throwable)
 
-        Assert.assertEquals(TRString("deep"), captured.message)
+        Assert.assertEquals(TraceString("deep"), captured.message)
         Assert.assertEquals(
             "Whole stackTrace must be captured (no truncation)",
             expectedFrames.size,
@@ -77,11 +77,11 @@ class TRExceptionTest {
     }
 
     @Test
-    fun `TRExceptionSnapshot stack trace is not truncated for deep Throwables`() {
+    fun `TraceExceptionSnapshot stack trace is not truncated for deep Throwables`() {
         val context = TraceContext()
         val throwable = makeDeepStack(50)
 
-        val captured = TRExceptionSnapshot(context, throwable)
+        val captured = TraceExceptionSnapshot(context, throwable)
 
         Assert.assertTrue(
             "Test stack must be deeper than 10 to exercise the no-truncation path",
@@ -91,34 +91,34 @@ class TRExceptionTest {
     }
 
     @Test
-    fun `TRExceptionSnapshot null message is captured as null`() {
+    fun `TraceExceptionSnapshot null message is captured as null`() {
         val context = TraceContext()
         val throwable = RuntimeException()
 
-        val captured = TRExceptionSnapshot(context, throwable)
+        val captured = TraceExceptionSnapshot(context, throwable)
 
         // RuntimeException() has a null message.
-        Assert.assertEquals(TRNull, captured.message)
+        Assert.assertEquals(TraceNull, captured.message)
     }
 
     @Test
-    fun `plain TRException and snapshot agree on class and identity`() {
+    fun `plain TraceException and snapshot agree on class and identity`() {
         val context = TraceContext()
         val throwable = IllegalArgumentException("foo")
 
-        val plain = TRException(context, throwable)
-        val snapshot = TRExceptionSnapshot(context, throwable)
+        val plain = TraceException(context, throwable)
+        val snapshot = TraceExceptionSnapshot(context, throwable)
 
         Assert.assertEquals(plain.className, snapshot.className)
         Assert.assertEquals(plain.identity, snapshot.identity)
     }
 
     @Test
-    fun `plain TRException toString is Class@id without message`() {
+    fun `plain TraceException toString is Class@id without message`() {
         val context = TraceContext()
         val throwable = IllegalStateException("boom")
 
-        val captured = TRValue(context, throwable) as TRException
+        val captured = TraceValue(context, throwable) as TraceException
         val rendered = captured.toString()
 
         Assert.assertTrue(
@@ -130,17 +130,17 @@ class TRExceptionTest {
             rendered.contains(captured.identity.toString()),
         )
         Assert.assertTrue(
-            "Plain TRException toString must not include the message; got: $rendered",
+            "Plain TraceException toString must not include the message; got: $rendered",
             !rendered.contains("boom"),
         )
     }
 
     @Test
-    fun `TRExceptionSnapshot toString includes class, identity and message`() {
+    fun `TraceExceptionSnapshot toString includes class, identity and message`() {
         val context = TraceContext()
         val throwable = IllegalStateException("boom")
 
-        val captured = TRExceptionSnapshot(context, throwable)
+        val captured = TraceExceptionSnapshot(context, throwable)
         val rendered = captured.toString()
 
         Assert.assertTrue(
@@ -166,7 +166,7 @@ class TRExceptionTest {
         val context = TraceContext()
         val throwable = IllegalStateException("boom")
 
-        val captured = TRValue(context, throwable) as TRException
+        val captured = TraceValue(context, throwable) as TraceException
 
         // The descriptor for IllegalStateException must be reachable via the same context.
         val resolved = context.classPool[captured.classDescriptor.id]
