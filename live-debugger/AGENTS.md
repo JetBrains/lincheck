@@ -16,8 +16,17 @@ and runs the instrumentation in `InstrumentationMode.LIVE_DEBUGGING`.
 
 A `SnapshotBreakpoint` (see [`common`](../common), package `org.jetbrains.lincheck.settings`)
 is identified by UUID and addressed by class name, file name, and line number.
-It may carry a condition and watch expressions — shipped as precompiled bytecode class fragments —
-and a hit limit.
+A breakpoint may carry a condition and watch expressions and a hit limit.
+Clients send expressions as plain source text (`conditionSource` / `watchSources`,
+capability `AGENT_COMPILED_EXPRESSIONS_V1`),
+which the agent compiles at instrumentation time,
+in the language of the breakpoint's source file —
+Java through the JDK's own compiler (`javax.tools`),
+Kotlin through `kotlin-compiler-embeddable`,
+shipped as the nested `kotlin-expression-compiler.jar` resource and loaded in an
+isolated class loader so it never touches the application's class path
+(see `ExpressionCompiler` in [`jvm-agent`](../jvm-agent)).
+The compiled-fragment fields remain an internal representation after agent-side compilation.
 
 - Adding or removing breakpoints re-transforms the affected loaded classes;
   the agent finds them by the breakpoint's *file name* in its own `SourceFileClassIndex`

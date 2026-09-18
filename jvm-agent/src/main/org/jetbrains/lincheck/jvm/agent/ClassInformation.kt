@@ -56,6 +56,7 @@ internal data class ClassInformation(
     private val nonSyntheticMethodLines: Set<Int>,
     private val basicCfgs: Map<String, BasicBlockControlFlowGraph>,
     val applicableBreakpoints: Map<BreakpointId, SnapshotBreakpoint>,
+    val enclosingClass: ClassModel,
     private val classBlockMatch: BlockMatch?,
     private val methodBlockMatches: Map<String, BlockMatch>,
 ) {
@@ -90,6 +91,7 @@ internal fun buildClassInformation(
     profile: TransformationProfile,
     blocklistEngine: BlocklistEngine,
     liveDebuggerSettings: LiveDebuggerSettings,
+    classLoader: ClassLoader? = null,
 ): ClassInformation {
     val (lineRanges, linesToMethodNames) = getMethodsLineRanges(classNode)
     val applicableBreakpoints = computeApplicableBreakpoints(classNode, liveDebuggerSettings)
@@ -104,10 +106,64 @@ internal fun buildClassInformation(
         nonSyntheticMethodLines = getNonSyntheticMethodLines(classNode),
         basicCfgs = computeControlFlowGraphs(classNode, profile),
         applicableBreakpoints = applicableBreakpoints,
+        enclosingClass = buildClassModel(classNode),
         classBlockMatch = classBlockMatch,
         methodBlockMatches = methodBlockMatches,
     )
 }
+
+/** Builds the class metadata needed to compile expressions at breakpoint locations. */
+private fun buildClassModel(classNode: ClassNode): ClassModel =
+    ClassModel(
+        binaryName = classNode.name.toCanonicalClassName(),
+        superclassBinaryName = classNode.superName?.toCanonicalClassName(),
+        declaredFields = classNode.fields.associate { field ->
+            field.name to FieldModel(
+                declaringBinaryName = classNode.name.toCanonicalClassName(),
+                name = field.name,
+                type = Type.getType(field.desc),
+                isPublic = field.access and Opcodes.ACC_PUBLIC != 0,
+                isProtected = field.access and Opcodes.ACC_PROTECTED != 0,
+                isPrivate = field.access and Opcodes.ACC_PRIVATE != 0,
+                isStatic = field.access and Opcodes.ACC_STATIC != 0,
+            )
+        },
+        declaredMethods = classNode.methods.mapNotNull { method ->
+            if (method.name == "<init>" || method.name == "<clinit>") return@mapNotNull null
+            MethodModel(
+                declaringBinaryName = classNode.name.toCanonicalClassName(),
+                name = method.name,
+                descriptor = method.desc,
+                isPublic = method.access and Opcodes.ACC_PUBLIC != 0,
+                isProtected = method.access and Opcodes.ACC_PROTECTED != 0,
+                isPrivate = method.access and Opcodes.ACC_PRIVATE != 0,
+                isStatic = method.access and Opcodes.ACC_STATIC != 0,
+                isSynthetic = method.access and Opcodes.ACC_SYNTHETIC != 0,
+                isVarArgs = method.access and Opcodes.ACC_VARARGS != 0,
+            )
+        },
+        declaredConstructors = classNode.methods.mapNotNull { method ->
+            if (method.name != "<init>") return@mapNotNull null
+            ConstructorModel(
+                descriptor = method.desc,
+                isPublic = method.access and Opcodes.ACC_PUBLIC != 0,
+                isProtected = method.access and Opcodes.ACC_PROTECTED != 0,
+                isPrivate = method.access and Opcodes.ACC_PRIVATE != 0,
+            )
+        },
+        nestedClasses = classNode.innerClasses.mapNotNull { nested ->
+            if (nested.outerName != classNode.name || nested.innerName == null) return@mapNotNull null
+            NestedClassModel(
+                binaryName = nested.name.toCanonicalClassName(),
+                simpleName = nested.innerName,
+                isPublic = nested.access and Opcodes.ACC_PUBLIC != 0,
+                isProtected = nested.access and Opcodes.ACC_PROTECTED != 0,
+                isPrivate = nested.access and Opcodes.ACC_PRIVATE != 0,
+                isStatic = nested.access and Opcodes.ACC_STATIC != 0,
+            )
+        },
+        isInterface = classNode.access and Opcodes.ACC_INTERFACE != 0,
+    )
 
 /**
  * Snapshots the breakpoints applicable to this class.

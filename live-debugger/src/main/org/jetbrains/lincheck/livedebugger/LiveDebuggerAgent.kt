@@ -31,6 +31,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
 import org.jetbrains.lincheck.trace.network.AgentHelloMessage
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
@@ -168,8 +169,21 @@ internal object LiveDebuggerAgent {
         // `PROTOCOL_VERSION`: the wire protocol frames commands/notifications,
         // while this versions the binary payload of `binaryTraceData`.
         traceVersion = TRACE_VERSION,
-        // Advertised so a client can tell the user whether captures are redacted before they arrive.
-        attributes = mapOf(AgentHelloMessage.KEY_CAPABILITIES to AgentHelloMessage.CAPABILITY_REDACTION_V1),
+        // Advertised so a client can tell whether captures are redacted before they arrive,
+        // and whether expressions may travel as source text for the agent to compile.
+        attributes = mapOf(
+            AgentHelloMessage.KEY_CAPABILITIES to listOf(
+                AgentHelloMessage.CAPABILITY_REDACTION_V1,
+                *listOfNotNull(
+                    AgentHelloMessage.CAPABILITY_AGENT_COMPILED_JAVA_EXPRESSIONS_V1.takeIf {
+                        ExpressionCompiler.isJavaAvailable
+                    },
+                    AgentHelloMessage.CAPABILITY_AGENT_COMPILED_KOTLIN_EXPRESSIONS_V1.takeIf {
+                        ExpressionCompiler.isKotlinAvailable
+                    },
+                ).toTypedArray(),
+            ).joinToString(","),
+        ),
     )
 
     private fun startServer(address: InetSocketAddress?): TracingWebSocketServer? {

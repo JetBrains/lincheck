@@ -144,7 +144,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
 
         try {
-            val classInfo = buildClassInformation(classNode, reader, profile, blocklistEngine, liveDebuggerSettings)
+            val classInfo = buildClassInformation(classNode, reader, profile, blocklistEngine, liveDebuggerSettings, loader)
             val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, profile, statsTracker, LincheckInstrumentation.context)
             val timeNano = measureTimeNano {
                 classNode.accept(visitor)

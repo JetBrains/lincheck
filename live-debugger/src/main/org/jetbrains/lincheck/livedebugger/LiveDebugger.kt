@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.SourceFileClassIndex
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
+import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.settings.BlocklistFileParser
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
@@ -120,6 +121,7 @@ internal object LiveDebugger {
 
         val result = LincheckClassFileTransformer.liveDebuggerSettings
             .addBreakpoints(breakpoints)
+        removeStaleCompiledExpressions()
         result.rejected.forEach { notifyBreakpointBlocked(it.breakpoint, it.match.reason) }
         retransformBreakpointClasses(result.added)
     }
@@ -205,6 +207,7 @@ internal object LiveDebugger {
 
         val result = LincheckClassFileTransformer.liveDebuggerSettings
             .removeBreakpoints(uuids)
+        removeStaleCompiledExpressions()
         if (result.notFound.isNotEmpty()) {
             Logger.warn { "No registered breakpoints found for UUIDs: ${result.notFound}" }
         }
@@ -216,6 +219,7 @@ internal object LiveDebugger {
 
         val result = LincheckClassFileTransformer.liveDebuggerSettings
             .removeAllBreakpoints()
+        removeStaleCompiledExpressions()
         blockedNotified.clear()
         hitSuppressedNotified.clear()
         if (result.removed.isEmpty()) return
@@ -232,9 +236,16 @@ internal object LiveDebugger {
         // the re-added breakpoint will have a different id and must not be touched.
         val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
             .removeBreakpoint(id)
+        removeStaleCompiledExpressions()
         if (removedBreakpoint != null) {
             retransformBreakpointClasses(listOf(removedBreakpoint))
         }
+    }
+
+    private fun removeStaleCompiledExpressions() {
+        ExpressionCompiler.retainCompiledExpressions(
+            LincheckClassFileTransformer.liveDebuggerSettings.lineBreakpoints.keys,
+        )
     }
 
     /**
