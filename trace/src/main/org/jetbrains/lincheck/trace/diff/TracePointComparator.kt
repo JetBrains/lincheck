@@ -47,6 +47,12 @@ internal object TracePointComparator {
                 .add(tracePoint.exception)
             is TraceCatchTracePoint -> h
                 .add(tracePoint.exception)
+            is TraceMethodCallResultTracePoint -> h
+                .add(tracePoint.result)
+                .add(tracePoint.exceptionClassName ?: "")
+            is TraceLoopEndTracePoint -> h
+                .add(tracePoint.iterations)
+            is TraceLoopIterationEndTracePoint -> Unit
         }
         return h.finish()
     }
@@ -104,6 +110,10 @@ internal object TracePointComparator {
                 hasher
                     .add(tracePoint.codeLocation)
             is TraceCatchTracePoint ->
+                hasher
+                    .add(tracePoint.codeLocation)
+            // The data a container's closing side carries (result, iteration count) is not used in weak comparison
+            is TraceContainerFooterTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
         }

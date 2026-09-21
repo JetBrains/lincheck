@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.trace.printing
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.*
-import java.time.Instant
 
 
 interface TraceAppendable {
@@ -267,13 +266,44 @@ object DefaultTRMethodCallTracePointPrinter: AbstractTraceMethodCallTracePointPr
     }
 }
 
+abstract class AbstractTraceMethodCallResultTracePointPrinter {
+
+    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceMethodCallResultTracePoint): TraceAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
+        if (tracePoint.exceptionClassName != null) {
+            appendKeyword("throw")
+            append(" ")
+            append(tracePoint.exceptionClassName)
+        } else if (tracePoint.result is TraceUnfinishedMethodResult) {
+            appendSpecialSymbol(UNFINISHED_METHOD_RESULT_SYMBOL)
+        } else if (tracePoint.result is TraceUntrackedMethodResult) {
+            appendSpecialSymbol(UNTRACKED_METHOD_RESULT_SYMBOL)
+        } else {
+            if (tracePoint.result != TraceVoid) {
+                appendKeyword("return")
+                append(" ")
+                appendObject(tracePoint.result)
+            }
+        }
+        return this
+    }
+}
+
+object DefaultTRMethodCallResultTracePointPrinter: AbstractTraceMethodCallResultTracePointPrinter() {
+    fun TraceAppendable.append(tracePoint: TraceMethodCallResultTracePoint): TraceAppendable {
+        appendTracePoint(tracePoint)
+        append(tracePoint, verbose)
+        return this
+    }
+}
+
 abstract class AbstractTraceLoopTracePointPrinter {
 
     protected fun TraceAppendable.appendTracePoint(tracePoint: TraceLoopTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendKeyword("loop")
         appendSpecialSymbol("(")
-        append("${tracePoint.iterations} iterations")
+        append("${tracePoint.iterationsAsString} iterations")
         appendSpecialSymbol(")")
         return this
     }
@@ -281,6 +311,26 @@ abstract class AbstractTraceLoopTracePointPrinter {
 
 object DefaultTRLoopTracePointPrinter: AbstractTraceLoopTracePointPrinter() {
     fun TraceAppendable.append(tracePoint: TraceLoopTracePoint): TraceAppendable {
+        appendTracePoint(tracePoint)
+        append(tracePoint, verbose)
+        return this
+    }
+}
+
+abstract class AbstractTraceLoopEndTracePointPrinter {
+
+    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceLoopEndTracePoint): TraceAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
+        appendKeyword("end loop")
+        appendSpecialSymbol("(")
+        append("${tracePoint.iterations} iterations")
+        appendSpecialSymbol(")")
+        return this
+    }
+}
+
+object DefaultTRLoopEndTracePointPrinter: AbstractTraceLoopEndTracePointPrinter() {
+    fun TraceAppendable.append(tracePoint: TraceLoopEndTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
@@ -301,6 +351,25 @@ abstract class AbstractTraceLoopIterationTracePointPrinter {
 
 object DefaultTRLoopIterationTracePointPrinter: AbstractTraceLoopIterationTracePointPrinter() {
     fun TraceAppendable.append(tracePoint: TraceLoopIterationTracePoint): TraceAppendable {
+        appendTracePoint(tracePoint)
+        append(tracePoint, verbose)
+        return this
+    }
+}
+
+abstract class AbstractTraceLoopIterationEndTracePointPrinter {
+
+    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceLoopIterationEndTracePoint): TraceAppendable {
+        appendDiffStatus(tracePoint.diffStatus)
+        appendSpecialSymbol("<")
+        appendKeyword("end iteration")
+        appendSpecialSymbol(">")
+        return this
+    }
+}
+
+object DefaultTRLoopIterationEndTracePointPrinter: AbstractTraceLoopIterationEndTracePointPrinter() {
+    fun TraceAppendable.append(tracePoint: TraceLoopIterationEndTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this

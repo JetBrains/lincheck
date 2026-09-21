@@ -11,18 +11,20 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.trace.TraceLoopTracePoint.Companion.UNKNOWN_ITERATIONS_COUNT
 import org.jetbrains.lincheck.trace.printing.*
-import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.trace.printing.DefaultTRArrayTracePointPrinter.append
 import org.jetbrains.lincheck.trace.printing.DefaultTRCatchTracePointPrinter.append
 import org.jetbrains.lincheck.trace.printing.DefaultTRFieldTracePointPrinter.append
 import org.jetbrains.lincheck.trace.printing.DefaultTRLineBreakpointSnapshotTracePointPrinter.append
 import org.jetbrains.lincheck.trace.printing.DefaultTRLocalVariableTracePointPrinter.append
+import org.jetbrains.lincheck.trace.printing.DefaultTRLoopEndTracePointPrinter.append
+import org.jetbrains.lincheck.trace.printing.DefaultTRLoopIterationEndTracePointPrinter.append
 import org.jetbrains.lincheck.trace.printing.DefaultTRLoopIterationTracePointPrinter.append
 import org.jetbrains.lincheck.trace.printing.DefaultTRLoopTracePointPrinter.append
+import org.jetbrains.lincheck.trace.printing.DefaultTRMethodCallResultTracePointPrinter.append
 import org.jetbrains.lincheck.trace.printing.DefaultTRMethodCallTracePointPrinter.append
 import org.jetbrains.lincheck.trace.printing.DefaultTRThrowTracePointPrinter.append
-import java.io.DataInput
 import java.util.*
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -101,7 +103,7 @@ sealed class TracePoint(
     internal fun copyDiffStatus(other: TracePoint) {
         check(diffStatus == null) { "Diff status can be changed only once" }
         if (other.diffStatus == null) return
-        if (this is TraceContainerTracePoint) {
+        if (this is TraceContainerHeaderTracePoint) {
             diffStatus = other.diffStatus
         } else {
             diffStatus = other.diffStatus?.toLeaf()
@@ -127,7 +129,11 @@ sealed class TracePoint(
     abstract fun toText(appendable: TraceAppendable)
 }
 
-sealed class TraceContainerTracePoint(
+/**
+ * A trace point which has children, written to a trace as two records:
+ * this one, opening the container, and a [TraceContainerFooterTracePoint] closing it.
+ */
+sealed class TraceContainerHeaderTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
@@ -137,11 +143,76 @@ sealed class TraceContainerTracePoint(
 
     val subtreeDiffStatuses: Set<DiffStatus> get() = childrenDiffStatuses ?: SUBTREE_STATUS_UNCHANGED
 
-    internal abstract fun loadFooter(inp: DataInput)
+    /**
+     * The closing side of this container.
+     *
+     * `null` until the container is completed while recording,
+     * or until its closing trace point is read back while loading a trace.
+     */
+    abstract var footerTracePoint: TraceContainerFooterTracePoint?
+
+    /**
+     * Returns the closing side of this container,
+     * creating it from the container's current state if the container was never completed explicitly.
+     */
+    abstract fun completeTracePoint(): TraceContainerFooterTracePoint
+
+    /**
+     * Returns the closing side of this container, as [completeTracePoint],
+     * additionally deriving from the container's [children] the closing data that depends on them.
+     *
+     * Containers whose closing record does not depend on their children ignore [children].
+     */
+    open fun completeTracePoint(children: List<TracePoint>): TraceContainerFooterTracePoint =
+        completeTracePoint()
 
     companion object {
         private val SUBTREE_STATUS_UNCHANGED = EnumSet.of(DiffStatus.UNCHANGED)
     }
+}
+
+/**
+ * Attaches the [footerTracePoint] just read from a trace to the container it closes.
+ *
+ * @throws IllegalStateException if `this` is not the container [footerTracePoint] belongs to.
+ */
+internal fun TraceContainerHeaderTracePoint.attachFooterTracePoint(footerTracePoint: TraceContainerFooterTracePoint) {
+    check(footerTracePoint.containerEventId == eventId) {
+        "Closing trace point refers to container #${footerTracePoint.containerEventId}, " +
+        "expected #$eventId, broken file"
+    }
+    this.footerTracePoint = footerTracePoint
+}
+
+/**
+ * The closing side of a [TraceContainerHeaderTracePoint], carrying the container data
+ * which becomes known only when the container ends.
+ *
+ * The two sides are linked by [containerEventId], which makes the trace decodable into a tree
+ * while reading strictly forward: no seeking to a container's closing record is required.
+ */
+sealed class TraceContainerFooterTracePoint(
+    context: TraceContext,
+    threadId: Int,
+    codeLocationId: Int,
+    /** [TracePoint.eventId] of the container this trace point closes. */
+    val containerEventId: Int,
+    eventId: Int
+) : TracePoint(context, threadId, codeLocationId, eventId)
+
+/**
+ * Narrows a closing trace point assigned to [container] to the type that container is closed by.
+ *
+ * @throws IllegalStateException if [this] closes a different kind of container.
+ */
+private inline fun <reified T : TraceContainerFooterTracePoint> TraceContainerFooterTracePoint?.asFooterTracePointOf(
+    container: TraceContainerHeaderTracePoint
+): T? = when (this) {
+    null -> null
+    is T -> this
+    else -> error(
+        "${container::class.java.simpleName} cannot be closed by ${this::class.java.simpleName}, broken file"
+    )
 }
 
 class TraceMethodCallTracePoint(
@@ -153,9 +224,18 @@ class TraceMethodCallTracePoint(
     val parameters: List<TraceValue>,
     val flags: Short = 0,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TraceContainerTracePoint(context, threadId, codeLocationId, eventId) {
-    var result: TraceValue = TraceUnfinishedMethodResult
-    var exceptionClassName: String? = null
+) : TraceContainerHeaderTracePoint(context, threadId, codeLocationId, eventId) {
+    /** Closing side of this call, carrying its outcome; `null` while the call is still running. */
+    var resultTracePoint: TraceMethodCallResultTracePoint? = null
+
+    override var footerTracePoint: TraceContainerFooterTracePoint?
+        get() = resultTracePoint
+        set(value) {
+            resultTracePoint = value.asFooterTracePointOf<TraceMethodCallResultTracePoint>(container = this)
+        }
+
+    val result: TraceValue get() = resultTracePoint?.result ?: TraceUnfinishedMethodResult
+    val exceptionClassName: String? get() = resultTracePoint?.exceptionClassName
 
     // TODO Make parametrized
     val methodDescriptor: MethodDescriptor get() = context.methodPool[methodId]
@@ -187,9 +267,21 @@ class TraceMethodCallTracePoint(
         }
     }
 
-    fun setExceptionResult(exception: Throwable) {
-        exceptionClassName = exception::class.java.simpleName
-    }
+    /**
+     * Records the value returned by this call, keeping the already recorded [exceptionClassName], if any.
+     *
+     * @return the closing tracepoint this call is now completed by.
+     */
+    fun setResult(result: TraceValue): TraceMethodCallResultTracePoint =
+        createResultTracePoint(result, exceptionClassName).also { resultTracePoint = it }
+
+    /**
+     * Records that this call completed by throwing [exception], keeping the already recorded [result].
+     *
+     * @return the closing tracepoint this call is now completed by.
+     */
+    fun setExceptionResult(exception: Throwable): TraceMethodCallResultTracePoint =
+        createResultTracePoint(result, exception::class.java.simpleName).also { resultTracePoint = it }
 
     /**
      * @return `true` if tracing of the thread was ended before this method returned its value, `false` otherwise.
@@ -212,9 +304,31 @@ class TraceMethodCallTracePoint(
     fun isSuperConstructorCall(): Boolean =
         (flags.toInt() and SUPER_CONSTRUCTOR_CALL_FLAG) != 0
 
-    override fun loadFooter(inp: DataInput) {
-        inp.readMethodCallTracePointFooter(context, this)
+    override fun completeTracePoint(): TraceMethodCallResultTracePoint =
+        resultTracePoint ?: createResultTracePoint(result, exceptionClassName).also { resultTracePoint = it }
+
+    /**
+     * Completes this call with the [TraceMethodCallResultTracePoint] carried as the last of its [children],
+     * if there is one, instead of deriving the closing tracepoint from [result] and [exceptionClassName].
+     *
+     * @throws IllegalStateException if that closing tracepoint belongs to another call.
+     */
+    override fun completeTracePoint(children: List<TracePoint>): TraceMethodCallResultTracePoint {
+        if (resultTracePoint == null) {
+            (children.lastOrNull() as? TraceMethodCallResultTracePoint)?.let { attachFooterTracePoint(it) }
+        }
+        return completeTracePoint()
     }
+
+    private fun createResultTracePoint(result: TraceValue, exceptionClassName: String?) =
+        TraceMethodCallResultTracePoint(
+            context = context,
+            threadId = threadId,
+            codeLocationId = codeLocationId,
+            methodCallEventId = eventId,
+            result = result,
+            exceptionClassName = exceptionClassName,
+        )
 
     override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
@@ -232,44 +346,82 @@ class TraceMethodCallTracePoint(
     }
 }
 
-class TraceLoopTracePoint(
+class TraceMethodCallResultTracePoint(
     context: TraceContext,
     threadId: Int,
     codeLocationId: Int,
-    val loopId: Int,
+    methodCallEventId: Int,
+    val result: TraceValue,
+    /** Simple name of the class of the exception thrown by the call, or `null` if it didn't throw. */
+    val exceptionClassName: String? = null,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TraceContainerTracePoint(context, threadId, codeLocationId, eventId) {
-
-    internal constructor(
-        context: TraceContext,
-        threadId: Int,
-        codeLocationId: Int,
-        loopId: Int,
-        eventId: Int,
-        iterations: Int
-    ) : this(context, threadId, codeLocationId, loopId, eventId) {
-        this.iterations = iterations
-    }
-
-    // This field is not serialized to disk, because it is computable from the number of children of the
-    // loop trace point. Basically the number of children is equal to the number of loop iterations.
-    // On trace point footer loading this variable will be restored.
-    var iterations: Int = 0
-        internal set
-
-    fun incrementIterations(): Int {
-        return iterations++
-    }
-
-    override fun loadFooter(inp: DataInput) {
-        inp.readLoopTracePointFooter(this)
-    }
+) : TraceContainerFooterTracePoint(context, threadId, codeLocationId, methodCallEventId, eventId) {
 
     override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
 }
 
+class TraceLoopTracePoint(
+    context: TraceContext,
+    threadId: Int,
+    codeLocationId: Int,
+    val loopId: Int,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TraceContainerHeaderTracePoint(context, threadId, codeLocationId, eventId) {
+
+    /** Number of completed iterations, or [UNKNOWN_ITERATIONS_COUNT] until the loop footer is available. */
+    val iterations: Int get() = loopEndTracePoint?.iterations ?: UNKNOWN_ITERATIONS_COUNT
+
+    /** Closing side of this loop; `null` while the loop is still running. */
+    var loopEndTracePoint: TraceLoopEndTracePoint? = null
+
+    override var footerTracePoint: TraceContainerFooterTracePoint?
+        get() = loopEndTracePoint
+        set(value) {
+            loopEndTracePoint = value.asFooterTracePointOf<TraceLoopEndTracePoint>(container = this)
+        }
+
+    override fun completeTracePoint(): TraceLoopEndTracePoint =
+        loopEndTracePoint ?: createLoopEndTracePoint(UNKNOWN_ITERATIONS_COUNT)
+
+    /** Completes this loop, counting its iterations as the [TraceLoopIterationTracePoint]s among [children]. */
+    override fun completeTracePoint(children: List<TracePoint>): TraceLoopEndTracePoint =
+        loopEndTracePoint ?: createLoopEndTracePoint(children.count { it is TraceLoopIterationTracePoint })
+
+    private fun createLoopEndTracePoint(iterations: Int): TraceLoopEndTracePoint =
+        TraceLoopEndTracePoint(
+            context = context,
+            threadId = threadId,
+            codeLocationId = codeLocationId,
+            loopEventId = eventId,
+            iterations = iterations,
+        ).also { loopEndTracePoint = it }
+
+    override fun toText(appendable: TraceAppendable) {
+        appendable.append(tracePoint = this)
+    }
+
+    companion object {
+        const val UNKNOWN_ITERATIONS_COUNT = -1
+    }
+}
+
+class TraceLoopEndTracePoint(
+    context: TraceContext,
+    threadId: Int,
+    codeLocationId: Int,
+    loopEventId: Int,
+    val iterations: Int,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TraceContainerFooterTracePoint(context, threadId, codeLocationId, loopEventId, eventId) {
+
+    override fun toText(appendable: TraceAppendable) {
+        appendable.append(tracePoint = this)
+    }
+}
+
+/** A single iteration of a [TraceLoopTracePoint]. */
 class TraceLoopIterationTracePoint(
     context: TraceContext,
     threadId: Int,
@@ -277,9 +429,42 @@ class TraceLoopIterationTracePoint(
     val loopId: Int,
     val loopIteration: Int,
     eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
-) : TraceContainerTracePoint(context, threadId, codeLocationId, eventId) {
+) : TraceContainerHeaderTracePoint(context, threadId, codeLocationId, eventId) {
+    /** Closing side of this iteration; `null` while the iteration is still running. */
+    var iterationEndTracePoint: TraceLoopIterationEndTracePoint? = null
 
-    override fun loadFooter(inp: DataInput) {}
+    override var footerTracePoint: TraceContainerFooterTracePoint?
+        get() = iterationEndTracePoint
+        set(value) {
+            iterationEndTracePoint = value.asFooterTracePointOf<TraceLoopIterationEndTracePoint>(container = this)
+        }
+
+    override fun completeTracePoint(): TraceLoopIterationEndTracePoint =
+        iterationEndTracePoint ?: TraceLoopIterationEndTracePoint(
+            context = context,
+            threadId = threadId,
+            codeLocationId = codeLocationId,
+            loopIterationEventId = eventId,
+        ).also { iterationEndTracePoint = it }
+
+    override fun toText(appendable: TraceAppendable) {
+        appendable.append(tracePoint = this)
+    }
+}
+
+/**
+ * The closing side of a [TraceLoopIterationTracePoint].
+ *
+ * An iteration has nothing to report on completion; the record exists so that every container
+ * is delimited the same way on the wire.
+ */
+class TraceLoopIterationEndTracePoint(
+    context: TraceContext,
+    threadId: Int,
+    codeLocationId: Int,
+    loopIterationEventId: Int,
+    eventId: Int = EVENT_ID_GENERATOR.getAndIncrement()
+) : TraceContainerFooterTracePoint(context, threadId, codeLocationId, loopIterationEventId, eventId) {
 
     override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
@@ -483,9 +668,11 @@ class TraceCatchTracePoint(
     override fun toText(appendable: TraceAppendable) {
         appendable.append(tracePoint = this)
     }
-
 }
 
 const val READ_ACCESS_SYMBOL  = "➜"
 const val WRITE_ACCESS_SYMBOL = "="
 
+val TraceLoopTracePoint.iterationsAsString: String
+    get() = if (iterations == UNKNOWN_ITERATIONS_COUNT) "<unknown>"
+            else iterations.toString()

@@ -12,7 +12,8 @@ package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
-import org.jetbrains.lincheck.trace.TraceContainerTracePoint
+import org.jetbrains.lincheck.trace.TraceContainerFooterTracePoint
+import org.jetbrains.lincheck.trace.TraceContainerHeaderTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
@@ -58,7 +59,7 @@ internal class BufferedTraceWriter(
     context: TraceContext,
     globalContextState: TraceContextSavedState,
     private val storage: BlockSaver,
-    private val bufferStream: ByteBufferOutputStream = ByteBufferOutputStream(PER_THREAD_DATA_BUFFER_SIZE)
+    private val bufferStream: ByteBufferOutputStream,
 ) : ContextAwareTraceWriter(
     context = context,
     dataStream = bufferStream,
@@ -99,8 +100,8 @@ internal class BufferedTraceWriter(
         maybeFlushData()
     }
 
-    override fun endWriteContainerTracepointFooter(id: Int) {
-        super.endWriteContainerTracepointFooter(id)
+    override fun endWriteContainerTracepoint(id: Int) {
+        super.endWriteContainerTracepoint(id)
         maybeFlushData()
     }
 
@@ -121,6 +122,12 @@ internal class BufferedTraceWriter(
         bufferStream.mark()
     }
 
+    /**
+     * Restores the writer to the last complete object, dropping the partially written one.
+     *
+     * Index cells survive the rollback by construction: [writeIndexCell] adds a cell only after
+     * its object is fully in the buffer, and marks the buffer at the same moment.
+     */
     fun rollback() {
         resetTracepointState()
         bufferStream.rollback()
@@ -326,17 +333,26 @@ private class FileStreamingThread(
     }
 }
 
-class FileStreamingTraceCollecting(
+class FileStreamingTraceCollecting internal constructor(
     dataStream: OutputStream,
     indexStream: OutputStream,
-    val context: TraceContext
+    val context: TraceContext,
+    // Tests shrink the per-thread buffer to make small traces overflow it and roll over to the next block.
+    private val perThreadDataBufferSize: Int,
 ): TraceCollectingStrategy, TraceContextSavedState {
-    constructor(baseFileName: String, context: TraceContext) :
+    constructor(dataStream: OutputStream, indexStream: OutputStream, context: TraceContext) :
+            this(dataStream, indexStream, context, PER_THREAD_DATA_BUFFER_SIZE)
+
+    internal constructor(baseFileName: String, context: TraceContext, perThreadDataBufferSize: Int) :
             this(
                 dataStream = openNewFile(baseFileName),
                 indexStream = openNewFile("$baseFileName.$INDEX_FILENAME_EXT"),
-                context = context
+                context = context,
+                perThreadDataBufferSize = perThreadDataBufferSize,
             )
+
+    constructor(baseFileName: String, context: TraceContext) :
+            this(baseFileName, context, PER_THREAD_DATA_BUFFER_SIZE)
 
     private val ioThread = FileStreamingThread(dataStream, indexStream, savedState = this)
     init {
@@ -369,7 +385,8 @@ class FileStreamingTraceCollecting(
                     indexList: List<IndexCell>,
                     contextSnapshot: BlockContextSnapshot
                 ) = ioThread.addBlock(writerId, logicalBlockStart, dataBlock, indexList, contextSnapshot)
-            }
+            },
+            bufferStream = ByteBufferOutputStream(perThreadDataBufferSize),
         )
         context.setThreadName(threadId, thread.name)
     }
@@ -380,7 +397,7 @@ class FileStreamingTraceCollecting(
     }
 
     override fun tracePointCreated(
-        parent: TraceContainerTracePoint?,
+        parent: TraceContainerHeaderTracePoint?,
         created: TracePoint
     ) {
         val writer = writers[Thread.currentThread()] ?: return
@@ -395,18 +412,22 @@ class FileStreamingTraceCollecting(
         }
     }
 
-    override fun openContainerTracePoint(container: TraceContainerTracePoint) {}
+    override fun openContainerTracePoint(container: TraceContainerHeaderTracePoint) {}
 
-    override fun completeContainerTracePoint(thread: Thread, container: TraceContainerTracePoint) {
+    override fun completeContainerTracePoint(
+        thread: Thread,
+        header: TraceContainerHeaderTracePoint,
+        footer: TraceContainerFooterTracePoint,
+    ) {
         val writer = writers[thread] ?: return
         try {
             writer.mark()
-            writer.writeTracePointFooter(container)
+            writer.writeTracePoint(footer)
         } catch (_: BufferOverflowException) {
             // Flush current buffers, start over
             writer.rollback()
             writer.flush()
-            writer.writeTracePointFooter(container)
+            writer.writeTracePoint(footer)
         }
     }
 

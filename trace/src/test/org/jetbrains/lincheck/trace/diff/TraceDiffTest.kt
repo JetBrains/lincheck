@@ -18,6 +18,7 @@ import org.jetbrains.lincheck.trace.TraceReadFieldTracePoint
 import org.jetbrains.lincheck.trace.TraceReadLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.TraceWriteFieldTracePoint
+import org.jetbrains.lincheck.trace.iterationsAsString
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 import org.jetbrains.lincheck.trace.serialization.PACK_FILENAME_EXT
 import org.jetbrains.lincheck.trace.tree.TraceBuilder
@@ -77,7 +78,7 @@ class TraceDiffTest {
         is TraceReadLocalVariableTracePoint -> "readVar($name)"
         is TraceReadFieldTracePoint -> "read($name=${(value as? TraceScalar)?.value})"
         is TraceWriteFieldTracePoint -> "write($name=${(value as? TraceScalar)?.value})"
-        is TraceLoopTracePoint -> "loop[$iterations]"
+        is TraceLoopTracePoint -> "loop[$iterationsAsString]"
         is TraceLoopIterationTracePoint -> "iter$loopIteration"
         else -> this::class.simpleName!!
     }
@@ -184,7 +185,7 @@ class TraceDiffTest {
             },
             right = {
                 node(call("A", "root")) {
-                    node(call("A", "child").also { it.result = TraceScalar(7) }) {
+                    node(call("A", "child").also { it.setResult(TraceScalar(7)) }) {
                         node(readVar("x"))
                     }
                 }
@@ -202,12 +203,12 @@ class TraceDiffTest {
                 readVar(x) [UNCHANGED]
             """,
             left = {
-                node(call("A", "root").also { it.result = TraceScalar(1) }) {
+                node(call("A", "root").also { it.setResult(TraceScalar(1)) }) {
                     node(readVar("x"))
                 }
             },
             right = {
-                node(call("A", "root").also { it.result = TraceScalar(2) }) {
+                node(call("A", "root").also { it.setResult(TraceScalar(2)) }) {
                     node(readVar("x"))
                 }
             },

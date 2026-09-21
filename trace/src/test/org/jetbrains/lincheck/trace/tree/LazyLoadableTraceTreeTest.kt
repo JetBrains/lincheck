@@ -248,6 +248,47 @@ class LazyLoadableTraceTreeTest {
         }
     }
 
+    /**
+     * Builds the following single-thread trace:
+     *
+     * ```
+     * root
+     *   loop
+     *     iter1
+     *       a
+     *     iter2
+     *   b
+     * ```
+     *
+     * Covers the nested-container case: iterations and their closing trace points are
+     * interleaved with the loop's own children, and `iter2` is childless.
+     */
+    private fun TraceBuilder.loopTrace(): Tree.Node<TracePoint> {
+        fun m(name: String) = call("com.example.Foo", name)
+        return node(m("root")) {
+            val l = loop(loopId = 1)
+            node(l) {
+                node(iteration(l)) { node(m("a")) }
+                node(iteration(l))
+            }
+            node(m("b"))
+        }
+    }
+
+    @Test
+    fun `loop iterations and their children are read back`() {
+        withTraceTree(build = { loopTrace() }) { _, tree ->
+            assertEquals("root(loop[2](iter1(a),iter2),b)", tree.structure())
+        }
+    }
+
+    @Test
+    fun `loop iterations and their children are read back without an index`() {
+        withTraceTree(build = { loopTrace() }, dropIndex = true) { _, tree ->
+            assertEquals("root(loop[2](iter1(a),iter2),b)", tree.structure())
+        }
+    }
+
     @Test
     fun `tree with null root trace point has null root`() {
         withTraceTree(build = { testTrace() }) { reader, _ ->

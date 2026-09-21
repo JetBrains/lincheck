@@ -79,7 +79,7 @@ class NetworkStreamingTraceCollecting(
         // No-op: all threads write directly to the shared queue, no per-thread buffers to flush
     }
 
-    override fun tracePointCreated(parent: TraceContainerTracePoint?, created: TracePoint) {
+    override fun tracePointCreated(parent: TraceContainerHeaderTracePoint?, created: TracePoint) {
         check(created is TraceSnapshotLineBreakpointTracePoint) {
             "Only snapshot line breakpoints are supported by WebSocket trace collection strategy"
         }
@@ -113,11 +113,15 @@ class NetworkStreamingTraceCollecting(
         }
     }
 
-    override fun openContainerTracePoint(container: TraceContainerTracePoint) {
+    override fun openContainerTracePoint(container: TraceContainerHeaderTracePoint) {
         error("Container trace points are not supported by WebSocket trace collection strategy")
     }
 
-    override fun completeContainerTracePoint(thread: Thread, container: TraceContainerTracePoint) {
+    override fun completeContainerTracePoint(
+        thread: Thread,
+        header: TraceContainerHeaderTracePoint,
+        footer: TraceContainerFooterTracePoint,
+    ) {
         error("Container trace points are not supported by WebSocket trace collection strategy")
     }
 
@@ -472,7 +476,7 @@ class NetworkTraceReader : Closeable {
                     }
 
                     ObjectKind.TRACEPOINT -> {
-                        val tracePoint = dataInput.readTraceTracePoint(context)
+                        val tracePoint = dataInput.readTracePointData(context)
                         check(tracePoint is TraceSnapshotLineBreakpointTracePoint) {
                             "WebSocket trace reader only supports TraceSnapshotLineBreakpointTracePoint, got ${tracePoint::class.simpleName}"
                         }
@@ -488,10 +492,6 @@ class NetworkTraceReader : Closeable {
                         } catch (e: Exception) {
                             Logger.error { "Error in trace point listener callback: ${e.message}" }
                         }
-                    }
-
-                    ObjectKind.TRACEPOINT_FOOTER -> {
-                        Logger.warn { "Unexpected TRACEPOINT_FOOTER in WebSocket stream (live debugger mode should not have container trace points)" }
                     }
                 }
             }

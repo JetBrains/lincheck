@@ -169,8 +169,14 @@ class TracePointCloner(
                 flags = tracePoint.flags,
                 eventId = eventId++
             ).also {
-                it.result = tracePoint.result.clone()
-                it.exceptionClassName = tracePoint.exceptionClassName
+                it.resultTracePoint = TraceMethodCallResultTracePoint(
+                    context = context,
+                    threadId = threadId,
+                    codeLocationId = it.codeLocationId,
+                    methodCallEventId = it.eventId,
+                    result = tracePoint.result.clone(),
+                    exceptionClassName = tracePoint.exceptionClassName,
+                )
             }
 
             is TraceSnapshotLineBreakpointTracePoint -> TraceSnapshotLineBreakpointTracePoint(
@@ -201,6 +207,11 @@ class TracePointCloner(
                 exception = tracePoint.exception.clone(),
                 eventId = eventId++
             )
+
+            // Cloning walks trace trees, whose nodes are always the opening side of a container:
+            // the closing side is cloned together with the container it belongs to.
+            is TraceContainerFooterTracePoint ->
+                error("Cannot clone the closing tracepoint ${tracePoint::class.java.simpleName}")
         }
     }
 

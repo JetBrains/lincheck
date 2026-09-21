@@ -35,12 +35,13 @@ import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
+import org.jetbrains.lincheck.trace.iterationsAsString
 import org.jetbrains.lincheck.trace.serialization.INDEX_FILENAME_EXT
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 import org.jetbrains.lincheck.trace.serialization.saveRecorderTrace
-import org.jetbrains.lincheck.util.tree.TreeRewriteRule
 import org.jetbrains.lincheck.util.tree.Tree
 import java.io.File
+import java.util.IdentityHashMap
 
 /**
  * Builds hand-crafted single-thread traces for tree tests
@@ -48,6 +49,7 @@ import java.io.File
  */
 internal class TraceBuilder {
     val context = TraceContext()
+    private val loopIterations = IdentityHashMap<TraceLoopTracePoint, Int>()
 
     fun codeLocation(line: Int): Int = context.codeLocationsPool.register(
         MethodCallCodeLocation(StackTraceElement("A", "m", "A.kt", line), accessPath = null, argumentNames = null)
@@ -69,7 +71,7 @@ internal class TraceBuilder {
             methodId = methodId,
             obj = TraceNull,
             parameters = emptyList(),
-        ).also { it.result = TraceUnit }
+        ).also { it.setResult(TraceUnit) }
     }
 
     private fun fieldId(className: String, fieldName: String, type: Types.Type): Int = context
@@ -123,10 +125,11 @@ internal class TraceBuilder {
     fun loop(loopId: Int): TraceLoopTracePoint =
         TraceLoopTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, loopId)
 
-    /** Creates the next iteration point of [loop], bumping its iteration count. */
+    /** Creates the next iteration point of [loop]. */
     fun iteration(loop: TraceLoopTracePoint): TraceLoopIterationTracePoint =
         TraceLoopIterationTracePoint(
-            context, 0, UNKNOWN_CODE_LOCATION_ID, loop.loopId, loopIteration = loop.incrementIterations() + 1,
+            context, 0, UNKNOWN_CODE_LOCATION_ID, loop.loopId,
+            loopIteration = loopIterations.merge(loop, 1, Int::plus)!!,
         )
 
     /** @return base file name of the saved trace. */
@@ -143,14 +146,20 @@ internal class TraceBuilder {
  * and runs [test] over the lazily loaded tree read back from disk.
  *
  * @param batchLoading see [LazyLoadableTraceTree].
+ * @param dropIndex delete the index file before reading,
+ *   forcing the reader to rebuild the context by scanning the whole data file.
  */
 internal fun withTraceTree(
     build: TraceBuilder.() -> Tree.Node<TracePoint>,
     batchLoading: Boolean = false,
+    dropIndex: Boolean = false,
     test: (LazyTraceReader, LazyLoadableTraceTree<TracePoint>) -> Unit,
 ) {
     val builder = TraceBuilder()
     val path = builder.save(builder.build())
+    if (dropIndex) {
+        check(File("$path.$INDEX_FILENAME_EXT").delete()) { "Cannot delete the index of $path" }
+    }
     LazyTraceReader(path).use { reader ->
         test(reader, reader.readTraceTrees(batchLoading).single())
     }
@@ -172,7 +181,7 @@ private fun Tree.Node<TracePoint>.label(): String = when (val tracePoint = data)
     is TraceWriteFieldTracePoint -> "write(${tracePoint.name})"
     is TraceReadLocalVariableTracePoint -> "readVar(${tracePoint.name})"
     is TraceWriteLocalVariableTracePoint -> "writeVar(${tracePoint.name})"
-    is TraceLoopTracePoint -> "loop[${tracePoint.iterations}]"
+    is TraceLoopTracePoint -> "loop[${tracePoint.iterationsAsString}]"
     is TraceLoopIterationTracePoint -> "iter${tracePoint.loopIteration}"
     is TraceArrayTracePoint -> "array"
     else -> tracePoint::class.simpleName!!

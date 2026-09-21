@@ -62,7 +62,7 @@ class TraceFileHeaderTest {
         val collector = FileStreamingTraceCollecting(traceFile.absolutePath, context)
         collector.registerCurrentThread(tracePoint.threadId)
         collector.tracePointCreated(parent = null, tracePoint)
-        collector.completeContainerTracePoint(Thread.currentThread(), tracePoint)
+        collector.completeContainerTracePoint(Thread.currentThread(), tracePoint, tracePoint.completeTracePoint())
         collector.completeThread(Thread.currentThread())
         collector.traceEnded()
         return traceFile

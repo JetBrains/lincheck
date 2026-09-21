@@ -11,8 +11,6 @@
 package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.trace.*
-import org.jetbrains.lincheck.util.Logger
-import java.util.concurrent.atomic.AtomicLong
 
 
 class NullTraceCollecting(private val context: TraceContext): TraceCollectingStrategy {
@@ -23,13 +21,17 @@ class NullTraceCollecting(private val context: TraceContext): TraceCollectingStr
     override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
-        parent: TraceContainerTracePoint?,
+        parent: TraceContainerHeaderTracePoint?,
         created: TracePoint
     ) {}
 
-    override fun openContainerTracePoint(container: TraceContainerTracePoint) {}
+    override fun openContainerTracePoint(container: TraceContainerHeaderTracePoint) {}
 
-    override fun completeContainerTracePoint(thread: Thread, container: TraceContainerTracePoint) {}
+    override fun completeContainerTracePoint(
+        thread: Thread,
+        header: TraceContainerHeaderTracePoint,
+        footer: TraceContainerFooterTracePoint,
+    ) {}
 
     /**
      * Do nothing.

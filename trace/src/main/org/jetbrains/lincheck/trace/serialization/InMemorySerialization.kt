@@ -11,7 +11,8 @@
 package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
-import org.jetbrains.lincheck.trace.TraceContainerTracePoint
+import org.jetbrains.lincheck.trace.TraceContainerFooterTracePoint
+import org.jetbrains.lincheck.trace.TraceContainerHeaderTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
@@ -129,7 +130,7 @@ class MemoryTraceCollecting(
     override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
-        parent: TraceContainerTracePoint?,
+        parent: TraceContainerHeaderTracePoint?,
         created: TracePoint
     ) {
         if (collectFlat) {
@@ -156,7 +157,7 @@ class MemoryTraceCollecting(
         }
     }
 
-    override fun openContainerTracePoint(container: TraceContainerTracePoint) {
+    override fun openContainerTracePoint(container: TraceContainerHeaderTracePoint) {
         val builder = treeBuilders[container.threadId] ?: return
         val node = builder.lastCreatedNode
         if (node == null || node.data !== container) {
@@ -166,15 +167,19 @@ class MemoryTraceCollecting(
         builder.openContainers.add(node)
     }
 
-    override fun completeContainerTracePoint(thread: Thread, container: TraceContainerTracePoint) {
-        val builder = treeBuilders[container.threadId] ?: return
+    override fun completeContainerTracePoint(
+        thread: Thread,
+        header: TraceContainerHeaderTracePoint,
+        footer: TraceContainerFooterTracePoint,
+    ) {
+        val builder = treeBuilders[header.threadId] ?: return
         val stack = builder.openContainers
         // The completed container is normally on top, but the tracker may abandon enclosed
         // frames without completing them (e.g. super constructor calls on exception),
         // so pop everything above the matching container as well to stay in sync.
-        val index = stack.indexOfLast { it.data === container }
+        val index = stack.indexOfLast { it.data === header }
         if (index < 0) {
-            Logger.warn { "Completed container ${container.toText(verbose = false)} trace point is not open" }
+            Logger.warn { "Completed container ${header.toText(verbose = false)} trace point is not open" }
             return
         }
         while (stack.size > index) {
@@ -247,9 +252,9 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
 private fun saveTraceTree(writer: TraceWriter, node: Tree.Node<TracePoint>) {
     val tracepoint = node.data
     writer.writeTracePoint(tracepoint)
-    if (tracepoint is TraceContainerTracePoint) {
+    if (tracepoint is TraceContainerHeaderTracePoint) {
         node.children.forEach { saveTraceTree(writer, it) }
-        writer.writeTracePointFooter(tracepoint)
+        writer.writeTracePoint(tracepoint.completeTracePoint(node.children.map { it.data }))
     }
 }
 

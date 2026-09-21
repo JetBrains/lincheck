@@ -183,15 +183,16 @@ private fun diffOneThread(
         null
     }
     // Make diff!
+    val outputRootChildren = mutableListOf<TracePoint>()
     points += diffTracepointSubtree(
         output = output,
         cloner = cloner,
         cmp = TracePointComparator,
-        outputRoot = outputRoot,
         leftNodes = listOf(leftRoot),
-        rightNodes = listOf(rightRoot)
+        rightNodes = listOf(rightRoot),
+        outputParentChildren = outputRootChildren,
     )
-    outputRoot?.let { output.writeTraceMethodCallTracePointFooter(it) }
+    outputRoot?.let { output.writeTracePoint(it.completeTracePoint(outputRootChildren)) }
     return points
 }
 
@@ -461,45 +462,41 @@ private fun saveThreadMap(threadMap: List<ThreadMapElement>): File {
     return threadMapFile
 }
 
+// The output tree is not materialized: nesting is expressed by the write/writeEnd call order.
+// The only parent-side bookkeeping left is each container's own children list,
+// collected in `outputParentChildren` because the container's closing tracepoint is derived from it.
 private fun copyTracepointSubtree(
     output: TraceWriter,
     cloner: (TracePoint) -> TracePoint,
     node: Tree.Node<TracePoint>,
     diffStatus: DiffStatus,
-    outputParent: TraceContainerTracePoint? = null
+    outputParentChildren: MutableList<TracePoint>? = null,
 ): Int {
     var points = 1
     val outputPoint = cloner(node.data)
     outputPoint.diffStatus = diffStatus
-    countCopiedChild(outputParent)
+    outputParentChildren?.add(outputPoint)
     output.writeTracePoint(outputPoint)
     // Save all children recursively, if needed
-    if (outputPoint is TraceContainerTracePoint) {
+    if (outputPoint is TraceContainerHeaderTracePoint) {
+        val outputChildren = mutableListOf<TracePoint>()
         node.children.forEach { child ->
-            points += copyTracepointSubtree(output, cloner, child, diffStatus, outputPoint)
+            points += copyTracepointSubtree(output, cloner, child, diffStatus, outputChildren)
         }
-        output.writeTracePointFooter(outputPoint)
+        output.writeTracePoint(outputPoint.completeTracePoint(outputChildren))
         // Free memory
         node.unloadChildren()
     }
     return points
 }
 
-// The output tree is not materialized: nesting is expressed by the save/saveFooter call order.
-// The only parent-side bookkeeping left is the loop-iteration count, written in the loop's footer.
-private fun countCopiedChild(outputParent: TraceContainerTracePoint?) {
-    if (outputParent is TraceLoopTracePoint) {
-        outputParent.incrementIterations()
-    }
-}
-
 private fun diffTracepointSubtree(
     output: TraceWriter,
     cloner: TracePointCloner,
     cmp: TracePointComparator,
-    outputRoot: TraceContainerTracePoint?,
     leftNodes: List<Tree.Node<TracePoint>>,
-    rightNodes: List<Tree.Node<TracePoint>>
+    rightNodes: List<Tree.Node<TracePoint>>,
+    outputParentChildren: MutableList<TracePoint>,
 ): Int {
     var points = 0
     val diff = diffLists(left = leftNodes, right = rightNodes) { l, r -> cmp.editIndependentEqual(l.data, r.data) }
@@ -517,32 +514,34 @@ private fun diffTracepointSubtree(
                     // "Remove" left and make it without children
                     val oldPoint = cloner.cloneLeftTracePoint(lp, rp.eventId)
                     oldPoint.diffStatus = DiffStatus.EDITED_OLD
-                    countCopiedChild(outputRoot)
+                    outputParentChildren.add(oldPoint)
                     output.writeTracePoint(oldPoint)
-                    if (oldPoint is TraceContainerTracePoint) {
-                        output.writeTracePointFooter(oldPoint)
+                    if (oldPoint is TraceContainerHeaderTracePoint) {
+                        // this tracepoint keeps no children, so its closing side has nothing to derive from them
+                        output.writeTracePoint(oldPoint.completeTracePoint())
                     }
                     points += 1
                 }
                 // Copy tracepoint itself from right subtree for now
                 val outputPoint = cloner.cloneRightTracePoint(rp, lp.eventId)
                 outputPoint.diffStatus = if (strict) DiffStatus.UNCHANGED else DiffStatus.EDITED_NEW
-                countCopiedChild(outputRoot)
+                outputParentChildren.add(outputPoint)
                 output.writeTracePoint(outputPoint)
                 points += 1
 
                 // Maybe, we need to go deeper?
-                if (outputPoint is TraceContainerTracePoint) {
+                if (outputPoint is TraceContainerHeaderTracePoint) {
+                    val outputChildren = mutableListOf<TracePoint>()
                     points += diffTracepointSubtree(
                         output = output,
                         cloner = cloner,
                         cmp = TracePointComparator,
-                        outputRoot = outputPoint,
                         leftNodes = ln.children,
-                        rightNodes = rn.children
+                        rightNodes = rn.children,
+                        outputParentChildren = outputChildren,
                     )
 
-                    output.writeTracePointFooter(outputPoint)
+                    output.writeTracePoint(outputPoint.completeTracePoint(outputChildren))
                     // Free memory
                     ln.unloadChildren()
                     rn.unloadChildren()
@@ -554,7 +553,7 @@ private fun diffTracepointSubtree(
                     cloner = { cloner.cloneLeftTracePoint(it, -1) },
                     node = leftNodes[line.leftIdx],
                     diffStatus = DiffStatus.REMOVED,
-                    outputParent = outputRoot
+                    outputParentChildren = outputParentChildren,
                 )
             }
             is AddedDiffLine -> {
@@ -563,7 +562,7 @@ private fun diffTracepointSubtree(
                     cloner = { cloner.cloneRightTracePoint(it, -1) },
                     node = rightNodes[line.rightIdx],
                     diffStatus = DiffStatus.ADDED,
-                    outputParent = outputRoot
+                    outputParentChildren = outputParentChildren,
                 )
             }
         }

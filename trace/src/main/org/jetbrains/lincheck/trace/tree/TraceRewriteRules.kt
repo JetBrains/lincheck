@@ -128,8 +128,8 @@ private fun combineCallTracePoints(
         child.eventId,
     )
     combined.copyDiffStatus(child)
-    combined.result = child.result
-    combined.exceptionClassName = child.exceptionClassName
+    // Safe to share the closing side: `combined` is built with `child.eventId`.
+    combined.resultTracePoint = child.resultTracePoint
     return combined
 }
 
@@ -276,8 +276,9 @@ fun removeEmptyLoopOrUpdateIterationsRule(context: TraceContext): TreeRewriteRul
             iterationNodes.size < loop.iterations -> {
                 val newLoop = TraceLoopTracePoint(
                     context, loop.threadId, loop.codeLocationId, loop.loopId,
-                    loop.eventId, iterationNodes.size,
+                    loop.eventId,
                 )
+                newLoop.completeTracePoint(iterationNodes.map { it.data })
                 newLoop.copyDiffStatus(loop)
                 node<TracePoint>(newLoop) {
                     iterationNodes.forEach { lazyNode(it) }
