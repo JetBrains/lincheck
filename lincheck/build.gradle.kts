@@ -114,6 +114,9 @@ setupTestsJDK(project)
 tasks {
     test {
         configureJvmTestCommon(project)
+        // Scheduling and instrumentation checks need a fresh execution, including on warm CI agents.
+        outputs.upToDateWhen { false }
+        outputs.cacheIf { false }
 
         val ideaActive = System.getProperty("idea.active") == "true"
         if (!ideaActive) {
@@ -156,6 +159,7 @@ tasks {
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
+        outputs.cacheIf { false }
 
         forkEvery = 1
     }

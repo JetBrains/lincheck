@@ -52,7 +52,7 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
                 .newBuild()
                 .setStandardError(System.err)
                 .addArguments(
-                    "-Dorg.gradle.daemon=false",
+                    "--build-cache",
                     "--init-script",
                     createInitScriptAsTempFile(
                         buildGradleInitScriptToDumpTrace(
@@ -111,6 +111,9 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
                     )
                 }
                 jvmTasks.forEach { task ->
+                    // Compilation can reuse the cache; the trace must come from a fresh instrumented test JVM.
+                    task.outputs.upToDateWhen { false }
+                    task.outputs.cacheIf { false }
                     task.doFirst {
                         val options = task as JavaForkOptions
                         val jvmArgs = options.jvmArgs?.toMutableList() ?: mutableListOf()

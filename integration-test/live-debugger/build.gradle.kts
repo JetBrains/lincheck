@@ -38,12 +38,6 @@ tasks {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 
-    registerTraceAgentIntegrationTestsPrerequisites()
-
-    val copyClasspathClashProjects = copyClasspathClashTestProjects()
-
-    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar")
-
     val integrationTestSuite: String? by project
     val integrationTestSuiteType: LiveDebuggerIntegrationTestSuite? = when (integrationTestSuite?.lowercase()) {
         "basic" -> LiveDebuggerIntegrationTestSuite.Basic
@@ -55,6 +49,21 @@ tasks {
         "all", null -> LiveDebuggerIntegrationTestSuite.All
         else -> null
     }
+
+    val prerequisites = registerTraceAgentIntegrationTestsPrerequisites(when (integrationTestSuiteType) {
+        LiveDebuggerIntegrationTestSuite.Basic, null -> emptySet()
+        LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections,
+        LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollectionsMultipleBreakpointsOnSameLine ->
+            setOf("kotlinx.collections.immutable")
+        LiveDebuggerIntegrationTestSuite.Ktor -> setOf("ktor")
+        LiveDebuggerIntegrationTestSuite.KotlinCompiler -> setOf("kotlin")
+        LiveDebuggerIntegrationTestSuite.All -> setOf("kotlinx.collections.immutable", "ktor", "kotlin")
+    })
+    val copyClasspathClashProjects = when (integrationTestSuiteType) {
+        LiveDebuggerIntegrationTestSuite.Basic, LiveDebuggerIntegrationTestSuite.All -> copyClasspathClashTestProjects()
+        else -> emptyList()
+    }
+    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar", prerequisites)
 
     register<Test>("liveDebuggerIntegrationTest") {
         useJUnitPlatform()
@@ -88,7 +97,8 @@ tasks {
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        outputs.cacheIf { false }
+        dependsOn(prerequisites)
         dependsOn(copyLiveDebuggerFatJar)
         copyClasspathClashProjects.forEach { dependsOn(it) }
     }

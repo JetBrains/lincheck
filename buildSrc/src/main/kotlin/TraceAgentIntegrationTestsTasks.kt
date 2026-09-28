@@ -58,11 +58,10 @@ private val projectsToTest = listOf(
     ),
 )
 
-lateinit var traceAgentIntegrationTestsPrerequisites: TaskProvider<Task>
-
-fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
+/** Prepare the selected suite's external snapshots; null selects every registered repository. */
+fun Project.registerTraceAgentIntegrationTestsPrerequisites(projectNames: Set<String>?): TaskProvider<Task> {
     val unzippedTestProjectsDir = layout.buildDirectory.dir("integrationTestProjects")
-    val prerequisite = projectsToTest.map { projectToTest ->
+    val prerequisite = projectsToTest.filter { projectNames == null || it.repositoryName in projectNames }.map { projectToTest ->
         val projectName = projectToTest.repositoryName
         val hash = projectToTest.commitHash
 
@@ -79,6 +78,13 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
             // Otherwise, Gradle thinks that we are trying to use the output of one unzip task as input for another.
             // Also, this helps to drop the commit hash from project folder.
             into(unzippedTestProjectsDir.get().dir(projectName))
+            val checkout = unzippedTestProjectsDir.get().dir(projectName).asFile
+            val revisionMarker = checkout.resolve(".integration-test-revision")
+            // Preserve warm compiler outputs for the same snapshot, but remove deleted sources when its pin changes.
+            doFirst {
+                if (!revisionMarker.isFile || revisionMarker.readText() != hash) checkout.deleteRecursively()
+            }
+            doLast { revisionMarker.writeText(hash) }
 
             eachFile {
                 val correctPath = relativePath.segments.drop(1)
@@ -88,7 +94,7 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites() {
         }
     }
 
-    traceAgentIntegrationTestsPrerequisites = tasks.register("traceAgentIntegrationTestsPrerequisites") {
+    return tasks.register("traceAgentIntegrationTestsPrerequisites") {
         prerequisite.forEach { dependsOn(it) }
         dependsOn(":trace-recorder:traceRecorderFatJar")
         dependsOn(":live-debugger:liveDebuggerFatJar")
@@ -125,10 +131,15 @@ fun Project.copyClasspathClashTestProjects(): List<TaskProvider<Copy>> =
  *
  * @param fromProject trace-recorder project from which to copy the fat-jar.
  * @param fatJarName expected fat-jar name.
+ * @param prerequisites preparation owned by this integration-test module.
  */
-fun Project.copyTraceAgentFatJar(fromProject: Project, fatJarName: String): TaskProvider<Copy> {
+fun Project.copyTraceAgentFatJar(
+    fromProject: Project,
+    fatJarName: String,
+    prerequisites: TaskProvider<Task>,
+): TaskProvider<Copy> {
     val copyTraceAgentFatJar = tasks.register<Copy>("${fromProject.name}_copyAgentFatJar") {
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        dependsOn(prerequisites)
         val fatJarFile = fromProject.layout.buildDirectory.file("libs/$fatJarName")
         from(fatJarFile)
         into(layout.buildDirectory.dir("libs"))
