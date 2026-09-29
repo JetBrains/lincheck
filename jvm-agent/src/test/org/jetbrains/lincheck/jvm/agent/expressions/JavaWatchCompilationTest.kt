@@ -10,8 +10,10 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions
 
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionNode
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionStatus
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionTarget
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.InheritedExpressionTarget
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.junit.Test
 
@@ -87,6 +89,30 @@ class JavaWatchCompilationTest : AbstractExpressionCompilationTest() {
             listOf("node.text", "node.value", "node.next().text", "node.next().value"),
             listOf("root", 5, "leaf", 9),
             receiver = receiver,
+        )
+    }
+
+    @Test
+    fun `inherited private field watches through a subtype local`() {
+        val owner = InheritedExpressionTarget()
+        assertWatches(
+            java,
+            listOf("owner.inheritedSecret", "owner"),
+            listOf("base-private", owner),
+            locals = listOf(reference("owner", InheritedExpressionTarget::class.java, owner)),
+            enclosingType = ExpressionNode::class.java,
+        )
+    }
+
+    @Test
+    fun `inherited private methods and hidden public fields keep their declaring class`() {
+        val owner = InheritedExpressionTarget()
+        assertWatches(
+            java,
+            listOf("owner.inheritedSecret()", "owner.count"),
+            listOf("base-private", 10),
+            locals = listOf(reference("owner", InheritedExpressionTarget::class.java, owner)),
+            enclosingType = ExpressionNode::class.java,
         )
     }
 

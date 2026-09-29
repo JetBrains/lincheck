@@ -13,6 +13,7 @@ package org.jetbrains.lincheck.jvm.agent.expressions
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionNode
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionStatus
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionTarget
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.InheritedExpressionTarget
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.junit.Test
 
@@ -113,6 +114,18 @@ class JavaConditionCompilationTest : AbstractExpressionCompilationTest() {
         assertCondition(java, "node.text.equals(\"leaf\") && node.value == 5", true, listOf(local))
         assertCondition(java, "node.text().equals(\"leaf\")", true, listOf(local))
         assertCondition(java, "node.next().value == 9", true, listOf(local))
+    }
+
+    @Test
+    fun `inherited private field condition through a subtype local`() {
+        val owner = InheritedExpressionTarget()
+        assertCondition(
+            java,
+            "owner.inheritedSecret.equals(\"base-private\")",
+            true,
+            locals = listOf(reference("owner", InheritedExpressionTarget::class.java, owner)),
+            enclosingType = ExpressionNode::class.java,
+        )
     }
 
     @Test

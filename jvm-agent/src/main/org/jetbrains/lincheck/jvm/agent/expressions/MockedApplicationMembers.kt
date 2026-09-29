@@ -32,12 +32,33 @@ import org.jetbrains.lincheck.jvm.agent.MethodModel
 internal class MockedApplicationMembers {
     private val fields = HashMap<MemberKey, FieldModel>()
     private val methods = HashMap<MemberKey, MethodModel>()
+    private val classFiles = HashMap<String, ClassModel>()
 
     fun field(owner: String, name: String, descriptor: String): FieldModel? =
-        fields[MemberKey(owner, name, descriptor)]
+        fields[MemberKey(owner, name, descriptor)] ?: classFileMember(owner) { type ->
+            type.declaredFields[name]?.takeIf { it.type.descriptor == descriptor }
+        }?.takeUnless { it.isPublic }
 
     fun method(owner: String, name: String, descriptor: String): MethodModel? =
-        methods[MemberKey(owner, name, descriptor)]
+        methods[MemberKey(owner, name, descriptor)] ?: classFileMember(owner) { type ->
+            type.declaredMethods.firstOrNull { it.name == name && it.descriptor == descriptor }
+        }?.takeUnless { it.isPublic }
+
+    /** Records original declarations before the compiler's class-file view widens their visibility. */
+    fun addClassFile(type: ClassModel) {
+        classFiles[type.binaryName] = type
+    }
+
+    private fun <T> classFileMember(owner: String, member: (ClassModel) -> T?): T? {
+        var type = classFiles[owner.replace('/', '.')]
+        while (type != null) {
+            // javac may name a subclass as owner, including for a private member made public in its superclass.
+            // Stop at public declarations too: a public subclass member can hide a mocked superclass member.
+            member(type)?.let { return it }
+            type = type.superclassBinaryName?.let(classFiles::get)
+        }
+        return null
+    }
 
     fun add(field: FieldModel) {
         fields[MemberKey(field.declaringBinaryName.replace('.', '/'), field.name, field.type.descriptor)] = field
@@ -72,6 +93,7 @@ internal class MockedApplicationMembers {
     fun addAll(other: MockedApplicationMembers) {
         fields.putAll(other.fields)
         methods.putAll(other.methods)
+        classFiles.putAll(other.classFiles)
     }
 
     private fun addInheritedMembers(subclass: ClassModel, superclass: ClassModel) {

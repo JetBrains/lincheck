@@ -10,10 +10,9 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions.java
 
+import org.jetbrains.lincheck.jvm.agent.ClassModel
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionBytecodeRewriter
 import org.jetbrains.lincheck.jvm.agent.expressions.MockedApplicationMembers
-import org.jetbrains.lincheck.jvm.agent.FieldModel
-import org.jetbrains.lincheck.jvm.agent.MethodModel
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
@@ -96,23 +95,10 @@ internal class MockApplicationClassFileManager(
 }
 
 private fun ByteArray.mockMemberVisibility(mockedMembers: MockedApplicationMembers): ByteArray {
+    mockedMembers.addClassFile(ClassModel.fromClassBytes(this))
     val reader = ClassReader(this)
     val writer = ClassWriter(reader, 0)
     reader.accept(object : ClassVisitor(Opcodes.ASM9, writer) {
-        private lateinit var owner: String
-
-        override fun visit(
-            version: Int,
-            access: Int,
-            name: String,
-            signature: String?,
-            superName: String?,
-            interfaces: Array<out String>?,
-        ) {
-            owner = name
-            super.visit(version, access, name, signature, superName, interfaces)
-        }
-
         override fun visitField(
             access: Int,
             name: String,
@@ -120,21 +106,7 @@ private fun ByteArray.mockMemberVisibility(mockedMembers: MockedApplicationMembe
             signature: String?,
             value: Any?,
         ): FieldVisitor? {
-            val mockedAccess = access.publicIfNeeded()
-            if (mockedAccess != access) {
-                mockedMembers.add(
-                    FieldModel(
-                        declaringBinaryName = owner.replace('/', '.'),
-                        name = name,
-                        type = org.objectweb.asm.Type.getType(descriptor),
-                        isPublic = access and Opcodes.ACC_PUBLIC != 0,
-                        isProtected = access and Opcodes.ACC_PROTECTED != 0,
-                        isPrivate = access and Opcodes.ACC_PRIVATE != 0,
-                        isStatic = access and Opcodes.ACC_STATIC != 0,
-                    ),
-                )
-            }
-            return super.visitField(mockedAccess, name, descriptor, signature, value)
+            return super.visitField(access.publicIfNeeded(), name, descriptor, signature, value)
         }
 
         override fun visitMethod(
@@ -147,23 +119,7 @@ private fun ByteArray.mockMemberVisibility(mockedMembers: MockedApplicationMembe
             if (name == "<init>" || name == "<clinit>") {
                 return super.visitMethod(access, name, descriptor, signature, exceptions)
             }
-            val mockedAccess = access.publicIfNeeded()
-            if (mockedAccess != access) {
-                mockedMembers.add(
-                    MethodModel(
-                        declaringBinaryName = owner.replace('/', '.'),
-                        name = name,
-                        descriptor = descriptor,
-                        isPublic = access and Opcodes.ACC_PUBLIC != 0,
-                        isProtected = access and Opcodes.ACC_PROTECTED != 0,
-                        isPrivate = access and Opcodes.ACC_PRIVATE != 0,
-                        isStatic = access and Opcodes.ACC_STATIC != 0,
-                        isSynthetic = access and Opcodes.ACC_SYNTHETIC != 0,
-                        isVarArgs = access and Opcodes.ACC_VARARGS != 0,
-                    ),
-                )
-            }
-            return super.visitMethod(mockedAccess, name, descriptor, signature, exceptions)
+            return super.visitMethod(access.publicIfNeeded(), name, descriptor, signature, exceptions)
         }
     }, 0)
     return writer.toByteArray()

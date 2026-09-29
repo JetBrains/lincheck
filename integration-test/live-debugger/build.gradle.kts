@@ -64,6 +64,10 @@ tasks {
         else -> emptyList()
     }
     val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar", prerequisites)
+    val copyAgentExpressionTestProject = register<Copy>("copyAgentExpressionTestProject") {
+        from(rootProject.layout.projectDirectory.dir("integration-test/test-projects/agent-expressions"))
+        into(layout.buildDirectory.dir("integrationTestProjects/agent-expressions"))
+    }
 
     register<Test>("liveDebuggerIntegrationTest") {
         useJUnitPlatform()
@@ -101,6 +105,10 @@ tasks {
         dependsOn(prerequisites)
         dependsOn(copyLiveDebuggerFatJar)
         copyClasspathClashProjects.forEach { dependsOn(it) }
+        if (integrationTestSuiteType == LiveDebuggerIntegrationTestSuite.Basic ||
+            integrationTestSuiteType == LiveDebuggerIntegrationTestSuite.All) {
+            dependsOn(copyAgentExpressionTestProject)
+        }
     }
 
     // Regenerates the `…/impl/generated/*GeneratedTests.kt` files from the `*Tests.json` data.

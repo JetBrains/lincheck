@@ -1,0 +1,2 @@
+# Thread 1
+Live breakpoint [00000000-0000-0000-0003-000000000001] at SourceWatchesTest.java:12, watches: ["Davis", Owner@1], stacktrace: [SourceWatchesTest.capture, SourceWatchesTest.capturesOwner, NativeMethodAccessorImpl.invoke0 ... (42 more)]
