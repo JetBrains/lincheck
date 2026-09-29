@@ -56,6 +56,37 @@ fun Test.configureJvmTestCommon(project: Project) {
     project.findProperty("lincheck.logLevel")?.let { extraArgs.add("-Dlincheck.logLevel=${it as String}") }
 
     jvmArgs(extraArgs)
+
+    configureTestShard(project)
+}
+
+/**
+ * Runs one shard of the task's test classes when `-PtestShard=<index>/<total>` (1-based) is set.
+ *
+ * Each top-level class goes to exactly one shard by a stable hash of its name, so the shards
+ * partition the suite and CI runs them as separate build configurations.
+ * A class and its nested classes share a shard.
+ */
+private fun Test.configureTestShard(project: Project) {
+    val testShard = project.findProperty("testShard") as String? ?: return
+    val parts = testShard.split("/")
+    require(parts.size == 2) {
+        "Invalid -PtestShard '$testShard', expected '<index>/<total>' (1-based), e.g. '2/4'"
+    }
+    val shardIndex = parts[0].toInt()
+    val totalShards = parts[1].toInt()
+    require(totalShards >= 1 && shardIndex in 1..totalShards) {
+        "Invalid -PtestShard '$testShard': index must be in 1..total"
+    }
+    // A module with fewer test classes than shards leaves some shards empty; that is a correct partition,
+    // not the misconfiguration Gradle 9 fails an empty test task for.
+    failOnNoDiscoveredTests.set(false)
+    exclude { element ->
+        val fileName = element.name
+        if (!fileName.endsWith(".class")) return@exclude false
+        val topLevelClass = fileName.removeSuffix(".class").substringBefore('$')
+        Math.floorMod(topLevelClass.hashCode(), totalShards) != shardIndex - 1
+    }
 }
 
 fun setupTestsJDK(project: Project) {
