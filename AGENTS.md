@@ -43,7 +43,12 @@ Follows the [agents.md](https://agents.md/) convention; `CLAUDE.md` just imports
   -PintegrationTestSuite=kotlinCompiler|ktor|ij|all
 ```
 
-`traceRecorderIntegrationTest` downloads the target external projects via `traceAgentIntegrationTestsPrerequisites`.
+`traceRecorderIntegrationTest` downloads the target external projects via `traceAgentIntegrationTestsPrerequisites`
+(so does `liveDebuggerIntegrationTest`): GitHub source archives of the repositories pinned in
+[`integration-test/github-projects.properties`](integration-test/github-projects.properties), the pins' only home.
+Set `LINCHECK_TEST_PROJECT_ARCHIVES` to a directory holding `<name>-<sha>.zip` files to reuse pre-fetched archives
+instead of downloading (the download tasks are skipped, the log says `Reusing pre-fetched archive …`);
+an archive missing from it is downloaded as usual.
 
 ## Testing
 

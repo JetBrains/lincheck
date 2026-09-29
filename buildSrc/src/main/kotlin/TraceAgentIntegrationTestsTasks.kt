@@ -15,65 +15,61 @@ import org.gradle.api.file.RelativePath
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.kotlin.dsl.register
+import java.io.File
+import java.util.Properties
 
-class GithubProjectSnapshot(val organization: String, val repositoryName: String, val commitHash: String)
+/**
+ * A real-world project the agents are tested against: the GitHub [repository] (`https://github.com/<org>/<name>`)
+ * at [commitHash], fetched as a source archive and unpacked under `integrationTestProjects/<name>`.
+ */
+class GithubProjectSnapshot(val name: String, val repository: String, val commitHash: String) {
+    val archiveUrl: String get() = "$repository/archive/$commitHash.zip"
+    val archiveFileName: String get() = "$name-$commitHash.zip"
+}
 
-private val projectsToTest = listOf(
-    GithubProjectSnapshot(
-        organization = "Kotlin",
-        repositoryName = "kotlinx.collections.immutable",
-        commitHash = "592f05fce02a1ad9e26cc6f3fdb55cdd97910599"
-    ),
-    GithubProjectSnapshot(
-        organization = "ivandev0",
-        repositoryName = "TraceDebuggerExamples",
-        commitHash = "7e6e5f190722644f2e6589f96859b1d646d4c5a9"
-    ),
-    GithubProjectSnapshot(
-        organization = "JetBrains",
-        repositoryName = "kotlin",
-        commitHash = "09113198e9031cbcc0240352fd4537dc74f7be79"
-    ),
-    GithubProjectSnapshot(
-        organization = "ktorio",
-        repositoryName = "ktor",
-        commitHash = "40eb608b9b561c9e6d7d2d998f2a7c39bd63869d"
-    ),
-    GithubProjectSnapshot(
-        organization = "Kotlin",
-        repositoryName = "kotlinx.coroutines",
-        commitHash = "8062e9f6c21bc2672528c5e63dcff7e9057a0989"
-    ),
-    // `kotlinx-datetime` is forked with decreased stress-test
-    // iterations number and deterministic random
-    GithubProjectSnapshot(
-        organization = "dmitrii-artuhov",
-        repositoryName = "kotlinx-datetime",
-        commitHash = "11246a8dd3051c3aeef70eb3d15173fd7183f549"
-    ),
-    GithubProjectSnapshot(
-        organization = "ivandev0",
-        repositoryName = "intellij-community",
-        commitHash = "f2d4ceabd39b9f162b1ec5bfe9d929ae549c5f00"
-    ),
-)
+/** The pins' single home; see the comments there for the file's shape. */
+private const val PROJECTS_MANIFEST = "integration-test/github-projects.properties"
+
+/**
+ * A directory of pre-fetched `<name>-<sha>.zip` archives, so a CI chain downloads each once instead of once per
+ * build. Unset, or an archive missing from it (a stale cache after a pin bump), means download from GitHub.
+ */
+private const val ARCHIVES_CACHE_ENV_VAR = "LINCHECK_TEST_PROJECT_ARCHIVES"
+
+private fun Project.projectsToTest(): List<GithubProjectSnapshot> {
+    val manifest = rootProject.file(PROJECTS_MANIFEST)
+    val pins = Properties().also { properties -> manifest.inputStream().use { properties.load(it) } }
+    return pins.stringPropertyNames()
+        .filter { it.endsWith(".repository") }
+        .sorted()
+        .map { key ->
+            val name = key.removeSuffix(".repository")
+            val ref = checkNotNull(pins.getProperty("$name.ref")?.trim()) { "$manifest has no '$name.ref'" }
+            check(ref.matches(Regex("[0-9a-f]{40}"))) { "$manifest: '$name.ref' must be a full 40-char commit SHA, got '$ref'" }
+            GithubProjectSnapshot(name, pins.getProperty(key).trim().removeSuffix(".git"), ref)
+        }
+}
 
 /** Prepare the selected suite's external snapshots; null selects every registered repository. */
 fun Project.registerTraceAgentIntegrationTestsPrerequisites(projectNames: Set<String>?): TaskProvider<Task> {
     val unzippedTestProjectsDir = layout.buildDirectory.dir("integrationTestProjects")
-    val prerequisite = projectsToTest.filter { projectNames == null || it.repositoryName in projectNames }.map { projectToTest ->
-        val projectName = projectToTest.repositoryName
+    val archivesCache = System.getenv(ARCHIVES_CACHE_ENV_VAR)?.takeIf { it.isNotBlank() }?.let(::File)
+    val prerequisite = projectsToTest().filter { projectNames == null || it.name in projectNames }.map { projectToTest ->
+        val projectName = projectToTest.name
         val hash = projectToTest.commitHash
+        val cachedArchive = archivesCache?.resolve(projectToTest.archiveFileName)?.takeIf { it.isFile }
 
         val downloadIntegrationTestsDependency = tasks.register<Download>("download_${projectName}_ForTest") {
-            src("https://github.com/${projectToTest.organization}/$projectName/archive/$hash.zip")
-            dest(unzippedTestProjectsDir.get().file("$projectName-$hash.zip"))
+            src(projectToTest.archiveUrl)
+            dest(unzippedTestProjectsDir.get().file(projectToTest.archiveFileName))
             overwrite(false) // TODO: seems to still overwrite for some reason
+            onlyIf("no pre-fetched archive in \$$ARCHIVES_CACHE_ENV_VAR") { cachedArchive == null }
         }
 
         tasks.register<Copy>("${projectName}_unzip") {
             dependsOn(downloadIntegrationTestsDependency)
-            from(zipTree(downloadIntegrationTestsDependency.get().dest))
+            if (cachedArchive != null) doFirst { logger.lifecycle("Reusing pre-fetched archive $cachedArchive") }
+            from(zipTree(cachedArchive ?: downloadIntegrationTestsDependency.get().dest))
             // We set a unique destination folder for the unzip task.
             // Otherwise, Gradle thinks that we are trying to use the output of one unzip task as input for another.
             // Also, this helps to drop the commit hash from project folder.
