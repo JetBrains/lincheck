@@ -11,6 +11,9 @@
 package org.jetbrains.lincheck.jvm.agent.expressions
 
 import org.jetbrains.lincheck.jvm.agent.ClassModel
+import org.jetbrains.lincheck.jvm.agent.FieldModel
+import org.jetbrains.lincheck.jvm.agent.MethodModel
+import org.jetbrains.lincheck.jvm.agent.loadClassModel
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -28,6 +31,97 @@ import java.util.ArrayDeque
 
 /** A source or expression the agent could not compile; the message is user-facing. */
 internal class ExpressionCompilationException(message: String) : Exception(message)
+
+/**
+ * The application classes one compilation request works with, read from class resources so nothing is loaded,
+ * and the access rule the generated wrapper has to respect.
+ *
+ * The wrapper is defined in its own loader, hence in its own runtime package: it may name platform classes and
+ * public application classes directly, and nothing else. A member of any other class is reached reflectively,
+ * through the class that actually declares it.
+ *
+ * @param known models already at hand, the enclosing class first among them: its bytes may not be on any
+ *   classpath while it is still being defined.
+ */
+internal class ApplicationClasses(
+    private val classLoader: ClassLoader?,
+    known: Collection<ClassModel> = emptyList(),
+) {
+    private val models = HashMap<String, ClassModel?>()
+
+    init {
+        known.forEach { models[it.binaryName] = it }
+    }
+
+    fun model(binaryName: String): ClassModel? {
+        if (binaryName !in models) models[binaryName] = loadClassModel(binaryName, classLoader)
+        return models[binaryName]
+    }
+
+    /** Whether the wrapper may name [type] directly. A class whose bytes cannot be found is taken to be public. */
+    fun isAccessible(type: Type): Boolean {
+        val className = type.binaryClassName() ?: return true
+        return className.isPlatformClass() || model(className)?.isPublic != false
+    }
+
+    fun isAccessible(internalName: String): Boolean = isAccessible(Type.getObjectType(internalName))
+
+    /**
+     * The field behind a direct access the wrapper cannot perform, or `null` when the access is fine as it is:
+     * the owner is accessible. Resolution walks the owner's hierarchy, since the compiler names the receiver's
+     * static type as owner, not the declaring class; an owner without a model is taken to declare the field.
+     */
+    fun reflectiveField(isStatic: Boolean, owner: String, name: String, descriptor: String): FieldModel? {
+        if (isAccessible(owner)) return null
+        return hierarchy(owner.replace('/', '.')).firstNotNullOfOrNull { model ->
+            model.declaredFields[name]?.takeIf { it.type.descriptor == descriptor }
+        } ?: FieldModel(
+            declaringBinaryName = owner.replace('/', '.'),
+            name = name,
+            type = Type.getType(descriptor),
+            isPublic = true,
+            isProtected = false,
+            isPrivate = false,
+            isStatic = isStatic,
+            isSynthetic = false,
+        )
+    }
+
+    /**
+     * The method behind a direct call the wrapper cannot perform, or `null` when the call is fine as it is:
+     * the owner and every argument type are accessible. (An inaccessible return type needs no cast, so it is fine.)
+     */
+    fun reflectiveMethod(isStatic: Boolean, owner: String, name: String, descriptor: String): MethodModel? {
+        if (isAccessible(owner) && Type.getArgumentTypes(descriptor).all(::isAccessible)) return null
+        return hierarchy(owner.replace('/', '.')).firstNotNullOfOrNull { model ->
+            model.declaredMethods.firstOrNull { it.name == name && it.descriptor == descriptor }
+        } ?: MethodModel(
+            declaringBinaryName = owner.replace('/', '.'),
+            name = name,
+            descriptor = descriptor,
+            isPublic = true,
+            isProtected = false,
+            isPrivate = false,
+            isStatic = isStatic,
+            isSynthetic = false,
+            isVarArgs = false,
+        )
+    }
+
+    /** [binaryName] and its supertypes, nearest first, as far as their models can be found. */
+    private fun hierarchy(binaryName: String): Sequence<ClassModel> = sequence {
+        val pending = ArrayDeque(listOf(binaryName))
+        val visited = HashSet<String>()
+        while (pending.isNotEmpty()) {
+            val name = pending.removeFirst()
+            if (!visited.add(name)) continue
+            val model = model(name) ?: continue
+            yield(model)
+            model.superclassBinaryName?.let(pending::addLast)
+            model.interfaceBinaryNames.forEach(pending::addLast)
+        }
+    }
+}
 
 /**
  * The compile classpath for one expression-compilation request, and the lifetime of what had to be recovered for it.
@@ -281,11 +375,14 @@ private fun enqueueReferencedClasses(bytes: ByteArray, pending: ArrayDeque<Strin
  * while primitives, primitive arrays, and `void` — `int`, `int[]`, `V` — yield `null`,
  * having no class file to resolve.
  */
-private fun Type.binaryClassName(): String? {
+internal fun Type.binaryClassName(): String? {
     var element = this
     while (element.sort == Type.ARRAY) element = Type.getType(element.descriptor.substring(1))
     return element.className.takeIf { element.sort == Type.OBJECT }
 }
+
+/** Whether this type, or its array element type, names a class outside the platform. */
+internal fun Type.isApplicationType(): Boolean = binaryClassName()?.isPlatformClass() == false
 
 /**
  * Whether this binary name belongs to the JDK or the Kotlin runtime,
@@ -294,6 +391,6 @@ private fun Type.binaryClassName(): String? {
  * `java.util.List`, `kotlin.Pair` and `sun.misc.Unsafe` are platform classes and need no recovery;
  * `com.example.Order` is an application class and does.
  */
-private fun String.isPlatformClass(): Boolean =
+internal fun String.isPlatformClass(): Boolean =
     startsWith("java.") || startsWith("javax.") || startsWith("jdk.") || startsWith("sun.") ||
         startsWith("kotlin.")

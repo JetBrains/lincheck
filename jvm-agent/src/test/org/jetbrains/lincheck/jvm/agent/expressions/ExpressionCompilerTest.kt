@@ -15,6 +15,8 @@ import org.jetbrains.lincheck.jvm.agent.expressions.java.JavaExpressionToolchain
 import org.jetbrains.lincheck.jvm.agent.expressions.java.JavaSource
 import org.jetbrains.lincheck.jvm.agent.expressions.kotlin.KotlinExpressionToolchain
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaChainedCallShapeFixture
+import org.jetbrains.lincheck.jvm.agent.fixtures.KotlinPropertyInitializerFixture
+import org.jetbrains.lincheck.jvm.agent.snapshotHookInvocationCount
 import org.jetbrains.lincheck.jvm.agent.transformWithSnapshotBreakpoints
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.junit.AfterClass
@@ -170,6 +172,29 @@ class ExpressionCompilerTest {
             "The compile failure must reach the breakpoint-blocked channel, got=$blockedReasons",
             blockedReasons.any { it.contains("failed to compile", ignoreCase = true) },
         )
+    }
+
+    /**
+     * A property initializer's line is also the getter's; the constructor parameter the condition captures exists
+     * in the constructor alone, so only that site is instrumented and the class still transforms.
+     */
+    @Test
+    fun `a site without a captured local is skipped`() {
+        val fixture = KotlinPropertyInitializerFixture::class.java
+        val breakpoint = SnapshotBreakpoint(
+            uuid = UUID.randomUUID(),
+            className = fixture.name,
+            fileName = "KotlinPropertyInitializerFixture.kt",
+            lineNumber = 15,
+            expressionLanguage = SnapshotBreakpoint.EXPRESSION_LANGUAGE_KOTLIN,
+            conditionSource = "input > 5",
+        )
+
+        val reasonsBefore = blockedReasons.size
+        val transformed = transformWithSnapshotBreakpoints(fixture.name.replace('.', '/'), listOf(breakpoint))
+
+        assertEquals(1, transformed.snapshotHookInvocationCount())
+        assertEquals("The condition must compile: $blockedReasons", reasonsBefore, blockedReasons.size)
     }
 
     private fun local(name: String, type: Type) = LocalVariableInfo(

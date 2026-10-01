@@ -18,7 +18,12 @@ import org.jetbrains.lincheck.jvm.agent.loadClassesFromBytes
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Label
+import org.objectweb.asm.MethodVisitor
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -100,6 +105,7 @@ abstract class AbstractExpressionCompilationTest {
         ) { "Expression failed to compile: $expressions" }
         val className = if (watches) resolved.watchClassName!! else resolved.conditionClassName!!
         val classes = if (watches) resolved.watchClasses!! else resolved.conditionClasses!!
+        assertSignaturesNameNoApplicationClass(classes)
         val wrapper = loadClassesFromBytes(enclosingClass.classLoader, className, classes)
 
         val selected = ExpressionWrapper.selectCaptures(expressions, activeLocals).map { it.name }.toMutableList()
@@ -119,6 +125,28 @@ abstract class AbstractExpressionCompilationTest {
     )
 
     private data class Evaluation(val wrapper: Class<*>, val captureValues: Array<Any?>)
+
+    /**
+     * The agent looks the factory up reflectively while the instrumented class is still being defined, which
+     * resolves every method signature of the wrapper; a signature naming an application class would load it again.
+     */
+    private fun assertSignaturesNameNoApplicationClass(classes: Map<String, ByteArray>) {
+        val fixturesPackage = ExpressionTarget::class.java.name.substringBeforeLast('.').replace('.', '/') + "/"
+        val generated = classes.keys.map { "L" + it.replace('.', '/') + ";" }
+        classes.forEach { (name, bytes) ->
+            ClassReader(bytes).accept(object : ClassVisitor(Opcodes.ASM9) {
+                override fun visitMethod(
+                    access: Int, methodName: String, descriptor: String, signature: String?, exceptions: Array<out String>?,
+                ): MethodVisitor? {
+                    val named = (Type.getArgumentTypes(descriptor) + Type.getReturnType(descriptor))
+                        .map { it.descriptor }
+                        .filter { fixturesPackage in it && it !in generated }
+                    assertTrue("$name.$methodName$descriptor names application classes: $named", named.isEmpty())
+                    return null
+                }
+            }, ClassReader.SKIP_CODE)
+        }
+    }
 
     companion object {
         private val nextBreakpointId = AtomicInteger(20_000)

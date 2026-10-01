@@ -33,6 +33,8 @@ import java.lang.reflect.Field
  * so the expression can compile. After [ExpressionEvaluatorTransplanter] moves the evaluator into the wrapper,
  * this step uses [MockedApplicationMembers] to replace those direct field and method instructions with reflective
  * `accessToField_...` and `accessToMethod_...` helpers recognized by the safety checker.
+ * Members of classes the wrapper cannot name ([ApplicationClasses.isAccessible]) get the same treatment, public or
+ * not, through the class that declares them.
  *
  * For example, the evaluator for `count > limit` may contain:
  * ```
@@ -47,22 +49,33 @@ import java.lang.reflect.Field
  * currently being instrumented. Constructors, writes, and `super` calls are not rewritten.
  */
 internal object ExpressionBytecodeRewriter {
-    fun rewrite(classes: Map<String, ByteArray>, mockedMembers: MockedApplicationMembers): Map<String, ByteArray> =
-        classes.mapValues { (_, bytes) -> rewriteClass(bytes, mockedMembers) }
+    fun rewrite(
+        classes: Map<String, ByteArray>,
+        mockedMembers: MockedApplicationMembers,
+        applicationClasses: ApplicationClasses,
+    ): Map<String, ByteArray> =
+        classes.mapValues { (_, bytes) -> rewriteClass(bytes, mockedMembers, applicationClasses) }
 
-    private fun rewriteClass(bytes: ByteArray, mockedMembers: MockedApplicationMembers): ByteArray {
+    private fun rewriteClass(
+        bytes: ByteArray,
+        mockedMembers: MockedApplicationMembers,
+        applicationClasses: ApplicationClasses,
+    ): ByteArray {
         val classNode = ClassNode(Opcodes.ASM9)
         ClassReader(bytes).accept(classNode, 0)
-        val accessors = AccessorGenerator(classNode)
+        val accessors = AccessorGenerator(classNode, applicationClasses)
 
         for (method in classNode.methods.toList()) {
             for (instruction in method.instructions.toArray()) {
                 when (instruction) {
                     is FieldInsnNode -> {
                         if (instruction.opcode != Opcodes.GETFIELD && instruction.opcode != Opcodes.GETSTATIC) continue
-                        val field = mockedMembers.field(
-                            instruction.owner, instruction.name, instruction.desc,
-                        ) ?: continue
+                        val field = mockedMembers.field(instruction.owner, instruction.name, instruction.desc)
+                            ?: applicationClasses.reflectiveField(
+                                instruction.opcode == Opcodes.GETSTATIC,
+                                instruction.owner, instruction.name, instruction.desc,
+                            )
+                            ?: continue
                         val accessor = accessors.field(field)
                         val replacement = MethodInsnNode(
                             Opcodes.INVOKESTATIC,
@@ -78,9 +91,14 @@ internal object ExpressionBytecodeRewriter {
                     }
                     is MethodInsnNode -> {
                         if (instruction.name == "<init>" || instruction.owner == classNode.name) continue
-                        val target = mockedMembers.method(
-                            instruction.owner, instruction.name, instruction.desc,
-                        ) ?: continue
+                        val target = mockedMembers.method(instruction.owner, instruction.name, instruction.desc)
+                            // A `super` call has its own dispatch; reflection would resolve it virtually.
+                            ?: instruction.takeUnless { it.opcode == Opcodes.INVOKESPECIAL }?.let {
+                                applicationClasses.reflectiveMethod(
+                                    it.opcode == Opcodes.INVOKESTATIC, it.owner, it.name, it.desc,
+                                )
+                            }
+                            ?: continue
                         val accessor = accessors.method(target)
                         val replacement = MethodInsnNode(
                             Opcodes.INVOKESTATIC,
@@ -112,7 +130,7 @@ private data class GeneratedAccessor(
     val methodNode: MethodNode,
 )
 
-private class AccessorGenerator(private val owner: ClassNode) {
+private class AccessorGenerator(private val owner: ClassNode, private val applicationClasses: ApplicationClasses) {
     private val fieldAccessors = LinkedHashMap<FieldModel, GeneratedAccessor>()
     private val methodAccessors = LinkedHashMap<MethodModel, GeneratedAccessor>()
     private var nextId = 0
@@ -155,10 +173,14 @@ private class AccessorGenerator(private val owner: ClassNode) {
         return GeneratedAccessor(
             name = name,
             descriptor = descriptor,
-            castResultTo = resultType.takeIf { accessorResult == OBJECT_TYPE && it != OBJECT_TYPE },
+            castResultTo = castTo(resultType, accessorResult),
             methodNode = node,
         )
     }
+
+    /** The precise type to cast an `Object`-typed accessor result to, if the wrapper may name it. */
+    private fun castTo(resultType: Type, accessorResult: Type): Type? =
+        resultType.takeIf { accessorResult == OBJECT_TYPE && it != OBJECT_TYPE && applicationClasses.isAccessible(it) }
 
     private fun generateMethodAccessor(method: MethodModel): GeneratedAccessor {
         val targetType = Type.getMethodType(method.descriptor)
@@ -210,7 +232,7 @@ private class AccessorGenerator(private val owner: ClassNode) {
         return GeneratedAccessor(
             name = name,
             descriptor = descriptor,
-            castResultTo = resultType.takeIf { accessorResult == OBJECT_TYPE && it != OBJECT_TYPE },
+            castResultTo = castTo(resultType, accessorResult),
             methodNode = node,
         )
     }

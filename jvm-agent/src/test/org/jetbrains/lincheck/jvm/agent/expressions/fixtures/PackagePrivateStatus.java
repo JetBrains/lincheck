@@ -10,14 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions.fixtures;
 
-public class InheritedExpressionTarget extends InheritedExpressionBase {
-    public int count = 10;
-
-    private int token() {
-        return 2;
-    }
-
-    private int code() {
-        return 7;
-    }
+/** Not public: a wrapper, defined in its own loader, cannot name this class and reads its constants reflectively. */
+enum PackagePrivateStatus {
+    ACTIVE,
+    INACTIVE,
 }

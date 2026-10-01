@@ -51,3 +51,26 @@ class KotlinExpressionNode(
 fun String.expressionSuffix() = "$this!"
 val String.expressionFirst: Char get() = first()
 fun expressionTopLevel(value: Int, expected: Int = 5) = value == expected
+
+fun expressionIsLong(text: String) = text.length > 3
+
+class KotlinOuter {
+    class Inner(private val limit: Int) {
+        fun check(value: Int) = println(value)
+    }
+}
+
+class KotlinCatalog(private val bonus: Int) {
+    class Entry(val score: Int)
+
+    private fun rate(e: Entry?): Int = if (e == null) 0 else bonus
+}
+
+/** Package-private in bytecode: a wrapper, defined in its own loader, cannot name this class. */
+private class KotlinHidden(val id: Int) {
+    fun twice() = id * 2
+}
+
+fun kotlinHidden(id: Int): Any = KotlinHidden(id)
+
+fun kotlinHiddenType(): Class<*> = KotlinHidden::class.java

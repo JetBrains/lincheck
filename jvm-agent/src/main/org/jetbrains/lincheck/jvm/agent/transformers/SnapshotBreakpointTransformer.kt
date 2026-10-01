@@ -122,8 +122,27 @@ internal class SnapshotBreakpointTransformer(
                 enclosingClass = enclosingClass,
                 classLoader = classLoader,
             ) ?: continue
+            if (!capturesAvailable(effectiveBreakpoint)) continue
             processBreakpoint(breakpointId, effectiveBreakpoint)
         }
+    }
+
+    /**
+     * Whether every local the expressions capture is in scope at this site. A line can belong to several methods —
+     * a Kotlin property initializer and the property's getter, a lambda and its enclosing method — and an
+     * expression naming a local of one of them cannot be evaluated in the others, so such a site is left alone.
+     */
+    private fun capturesAvailable(breakpoint: SnapshotBreakpoint): Boolean {
+        val missing = listOfNotNull(breakpoint.conditionCodeFragment, breakpoint.watchCodeFragment)
+            .flatMap(::extractCapturedVarNamesFromBytecode)
+            .filter { name -> currentActiveLocalVariablesInfo.none { it.name == name } }
+        if (missing.isNotEmpty()) {
+            Logger.debug {
+                "Breakpoint at ${breakpoint.fileName}:${breakpoint.lineNumber} skips $className.$methodName: " +
+                    "no local '${missing.first()}' here"
+            }
+        }
+        return missing.isEmpty()
     }
 
     private fun GeneratorAdapter.processBreakpoint(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint) {

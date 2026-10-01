@@ -10,11 +10,13 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions.kotlin
 
+import org.jetbrains.lincheck.jvm.agent.loadClassModel
 import org.jetbrains.lincheck.jvm.agent.expressions.CapturedLocal
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionEvaluatorTransplanter
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionKind
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionWrapper
+import org.jetbrains.lincheck.jvm.agent.expressions.isPlatformClass
 
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.ARRAY
@@ -106,7 +108,7 @@ internal object KotlinWrapperSource {
         // even see it — the JVM's own checkcast lets null through.
         captures.forEachIndexed { i, capture ->
             wrapper.addProperty(
-                PropertySpec.builder(capture.name, typeName(capture.type, classLoader))
+                PropertySpec.builder(capture.name, typeName(ExpressionWrapper.storageType(capture.type), classLoader))
                     .addAnnotation(JvmField::class)
                     .initializer("__capture(args[%L])", i)
                     .build(),
@@ -164,9 +166,10 @@ internal object KotlinWrapperSource {
     }
 
     /**
-     * The KotlinPoet type of a JVM type. Generic classes are star-projected (arity read through
-     * [classLoader] — Kotlin has no raw types); common `java.lang` types map to their Kotlin
-     * counterparts. Captures are declared non-null; null transports through `__capture`.
+     * The KotlinPoet type of a JVM type. Generic classes are star-projected (arity read from the class file found
+     * through [classLoader], since Kotlin has no raw types and loading the class is not an option while it may be
+     * in its own definition); `java.lang` types map to their Kotlin counterparts, boxed primitives to the nullable
+     * ones. Captures are declared non-null; null transports through `__capture`.
      */
     internal fun typeName(type: Type, classLoader: ClassLoader?): TypeName = when (type.sort) {
         Type.VOID -> UNIT
@@ -190,11 +193,17 @@ internal object KotlinWrapperSource {
             "java.lang.String" -> STRING
             "java.lang.Object" -> ANY
             "java.lang.CharSequence" -> CHAR_SEQUENCE
+            "java.lang.Boolean" -> BOOLEAN.copy(nullable = true)
+            "java.lang.Character" -> CHAR.copy(nullable = true)
+            "java.lang.Byte" -> BYTE.copy(nullable = true)
+            "java.lang.Short" -> SHORT.copy(nullable = true)
+            "java.lang.Integer" -> INT.copy(nullable = true)
+            "java.lang.Long" -> LONG.copy(nullable = true)
+            "java.lang.Float" -> FLOAT.copy(nullable = true)
+            "java.lang.Double" -> DOUBLE.copy(nullable = true)
             else -> {
                 val className = className(name)
-                val arity = runCatching {
-                    Class.forName(name, false, classLoader).typeParameters.size
-                }.getOrDefault(0)
+                val arity = loadClassModel(name, classLoader)?.typeParameterCount ?: 0
                 if (arity == 0) className else className.parameterizedBy(List(arity) { STAR })
             }
         }
@@ -211,10 +220,14 @@ internal object KotlinWrapperSource {
         else -> ClassName("kotlin", "DoubleArray")
     }
 
-    /** A [ClassName] from a binary name, `$`-separated nesting included. */
+    /**
+     * A [ClassName] from a binary name. Application classes are mocked as top-level classes named by their binary
+     * simple name, `$` included (KotlinPoet backticks it), so a nested `Outer$Inner` is addressed that way; platform
+     * classes come from real class files and keep their nesting.
+     */
     private fun className(binaryName: String): ClassName {
         val packageName = binaryName.substringBeforeLast('.', "")
-        val simpleNames = binaryName.substringAfterLast('.').split('$')
-        return ClassName(packageName, simpleNames)
+        val simpleName = binaryName.substringAfterLast('.')
+        return if (binaryName.isPlatformClass()) ClassName(packageName, simpleName.split('$')) else ClassName(packageName, simpleName)
     }
 }

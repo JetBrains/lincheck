@@ -96,12 +96,13 @@ internal class MockedApplicationMembers {
         classFiles.putAll(other.classFiles)
     }
 
+    // The compiler inputs let a subclass see every superclass member, private ones included, the way the
+    // debugger's reflective access does; the compiler then names the subclass as owner of the inherited access.
+    // A member the subclass declares itself hides the inherited one, whatever its visibility.
     private fun addInheritedMembers(subclass: ClassModel, superclass: ClassModel) {
         val compiledOwner = subclass.binaryName.replace('.', '/')
-        val samePackage = subclass.binaryName.substringBeforeLast('.', "") ==
-            superclass.binaryName.substringBeforeLast('.', "")
         superclass.declaredFields.values
-            .filter { !it.isPublic && !it.isPrivate && (it.isProtected || samePackage) }
+            .filter { !it.isPublic && it.name !in subclass.declaredFields }
             .forEach { field ->
                 fields.putIfAbsent(
                     MemberKey(compiledOwner, field.name, field.type.descriptor),
@@ -109,7 +110,10 @@ internal class MockedApplicationMembers {
                 )
             }
         superclass.declaredMethods
-            .filter { !it.isPublic && !it.isPrivate && (it.isProtected || samePackage) }
+            .filter { method ->
+                !method.isPublic &&
+                    subclass.declaredMethods.none { it.name == method.name && it.descriptor == method.descriptor }
+            }
             .forEach { method ->
                 methods.putIfAbsent(
                     MemberKey(compiledOwner, method.name, method.descriptor),

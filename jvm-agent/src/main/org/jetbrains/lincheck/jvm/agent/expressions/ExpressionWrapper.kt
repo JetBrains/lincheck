@@ -75,6 +75,12 @@ internal object ExpressionWrapper {
         classLoader: ClassLoader?,
     ): String = KotlinWrapperSource.render(packageName, simpleName, captures, kind, classLoader)
 
+    /**
+     * The type the wrapper stores a capture as. Application types are stored as `Object`: the wrapper's signatures
+     * must not name a class that may still be in its own definition (see [ExpressionEvaluatorTransplanter]).
+     */
+    fun storageType(type: Type): Type = if (type.isApplicationType()) OBJECT_TYPE else type
+
     /** Helper method evaluating the watch array off `invoke()`'s hot path; allowlisted by the checker. */
     const val WATCH_VALUES_HELPER = "__watchValues"
 
@@ -82,4 +88,5 @@ internal object ExpressionWrapper {
     const val INSTANCE_FIELD = "__instance"
 
     private val IDENTIFIER_REGEX = Regex("""[A-Za-z_][A-Za-z0-9_]*""")
+    private val OBJECT_TYPE = Type.getType(Any::class.java)
 }

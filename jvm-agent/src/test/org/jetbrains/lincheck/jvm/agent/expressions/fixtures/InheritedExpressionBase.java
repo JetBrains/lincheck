@@ -17,4 +17,13 @@ public class InheritedExpressionBase {
     private String inheritedSecret() {
         return inheritedSecret;
     }
+
+    // Both redeclared by the subclass: same signature, and same name with another return type.
+    private int token() {
+        return 1;
+    }
+
+    private String code() {
+        return "base";
+    }
 }

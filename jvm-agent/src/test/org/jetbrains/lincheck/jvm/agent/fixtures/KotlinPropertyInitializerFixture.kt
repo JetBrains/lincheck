@@ -8,16 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.jvm.agent.expressions.fixtures;
+package org.jetbrains.lincheck.jvm.agent.fixtures
 
-public class InheritedExpressionTarget extends InheritedExpressionBase {
-    public int count = 10;
 
-    private int token() {
-        return 2;
-    }
-
-    private int code() {
-        return 7;
-    }
+class KotlinPropertyInitializerFixture(val input: Int) {
+    val doubled = input * 2 // line 15: the initializer runs in <init>, and the getter carries the same line
 }

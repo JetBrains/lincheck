@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.ClassModel
 import org.jetbrains.lincheck.jvm.agent.FieldModel
 import org.jetbrains.lincheck.jvm.agent.MethodModel
 import org.jetbrains.lincheck.jvm.agent.loadClassModel
+import org.jetbrains.lincheck.jvm.agent.expressions.ApplicationClasses
 import org.jetbrains.lincheck.jvm.agent.expressions.CapturedLocal
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionKind
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionWrapper
@@ -26,6 +27,7 @@ import org.jetbrains.lincheck.jvm.agent.expressions.expressionClasspath
 import org.jetbrains.lincheck.jvm.agent.expressions.MockedApplicationMembers
 import com.squareup.kotlinpoet.ANY
 import com.squareup.kotlinpoet.ARRAY
+import com.squareup.kotlinpoet.AnnotationSpec
 import com.squareup.kotlinpoet.BOOLEAN
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
@@ -68,11 +70,12 @@ internal object KotlinEnclosingClassEvaluator {
     /**
      * PSI supplies a conservative set of referenced names, while JVM descriptors drive a bounded class-graph walk.
      * Every visited application class is represented by source containing only members whose names can participate
-     * in the expression. Superclass facades preserve inherited member lookup. This avoids loading classes, but cannot
-     * reproduce nested-class lexical receivers, object semantics, Kotlin extension resolution, delegated
-     * properties, metadata-only declarations, or graphs beyond [MAX_GRAPH_CLASSES]. Lambdas are rejected because
-     * their generated classes are not relocated with the evaluator. Receiver-independent expressions in nested
-     * classes remain supported.
+     * in the expression. Superclass facades preserve inherited member lookup. A nested class is mocked as a top-level
+     * class named by its binary simple name, so its own members resolve while its outer class's scope does not;
+     * a file facade is mocked as a file of top-level declarations. This avoids loading classes, but cannot
+     * reproduce object semantics, Kotlin extension resolution, delegated properties, metadata-only declarations,
+     * or graphs beyond [MAX_GRAPH_CLASSES]. Lambdas are rejected because their generated classes are not relocated
+     * with the evaluator.
      */
     fun compile(
         wrapperBinaryName: String,
@@ -84,9 +87,6 @@ internal object KotlinEnclosingClassEvaluator {
         receiverCapture: CapturedLocal?,
         classLoader: ClassLoader?,
     ): Map<String, ByteArray> {
-        require(receiverCapture == null || '$' !in enclosing.binaryName) {
-            "Agent-side Kotlin expressions using an enclosing receiver are not yet supported in nested classes"
-        }
         require(!enclosing.isInterface) {
             "Agent-side Kotlin expressions using an enclosing receiver are not yet supported in interfaces"
         }
@@ -114,11 +114,18 @@ internal object KotlinEnclosingClassEvaluator {
             graph.values.map { it.model } + listOfNotNull(companion?.model),
             captures.map { it.type },
         )
+        val applicationClasses = ApplicationClasses(
+            classLoader, graph.values.map(CandidateClass::model) + listOfNotNull(companion?.model),
+        )
         // The facade and the wrapper resolve the same application types, so they share one prepared classpath.
         return expressionClasspath(classLoader, requiredClassNames).use { classpath ->
             val facadeClasses = KotlinExpressionToolchain.compile(sources, classpath)
-            val evaluatorOwner =
-                if (receiverCapture != null) enclosing.binaryName else "${enclosing.binaryName}\$Companion"
+            // The evaluator sits where the expression's names resolve as in the application: in the class for an
+            // instance method, at top level for a file facade, and otherwise in the companion object.
+            val evaluatorOwner = when {
+                receiverCapture != null || enclosing.isKotlinFileFacade -> enclosing.binaryName
+                else -> "${enclosing.binaryName}\$Companion"
+            }
             val facadeBytes = facadeClasses[evaluatorOwner]
                 ?: throw ExpressionCompilationException("Expression compiler produced no enclosing-class facade")
 
@@ -133,12 +140,15 @@ internal object KotlinEnclosingClassEvaluator {
                 wrapperBytes = wrapperBytes,
                 evaluatorMethodName = EVALUATE_METHOD,
                 languageName = "Kotlin",
-                evaluatorReceiverType = receiverCapture?.let {
-                    Type.getObjectType(enclosing.binaryName.replace('.', '/'))
-                } ?: Type.getType(Object::class.java),
+                evaluatorReceiverType = when {
+                    receiverCapture != null -> Type.getObjectType(enclosing.binaryName.replace('.', '/'))
+                    enclosing.isKotlinFileFacade -> null
+                    else -> Type.getType(Object::class.java)
+                },
                 receiverCapture = receiverCapture,
                 evaluationCaptures = evaluationCaptures,
                 kind = kind,
+                applicationClasses = applicationClasses,
                 prepareEvaluator = ::removeParameterNullChecks,
             )
 
@@ -146,7 +156,7 @@ internal object KotlinEnclosingClassEvaluator {
             mockedMembers.addNonPublicMembers(graph.values.map(CandidateClass::model))
             companion?.model?.let { mockedMembers.addNonPublicMembers(listOf(it)) }
             val result = wrapperClasses.toMutableMap().apply { put(wrapperBinaryName, transplanted) }
-            ExpressionBytecodeRewriter.rewrite(result, mockedMembers)
+            ExpressionBytecodeRewriter.rewrite(result, mockedMembers, applicationClasses)
         }
     }
 
@@ -244,6 +254,9 @@ internal object KotlinEnclosingClassEvaluator {
         val model = candidate.model
         val packageName = model.binaryName.substringBeforeLast('.', "")
         val simpleName = model.binaryName.substringAfterLast('.')
+        if (model.isKotlinFileFacade) {
+            return renderFileFacadeMock(candidate, packageName, simpleName, expressions, kind, captures, classLoader)
+        }
         val type = TypeSpec.classBuilder(simpleName).addModifiers(KModifier.OPEN)
         model.superclassBinaryName?.takeIf { it in classNames }?.let { superclass ->
             type.superclass(KotlinWrapperSource.typeName(Type.getObjectType(superclass.replace('.', '/')), classLoader))
@@ -297,6 +310,33 @@ internal object KotlinEnclosingClassEvaluator {
         return FileSpec.builder(packageName, simpleName).addType(type.build()).build().toString()
     }
 
+    /**
+     * A file facade holds top-level declarations, so its mock is a file of top-level declarations compiled to the
+     * same facade class; a call to one of them then targets that class, as it does in the application.
+     */
+    private fun renderFileFacadeMock(
+        candidate: CandidateClass,
+        packageName: String,
+        facadeName: String,
+        expressions: List<String>?,
+        kind: ExpressionKind,
+        captures: List<CapturedLocal>,
+        classLoader: ClassLoader?,
+    ): String {
+        val file = FileSpec.builder(packageName, facadeName.removeSuffix("Kt"))
+            .addAnnotation(
+                AnnotationSpec.builder(JvmName::class)
+                    .useSiteTarget(AnnotationSpec.UseSiteTarget.FILE)
+                    .addMember("%S", facadeName)
+                    .build(),
+            )
+        candidate.fields.filter(FieldModel::isStatic).forEach { file.addProperty(it.property(classLoader)) }
+        candidate.properties.filter { it.getter.isStatic }.forEach { file.addProperty(it.stub(classLoader)) }
+        candidate.methods.filter(MethodModel::isStatic).forEach { file.addFunction(it.stub(classLoader)) }
+        expressions?.let { file.addFunction(evaluator(it, kind, captures, classLoader)) }
+        return file.build().toString()
+    }
+
     private fun evaluator(
         expressions: List<String>,
         kind: ExpressionKind,
@@ -348,7 +388,7 @@ internal object KotlinEnclosingClassEvaluator {
                 type
             }
             function.addParameter(
-                ParameterSpec.builder("p$index", parameterType.kotlinParameterTypeName(classLoader))
+                ParameterSpec.builder("p$index", KotlinWrapperSource.typeName(parameterType, classLoader))
                     .apply {
                         if (isVarArgs && index == methodType.argumentTypes.lastIndex) addModifiers(KModifier.VARARG)
                     }
@@ -415,18 +455,6 @@ private fun Set<String>.withPropertyJvmNames(): Set<String> = buildSet {
 
 private fun String.isPlatformType(): Boolean =
     startsWith("java.") || startsWith("javax.") || startsWith("jdk.") || startsWith("sun.") || startsWith("kotlin.")
-
-private fun Type.kotlinParameterTypeName(classLoader: ClassLoader?) = when (className) {
-    "java.lang.Boolean" -> KotlinWrapperSource.typeName(Type.BOOLEAN_TYPE, classLoader).copy(nullable = true)
-    "java.lang.Character" -> KotlinWrapperSource.typeName(Type.CHAR_TYPE, classLoader).copy(nullable = true)
-    "java.lang.Byte" -> KotlinWrapperSource.typeName(Type.BYTE_TYPE, classLoader).copy(nullable = true)
-    "java.lang.Short" -> KotlinWrapperSource.typeName(Type.SHORT_TYPE, classLoader).copy(nullable = true)
-    "java.lang.Integer" -> KotlinWrapperSource.typeName(Type.INT_TYPE, classLoader).copy(nullable = true)
-    "java.lang.Long" -> KotlinWrapperSource.typeName(Type.LONG_TYPE, classLoader).copy(nullable = true)
-    "java.lang.Float" -> KotlinWrapperSource.typeName(Type.FLOAT_TYPE, classLoader).copy(nullable = true)
-    "java.lang.Double" -> KotlinWrapperSource.typeName(Type.DOUBLE_TYPE, classLoader).copy(nullable = true)
-    else -> KotlinWrapperSource.typeName(this, classLoader)
-}
 
 private fun Type.defaultKotlinValue(classLoader: ClassLoader?): CodeBlock {
     val literal = when (sort) {

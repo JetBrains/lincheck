@@ -14,7 +14,11 @@ import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionNode
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionStatus
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionTarget
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.KotlinExpressionNode
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.KotlinCatalog
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.KotlinExpressionTarget
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.KotlinOuter
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.kotlinHidden
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.kotlinHiddenType
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.junit.Test
 
@@ -172,5 +176,49 @@ class KotlinConditionCompilationTest : AbstractExpressionCompilationTest() {
     fun `enum constants`() {
         val status = reference("status", ExpressionStatus::class.java, ExpressionStatus.ACTIVE)
         assertCondition(kotlin, "status == ExpressionStatus.ACTIVE", true, listOf(status))
+    }
+
+    @Test
+    fun `top-level function called from its own file facade`() {
+        val text = reference("text", String::class.java, "hello")
+        val fileFacade = Class.forName(KotlinExpressionTarget::class.java.name.substringBeforeLast('.') + ".KotlinExpressionTargetKt")
+        assertCondition(kotlin, "expressionIsLong(text)", true, listOf(text), enclosingType = fileFacade)
+    }
+
+    @Test
+    fun `enclosing receiver in a nested class`() {
+        assertCondition(kotlin, "value > limit", true, listOf(int("value", 15)), receiver = KotlinOuter.Inner(10))
+        assertCondition(kotlin, "value > limit", false, listOf(int("value", 5)), receiver = KotlinOuter.Inner(10))
+    }
+
+    @Test
+    fun `private method with a nested class parameter`() {
+        val entry = reference("entry", KotlinCatalog.Entry::class.java, KotlinCatalog.Entry(1))
+        assertCondition(kotlin, "rate(entry) > value", true, listOf(entry, int("value", 3)), receiver = KotlinCatalog(5))
+    }
+
+    @Test
+    fun `boxed capture passed to a nullable parameter`() {
+        val receiver = KotlinExpressionTarget("key", 4, null)
+        assertCondition(kotlin, "acceptsNullableInt(maybe)", true, listOf(reference("maybe", Integer::class.java, 5)), receiver)
+        assertCondition(kotlin, "acceptsNullableInt(maybe)", false, listOf(reference("maybe", Integer::class.java, null)), receiver)
+    }
+
+    @Test
+    fun `inherited private property through the enclosing receiver`() {
+        assertCondition(kotlin, "inheritedSecret == \"base\"", true, receiver = KotlinExpressionTarget("key", 4, null))
+    }
+
+    @Test
+    fun `members of a package-private class`() {
+        val hidden = reference("hidden", kotlinHiddenType(), kotlinHidden(4))
+        assertCondition(kotlin, "hidden.id == 4 && hidden.twice() == 8", true, listOf(hidden))
+    }
+
+    @Test
+    fun `capture typed as the enclosing class`() {
+        val target = KotlinExpressionTarget("key", 4, null)
+        val ref = reference("ref", KotlinExpressionTarget::class.java, target)
+        assertCondition(kotlin, "value > ref.count", true, listOf(int("value", 5), ref))
     }
 }

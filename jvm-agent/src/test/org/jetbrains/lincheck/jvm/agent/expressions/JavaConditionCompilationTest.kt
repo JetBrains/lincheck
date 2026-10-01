@@ -14,6 +14,8 @@ import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionNode
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionStatus
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionTarget
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.InheritedExpressionTarget
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.NestedHierarchyTarget
+import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.PackagePrivateFixtures
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.junit.Test
 
@@ -162,5 +164,67 @@ class JavaConditionCompilationTest : AbstractExpressionCompilationTest() {
     fun `enum constants`() {
         val status = reference("status", ExpressionStatus::class.java, ExpressionStatus.ACTIVE)
         assertCondition(java, "status == ExpressionStatus.ACTIVE", true, listOf(status))
+    }
+
+    @Test
+    fun `members and constants of package-private classes`() {
+        val owner = reference("owner", PackagePrivateFixtures.ownerType(), PackagePrivateFixtures.owner(2, "Davis", true))
+        assertCondition(java, "owner.id == 2 && owner.name().equals(\"Davis\")", true, listOf(owner))
+        assertCondition(java, "owner.name.equals(\"Davis\")", true, listOf(owner))
+        assertCondition(java, "owner.status == PackagePrivateStatus.ACTIVE", true, listOf(owner))
+        val status = reference("s", PackagePrivateFixtures.statusType(), PackagePrivateFixtures.activeStatus())
+        assertCondition(java, "s == PackagePrivateStatus.ACTIVE", true, listOf(status))
+        assertCondition(java, "s == PackagePrivateStatus.INACTIVE", false, listOf(status))
+    }
+
+    @Test
+    fun `capture typed as the enclosing class`() {
+        val target = ExpressionTarget("key", 4, true)
+        val ref = reference("ref", ExpressionTarget::class.java, target)
+        assertCondition(java, "value > ref.count", true, listOf(int("value", 5), ref))
+        assertCondition(java, "ref.doubled() == 8", true, listOf(ref))
+    }
+
+    @Test
+    fun `enclosing receiver in nested and inner classes`() {
+        assertCondition(java, "value > 2", true, receiver = ExpressionTarget.Nested(3))
+        assertCondition(java, "this.value == 3", true, receiver = ExpressionTarget("key", 4, true).Inner(3))
+    }
+
+    @Test
+    fun `inherited private field through the enclosing receiver`() {
+        val receiver = InheritedExpressionTarget()
+        assertCondition(java, "inheritedSecret.equals(\"base-private\") && count == 10", true, receiver = receiver)
+        assertCondition(java, "inheritedSecret().equals(\"base-private\")", true, receiver = receiver)
+    }
+
+    @Test
+    fun `private methods redeclared along the hierarchy`() {
+        assertCondition(java, "token() == 2 && code() == 7", true, receiver = InheritedExpressionTarget())
+    }
+
+    @Test
+    fun `public members inherited between nested classes`() {
+        val owner = reference("owner", NestedHierarchyTarget.Owner::class.java, NestedHierarchyTarget.Owner())
+        assertCondition(
+            java,
+            "owner.email.equals(\"owner@example.com\") && owner.id == 2 && owner.address.city.equals(\"Sun Prairie\")" +
+                " && owner.addresses[0].city.equals(\"Sun Prairie\") && owner.addresses.length == 1",
+            true,
+            listOf(owner),
+            enclosingType = NestedHierarchyTarget::class.java,
+        )
+    }
+
+    @Test
+    fun `external superclass with private constructor declared first`() {
+        val owner = reference("owner", NestedHierarchyTarget.ExternalOwner::class.java, NestedHierarchyTarget.ExternalOwner())
+        assertCondition(
+            java,
+            "owner.value.equals(\"external-owner\")",
+            true,
+            listOf(owner),
+            enclosingType = NestedHierarchyTarget::class.java,
+        )
     }
 }

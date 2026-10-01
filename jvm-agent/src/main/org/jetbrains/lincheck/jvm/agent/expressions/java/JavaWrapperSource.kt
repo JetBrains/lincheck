@@ -84,7 +84,7 @@ internal object JavaWrapperSource {
             .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
             .addSuperinterface(samType)
         for (capture in captures) {
-            wrapper.addField(typeName(capture.type), capture.name)
+            wrapper.addField(typeName(ExpressionWrapper.storageType(capture.type)), capture.name)
         }
         wrapper.addMethod(MethodSpec.constructorBuilder().addModifiers(Modifier.PRIVATE).build())
 
@@ -97,7 +97,10 @@ internal object JavaWrapperSource {
             .addParameter(objectArray, "args")
             .addStatement("\$1L expression = new \$1L()", simpleName)
         captures.forEachIndexed { i, capture ->
-            apply.addStatement("expression.\$L = (\$T) args[\$L]", capture.name, typeName(capture.type).box(), i)
+            apply.addStatement(
+                "expression.\$L = (\$T) args[\$L]",
+                capture.name, typeName(ExpressionWrapper.storageType(capture.type)).box(), i,
+            )
         }
         apply.addStatement("return expression")
         val factory = TypeSpec.anonymousClassBuilder("")
