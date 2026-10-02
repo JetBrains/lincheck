@@ -5,13 +5,13 @@ import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TraceContainerFooterTracePoint
-import org.jetbrains.lincheck.trace.TraceContainerHeaderTracePoint
-import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.ContainerFooterTracePoint
+import org.jetbrains.lincheck.trace.ContainerHeaderTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.lincheck.trace.TraceNull
 import org.jetbrains.lincheck.trace.TraceScalar
 import org.jetbrains.lincheck.trace.TracePoint
-import org.jetbrains.lincheck.trace.TraceWriteLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.WriteLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.attachFooterTracePoint
 import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
@@ -308,7 +308,7 @@ class BufferedTraceWriterTest {
         threadId: Int,
         className: String,
         methodName: String
-    ): TraceMethodCallTracePoint {
+    ): MethodCallTracePoint {
         val methodType = Types.MethodType(Types.OBJECT_TYPE)
         val md = context.createAndRegisterMethodDescriptor(className, methodName, methodType)
         val codeLocationId = context.codeLocationsPool.register(
@@ -318,7 +318,7 @@ class BufferedTraceWriterTest {
                 argumentNames = null
             )
         )
-        val tracepoint = TraceMethodCallTracePoint(
+        val tracepoint = MethodCallTracePoint(
             context,
             threadId,
             codeLocationId,
@@ -333,7 +333,7 @@ class BufferedTraceWriterTest {
         context: TraceContext,
         threadId: Int,
         variableName: String
-    ): TraceWriteLocalVariableTracePoint {
+    ): WriteLocalVariableTracePoint {
         val vd = context.createAndRegisterVariableDescriptor(variableName, Types.INT_TYPE)
 
         // Create an access path for the variable
@@ -345,7 +345,7 @@ class BufferedTraceWriterTest {
                 accessPath = accessPath
             )
         )
-        return TraceWriteLocalVariableTracePoint(
+        return WriteLocalVariableTracePoint(
             context,
             threadId,
             codeLocationId,
@@ -442,10 +442,10 @@ class BufferedTraceWriterTest {
                         val tr = dataInput.readTracePointData(loadedContext)
                         Logger.info { "  Tracepoint: ${tr.toText(verbose = true)}" }
 
-                        if (tr is TraceContainerFooterTracePoint) {
+                        if (tr is ContainerFooterTracePoint) {
                             check(tracePointsStack.isNotEmpty()) { "Closing tracepoint without container trace point" }
-                            (tracePointsStack.removeLast() as TraceContainerHeaderTracePoint).attachFooterTracePoint(tr)
-                        } else if (tr is TraceContainerHeaderTracePoint) {
+                            (tracePointsStack.removeLast() as ContainerHeaderTracePoint).attachFooterTracePoint(tr)
+                        } else if (tr is ContainerHeaderTracePoint) {
                             tracePointsStack.add(tr)
                         }
                     }

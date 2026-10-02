@@ -27,18 +27,18 @@ import org.jetbrains.lincheck.descriptors.VariableDescriptor
 import org.jetbrains.lincheck.trace.DiffStatus
 import org.jetbrains.lincheck.trace.TraceArray
 import org.jetbrains.lincheck.trace.TraceArraySnapshot
-import org.jetbrains.lincheck.trace.TraceCatchTracePoint
-import org.jetbrains.lincheck.trace.TraceLoopEndTracePoint
-import org.jetbrains.lincheck.trace.TraceLoopIterationEndTracePoint
-import org.jetbrains.lincheck.trace.TraceLoopIterationTracePoint
-import org.jetbrains.lincheck.trace.TraceLoopTracePoint
-import org.jetbrains.lincheck.trace.TraceMethodCallResultTracePoint
-import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.CatchTracePoint
+import org.jetbrains.lincheck.trace.LoopEndTracePoint
+import org.jetbrains.lincheck.trace.LoopIterationEndTracePoint
+import org.jetbrains.lincheck.trace.LoopIterationTracePoint
+import org.jetbrains.lincheck.trace.LoopTracePoint
+import org.jetbrains.lincheck.trace.MethodCallResultTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.lincheck.trace.TraceObject
 import org.jetbrains.lincheck.trace.TraceMapSnapshot
 import org.jetbrains.lincheck.trace.TraceObjectSnapshot
 import org.jetbrains.lincheck.trace.TraceScalar
-import org.jetbrains.lincheck.trace.TraceReadArrayTracePoint
+import org.jetbrains.lincheck.trace.ReadArrayTracePoint
 import org.jetbrains.lincheck.trace.TraceTextSnapshot
 import org.jetbrains.lincheck.trace.TraceTypeReference
 import org.jetbrains.lincheck.trace.TypeFlavor
@@ -48,11 +48,11 @@ import org.jetbrains.lincheck.trace.TraceArbitraryDecimal
 import org.jetbrains.lincheck.trace.TraceArbitraryInteger
 import org.jetbrains.lincheck.trace.TraceException
 import org.jetbrains.lincheck.trace.TraceExceptionSnapshot
-import org.jetbrains.lincheck.trace.TraceReadLocalVariableTracePoint
-import org.jetbrains.lincheck.trace.TraceReadFieldTracePoint
+import org.jetbrains.lincheck.trace.ReadLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.ReadFieldTracePoint
 import org.jetbrains.lincheck.trace.TraceRedacted
-import org.jetbrains.lincheck.trace.TraceSnapshotLineBreakpointTracePoint
-import org.jetbrains.lincheck.trace.TraceThrowTracePoint
+import org.jetbrains.lincheck.trace.SnapshotLineBreakpointTracePoint
+import org.jetbrains.lincheck.trace.ThrowTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.TraceUnfinishedMethodResult
 import org.jetbrains.lincheck.trace.TraceUntrackedMethodResult
@@ -60,9 +60,9 @@ import org.jetbrains.lincheck.trace.TraceRenderedValue
 import org.jetbrains.lincheck.trace.TraceValue
 import org.jetbrains.lincheck.trace.TraceUnit
 import org.jetbrains.lincheck.trace.TraceVoid
-import org.jetbrains.lincheck.trace.TraceWriteArrayTracePoint
-import org.jetbrains.lincheck.trace.TraceWriteLocalVariableTracePoint
-import org.jetbrains.lincheck.trace.TraceWriteFieldTracePoint
+import org.jetbrains.lincheck.trace.WriteArrayTracePoint
+import org.jetbrains.lincheck.trace.WriteLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.WriteFieldTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterClassDescriptor
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
@@ -1010,7 +1010,7 @@ class TraceBinarySerializationTest {
         )
         val mapClass = context.createAndRegisterClassDescriptor("java.util.HashMap")
         val keyClass = context.createAndRegisterClassDescriptor("org.example.Key")
-        val tracePoint = TraceSnapshotLineBreakpointTracePoint(
+        val tracePoint = SnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = location,
             threadId = 0,
@@ -1047,7 +1047,7 @@ class TraceBinarySerializationTest {
         out.flush()
 
         val reader = NetworkTraceReader()
-        val received = mutableListOf<TraceSnapshotLineBreakpointTracePoint>()
+        val received = mutableListOf<SnapshotLineBreakpointTracePoint>()
         reader.addTracePointListener { received += it }
         reader.start()
         reader.processMessage(header)
@@ -1073,7 +1073,7 @@ class TraceBinarySerializationTest {
             LineCodeLocation(StackTraceElement("org.example.Svc", "handle", "Svc.kt", 10), emptyList())
         )
         val secretClass = context.createAndRegisterClassDescriptor("org.example.Secret")
-        val tracePoint = TraceSnapshotLineBreakpointTracePoint(
+        val tracePoint = SnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = location,
             threadId = 0,
@@ -1108,7 +1108,7 @@ class TraceBinarySerializationTest {
         out.flush()
 
         val reader = NetworkTraceReader()
-        val received = mutableListOf<TraceSnapshotLineBreakpointTracePoint>()
+        val received = mutableListOf<SnapshotLineBreakpointTracePoint>()
         reader.addTracePointListener { received += it }
         reader.start()
         reader.processMessage(header)
@@ -1448,15 +1448,15 @@ class TraceBinarySerializationTest {
     @Test
     fun tracePointKind() {
         for (kind in TracePointKind.entries) {
-            assertRoundTrip(kind, DataOutput::writeTraceTracePointKind, DataInput::readTraceTracePointKind)
+            assertRoundTrip(kind, DataOutput::writeTracePointKind, DataInput::readTracePointKind)
         }
     }
 
     @Test
-    fun readTraceTracePointKindRejectsOutOfRangeOrdinal() {
+    fun readTracePointKindRejectsOutOfRangeOrdinal() {
         val bytes = encodeBytes { writeByte(100) }
         val exception = assertThrows(IOException::class.java) {
-            DataInputStream(ByteArrayInputStream(bytes)).use { it.readTraceTracePointKind() }
+            DataInputStream(ByteArrayInputStream(bytes)).use { it.readTracePointKind() }
         }
         assertTrue(
             "expected 'TracePointKind' in message but was: ${exception.message}",
@@ -1477,23 +1477,23 @@ class TraceBinarySerializationTest {
         val cases: List<DiffStatus?> = listOf(null) + DiffStatus.entries
 
         for (status in cases) {
-            val leaf = TraceReadLocalVariableTracePoint(
+            val leaf = ReadLocalVariableTracePoint(
                 context = context, threadId = 0, codeLocationId = 0,
                 localVariableId = variableId, value = TraceNull, eventId = 0,
             ).also { if (status != null) it.diffStatus = status }
             assertRoundTrip(
                 value = leaf,
                 writer = { writeTracePointData(it) },
-                reader = { readTracePointData(context) as TraceReadLocalVariableTracePoint },
+                reader = { readTracePointData(context) as ReadLocalVariableTracePoint },
             ) { a, b -> assertEquals(a.diffStatus, b.diffStatus) }
 
-            val container = TraceLoopTracePoint(
+            val container = LoopTracePoint(
                 context = context, threadId = 0, codeLocationId = 0, loopId = 0,
             ).also { if (status != null) it.diffStatus = status }
             assertRoundTrip(
                 value = container,
                 writer = { writeTracePointData(it) },
-                reader = { readTracePointData(context) as TraceLoopTracePoint },
+                reader = { readTracePointData(context) as LoopTracePoint },
             ) { a, b -> assertEquals(a.diffStatus, b.diffStatus) }
         }
     }
@@ -1510,13 +1510,13 @@ class TraceBinarySerializationTest {
             EnumSet.of(DiffStatus.UNCHANGED, DiffStatus.REMOVED, DiffStatus.ADDED, DiffStatus.EDITED_OLD, DiffStatus.EDITED_NEW),
         )
         for (statuses in cases) {
-            val container = TraceLoopTracePoint(
+            val container = LoopTracePoint(
                 context = context, threadId = 0, codeLocationId = 0, loopId = 0,
             ).also { it.childrenDiffStatuses = statuses }
             assertRoundTrip(
                 value = container,
                 writer = { writeTracePointData(it) },
-                reader = { readTracePointData(context) as TraceLoopTracePoint },
+                reader = { readTracePointData(context) as LoopTracePoint },
             ) { a, b -> assertEquals(a.childrenDiffStatuses, b.childrenDiffStatuses) }
         }
     }
@@ -1533,7 +1533,7 @@ class TraceBinarySerializationTest {
         val fieldId = context.fieldPool.register(
             FieldDescriptor(context, classId, "x", Types.INT_TYPE, FieldKind.INSTANCE, isFinal = false, isVolatile = false)
         )
-        val original = TraceWriteFieldTracePoint(
+        val original = WriteFieldTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
@@ -1545,7 +1545,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceWriteFieldTracePoint },
+            reader = { readTracePointData(context) as WriteFieldTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.fieldId, b.fieldId)
@@ -1564,7 +1564,7 @@ class TraceBinarySerializationTest {
         val fieldId = context.fieldPool.register(
             FieldDescriptor(context, classId, "x", Types.INT_TYPE, FieldKind.INSTANCE, isFinal = false, isVolatile = false)
         )
-        val original = TraceReadFieldTracePoint(
+        val original = ReadFieldTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
@@ -1576,7 +1576,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceReadFieldTracePoint },
+            reader = { readTracePointData(context) as ReadFieldTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.fieldId, b.fieldId)
@@ -1600,7 +1600,7 @@ class TraceBinarySerializationTest {
             totalSize = 1,
             capturedElements = listOf(TraceScalar(0)),
         )
-        val original = TraceWriteArrayTracePoint(
+        val original = WriteArrayTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             array = array,
             index = 0,
@@ -1610,7 +1610,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceWriteArrayTracePoint },
+            reader = { readTracePointData(context) as WriteArrayTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.array, b.array)
@@ -1636,7 +1636,7 @@ class TraceBinarySerializationTest {
                 TraceScalar(3),
             ),
         )
-        val original = TraceReadArrayTracePoint(
+        val original = ReadArrayTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             array = array,
             index = 1,
@@ -1646,7 +1646,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceReadArrayTracePoint },
+            reader = { readTracePointData(context) as ReadArrayTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.array, b.array)
@@ -1664,7 +1664,7 @@ class TraceBinarySerializationTest {
         val codeLocationId = 9
         val eventId = 301
         val variableId = context.variablePool.register(VariableDescriptor(context, "counter", Types.INT_TYPE))
-        val original = TraceWriteLocalVariableTracePoint(
+        val original = WriteLocalVariableTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             localVariableId = variableId,
             value = TraceScalar(99),
@@ -1673,7 +1673,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceWriteLocalVariableTracePoint },
+            reader = { readTracePointData(context) as WriteLocalVariableTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.localVariableId, b.localVariableId)
@@ -1688,7 +1688,7 @@ class TraceBinarySerializationTest {
         val codeLocationId = 9
         val eventId = 300
         val variableId = context.variablePool.register(VariableDescriptor(context, "counter", Types.INT_TYPE))
-        val original = TraceReadLocalVariableTracePoint(
+        val original = ReadLocalVariableTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             localVariableId = variableId,
             value = TraceScalar(42),
@@ -1697,7 +1697,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceReadLocalVariableTracePoint },
+            reader = { readTracePointData(context) as ReadLocalVariableTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.localVariableId, b.localVariableId)
@@ -1717,7 +1717,7 @@ class TraceBinarySerializationTest {
         val methodId = context.methodPool.register(
             MethodDescriptor(context, classId, MethodSignature("foo", Types.MethodType(Types.INT_TYPE, Types.OBJECT_TYPE)))
         )
-        val original = TraceMethodCallTracePoint(
+        val original = MethodCallTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
@@ -1730,7 +1730,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceMethodCallTracePoint },
+            reader = { readTracePointData(context) as MethodCallTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.methodId, b.methodId)
@@ -1748,7 +1748,7 @@ class TraceBinarySerializationTest {
         val methodId = context.methodPool.register(
             MethodDescriptor(context, classId, MethodSignature("noArgs", Types.MethodType(Types.VOID_TYPE)))
         )
-        val original = TraceMethodCallTracePoint(
+        val original = MethodCallTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = 0,
@@ -1759,7 +1759,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceMethodCallTracePoint },
+            reader = { readTracePointData(context) as MethodCallTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.methodId, b.methodId)
@@ -1777,7 +1777,7 @@ class TraceBinarySerializationTest {
         val methodId = context.methodPool.register(
             MethodDescriptor(context, classId, MethodSignature("staticFoo", Types.MethodType(Types.VOID_TYPE)))
         )
-        val original = TraceMethodCallTracePoint(
+        val original = MethodCallTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = 0,
@@ -1788,7 +1788,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceMethodCallTracePoint },
+            reader = { readTracePointData(context) as MethodCallTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.methodId, b.methodId)
@@ -1811,7 +1811,7 @@ class TraceBinarySerializationTest {
             TraceNull to null,
         )
         for ((result, exceptionClassName) in outcomes) {
-            val original = TraceMethodCallResultTracePoint(
+            val original = MethodCallResultTracePoint(
                 context = context,
                 threadId = 0,
                 codeLocationId = 0,
@@ -1822,7 +1822,7 @@ class TraceBinarySerializationTest {
             assertRoundTrip(
                 value = original,
                 writer = { writeTracePointData(it) },
-                reader = { readTracePointData(context) as TraceMethodCallResultTracePoint },
+                reader = { readTracePointData(context) as MethodCallResultTracePoint },
             ) { a, b ->
                 assertCommonHeaderEqual(a, b)
                 assertEquals(a.containerEventId, b.containerEventId)
@@ -1839,7 +1839,7 @@ class TraceBinarySerializationTest {
         val methodId = context.methodPool.register(
             MethodDescriptor(context, classId, MethodSignature("foo", Types.MethodType(Types.VOID_TYPE)))
         )
-        val call = TraceMethodCallTracePoint(
+        val call = MethodCallTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = 0,
@@ -1847,7 +1847,7 @@ class TraceBinarySerializationTest {
             obj = TraceNull,
             parameters = emptyList(),
         )
-        val resultTracePoint = TraceMethodCallResultTracePoint(
+        val resultTracePoint = MethodCallResultTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = 0,
@@ -1867,22 +1867,22 @@ class TraceBinarySerializationTest {
         val codeLocationId = 17
         val eventId = 100
         val loopId = 5
-        val original = TraceLoopTracePoint(
+        val original = LoopTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
             loopId = loopId,
             eventId = eventId,
         )
-        assertEquals(TraceLoopTracePoint.UNKNOWN_ITERATIONS_COUNT, original.iterations)
+        assertEquals(LoopTracePoint.UNKNOWN_ITERATIONS_COUNT, original.iterations)
         original.completeTracePoint(children = List(3) { iteration ->
-            TraceLoopIterationTracePoint(context, threadId, codeLocationId, loopId, loopIteration = iteration + 1)
+            LoopIterationTracePoint(context, threadId, codeLocationId, loopId, loopIteration = iteration + 1)
         })
         assertEquals(3, original.iterations)
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceLoopTracePoint },
+            reader = { readTracePointData(context) as LoopTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.loopId, b.loopId)
@@ -1893,7 +1893,7 @@ class TraceBinarySerializationTest {
     fun loopEndTracePoint() {
         val context = TraceContext()
         for (iterations in listOf(0, 1, 100, Int.MAX_VALUE)) {
-            val original = TraceLoopEndTracePoint(
+            val original = LoopEndTracePoint(
                 context = context,
                 threadId = 0,
                 codeLocationId = 0,
@@ -1903,7 +1903,7 @@ class TraceBinarySerializationTest {
             assertRoundTrip(
                 value = original,
                 writer = { writeTracePointData(it) },
-                reader = { readTracePointData(context) as TraceLoopEndTracePoint },
+                reader = { readTracePointData(context) as LoopEndTracePoint },
             ) { a, b ->
                 assertCommonHeaderEqual(a, b)
                 assertEquals(a.containerEventId, b.containerEventId)
@@ -1922,7 +1922,7 @@ class TraceBinarySerializationTest {
         val eventId = 101
         val loopId = 7
         val loopIteration = 42
-        val original = TraceLoopIterationTracePoint(
+        val original = LoopIterationTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
@@ -1933,7 +1933,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceLoopIterationTracePoint },
+            reader = { readTracePointData(context) as LoopIterationTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.loopId, b.loopId)
@@ -1948,7 +1948,7 @@ class TraceBinarySerializationTest {
         val codeLocationId = 13
         val loopIterationEventId = 101
         val eventId = 102
-        val original = TraceLoopIterationEndTracePoint(
+        val original = LoopIterationEndTracePoint(
             context = context,
             threadId = threadId,
             codeLocationId = codeLocationId,
@@ -1958,7 +1958,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceLoopIterationEndTracePoint },
+            reader = { readTracePointData(context) as LoopIterationEndTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(loopIterationEventId, a.containerEventId)
@@ -1980,7 +1980,7 @@ class TraceBinarySerializationTest {
             identity = 0xDEADL,
             rendered = null,
         )
-        val original = TraceThrowTracePoint(
+        val original = ThrowTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             exception = exception,
             eventId = eventId,
@@ -1988,7 +1988,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceThrowTracePoint },
+            reader = { readTracePointData(context) as ThrowTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.exception, b.exception)
@@ -2007,7 +2007,7 @@ class TraceBinarySerializationTest {
             identity = 0xFACEL,
             rendered = null,
         )
-        val original = TraceCatchTracePoint(
+        val original = CatchTracePoint(
             context = context, threadId = threadId, codeLocationId = codeLocationId,
             exception = exception,
             eventId = eventId,
@@ -2015,7 +2015,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = original,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceCatchTracePoint },
+            reader = { readTracePointData(context) as CatchTracePoint },
         ) { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.exception, b.exception)
@@ -2029,7 +2029,7 @@ class TraceBinarySerializationTest {
         val context = TraceContext()
         val threadId = 1
         val codeLocationId = 9
-        val assertFieldsEquality: (TraceSnapshotLineBreakpointTracePoint, TraceSnapshotLineBreakpointTracePoint) -> Unit = { a, b ->
+        val assertFieldsEquality: (SnapshotLineBreakpointTracePoint, SnapshotLineBreakpointTracePoint) -> Unit = { a, b ->
             assertCommonHeaderEqual(a, b)
             assertEquals(a.breakpointUuid, b.breakpointUuid)
             assertEquals(a.stackTraceCodeLocationIds, b.stackTraceCodeLocationIds)
@@ -2041,7 +2041,7 @@ class TraceBinarySerializationTest {
 
         // Populated case.
         val eventIdPopulated = 600
-        val populated = TraceSnapshotLineBreakpointTracePoint(
+        val populated = SnapshotLineBreakpointTracePoint(
             context = context,
             codeLocationId = codeLocationId,
             threadId = threadId,
@@ -2063,13 +2063,13 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = populated,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceSnapshotLineBreakpointTracePoint },
+            reader = { readTracePointData(context) as SnapshotLineBreakpointTracePoint },
             assertEquality = assertFieldsEquality,
         )
 
         // Null-traceId / empty-stack / empty-locals case.
         val eventIdEmpty = 601
-        val empty = TraceSnapshotLineBreakpointTracePoint(
+        val empty = SnapshotLineBreakpointTracePoint(
             context = context, codeLocationId = codeLocationId, threadId = threadId,
             breakpointUuid = UUID(0L, 0L),
             stackTraceCodeLocationIds = emptyList(),
@@ -2082,7 +2082,7 @@ class TraceBinarySerializationTest {
         assertRoundTrip(
             value = empty,
             writer = { writeTracePointData(it) },
-            reader = { readTracePointData(context) as TraceSnapshotLineBreakpointTracePoint },
+            reader = { readTracePointData(context) as SnapshotLineBreakpointTracePoint },
             assertEquality = assertFieldsEquality,
         )
     }

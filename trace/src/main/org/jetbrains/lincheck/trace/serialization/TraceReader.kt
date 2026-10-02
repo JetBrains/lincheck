@@ -19,7 +19,7 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import kotlin.use
 
-private typealias TraceTree = MutableList<TraceContainerHeaderTracePoint>
+private typealias TraceTree = MutableList<ContainerHeaderTracePoint>
 /**
  * Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block.
  */
@@ -38,10 +38,10 @@ internal interface TracepointConsumer {
      * Called for every tracepoint record, once it is read.
      *
      * [parent] is the record's container in the trace tree, `null` for a root:
-     * for a [TraceContainerFooterTracePoint] that is the container it closes,
+     * for a [ContainerFooterTracePoint] that is the container it closes,
      * which is attached to it by the time this is called.
      */
-    fun tracePointRead(parent: TraceContainerHeaderTracePoint?, tracePoint: TracePoint)
+    fun tracePointRead(parent: ContainerHeaderTracePoint?, tracePoint: TracePoint)
 }
 
 internal interface BlockConsumer {
@@ -129,7 +129,7 @@ internal fun loadAllObjectsDeep(
  * Reads one tracepoint record and folds it into [tree], the stack of currently open containers.
  *
  * The trace is decodable strictly forward: every container is delimited by its own
- * [TraceContainerFooterTracePoint], so no seeking is required.
+ * [ContainerFooterTracePoint], so no seeking is required.
  *
  * @return always `true`: the caller's [loadObjects] loop stops on the block-end record itself.
  */
@@ -142,7 +142,7 @@ private fun loadTracePoint(
     consumer.tracePointStarted()
     val tracePoint = input.readTracePointData(context)
 
-    if (tracePoint is TraceContainerFooterTracePoint) {
+    if (tracePoint is ContainerFooterTracePoint) {
         val container = tree.removeLastOrNull()
             ?: error("Closing tracepoint for container #${tracePoint.containerEventId} has no open container")
         container.attachFooterTracePoint(tracePoint)
@@ -151,7 +151,7 @@ private fun loadTracePoint(
     }
 
     consumer.tracePointRead(tree.lastOrNull(), tracePoint)
-    if (tracePoint is TraceContainerHeaderTracePoint) {
+    if (tracePoint is ContainerHeaderTracePoint) {
         tree.add(tracePoint)
     }
     return true

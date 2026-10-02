@@ -23,7 +23,7 @@ import java.io.OutputStream
  * One `writeTR<Type>TracePoint` method per tracepoint type;
  * read/write variants share the method of their sealed base class
  * (their bodies are identical, the kind byte tells them apart on the read side).
- * The closing side of a container ([TraceContainerFooterTracePoint]) is an ordinary tracepoint record,
+ * The closing side of a container ([ContainerFooterTracePoint]) is an ordinary tracepoint record,
  * written after all the container's children: with [TraceWriter.writeTracePoint] by a caller which holds it,
  * or by calling [TraceWriter.writeTracePoint] with the container's footer.
  *
@@ -62,7 +62,7 @@ internal interface TraceWriter : DataOutput, Closeable {
     /**
      * Mark the end of the container tracepoint's header.
      *
-     * The container tracepoints are [TraceMethodCallTracePoint], [TraceLoopTracePoint], and [TraceLoopIterationTracePoint].
+     * The container tracepoints are [MethodCallTracePoint], [LoopTracePoint], and [LoopIterationTracePoint].
      */
     fun endWriteContainerTracepointHeader(id: Int)
 
@@ -124,21 +124,21 @@ internal interface TraceWriter : DataOutput, Closeable {
      */
     fun writeTracePoint(tracePoint: TracePoint) {
         when (tracePoint) {
-            is TraceMethodCallTracePoint             -> writeTraceMethodCallTracePoint(tracePoint)
-            is TraceLoopTracePoint                   -> writeTraceLoopTracePoint(tracePoint)
-            is TraceLoopIterationTracePoint          -> writeTraceLoopIterationTracePoint(tracePoint)
-            is TraceFieldTracePoint                  -> writeTraceFieldTracePoint(tracePoint)
-            is TraceArrayTracePoint                  -> writeTraceArrayTracePoint(tracePoint)
-            is TraceLocalVariableTracePoint          -> writeTraceLocalVariableTracePoint(tracePoint)
-            is TraceExceptionProcessingTracePoint    -> writeTraceExceptionProcessingTracePoint(tracePoint)
-            is TraceSnapshotLineBreakpointTracePoint -> writeTraceSnapshotLineBreakpointTracePoint(tracePoint)
-            is TraceMethodCallResultTracePoint       -> writeTraceMethodCallResultTracePoint(tracePoint)
-            is TraceLoopEndTracePoint                -> writeTraceLoopEndTracePoint(tracePoint)
-            is TraceLoopIterationEndTracePoint       -> writeTraceLoopIterationEndTracePoint(tracePoint)
+            is MethodCallTracePoint             -> writeMethodCallTracePoint(tracePoint)
+            is LoopTracePoint                   -> writeLoopTracePoint(tracePoint)
+            is LoopIterationTracePoint          -> writeLoopIterationTracePoint(tracePoint)
+            is FieldTracePoint                  -> writeFieldTracePoint(tracePoint)
+            is ArrayTracePoint                  -> writeArrayTracePoint(tracePoint)
+            is LocalVariableTracePoint          -> writeLocalVariableTracePoint(tracePoint)
+            is ExceptionProcessingTracePoint    -> writeExceptionProcessingTracePoint(tracePoint)
+            is SnapshotLineBreakpointTracePoint -> writeSnapshotLineBreakpointTracePoint(tracePoint)
+            is MethodCallResultTracePoint       -> writeMethodCallResultTracePoint(tracePoint)
+            is LoopEndTracePoint                -> writeLoopEndTracePoint(tracePoint)
+            is LoopIterationEndTracePoint       -> writeLoopIterationEndTracePoint(tracePoint)
         }
     }
 
-    fun writeTraceMethodCallTracePoint(tracePoint: TraceMethodCallTracePoint) {
+    fun writeMethodCallTracePoint(tracePoint: MethodCallTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeMethodDescriptor(tracePoint.methodId)
         preWriteTraceValue(tracePoint.obj)
@@ -146,17 +146,17 @@ internal interface TraceWriter : DataOutput, Closeable {
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTraceLoopTracePoint(tracePoint: TraceLoopTracePoint) {
+    fun writeLoopTracePoint(tracePoint: LoopTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTraceLoopIterationTracePoint(tracePoint: TraceLoopIterationTracePoint) {
+    fun writeLoopIterationTracePoint(tracePoint: LoopIterationTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTraceFieldTracePoint(tracePoint: TraceFieldTracePoint) {
+    fun writeFieldTracePoint(tracePoint: FieldTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeFieldDescriptor(tracePoint.fieldId)
         preWriteTraceValue(tracePoint.obj)
@@ -164,27 +164,27 @@ internal interface TraceWriter : DataOutput, Closeable {
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTraceArrayTracePoint(tracePoint: TraceArrayTracePoint) {
+    fun writeArrayTracePoint(tracePoint: ArrayTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         preWriteTraceValue(tracePoint.array)
         preWriteTraceValue(tracePoint.value)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTraceLocalVariableTracePoint(tracePoint: TraceLocalVariableTracePoint) {
+    fun writeLocalVariableTracePoint(tracePoint: LocalVariableTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeVariableDescriptor(tracePoint.localVariableId)
         preWriteTraceValue(tracePoint.value)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTraceExceptionProcessingTracePoint(tracePoint: TraceExceptionProcessingTracePoint) {
+    fun writeExceptionProcessingTracePoint(tracePoint: ExceptionProcessingTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         preWriteTraceValue(tracePoint.exception)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTraceSnapshotLineBreakpointTracePoint(tracePoint: TraceSnapshotLineBreakpointTracePoint) {
+    fun writeSnapshotLineBreakpointTracePoint(tracePoint: SnapshotLineBreakpointTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         tracePoint.stackTraceCodeLocationIds.forEach { writeCodeLocation(it) }
         tracePoint.locals.forEach { preWriteTraceValue(it) }
@@ -192,18 +192,18 @@ internal interface TraceWriter : DataOutput, Closeable {
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTraceMethodCallResultTracePoint(tracePoint: TraceMethodCallResultTracePoint) {
+    fun writeMethodCallResultTracePoint(tracePoint: MethodCallResultTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         preWriteTraceValue(tracePoint.result)
         writeContainerEndTracepoint(tracePoint)
     }
 
-    fun writeTraceLoopEndTracePoint(tracePoint: TraceLoopEndTracePoint) {
+    fun writeLoopEndTracePoint(tracePoint: LoopEndTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeContainerEndTracepoint(tracePoint)
     }
 
-    fun writeTraceLoopIterationEndTracePoint(tracePoint: TraceLoopIterationEndTracePoint) {
+    fun writeLoopIterationEndTracePoint(tracePoint: LoopIterationEndTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeContainerEndTracepoint(tracePoint)
     }
@@ -216,14 +216,14 @@ private fun TraceWriter.writeLeafTracepoint(tracePoint: TracePoint) {
 }
 
 // Marks the tracepoint as a container which could have children.
-private fun TraceWriter.writeContainerTracepointHeader(tracePoint: TraceContainerHeaderTracePoint) {
+private fun TraceWriter.writeContainerTracepointHeader(tracePoint: ContainerHeaderTracePoint) {
     startWriteAnyTracepoint()
     writeTracePointData(tracePoint)
     endWriteContainerTracepointHeader(tracePoint.eventId)
 }
 
 // Closes the container: everything written between its header and this record is its children.
-private fun TraceWriter.writeContainerEndTracepoint(tracePoint: TraceContainerFooterTracePoint) {
+private fun TraceWriter.writeContainerEndTracepoint(tracePoint: ContainerFooterTracePoint) {
     // Must be called after the closing tracepoint's own prerequisites, so that they still fall
     // into the children range, and before its first byte, which bounds that range.
     endWriteContainerTracepointChildren(tracePoint.containerEventId)

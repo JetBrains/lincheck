@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.trace.tree
 
-import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.util.collections.LazyLoadableList
 import org.jetbrains.lincheck.util.tree.Tree
@@ -137,7 +137,7 @@ class LazyLoadableTraceTreeTest {
     fun `tree operations work over the lazily loaded tree`() {
         withTraceTree(build = { testTrace() }) { _, tree ->
             val visited = mutableListOf<String>()
-            tree.forEach { visited.add((it as TraceMethodCallTracePoint).methodName) }
+            tree.forEach { visited.add((it as MethodCallTracePoint).methodName) }
             assertEquals(listOf("root", "a", "b", "c"), visited)
 
             tree.validate()
@@ -147,12 +147,12 @@ class LazyLoadableTraceTreeTest {
     @Test
     fun `reader loaders read children shallowly without mutating the parent`() {
         withTraceTree(build = { testTrace() }) { reader, tree ->
-            val root = tree.root!!.data as TraceMethodCallTracePoint
+            val root = tree.root!!.data as MethodCallTracePoint
 
             val children = reader.loadAllChildren(root)
-            assertEquals(listOf("a", "c"), children.map { (it as TraceMethodCallTracePoint).methodName })
+            assertEquals(listOf("a", "c"), children.map { (it as MethodCallTracePoint).methodName })
 
-            val c = children[1] as TraceMethodCallTracePoint
+            val c = children[1] as MethodCallTracePoint
             assertTrue(reader.loadAllChildren(c).isEmpty())
 
             val batched = reader.readAllChildren(root)
@@ -162,7 +162,7 @@ class LazyLoadableTraceTreeTest {
 
             val lazyChildren = reader.readChildren(root)
             assertEquals(2, lazyChildren.size)
-            assertEquals("c", (lazyChildren[1] as TraceMethodCallTracePoint).methodName)
+            assertEquals("c", (lazyChildren[1] as MethodCallTracePoint).methodName)
             assertFalse(lazyChildren.isLoaded(0)) // loading one child does not load its siblings
         }
     }

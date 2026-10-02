@@ -21,38 +21,38 @@ internal object TracePointComparator {
     fun strictHash(tracePoint: TracePoint): Long {
         val h = prepareEditIndependentHash(tracePoint)
         when (tracePoint) {
-            is TraceReadArrayTracePoint -> h
+            is ReadArrayTracePoint -> h
                 .add(tracePoint.value)
-            is TraceWriteArrayTracePoint -> h
+            is WriteArrayTracePoint -> h
                 .add(tracePoint.value)
-            is TraceFieldTracePoint -> h
+            is FieldTracePoint -> h
                 .add(tracePoint.obj)
                 .add(tracePoint.value)
-            is TraceLocalVariableTracePoint -> h
+            is LocalVariableTracePoint -> h
                 .add(tracePoint.value)
-            is TraceLoopTracePoint -> Unit
-            is TraceLoopIterationTracePoint -> Unit
-            is TraceMethodCallTracePoint -> h
+            is LoopTracePoint -> Unit
+            is LoopIterationTracePoint -> Unit
+            is MethodCallTracePoint -> h
                 .add(tracePoint.obj)
                 .addTraceValueList(tracePoint.parameters)
                 .add(tracePoint.result)
                 .add(tracePoint.exceptionClassName ?: "")
-            is TraceSnapshotLineBreakpointTracePoint -> h
+            is SnapshotLineBreakpointTracePoint -> h
                 .add(tracePoint.breakpointUuid.toString())
                 .add(tracePoint.stackTrace) // Should we add it as-is?
                 .addTraceValueList(tracePoint.locals)
                 .addTraceValueList(tracePoint.watches)
                 .add(tracePoint.traceId ?: "")
-            is TraceThrowTracePoint -> h
+            is ThrowTracePoint -> h
                 .add(tracePoint.exception)
-            is TraceCatchTracePoint -> h
+            is CatchTracePoint -> h
                 .add(tracePoint.exception)
-            is TraceMethodCallResultTracePoint -> h
+            is MethodCallResultTracePoint -> h
                 .add(tracePoint.result)
                 .add(tracePoint.exceptionClassName ?: "")
-            is TraceLoopEndTracePoint -> h
+            is LoopEndTracePoint -> h
                 .add(tracePoint.iterations)
-            is TraceLoopIterationEndTracePoint -> Unit
+            is LoopIterationEndTracePoint -> Unit
         }
         return h.finish()
     }
@@ -67,32 +67,32 @@ internal object TracePointComparator {
         when (tracePoint) {
             // For next 3 classes value is not used in weak comparison,
             // read/write is not relevant because class is checked separately
-            is TraceArrayTracePoint ->
+            is ArrayTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.array)
                     .add(tracePoint.index)
-            is TraceFieldTracePoint ->
+            is FieldTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.className)
                     .add(tracePoint.name)
                     .add(tracePoint.isStatic)
-            is TraceLocalVariableTracePoint ->
+            is LocalVariableTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.name)
-            is TraceLoopTracePoint ->
+            is LoopTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.loopId)
-            is TraceLoopIterationTracePoint ->
+            is LoopIterationTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.loopId)
                     .add(tracePoint.loopIteration)
             // Arguments (including receiver) and result value are not used in weak comparison
-            is TraceMethodCallTracePoint ->
+            is MethodCallTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.className)
@@ -102,18 +102,18 @@ internal object TracePointComparator {
                     .add(tracePoint.returnType)
                     .add(tracePoint.argumentTypes) // It is Ok, as we use hashcode for Types.Type anyway
             // Only code location and breakpoint UUID for now
-            is TraceSnapshotLineBreakpointTracePoint ->
+            is SnapshotLineBreakpointTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.breakpointUuid.toString())
-            is TraceThrowTracePoint ->
+            is ThrowTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
-            is TraceCatchTracePoint ->
+            is CatchTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
             // The data a container's closing side carries (result, iteration count) is not used in weak comparison
-            is TraceContainerFooterTracePoint ->
+            is ContainerFooterTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
         }

@@ -5,10 +5,10 @@ import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.lincheck.trace.TraceNull
 import org.jetbrains.lincheck.trace.TraceScalar
-import org.jetbrains.lincheck.trace.TraceWriteLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.WriteLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
@@ -77,7 +77,7 @@ class LazyTraceReaderBlockBoundaryTest {
         return traceFile.absolutePath
     }
 
-    private fun createMethodCallTracePoint(context: TraceContext, methodName: String): TraceMethodCallTracePoint {
+    private fun createMethodCallTracePoint(context: TraceContext, methodName: String): MethodCallTracePoint {
         val methodType = Types.MethodType(Types.OBJECT_TYPE)
         val md = context.createAndRegisterMethodDescriptor("com.example.SomeClass", methodName, methodType)
         val codeLocationId = context.codeLocationsPool.register(
@@ -87,7 +87,7 @@ class LazyTraceReaderBlockBoundaryTest {
                 argumentNames = null
             )
         )
-        return TraceMethodCallTracePoint(
+        return MethodCallTracePoint(
             context,
             THREAD_ID,
             codeLocationId,
@@ -100,7 +100,7 @@ class LazyTraceReaderBlockBoundaryTest {
     private fun createVariableWriteTracePoint(
         context: TraceContext,
         variableName: String
-    ): TraceWriteLocalVariableTracePoint {
+    ): WriteLocalVariableTracePoint {
         val vd = context.createAndRegisterVariableDescriptor(variableName, Types.INT_TYPE)
         val codeLocationId = context.codeLocationsPool.register(
             AccessCodeLocation(
@@ -108,7 +108,7 @@ class LazyTraceReaderBlockBoundaryTest {
                 accessPath = AccessPath(listOf(LocalVariableAccessLocation(vd)))
             )
         )
-        return TraceWriteLocalVariableTracePoint(
+        return WriteLocalVariableTracePoint(
             context,
             THREAD_ID,
             codeLocationId,

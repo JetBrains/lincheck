@@ -12,7 +12,7 @@ package org.jetbrains.lincheck.trace.diff
 
 import org.jetbrains.lincheck.trace.TraceObject
 import org.jetbrains.lincheck.trace.TraceObjectSnapshot
-import org.jetbrains.lincheck.trace.TraceSnapshotLineBreakpointTracePoint
+import org.jetbrains.lincheck.trace.SnapshotLineBreakpointTracePoint
 import org.jetbrains.lincheck.trace.TraceValue
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
@@ -69,7 +69,7 @@ class TracePointComparatorTest {
         assertTrue(TracePointComparator.editIndependentEqual(left, right))
     }
 
-    private fun wrap(value: TraceValue): TraceSnapshotLineBreakpointTracePoint = TraceSnapshotLineBreakpointTracePoint(
+    private fun wrap(value: TraceValue): SnapshotLineBreakpointTracePoint = SnapshotLineBreakpointTracePoint(
         context = ctx,
         codeLocationId = UNKNOWN_CODE_LOCATION_ID,
         threadId = 0,

@@ -84,7 +84,7 @@ class TracePointCloner(
         idMapOutput.writeInt(leftId)
         idMapOutput.writeInt(rightId)
         return when (tracePoint) {
-            is TraceReadArrayTracePoint -> TraceReadArrayTracePoint(
+            is ReadArrayTracePoint -> ReadArrayTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -94,7 +94,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceWriteArrayTracePoint -> TraceWriteArrayTracePoint(
+            is WriteArrayTracePoint -> WriteArrayTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -104,7 +104,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceReadFieldTracePoint -> TraceReadFieldTracePoint(
+            is ReadFieldTracePoint -> ReadFieldTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -114,7 +114,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceWriteFieldTracePoint -> TraceWriteFieldTracePoint(
+            is WriteFieldTracePoint -> WriteFieldTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -124,7 +124,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceReadLocalVariableTracePoint -> TraceReadLocalVariableTracePoint(
+            is ReadLocalVariableTracePoint -> ReadLocalVariableTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -133,7 +133,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceWriteLocalVariableTracePoint -> TraceWriteLocalVariableTracePoint(
+            is WriteLocalVariableTracePoint -> WriteLocalVariableTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -142,7 +142,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceLoopTracePoint -> TraceLoopTracePoint(
+            is LoopTracePoint -> LoopTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -150,7 +150,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceLoopIterationTracePoint -> TraceLoopIterationTracePoint(
+            is LoopIterationTracePoint -> LoopIterationTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -159,7 +159,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceMethodCallTracePoint -> TraceMethodCallTracePoint(
+            is MethodCallTracePoint -> MethodCallTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -169,7 +169,7 @@ class TracePointCloner(
                 flags = tracePoint.flags,
                 eventId = eventId++
             ).also {
-                it.resultTracePoint = TraceMethodCallResultTracePoint(
+                it.resultTracePoint = MethodCallResultTracePoint(
                     context = context,
                     threadId = threadId,
                     codeLocationId = it.codeLocationId,
@@ -179,7 +179,7 @@ class TracePointCloner(
                 )
             }
 
-            is TraceSnapshotLineBreakpointTracePoint -> TraceSnapshotLineBreakpointTracePoint(
+            is SnapshotLineBreakpointTracePoint -> SnapshotLineBreakpointTracePoint(
                 context = context,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
                 threadId = threadId,
@@ -192,7 +192,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceThrowTracePoint -> TraceThrowTracePoint(
+            is ThrowTracePoint -> ThrowTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -200,7 +200,7 @@ class TracePointCloner(
                 eventId = eventId++
             )
 
-            is TraceCatchTracePoint -> TraceCatchTracePoint(
+            is CatchTracePoint -> CatchTracePoint(
                 context = context,
                 threadId = threadId,
                 codeLocationId = cloneCodeLocation(tracePoint, codeLocationMap),
@@ -210,7 +210,7 @@ class TracePointCloner(
 
             // Cloning walks trace trees, whose nodes are always the opening side of a container:
             // the closing side is cloned together with the container it belongs to.
-            is TraceContainerFooterTracePoint ->
+            is ContainerFooterTracePoint ->
                 error("Cannot clone the closing tracepoint ${tracePoint::class.java.simpleName}")
         }
     }

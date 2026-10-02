@@ -168,7 +168,7 @@ private fun diffOneThread(
     // Diff from roots into virtual root for diff, if we need it
     val outputRoot = if (!TracePointComparator.strictEqual(leftRoot.data, rightRoot.data)) {
         points = 1
-        TraceMethodCallTracePoint(
+        MethodCallTracePoint(
             context = output.context,
             threadId = outputThreadId,
             codeLocationId = UNKNOWN_CODE_LOCATION_ID,
@@ -178,7 +178,7 @@ private fun diffOneThread(
             obj = TraceNull,
             parameters = emptyList(),
             eventId = cloner.generateEventId(),
-        ).also { output.writeTraceMethodCallTracePoint(it) }
+        ).also { output.writeMethodCallTracePoint(it) }
     } else {
         null
     }
@@ -478,7 +478,7 @@ private fun copyTracepointSubtree(
     outputParentChildren?.add(outputPoint)
     output.writeTracePoint(outputPoint)
     // Save all children recursively, if needed
-    if (outputPoint is TraceContainerHeaderTracePoint) {
+    if (outputPoint is ContainerHeaderTracePoint) {
         val outputChildren = mutableListOf<TracePoint>()
         node.children.forEach { child ->
             points += copyTracepointSubtree(output, cloner, child, diffStatus, outputChildren)
@@ -516,7 +516,7 @@ private fun diffTracepointSubtree(
                     oldPoint.diffStatus = DiffStatus.EDITED_OLD
                     outputParentChildren.add(oldPoint)
                     output.writeTracePoint(oldPoint)
-                    if (oldPoint is TraceContainerHeaderTracePoint) {
+                    if (oldPoint is ContainerHeaderTracePoint) {
                         // this tracepoint keeps no children, so its closing side has nothing to derive from them
                         output.writeTracePoint(oldPoint.completeTracePoint())
                     }
@@ -530,7 +530,7 @@ private fun diffTracepointSubtree(
                 points += 1
 
                 // Maybe, we need to go deeper?
-                if (outputPoint is TraceContainerHeaderTracePoint) {
+                if (outputPoint is ContainerHeaderTracePoint) {
                     val outputChildren = mutableListOf<TracePoint>()
                     points += diffTracepointSubtree(
                         output = output,

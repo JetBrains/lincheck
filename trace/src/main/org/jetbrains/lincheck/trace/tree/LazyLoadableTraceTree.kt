@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.trace.tree
 
-import org.jetbrains.lincheck.trace.TraceContainerHeaderTracePoint
+import org.jetbrains.lincheck.trace.ContainerHeaderTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 import org.jetbrains.lincheck.util.collections.LazyLoadableList
@@ -78,7 +78,7 @@ class LazyLoadableTraceNode<T : TracePoint>(
         // Note: currently LazyTraceReader returns the LazyLoadedList itself, but with TracePoint elements instead of LazyLoadableTraceNode's.
         //       This introduces some performance penalty of having to create one more layer of LazyLoadedList's here which wrap
         //       the logic of lists returned by the LazyTraceReader. Beware of its performance impact.
-        val container = data as? TraceContainerHeaderTracePoint
+        val container = data as? ContainerHeaderTracePoint
             ?: return LazyLoadableList(size = 0, load = { error("Leaf trace points have no children") })
         if (batchLoading) {
             val childTracePoints = reader.readAllChildren(container)

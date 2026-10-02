@@ -10,14 +10,14 @@
 
 package org.jetbrains.lincheck.trace.diff
 
-import org.jetbrains.lincheck.trace.TraceLoopIterationTracePoint
-import org.jetbrains.lincheck.trace.TraceLoopTracePoint
-import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.LoopIterationTracePoint
+import org.jetbrains.lincheck.trace.LoopTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.lincheck.trace.TraceScalar
-import org.jetbrains.lincheck.trace.TraceReadFieldTracePoint
-import org.jetbrains.lincheck.trace.TraceReadLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.ReadFieldTracePoint
+import org.jetbrains.lincheck.trace.ReadLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
-import org.jetbrains.lincheck.trace.TraceWriteFieldTracePoint
+import org.jetbrains.lincheck.trace.WriteFieldTracePoint
 import org.jetbrains.lincheck.trace.iterationsAsString
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 import org.jetbrains.lincheck.trace.serialization.PACK_FILENAME_EXT
@@ -74,12 +74,12 @@ class TraceDiffTest {
     }
 
     private fun TracePoint.label(): String = when (this) {
-        is TraceMethodCallTracePoint -> methodName
-        is TraceReadLocalVariableTracePoint -> "readVar($name)"
-        is TraceReadFieldTracePoint -> "read($name=${(value as? TraceScalar)?.value})"
-        is TraceWriteFieldTracePoint -> "write($name=${(value as? TraceScalar)?.value})"
-        is TraceLoopTracePoint -> "loop[$iterationsAsString]"
-        is TraceLoopIterationTracePoint -> "iter$loopIteration"
+        is MethodCallTracePoint -> methodName
+        is ReadLocalVariableTracePoint -> "readVar($name)"
+        is ReadFieldTracePoint -> "read($name=${(value as? TraceScalar)?.value})"
+        is WriteFieldTracePoint -> "write($name=${(value as? TraceScalar)?.value})"
+        is LoopTracePoint -> "loop[$iterationsAsString]"
+        is LoopIterationTracePoint -> "iter$loopIteration"
         else -> this::class.simpleName!!
     }
 

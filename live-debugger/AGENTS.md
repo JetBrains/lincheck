@@ -38,7 +38,7 @@ The compiled-fragment fields remain an internal representation after agent-side 
   classes loaded before a dynamic attach.
   `SnapshotBreakpointTransformer` (in [`jvm-agent`](../jvm-agent)) injects the capture code,
   which calls back through `sun.nio.ch.lincheck.Injections.onSnapshotLineBreakpoint`.
-- Each hit produces a `TraceSnapshotLineBreakpointTracePoint`
+- Each hit produces a `SnapshotLineBreakpointTracePoint`
   with the captured stack trace, locals, watches, and timestamp.
 - Hit limits are enforced via `sun.nio.ch.lincheck.BreakpointStorage`;
   reaching the limit disables the breakpoint and notifies the client.

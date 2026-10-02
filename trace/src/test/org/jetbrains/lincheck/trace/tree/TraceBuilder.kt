@@ -16,20 +16,20 @@ import org.jetbrains.lincheck.descriptors.FieldKind
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TraceArrayTracePoint
-import org.jetbrains.lincheck.trace.TraceLoopIterationTracePoint
-import org.jetbrains.lincheck.trace.TraceLoopTracePoint
-import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.ArrayTracePoint
+import org.jetbrains.lincheck.trace.LoopIterationTracePoint
+import org.jetbrains.lincheck.trace.LoopTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.lincheck.trace.TraceNull
 import org.jetbrains.lincheck.trace.TraceScalar
-import org.jetbrains.lincheck.trace.TraceReadArrayTracePoint
-import org.jetbrains.lincheck.trace.TraceReadFieldTracePoint
-import org.jetbrains.lincheck.trace.TraceReadLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.ReadArrayTracePoint
+import org.jetbrains.lincheck.trace.ReadFieldTracePoint
+import org.jetbrains.lincheck.trace.ReadLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.TraceUnit
 import org.jetbrains.lincheck.trace.TraceValue
-import org.jetbrains.lincheck.trace.TraceWriteFieldTracePoint
-import org.jetbrains.lincheck.trace.TraceWriteLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.WriteFieldTracePoint
+import org.jetbrains.lincheck.trace.WriteLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
@@ -49,7 +49,7 @@ import java.util.IdentityHashMap
  */
 internal class TraceBuilder {
     val context = TraceContext()
-    private val loopIterations = IdentityHashMap<TraceLoopTracePoint, Int>()
+    private val loopIterations = IdentityHashMap<LoopTracePoint, Int>()
 
     fun codeLocation(line: Int): Int = context.codeLocationsPool.register(
         MethodCallCodeLocation(StackTraceElement("A", "m", "A.kt", line), accessPath = null, argumentNames = null)
@@ -60,11 +60,11 @@ internal class TraceBuilder {
         methodName: String,
         returnType: Types.Type = Types.VOID_TYPE,
         codeLocationId: Int = UNKNOWN_CODE_LOCATION_ID,
-    ): TraceMethodCallTracePoint {
+    ): MethodCallTracePoint {
         val methodId = context
             .createAndRegisterMethodDescriptor(className, methodName, Types.MethodType(returnType))
             .id
-        return TraceMethodCallTracePoint(
+        return MethodCallTracePoint(
             context = context,
             threadId = 0,
             codeLocationId = codeLocationId,
@@ -90,13 +90,13 @@ internal class TraceBuilder {
         fieldName: String,
         value: TraceValue,
         type: Types.Type = Types.ObjectType("java.lang.String"),
-    ): TraceReadFieldTracePoint =
-        TraceReadFieldTracePoint(
+    ): ReadFieldTracePoint =
+        ReadFieldTracePoint(
             context, 0, UNKNOWN_CODE_LOCATION_ID, fieldId(className, fieldName, type), TraceNull, value,
         )
 
-    fun writeField(className: String, fieldName: String, value: TraceValue): TraceWriteFieldTracePoint =
-        TraceWriteFieldTracePoint(
+    fun writeField(className: String, fieldName: String, value: TraceValue): WriteFieldTracePoint =
+        WriteFieldTracePoint(
             context, 0, UNKNOWN_CODE_LOCATION_ID,
             fieldId(className, fieldName, Types.ObjectType("java.lang.String")), TraceNull, value,
         )
@@ -105,13 +105,13 @@ internal class TraceBuilder {
         .createAndRegisterVariableDescriptor(name, Types.ObjectType("java.lang.Object"))
         .id
 
-    fun readVar(name: String): TraceReadLocalVariableTracePoint =
-        TraceReadLocalVariableTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, variableId(name), TraceNull)
+    fun readVar(name: String): ReadLocalVariableTracePoint =
+        ReadLocalVariableTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, variableId(name), TraceNull)
 
-    fun writeVar(name: String): TraceWriteLocalVariableTracePoint =
-        TraceWriteLocalVariableTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, variableId(name), TraceNull)
+    fun writeVar(name: String): WriteLocalVariableTracePoint =
+        WriteLocalVariableTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, variableId(name), TraceNull)
 
-    fun readArray(arrayVariableName: String): TraceReadArrayTracePoint {
+    fun readArray(arrayVariableName: String): ReadArrayTracePoint {
         val variable = context.createAndRegisterVariableDescriptor(arrayVariableName, Types.ObjectType("[I"))
         val codeLocationId = context.codeLocationsPool.register(
             AccessCodeLocation(
@@ -119,15 +119,15 @@ internal class TraceBuilder {
                 AccessPath(LocalVariableAccessLocation(variable)),
             )
         )
-        return TraceReadArrayTracePoint(context, 0, codeLocationId, TraceNull, 0, TraceScalar(1))
+        return ReadArrayTracePoint(context, 0, codeLocationId, TraceNull, 0, TraceScalar(1))
     }
 
-    fun loop(loopId: Int): TraceLoopTracePoint =
-        TraceLoopTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, loopId)
+    fun loop(loopId: Int): LoopTracePoint =
+        LoopTracePoint(context, 0, UNKNOWN_CODE_LOCATION_ID, loopId)
 
     /** Creates the next iteration point of [loop]. */
-    fun iteration(loop: TraceLoopTracePoint): TraceLoopIterationTracePoint =
-        TraceLoopIterationTracePoint(
+    fun iteration(loop: LoopTracePoint): LoopIterationTracePoint =
+        LoopIterationTracePoint(
             context, 0, UNKNOWN_CODE_LOCATION_ID, loop.loopId,
             loopIteration = loopIterations.merge(loop, 1, Int::plus)!!,
         )
@@ -166,7 +166,7 @@ internal fun withTraceTree(
 }
 
 internal val Tree.Node<TracePoint>.methodName: String
-    get() = (data as TraceMethodCallTracePoint).methodName
+    get() = (data as MethodCallTracePoint).methodName
 
 /** Renders the tree as `label(child,child,...)` for compact structure assertions. */
 internal fun Tree<TracePoint>.structure(): String = root?.structure() ?: "<empty>"
@@ -176,13 +176,13 @@ internal fun Tree.Node<TracePoint>.structure(): String =
     else "${label()}(${children.joinToString(",") { it.structure() }})"
 
 private fun Tree.Node<TracePoint>.label(): String = when (val tracePoint = data) {
-    is TraceMethodCallTracePoint -> tracePoint.methodName
-    is TraceReadFieldTracePoint -> "read(${tracePoint.name})"
-    is TraceWriteFieldTracePoint -> "write(${tracePoint.name})"
-    is TraceReadLocalVariableTracePoint -> "readVar(${tracePoint.name})"
-    is TraceWriteLocalVariableTracePoint -> "writeVar(${tracePoint.name})"
-    is TraceLoopTracePoint -> "loop[${tracePoint.iterationsAsString}]"
-    is TraceLoopIterationTracePoint -> "iter${tracePoint.loopIteration}"
-    is TraceArrayTracePoint -> "array"
+    is MethodCallTracePoint -> tracePoint.methodName
+    is ReadFieldTracePoint -> "read(${tracePoint.name})"
+    is WriteFieldTracePoint -> "write(${tracePoint.name})"
+    is ReadLocalVariableTracePoint -> "readVar(${tracePoint.name})"
+    is WriteLocalVariableTracePoint -> "writeVar(${tracePoint.name})"
+    is LoopTracePoint -> "loop[${tracePoint.iterationsAsString}]"
+    is LoopIterationTracePoint -> "iter${tracePoint.loopIteration}"
+    is ArrayTracePoint -> "array"
     else -> tracePoint::class.simpleName!!
 }

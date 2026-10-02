@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.trace.tree
 
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TraceMethodCallTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
 import org.jetbrains.lincheck.trace.TraceNull
 import org.jetbrains.lincheck.trace.TraceScalar
 import org.jetbrains.lincheck.trace.TraceString
@@ -47,8 +47,8 @@ class TraceRewriteRulesTest {
             assertEquals("main(callMe(body),stay\$default(stay,body2))", view.structure())
 
             // The combined call keeps the child's identity but the parent's code location.
-            val defaultCall = tree.root!!.children[0].data as TraceMethodCallTracePoint
-            val combined = view.root!!.children[0].data as TraceMethodCallTracePoint
+            val defaultCall = tree.root!!.children[0].data as MethodCallTracePoint
+            val combined = view.root!!.children[0].data as MethodCallTracePoint
             assertEquals("callMe", combined.methodName)
             assertEquals(defaultCall.codeLocationId, combined.codeLocationId)
         }

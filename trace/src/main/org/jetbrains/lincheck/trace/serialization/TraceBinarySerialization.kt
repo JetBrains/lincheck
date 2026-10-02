@@ -874,7 +874,7 @@ internal val TracePointKind.isContainer: Boolean
         else -> false
     }
 
-/** `true` for the kinds of the closing side of a container tracepoint (see [TraceContainerFooterTracePoint]). */
+/** `true` for the kinds of the closing side of a container tracepoint (see [ContainerFooterTracePoint]). */
 internal val TracePointKind.isContainerEnd: Boolean
     get() = when (this) {
         TracePointKind.METHOD_CALL_RESULT,
@@ -884,31 +884,31 @@ internal val TracePointKind.isContainerEnd: Boolean
     }
 
 internal val TracePoint.kind: TracePointKind get() = when (this) {
-    is TraceWriteFieldTracePoint               -> TracePointKind.WRITE_FIELD
-    is TraceWriteArrayTracePoint               -> TracePointKind.WRITE_ARRAY
-    is TraceWriteLocalVariableTracePoint       -> TracePointKind.WRITE_LOCAL_VARIABLE
-    is TraceReadFieldTracePoint                -> TracePointKind.READ_FIELD
-    is TraceReadArrayTracePoint                -> TracePointKind.READ_ARRAY
-    is TraceReadLocalVariableTracePoint        -> TracePointKind.READ_LOCAL_VARIABLE
-    is TraceMethodCallTracePoint               -> TracePointKind.METHOD_CALL
-    is TraceMethodCallResultTracePoint         -> TracePointKind.METHOD_CALL_RESULT
-    is TraceLoopTracePoint                     -> TracePointKind.LOOP
-    is TraceLoopEndTracePoint                  -> TracePointKind.LOOP_END
-    is TraceLoopIterationTracePoint            -> TracePointKind.LOOP_ITERATION
-    is TraceLoopIterationEndTracePoint         -> TracePointKind.LOOP_ITERATION_END
-    is TraceThrowTracePoint                    -> TracePointKind.THROW
-    is TraceCatchTracePoint                    -> TracePointKind.CATCH
-    is TraceSnapshotLineBreakpointTracePoint   -> TracePointKind.SNAPSHOT_LINE_BREAKPOINT
+    is WriteFieldTracePoint               -> TracePointKind.WRITE_FIELD
+    is WriteArrayTracePoint               -> TracePointKind.WRITE_ARRAY
+    is WriteLocalVariableTracePoint       -> TracePointKind.WRITE_LOCAL_VARIABLE
+    is ReadFieldTracePoint                -> TracePointKind.READ_FIELD
+    is ReadArrayTracePoint                -> TracePointKind.READ_ARRAY
+    is ReadLocalVariableTracePoint        -> TracePointKind.READ_LOCAL_VARIABLE
+    is MethodCallTracePoint               -> TracePointKind.METHOD_CALL
+    is MethodCallResultTracePoint         -> TracePointKind.METHOD_CALL_RESULT
+    is LoopTracePoint                     -> TracePointKind.LOOP
+    is LoopEndTracePoint                  -> TracePointKind.LOOP_END
+    is LoopIterationTracePoint            -> TracePointKind.LOOP_ITERATION
+    is LoopIterationEndTracePoint         -> TracePointKind.LOOP_ITERATION_END
+    is ThrowTracePoint                    -> TracePointKind.THROW
+    is CatchTracePoint                    -> TracePointKind.CATCH
+    is SnapshotLineBreakpointTracePoint   -> TracePointKind.SNAPSHOT_LINE_BREAKPOINT
 }
 
-/** Placeholder [TraceContainerFooterTracePoint.containerEventId] for tracepoints which do not close a container. */
+/** Placeholder [ContainerFooterTracePoint.containerEventId] for tracepoints which do not close a container. */
 private const val NO_CONTAINER_EVENT_ID: Int = -1
 
-internal fun DataOutput.writeTraceTracePointKind(value: TracePointKind) {
+internal fun DataOutput.writeTracePointKind(value: TracePointKind) {
     writeByte(value.ordinal)
 }
 
-internal fun DataInput.readTraceTracePointKind(): TracePointKind {
+internal fun DataInput.readTracePointKind(): TracePointKind {
     val ordinal = readByte().toInt()
     val values = TracePointKind.entries
     if (ordinal !in values.indices) {
@@ -929,51 +929,51 @@ internal fun DataInput.readTraceTracePointKind(): TracePointKind {
 // and the only way to honor that contract is to go through these dispatchers.
 
 internal fun DataOutput.writeTracePointData(value: TracePoint) {
-    writeTraceTracePointKind(value.kind)
+    writeTracePointKind(value.kind)
     writeInt(value.codeLocationId)
     writeInt(value.threadId)
     writeInt(value.eventId)
     writeDiffStatus(value.diffStatus)
-    if (value is TraceContainerHeaderTracePoint) {
+    if (value is ContainerHeaderTracePoint) {
         writeDiffStatusesSet(value.childrenDiffStatuses)
     }
-    if (value is TraceContainerFooterTracePoint) {
+    if (value is ContainerFooterTracePoint) {
         writeInt(value.containerEventId)
     }
 
     when (value) {
         // writes
-        is TraceWriteFieldTracePoint             -> writeFieldTracePoint(value)
-        is TraceWriteArrayTracePoint             -> writeArrayTracePoint(value)
-        is TraceWriteLocalVariableTracePoint     -> writeLocalVariableTracePoint(value)
+        is WriteFieldTracePoint             -> writeFieldTracePoint(value)
+        is WriteArrayTracePoint             -> writeArrayTracePoint(value)
+        is WriteLocalVariableTracePoint     -> writeLocalVariableTracePoint(value)
 
         // reads
-        is TraceReadFieldTracePoint              -> writeFieldTracePoint(value)
-        is TraceReadArrayTracePoint              -> writeArrayTracePoint(value)
-        is TraceReadLocalVariableTracePoint      -> writeLocalVariableTracePoint(value)
+        is ReadFieldTracePoint              -> writeFieldTracePoint(value)
+        is ReadArrayTracePoint              -> writeArrayTracePoint(value)
+        is ReadLocalVariableTracePoint      -> writeLocalVariableTracePoint(value)
 
         // method calls
-        is TraceMethodCallTracePoint             -> writeMethodCallTracePoint(value)
-        is TraceMethodCallResultTracePoint       -> writeMethodCallResultTracePoint(value)
+        is MethodCallTracePoint             -> writeMethodCallTracePoint(value)
+        is MethodCallResultTracePoint       -> writeMethodCallResultTracePoint(value)
 
         // loops
-        is TraceLoopTracePoint                   -> writeLoopTracePoint(value)
-        is TraceLoopEndTracePoint                -> writeLoopEndTracePoint(value)
-        is TraceLoopIterationTracePoint          -> writeLoopIterationTracePoint(value)
+        is LoopTracePoint                   -> writeLoopTracePoint(value)
+        is LoopEndTracePoint                -> writeLoopEndTracePoint(value)
+        is LoopIterationTracePoint          -> writeLoopIterationTracePoint(value)
         // an iteration's closing record carries nothing beyond the common header
-        is TraceLoopIterationEndTracePoint       -> {}
+        is LoopIterationEndTracePoint       -> {}
 
         // exceptions
-        is TraceThrowTracePoint                  -> writeExceptionProcessingTracePoint(value)
-        is TraceCatchTracePoint                  -> writeExceptionProcessingTracePoint(value)
+        is ThrowTracePoint                  -> writeExceptionProcessingTracePoint(value)
+        is CatchTracePoint                  -> writeExceptionProcessingTracePoint(value)
 
         // breakpoints
-        is TraceSnapshotLineBreakpointTracePoint -> writeSnapshotLineBreakpointTracePoint(value)
+        is SnapshotLineBreakpointTracePoint -> writeSnapshotLineBreakpointTracePoint(value)
     }
 }
 
 internal fun DataInput.readTracePointData(context: TraceContext): TracePoint {
-    val kind = readTraceTracePointKind()
+    val kind = readTracePointKind()
     val codeLocationId = readInt()
     val threadId = readInt()
     val eventId = readInt()
@@ -1011,7 +1011,7 @@ internal fun DataInput.readTracePointData(context: TraceContext): TracePoint {
         TracePointKind.LOOP_ITERATION ->
             readLoopIterationTracePoint(context, codeLocationId, threadId, eventId)
         TracePointKind.LOOP_ITERATION_END ->
-            TraceLoopIterationEndTracePoint(context, threadId, codeLocationId, containerEventId, eventId)
+            LoopIterationEndTracePoint(context, threadId, codeLocationId, containerEventId, eventId)
 
         // exceptions
         TracePointKind.THROW,
@@ -1026,7 +1026,7 @@ internal fun DataInput.readTracePointData(context: TraceContext): TracePoint {
     if (diffStatus != null) {
         tracePoint.diffStatus = diffStatus
     }
-    if (tracePoint is TraceContainerHeaderTracePoint) {
+    if (tracePoint is ContainerHeaderTracePoint) {
         check(kind.isContainer) {
             "Container tracepoint of kind $kind is not marked as container"
         }
@@ -1043,10 +1043,10 @@ internal fun DataInput.readTracePointData(context: TraceContext): TracePoint {
  */
 internal fun DataInput.readContainerFooterTracePoint(
     context: TraceContext,
-    container: TraceContainerHeaderTracePoint,
-): TraceContainerFooterTracePoint {
+    container: ContainerHeaderTracePoint,
+): ContainerFooterTracePoint {
     val tracePoint = readTracePointData(context)
-    check(tracePoint is TraceContainerFooterTracePoint) {
+    check(tracePoint is ContainerFooterTracePoint) {
         "Expected a closing tracepoint, got ${tracePoint::class.java.simpleName}, broken file"
     }
     container.attachFooterTracePoint(tracePoint)
@@ -1067,10 +1067,10 @@ internal fun DataInput.readContainerFooterTracePoint(
 
 // -------- Field --------
 //
-// Shared writer for both `TraceReadFieldTracePoint` and `TraceWriteFieldTracePoint` (their bodies
+// Shared writer for both `ReadFieldTracePoint` and `WriteFieldTracePoint` (their bodies
 // are identical; the kind byte in the header tells them apart on the read side).
 
-private fun DataOutput.writeFieldTracePoint(value: TraceFieldTracePoint) {
+private fun DataOutput.writeFieldTracePoint(value: FieldTracePoint) {
     writeInt(value.fieldId)
     writeTraceValue(value.obj)
     writeTraceValue(value.value)
@@ -1082,15 +1082,15 @@ private fun DataInput.readFieldTracePoint(
     codeLocationId: Int,
     threadId: Int,
     eventId: Int,
-): TraceFieldTracePoint {
+): FieldTracePoint {
     val fieldId = readInt()
     val obj = readTraceValue(context)
     val value = readTraceValue(context)
     return when (kind) {
         TracePointKind.READ_FIELD  ->
-            TraceReadFieldTracePoint(context, threadId, codeLocationId, fieldId, obj, value, eventId)
+            ReadFieldTracePoint(context, threadId, codeLocationId, fieldId, obj, value, eventId)
         TracePointKind.WRITE_FIELD ->
-            TraceWriteFieldTracePoint(context, threadId, codeLocationId, fieldId, obj, value, eventId)
+            WriteFieldTracePoint(context, threadId, codeLocationId, fieldId, obj, value, eventId)
         else ->
             error("Unexpected kind for field tracepoint: $kind")
     }
@@ -1098,7 +1098,7 @@ private fun DataInput.readFieldTracePoint(
 
 // -------- Array --------
 
-private fun DataOutput.writeArrayTracePoint(value: TraceArrayTracePoint) {
+private fun DataOutput.writeArrayTracePoint(value: ArrayTracePoint) {
     writeTraceValue(value.array)
     writeInt(value.index)
     writeTraceValue(value.value)
@@ -1110,22 +1110,22 @@ private fun DataInput.readArrayTracePoint(
     codeLocationId: Int,
     threadId: Int,
     eventId: Int,
-): TraceArrayTracePoint {
+): ArrayTracePoint {
     val array = readTraceValue(context) ?: TraceNull
     val index = readInt()
     val value = readTraceValue(context)
     return when (kind) {
         TracePointKind.READ_ARRAY  ->
-            TraceReadArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId)
+            ReadArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId)
         TracePointKind.WRITE_ARRAY ->
-            TraceWriteArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId)
+            WriteArrayTracePoint(context, threadId, codeLocationId, array, index, value, eventId)
         else -> error("Unexpected kind for array tracepoint: $kind")
     }
 }
 
 // -------- Local Variable --------
 
-private fun DataOutput.writeLocalVariableTracePoint(value: TraceLocalVariableTracePoint) {
+private fun DataOutput.writeLocalVariableTracePoint(value: LocalVariableTracePoint) {
     writeInt(value.localVariableId)
     writeTraceValue(value.value)
 }
@@ -1136,21 +1136,21 @@ private fun DataInput.readLocalVariableTracePoint(
     codeLocationId: Int,
     threadId: Int,
     eventId: Int,
-): TraceLocalVariableTracePoint {
+): LocalVariableTracePoint {
     val localVariableId = readInt()
     val value = readTraceValue(context)
     return when (kind) {
         TracePointKind.READ_LOCAL_VARIABLE  ->
-            TraceReadLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId)
+            ReadLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId)
         TracePointKind.WRITE_LOCAL_VARIABLE ->
-            TraceWriteLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId)
+            WriteLocalVariableTracePoint(context, threadId, codeLocationId, localVariableId, value, eventId)
         else -> error("Unexpected kind for local-variable tracepoint: $kind")
     }
 }
 
 // -------- Method Call --------
 
-private fun DataOutput.writeMethodCallTracePoint(value: TraceMethodCallTracePoint) {
+private fun DataOutput.writeMethodCallTracePoint(value: MethodCallTracePoint) {
     writeInt(value.methodId)
     writeTraceValue(value.obj)
     writeInt(value.parameters.size)
@@ -1163,13 +1163,13 @@ private fun DataInput.readMethodCallTracePoint(
     codeLocationId: Int,
     threadId: Int,
     eventId: Int,
-): TraceMethodCallTracePoint {
+): MethodCallTracePoint {
     val methodId = readInt()
     val obj = readTraceValue(context)
     val parametersCount = readInt()
     val parameters = List(parametersCount) { readTraceValue(context) }
     val flags = readShort()
-    return TraceMethodCallTracePoint(
+    return MethodCallTracePoint(
         context = context,
         threadId = threadId,
         codeLocationId = codeLocationId,
@@ -1181,7 +1181,7 @@ private fun DataInput.readMethodCallTracePoint(
     )
 }
 
-private fun DataOutput.writeMethodCallResultTracePoint(value: TraceMethodCallResultTracePoint) {
+private fun DataOutput.writeMethodCallResultTracePoint(value: MethodCallResultTracePoint) {
     writeTraceValue(value.result)
     writeNullableString(value.exceptionClassName)
 }
@@ -1192,10 +1192,10 @@ private fun DataInput.readMethodCallResultTracePoint(
     threadId: Int,
     eventId: Int,
     methodCallEventId: Int,
-): TraceMethodCallResultTracePoint {
+): MethodCallResultTracePoint {
     val result = readTraceValue(context)
     val exceptionClassName = readNullableString()
-    return TraceMethodCallResultTracePoint(
+    return MethodCallResultTracePoint(
         context = context,
         threadId = threadId,
         codeLocationId = codeLocationId,
@@ -1208,7 +1208,7 @@ private fun DataInput.readMethodCallResultTracePoint(
 
 // -------- Loop --------
 
-private fun DataOutput.writeLoopTracePoint(value: TraceLoopTracePoint) {
+private fun DataOutput.writeLoopTracePoint(value: LoopTracePoint) {
     writeInt(value.loopId)
 }
 
@@ -1217,9 +1217,9 @@ private fun DataInput.readLoopTracePoint(
     codeLocationId: Int,
     threadId: Int,
     eventId: Int,
-): TraceLoopTracePoint {
+): LoopTracePoint {
     val loopId = readInt()
-    return TraceLoopTracePoint(
+    return LoopTracePoint(
         context = context,
         threadId = threadId,
         codeLocationId = codeLocationId,
@@ -1228,7 +1228,7 @@ private fun DataInput.readLoopTracePoint(
     )
 }
 
-private fun DataOutput.writeLoopEndTracePoint(value: TraceLoopEndTracePoint) {
+private fun DataOutput.writeLoopEndTracePoint(value: LoopEndTracePoint) {
     writeInt(value.iterations)
 }
 
@@ -1238,9 +1238,9 @@ private fun DataInput.readLoopEndTracePoint(
     threadId: Int,
     eventId: Int,
     loopEventId: Int,
-): TraceLoopEndTracePoint {
+): LoopEndTracePoint {
     val iterations = readInt()
-    return TraceLoopEndTracePoint(
+    return LoopEndTracePoint(
         context = context,
         threadId = threadId,
         codeLocationId = codeLocationId,
@@ -1252,7 +1252,7 @@ private fun DataInput.readLoopEndTracePoint(
 
 // -------- Loop Iteration --------
 
-private fun DataOutput.writeLoopIterationTracePoint(value: TraceLoopIterationTracePoint) {
+private fun DataOutput.writeLoopIterationTracePoint(value: LoopIterationTracePoint) {
     writeInt(value.loopId)
     writeInt(value.loopIteration)
 }
@@ -1262,10 +1262,10 @@ private fun DataInput.readLoopIterationTracePoint(
     codeLocationId: Int,
     threadId: Int,
     eventId: Int,
-): TraceLoopIterationTracePoint {
+): LoopIterationTracePoint {
     val loopId = readInt()
     val loopIteration = readInt()
-    return TraceLoopIterationTracePoint(
+    return LoopIterationTracePoint(
         context = context,
         threadId = threadId,
         codeLocationId = codeLocationId,
@@ -1277,7 +1277,7 @@ private fun DataInput.readLoopIterationTracePoint(
 
 // -------- Exception Processing --------
 
-private fun DataOutput.writeExceptionProcessingTracePoint(value: TraceExceptionProcessingTracePoint) {
+private fun DataOutput.writeExceptionProcessingTracePoint(value: ExceptionProcessingTracePoint) {
     writeTraceValue(value.exception)
 }
 
@@ -1287,18 +1287,18 @@ private fun DataInput.readExceptionProcessingTracePoint(
     codeLocationId: Int,
     threadId: Int,
     eventId: Int,
-): TraceExceptionProcessingTracePoint {
+): ExceptionProcessingTracePoint {
     val exception = readTraceValue(context) ?: TraceNull
     return when (kind) {
-        TracePointKind.THROW -> TraceThrowTracePoint(context, threadId, codeLocationId, exception, eventId)
-        TracePointKind.CATCH -> TraceCatchTracePoint(context, threadId, codeLocationId, exception, eventId)
+        TracePointKind.THROW -> ThrowTracePoint(context, threadId, codeLocationId, exception, eventId)
+        TracePointKind.CATCH -> CatchTracePoint(context, threadId, codeLocationId, exception, eventId)
         else -> error("Unexpected kind for exception-processing tracepoint: $kind")
     }
 }
 
 // -------- Snapshot Line Breakpoint --------
 
-private fun DataOutput.writeSnapshotLineBreakpointTracePoint(value: TraceSnapshotLineBreakpointTracePoint) {
+private fun DataOutput.writeSnapshotLineBreakpointTracePoint(value: SnapshotLineBreakpointTracePoint) {
     writeUUID(value.breakpointUuid)
     writeInt(value.stackTraceCodeLocationIds.size)
     value.stackTraceCodeLocationIds.forEach { writeInt(it) }
@@ -1315,7 +1315,7 @@ private fun DataInput.readSnapshotLineBreakpointTracePoint(
     codeLocationId: Int,
     threadId: Int,
     eventId: Int,
-): TraceSnapshotLineBreakpointTracePoint {
+): SnapshotLineBreakpointTracePoint {
     val breakpointUuid = readUUID()
     val size = readInt()
     val stackTraceCodeLocationIds = List(size) { readInt() }
@@ -1325,7 +1325,7 @@ private fun DataInput.readSnapshotLineBreakpointTracePoint(
     val watchValuesSize = readInt()
     val watchValues = List(watchValuesSize) { readTraceValue(context) }
     val traceId = readNullableString()
-    return TraceSnapshotLineBreakpointTracePoint(
+    return SnapshotLineBreakpointTracePoint(
         context = context,
         codeLocationId = codeLocationId,
         threadId = threadId,

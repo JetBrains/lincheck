@@ -133,11 +133,11 @@ class DefaultTRTextAppendable(
     }
 }
 
-abstract class AbstractTraceMethodCallTracePointPrinter() {
+abstract class AbstractMethodCallTracePointPrinter() {
 
     protected fun TraceAppendable.appendTracePoint(
-        tracePoint: TraceMethodCallTracePoint,
-        parentCall: TraceMethodCallTracePoint? = null,
+        tracePoint: MethodCallTracePoint,
+        parentCall: MethodCallTracePoint? = null,
     ): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         if (tracePoint.isConstructor()) {
@@ -164,8 +164,8 @@ abstract class AbstractTraceMethodCallTracePointPrinter() {
     }
 
     protected fun TraceAppendable.appendOwner(
-        tracePoint: TraceMethodCallTracePoint,
-        parentCall: TraceMethodCallTracePoint? = null,
+        tracePoint: MethodCallTracePoint,
+        parentCall: MethodCallTracePoint? = null,
     ): TraceAppendable {
         if (tracePoint.isStatic() && tracePoint.isCalledFromDefiningClass(parentCall)) {
             return this
@@ -200,7 +200,7 @@ abstract class AbstractTraceMethodCallTracePointPrinter() {
         return this
     }
 
-    protected fun TraceAppendable.appendParameters(tracePoint: TraceMethodCallTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendParameters(tracePoint: MethodCallTracePoint): TraceAppendable {
         // Due to trace compression codelocation can be shifted and therefore argument names do not match
         // Without having parameter names it is impossible to match up
         // In practise I have only seen `null` names for those kind of pais so probably doesn't really matter.
@@ -234,7 +234,7 @@ abstract class AbstractTraceMethodCallTracePointPrinter() {
         return this
     }
 
-    protected fun TraceAppendable.appendResult(tracePoint: TraceMethodCallTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendResult(tracePoint: MethodCallTracePoint): TraceAppendable {
         if (tracePoint.exceptionClassName != null) {
             append(": ")
             appendKeyword("threw")
@@ -254,11 +254,11 @@ abstract class AbstractTraceMethodCallTracePointPrinter() {
     }
 }
 
-object DefaultTRMethodCallTracePointPrinter: AbstractTraceMethodCallTracePointPrinter() {
+object DefaultTRMethodCallTracePointPrinter: AbstractMethodCallTracePointPrinter() {
 
     fun TraceAppendable.append(
-        tracePoint: TraceMethodCallTracePoint,
-        parentCall: TraceMethodCallTracePoint? = null,
+        tracePoint: MethodCallTracePoint,
+        parentCall: MethodCallTracePoint? = null,
     ): TraceAppendable {
         appendTracePoint(tracePoint, parentCall)
         append(tracePoint, verbose)
@@ -266,9 +266,9 @@ object DefaultTRMethodCallTracePointPrinter: AbstractTraceMethodCallTracePointPr
     }
 }
 
-abstract class AbstractTraceMethodCallResultTracePointPrinter {
+abstract class AbstractMethodCallResultTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceMethodCallResultTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: MethodCallResultTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         if (tracePoint.exceptionClassName != null) {
             appendKeyword("throw")
@@ -289,17 +289,17 @@ abstract class AbstractTraceMethodCallResultTracePointPrinter {
     }
 }
 
-object DefaultTRMethodCallResultTracePointPrinter: AbstractTraceMethodCallResultTracePointPrinter() {
-    fun TraceAppendable.append(tracePoint: TraceMethodCallResultTracePoint): TraceAppendable {
+object DefaultTRMethodCallResultTracePointPrinter: AbstractMethodCallResultTracePointPrinter() {
+    fun TraceAppendable.append(tracePoint: MethodCallResultTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
     }
 }
 
-abstract class AbstractTraceLoopTracePointPrinter {
+abstract class AbstractLoopTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceLoopTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: LoopTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendKeyword("loop")
         appendSpecialSymbol("(")
@@ -309,17 +309,17 @@ abstract class AbstractTraceLoopTracePointPrinter {
     }
 }
 
-object DefaultTRLoopTracePointPrinter: AbstractTraceLoopTracePointPrinter() {
-    fun TraceAppendable.append(tracePoint: TraceLoopTracePoint): TraceAppendable {
+object DefaultTRLoopTracePointPrinter: AbstractLoopTracePointPrinter() {
+    fun TraceAppendable.append(tracePoint: LoopTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
     }
 }
 
-abstract class AbstractTraceLoopEndTracePointPrinter {
+abstract class AbstractLoopEndTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceLoopEndTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: LoopEndTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendKeyword("end loop")
         appendSpecialSymbol("(")
@@ -329,17 +329,17 @@ abstract class AbstractTraceLoopEndTracePointPrinter {
     }
 }
 
-object DefaultTRLoopEndTracePointPrinter: AbstractTraceLoopEndTracePointPrinter() {
-    fun TraceAppendable.append(tracePoint: TraceLoopEndTracePoint): TraceAppendable {
+object DefaultTRLoopEndTracePointPrinter: AbstractLoopEndTracePointPrinter() {
+    fun TraceAppendable.append(tracePoint: LoopEndTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
     }
 }
 
-abstract class AbstractTraceLoopIterationTracePointPrinter {
+abstract class AbstractLoopIterationTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceLoopIterationTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: LoopIterationTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendSpecialSymbol("<")
         appendKeyword("iteration ")
@@ -349,17 +349,17 @@ abstract class AbstractTraceLoopIterationTracePointPrinter {
     }
 }
 
-object DefaultTRLoopIterationTracePointPrinter: AbstractTraceLoopIterationTracePointPrinter() {
-    fun TraceAppendable.append(tracePoint: TraceLoopIterationTracePoint): TraceAppendable {
+object DefaultTRLoopIterationTracePointPrinter: AbstractLoopIterationTracePointPrinter() {
+    fun TraceAppendable.append(tracePoint: LoopIterationTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
     }
 }
 
-abstract class AbstractTraceLoopIterationEndTracePointPrinter {
+abstract class AbstractLoopIterationEndTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceLoopIterationEndTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: LoopIterationEndTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendSpecialSymbol("<")
         appendKeyword("end iteration")
@@ -368,17 +368,17 @@ abstract class AbstractTraceLoopIterationEndTracePointPrinter {
     }
 }
 
-object DefaultTRLoopIterationEndTracePointPrinter: AbstractTraceLoopIterationEndTracePointPrinter() {
-    fun TraceAppendable.append(tracePoint: TraceLoopIterationEndTracePoint): TraceAppendable {
+object DefaultTRLoopIterationEndTracePointPrinter: AbstractLoopIterationEndTracePointPrinter() {
+    fun TraceAppendable.append(tracePoint: LoopIterationEndTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
     }
 }
 
-abstract class AbstractTraceFieldTracePointPrinter {
+abstract class AbstractFieldTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceFieldTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: FieldTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendOwner(tracePoint)
         appendFieldName(tracePoint)
@@ -389,7 +389,7 @@ abstract class AbstractTraceFieldTracePointPrinter {
         return this
     }
 
-    protected fun TraceAppendable.appendOwner(tracePoint: TraceFieldTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendOwner(tracePoint: FieldTracePoint): TraceAppendable {
         val ownerName = tracePoint.accessPath
         val appendDot = {
             // When lambda captures a local variable, it is wrapped into the `*Ref` class,
@@ -414,21 +414,21 @@ abstract class AbstractTraceFieldTracePointPrinter {
         return this
     }
 
-    protected fun TraceAppendable.appendFieldName(tracePoint: TraceFieldTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendFieldName(tracePoint: FieldTracePoint): TraceAppendable {
         if (!isLambdaCaptureSyntheticField(tracePoint)) {
             appendFieldName(tracePoint.fieldDescriptor)
         }
         return this
     }
 
-    private fun isLambdaCaptureSyntheticField(tracePoint: TraceFieldTracePoint): Boolean {
+    private fun isLambdaCaptureSyntheticField(tracePoint: FieldTracePoint): Boolean {
         return tracePoint.className.startsWith("kotlin.jvm.internal.Ref$") && tracePoint.name == "element"
     }
 }
 
-object DefaultTRFieldTracePointPrinter: AbstractTraceFieldTracePointPrinter() {
+object DefaultTRFieldTracePointPrinter: AbstractFieldTracePointPrinter() {
 
-    fun TraceAppendable.append(tracePoint: TraceFieldTracePoint): TraceAppendable {
+    fun TraceAppendable.append(tracePoint: FieldTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
@@ -436,9 +436,9 @@ object DefaultTRFieldTracePointPrinter: AbstractTraceFieldTracePointPrinter() {
 }
 
 
-abstract class AbstractTraceLocalVariableTracePointPrinter {
+abstract class AbstractLocalVariableTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceLocalVariableTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: LocalVariableTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendVariableName(tracePoint.variableDescriptor)
         append(" ")
@@ -449,18 +449,18 @@ abstract class AbstractTraceLocalVariableTracePointPrinter {
     }
 }
 
-object DefaultTRLocalVariableTracePointPrinter: AbstractTraceLocalVariableTracePointPrinter() {
+object DefaultTRLocalVariableTracePointPrinter: AbstractLocalVariableTracePointPrinter() {
 
-    fun TraceAppendable.append(tracePoint: TraceLocalVariableTracePoint): TraceAppendable {
+    fun TraceAppendable.append(tracePoint: LocalVariableTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
     }
 }
 
-abstract class AbstractTraceArrayTracePointPrinter {
+abstract class AbstractArrayTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceArrayTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: ArrayTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendOwner(tracePoint)
         appendSpecialSymbol("[")
@@ -474,7 +474,7 @@ abstract class AbstractTraceArrayTracePointPrinter {
     }
 
     // TODO: DR-356 `ArrayElementByIndexAccessLocation` and `ArrayElementByNameAccessLocation` do not appear in trace
-    protected fun TraceAppendable.appendOwner(tracePoint: TraceArrayTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendOwner(tracePoint: ArrayTracePoint): TraceAppendable {
         val ownerName = tracePoint.accessPath
         if (ownerName != null) {
             ownerName.filterThisAccesses().takeIf { !it.isEmpty() }?.let {
@@ -487,9 +487,9 @@ abstract class AbstractTraceArrayTracePointPrinter {
     }
 }
 
-object DefaultTRArrayTracePointPrinter: AbstractTraceArrayTracePointPrinter() {
+object DefaultTRArrayTracePointPrinter: AbstractArrayTracePointPrinter() {
 
-    fun TraceAppendable.append(tracePoint: TraceArrayTracePoint): TraceAppendable {
+    fun TraceAppendable.append(tracePoint: ArrayTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
@@ -497,7 +497,7 @@ object DefaultTRArrayTracePointPrinter: AbstractTraceArrayTracePointPrinter() {
 }
 
 object DefaultTRLineBreakpointSnapshotTracePointPrinter {
-    fun TraceAppendable.append(tracePoint: TraceSnapshotLineBreakpointTracePoint): TraceAppendable {
+    fun TraceAppendable.append(tracePoint: SnapshotLineBreakpointTracePoint): TraceAppendable {
         append("Live breakpoint [${tracePoint.breakpointUuid}]")
         append(tracePoint, verbose)
         if (tracePoint.watches.isNotEmpty()) {
@@ -528,9 +528,9 @@ object DefaultTRLineBreakpointSnapshotTracePointPrinter {
     }
 }
 
-abstract class AbstractTraceThrowTracePointPrinter {
+abstract class AbstractThrowTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceThrowTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: ThrowTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendKeyword("throw")
         append(" ")
@@ -539,18 +539,18 @@ abstract class AbstractTraceThrowTracePointPrinter {
     }
 }
 
-object DefaultTRThrowTracePointPrinter: AbstractTraceThrowTracePointPrinter() {
+object DefaultTRThrowTracePointPrinter: AbstractThrowTracePointPrinter() {
 
-    fun TraceAppendable.append(tracePoint: TraceThrowTracePoint): TraceAppendable {
+    fun TraceAppendable.append(tracePoint: ThrowTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this
     }
 }
 
-abstract class AbstractTraceCatchTracePointPrinter {
+abstract class AbstractCatchTracePointPrinter {
 
-    protected fun TraceAppendable.appendTracePoint(tracePoint: TraceCatchTracePoint): TraceAppendable {
+    protected fun TraceAppendable.appendTracePoint(tracePoint: CatchTracePoint): TraceAppendable {
         appendDiffStatus(tracePoint.diffStatus)
         appendKeyword("catch")
         append("(")
@@ -560,9 +560,9 @@ abstract class AbstractTraceCatchTracePointPrinter {
     }
 }
 
-object DefaultTRCatchTracePointPrinter: AbstractTraceCatchTracePointPrinter() {
+object DefaultTRCatchTracePointPrinter: AbstractCatchTracePointPrinter() {
 
-    fun TraceAppendable.append(tracePoint: TraceCatchTracePoint): TraceAppendable {
+    fun TraceAppendable.append(tracePoint: CatchTracePoint): TraceAppendable {
         appendTracePoint(tracePoint)
         append(tracePoint, verbose)
         return this

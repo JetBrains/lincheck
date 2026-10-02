@@ -33,7 +33,7 @@ import kotlin.reflect.KClass
  * As a simple backpressure defense mechanism, when the queue is full, the oldest trace points are dropped.
  *
  * Limitations:
- * - supports only [TraceSnapshotLineBreakpointTracePoint] trace points;
+ * - supports only [SnapshotLineBreakpointTracePoint] trace points;
  * - trace points are streamed as a flat list (no tree structure).
  *
  * @param context the trace context containing descriptors and metadata
@@ -44,7 +44,7 @@ class NetworkStreamingTraceCollecting(
     val tracingServer: TracingServer,
     private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
 ) : TraceCollectingStrategy, Closeable {
-    private val tracePointQueue = ArrayBlockingQueue<TraceSnapshotLineBreakpointTracePoint>(queueCapacity)
+    private val tracePointQueue = ArrayBlockingQueue<SnapshotLineBreakpointTracePoint>(queueCapacity)
 
     private val recordedPoints = AtomicLong(0)
     private val droppedPoints = AtomicLong(0)
@@ -79,8 +79,8 @@ class NetworkStreamingTraceCollecting(
         // No-op: all threads write directly to the shared queue, no per-thread buffers to flush
     }
 
-    override fun tracePointCreated(parent: TraceContainerHeaderTracePoint?, created: TracePoint) {
-        check(created is TraceSnapshotLineBreakpointTracePoint) {
+    override fun tracePointCreated(parent: ContainerHeaderTracePoint?, created: TracePoint) {
+        check(created is SnapshotLineBreakpointTracePoint) {
             "Only snapshot line breakpoints are supported by WebSocket trace collection strategy"
         }
 
@@ -113,14 +113,14 @@ class NetworkStreamingTraceCollecting(
         }
     }
 
-    override fun openContainerTracePoint(container: TraceContainerHeaderTracePoint) {
+    override fun openContainerTracePoint(container: ContainerHeaderTracePoint) {
         error("Container trace points are not supported by WebSocket trace collection strategy")
     }
 
     override fun completeContainerTracePoint(
         thread: Thread,
-        header: TraceContainerHeaderTracePoint,
-        footer: TraceContainerFooterTracePoint,
+        header: ContainerHeaderTracePoint,
+        footer: ContainerFooterTracePoint,
     ) {
         error("Container trace points are not supported by WebSocket trace collection strategy")
     }
@@ -186,7 +186,7 @@ class NetworkStreamingTraceCollecting(
         Logger.info { "Network trace writer reset for new client" }
     }
 
-    private fun writeTracePointToSubscriber(tracePoint: TraceSnapshotLineBreakpointTracePoint) {
+    private fun writeTracePointToSubscriber(tracePoint: SnapshotLineBreakpointTracePoint) {
         try {
             // Detect client change and reset sender if needed
             val currentClient = tracingServer.connection
@@ -220,7 +220,7 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
 
 
 /**
- * Sends [TraceSnapshotLineBreakpointTracePoint] objects over a [TracingCallbacks] websocket.
+ * Sends [SnapshotLineBreakpointTracePoint] objects over a [TracingCallbacks] websocket.
  *
  * This class encapsulates the header and per-trace-point serialization logic so that
  * both the lincheck tracing infrastructure and the control-plane can send trace points
@@ -241,12 +241,12 @@ class NetworkTracePointSender(
     private var headerSent = false
 
     /**
-     * Serializes and sends a single [TraceSnapshotLineBreakpointTracePoint] over the WebSocket.
+     * Serializes and sends a single [SnapshotLineBreakpointTracePoint] over the WebSocket.
      *
      * On the first call, the trace protocol header (magic number, version and runtime) is sent
      * automatically before the trace point data.
      */
-    fun send(tracePoint: TraceSnapshotLineBreakpointTracePoint) = lock.withLock {
+    fun send(tracePoint: SnapshotLineBreakpointTracePoint) = lock.withLock {
         // Send header on first write
         if (!headerSent) {
             byteStream.reset()
@@ -305,7 +305,7 @@ internal class NetworkTraceWriter(
     }
 }
 
-internal typealias SnapshotLineBreakpointListener = (TraceSnapshotLineBreakpointTracePoint) -> Unit
+internal typealias SnapshotLineBreakpointListener = (SnapshotLineBreakpointTracePoint) -> Unit
 
 /**
  * Incremental trace reader that processes binary trace data.
@@ -315,14 +315,14 @@ internal typealias SnapshotLineBreakpointListener = (TraceSnapshotLineBreakpoint
  * signalled via [handleDisconnect].
  *
  * Limitations:
- * - supports only [TraceSnapshotLineBreakpointTracePoint] trace points;
+ * - supports only [SnapshotLineBreakpointTracePoint] trace points;
  * - trace points are streamed as a flat list (no tree structure).
  */
 class NetworkTraceReader : Closeable {
     
     val context = TraceContext()
 
-    private val threadTracePoints = mutableMapOf<Int, MutableList<TraceSnapshotLineBreakpointTracePoint>>()
+    private val threadTracePoints = mutableMapOf<Int, MutableList<SnapshotLineBreakpointTracePoint>>()
 
     private val tracePointListeners = mutableListOf<SnapshotLineBreakpointListener>()
 
@@ -354,13 +354,13 @@ class NetworkTraceReader : Closeable {
     }
 
 
-    fun getThreadTracePoints(threadId: Int): List<TraceSnapshotLineBreakpointTracePoint> {
+    fun getThreadTracePoints(threadId: Int): List<SnapshotLineBreakpointTracePoint> {
         synchronized(threadTracePoints) {
             return threadTracePoints[threadId]?.toList() ?: emptyList()
         }
     }
 
-    fun getAllTracePoints(): List<List<TraceSnapshotLineBreakpointTracePoint>> {
+    fun getAllTracePoints(): List<List<SnapshotLineBreakpointTracePoint>> {
         synchronized(threadTracePoints) {
             return threadTracePoints.entries
                 .sortedBy { it.key }
@@ -374,13 +374,13 @@ class NetworkTraceReader : Closeable {
         }
     }
 
-    fun addTracePointListener(listener: (TraceSnapshotLineBreakpointTracePoint) -> Unit) {
+    fun addTracePointListener(listener: (SnapshotLineBreakpointTracePoint) -> Unit) {
         synchronized(tracePointListeners) {
             tracePointListeners.add(listener)
         }
     }
 
-    private fun notifyListeners(tracePoint: TraceSnapshotLineBreakpointTracePoint) {
+    private fun notifyListeners(tracePoint: SnapshotLineBreakpointTracePoint) {
         synchronized(tracePointListeners) {
             tracePointListeners.forEach { it(tracePoint) }
         }
@@ -477,8 +477,8 @@ class NetworkTraceReader : Closeable {
 
                     ObjectKind.TRACEPOINT -> {
                         val tracePoint = dataInput.readTracePointData(context)
-                        check(tracePoint is TraceSnapshotLineBreakpointTracePoint) {
-                            "WebSocket trace reader only supports TraceSnapshotLineBreakpointTracePoint, got ${tracePoint::class.simpleName}"
+                        check(tracePoint is SnapshotLineBreakpointTracePoint) {
+                            "WebSocket trace reader only supports SnapshotLineBreakpointTracePoint, got ${tracePoint::class.simpleName}"
                         }
 
                         synchronized(threadTracePoints) {

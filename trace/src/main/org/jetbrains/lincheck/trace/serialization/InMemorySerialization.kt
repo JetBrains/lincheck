@@ -11,8 +11,8 @@
 package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
-import org.jetbrains.lincheck.trace.TraceContainerFooterTracePoint
-import org.jetbrains.lincheck.trace.TraceContainerHeaderTracePoint
+import org.jetbrains.lincheck.trace.ContainerFooterTracePoint
+import org.jetbrains.lincheck.trace.ContainerHeaderTracePoint
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
@@ -130,7 +130,7 @@ class MemoryTraceCollecting(
     override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
-        parent: TraceContainerHeaderTracePoint?,
+        parent: ContainerHeaderTracePoint?,
         created: TracePoint
     ) {
         if (collectFlat) {
@@ -157,7 +157,7 @@ class MemoryTraceCollecting(
         }
     }
 
-    override fun openContainerTracePoint(container: TraceContainerHeaderTracePoint) {
+    override fun openContainerTracePoint(container: ContainerHeaderTracePoint) {
         val builder = treeBuilders[container.threadId] ?: return
         val node = builder.lastCreatedNode
         if (node == null || node.data !== container) {
@@ -169,8 +169,8 @@ class MemoryTraceCollecting(
 
     override fun completeContainerTracePoint(
         thread: Thread,
-        header: TraceContainerHeaderTracePoint,
-        footer: TraceContainerFooterTracePoint,
+        header: ContainerHeaderTracePoint,
+        footer: ContainerFooterTracePoint,
     ) {
         val builder = treeBuilders[header.threadId] ?: return
         val stack = builder.openContainers
@@ -252,7 +252,7 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
 private fun saveTraceTree(writer: TraceWriter, node: Tree.Node<TracePoint>) {
     val tracepoint = node.data
     writer.writeTracePoint(tracepoint)
-    if (tracepoint is TraceContainerHeaderTracePoint) {
+    if (tracepoint is ContainerHeaderTracePoint) {
         node.children.forEach { saveTraceTree(writer, it) }
         writer.writeTracePoint(tracepoint.completeTracePoint(node.children.map { it.data }))
     }
