@@ -202,11 +202,7 @@ object LincheckClassFileTransformer : ClassFileTransformer {
         // IntelliJ runtime agents, to wrap all their methods into the ignored section.
         isIntellijRuntimeAgentClass(className) ||
         // `ThreadContainer` classes, to detect threads started in the thread containers.
-        isThreadContainerClass(className) ||
-        // TODO: instead of eagerly instrumenting `DispatchedContinuation`
-        //  we should try to fix lazy class re-transformation logic
-        isCoroutineDispatcherInternalClass(className) ||
-        isCoroutineConcurrentKtInternalClass(className)
+        isThreadContainerClass(className)
 }
 
 private val InstrumentationMode.useBytecodeCache: Boolean get() = when (this) {
