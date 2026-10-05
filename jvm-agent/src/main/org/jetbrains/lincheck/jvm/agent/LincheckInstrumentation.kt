@@ -467,24 +467,26 @@ object LincheckInstrumentation {
         // for some reason, trying to call `retransformClasses` on an empty list can throw NPE on JVM 8
         if (classes.isEmpty()) return
 
-        for (batch in classes.chunked(RETRANSFORM_BATCH_SIZE)) {
+        val retransformableClasses = classes.filter { canRetransformClass(it) }
+        for (classBatch in retransformableClasses.chunked(CLASS_RETRANSFORM_BATCH_SIZE)) {
             // failsafe guardrails:
             // 1. first try to retransform the whole batch in one bulk
             // 2. if transformation fails for some class => retransform classes one by one,
             //    thus skipping and logging failing classes
             try {
-                instrumentation.retransformClasses(*batch.toTypedArray())
+                instrumentation.retransformClasses(*classBatch.toTypedArray())
             } catch (t: Throwable) {
-                Logger.warn(t) { "Failed to retransform classes in batch of size ${batch.size}, retrying one by one" }
-                batch.forEach { retransformClass(it) }
+                Logger.warn(t) { "Failed to retransform classes in batch of size ${classBatch.size}, retrying one by one" }
+                classBatch.forEach { retransformClass(it) }
             }
         }
     }
 
-    /** How many classes [retransformClasses] hands to the JVM per VM operation. */
-    private const val RETRANSFORM_BATCH_SIZE = 512
-
-    private fun retransformClass(clazz: Class<*>) {
+    /**
+     * Re-transforms the given [clazz], skipping and logging if the re-transformation fails.
+     */
+    fun retransformClass(clazz: Class<*>) {
+        if (!canRetransformClass(clazz)) return
         try {
             instrumentation.retransformClasses(clazz)
         } catch (t: Throwable) {
@@ -806,6 +808,11 @@ object LincheckInstrumentation {
      * the Lincheck agent re-transforms all the loaded classes on each run.
      */
     internal val INSTRUMENT_ALL_CLASSES = System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
+
+    /**
+     * Size of classes batch re-transformed via JVM's [Instrumentation.retransformClasses].
+     */
+    private const val CLASS_RETRANSFORM_BATCH_SIZE = 512
 }
 
 internal val dumpTransformedSources by lazy {
