@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.livedebugger
 
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.SourceFileClassIndex
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
@@ -24,6 +23,7 @@ import org.jetbrains.lincheck.settings.RedactionFileParser
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
+import org.jetbrains.lincheck.settings.liveDebuggerSettings
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingNotificationListener
 import org.jetbrains.lincheck.util.Logger
@@ -72,7 +72,7 @@ internal object LiveDebugger {
         get() = invalidRequiredRedactionSources.isEmpty()
 
     private fun markRequiredPolicyPendingOrInvalid(owner: PolicyOwner) {
-        val settings = LincheckClassFileTransformer.liveDebuggerSettings
+        val settings = liveDebuggerSettings
         settings.requiredRedactionPolicyValid = false
         invalidRequiredRedactionSources.add(owner)
         removeAllBreakpoints()
@@ -80,7 +80,7 @@ internal object LiveDebugger {
 
     private fun markRequiredPolicyValid(owner: PolicyOwner) {
         invalidRequiredRedactionSources.remove(owner)
-        LincheckClassFileTransformer.liveDebuggerSettings.requiredRedactionPolicyValid =
+        liveDebuggerSettings.requiredRedactionPolicyValid =
             invalidRequiredRedactionSources.isEmpty()
     }
 
@@ -99,7 +99,7 @@ internal object LiveDebugger {
                 }
                 return
             }
-            val settings = LincheckClassFileTransformer.liveDebuggerSettings
+            val settings = liveDebuggerSettings
             val result = settings.addBreakpoints(breakpoints)
             result.rejected.forEach { notifyBreakpointBlocked(it.breakpoint, it.match.reason) }
 
@@ -119,8 +119,7 @@ internal object LiveDebugger {
         }
         Logger.info { "Adding breakpoints: $breakpoints" }
 
-        val result = LincheckClassFileTransformer.liveDebuggerSettings
-            .addBreakpoints(breakpoints)
+        val result = liveDebuggerSettings.addBreakpoints(breakpoints)
         removeStaleCompiledExpressions()
         result.rejected.forEach { notifyBreakpointBlocked(it.breakpoint, it.match.reason) }
         retransformBreakpointClasses(result.added)
@@ -138,8 +137,8 @@ internal object LiveDebugger {
         }
         try {
             val blocklists = BlocklistFileParser.parseBlocklistsFile(blocklistFilePath)
-            LincheckClassFileTransformer.liveDebuggerSettings.blocklistRegistry.add(blocklists)
-            LincheckClassFileTransformer.dynamicExtentChecker.invalidate()
+            liveDebuggerSettings.blocklistRegistry.add(blocklists)
+            liveDebuggerSettings.dynamicExtentChecker.invalidate()
             Logger.info { "Loaded ${blocklists.size} blocklist(s) from $blocklistFilePath" }
         } catch (e: Exception) {
             Logger.error(e) { "Failed to load blocklists from file: $blocklistFilePath" }
@@ -158,8 +157,7 @@ internal object LiveDebugger {
         markRequiredPolicyPendingOrInvalid(PolicyOwner.STARTUP_FILE)
         try {
             val templates = RedactionFileParser.parseTemplatesFile(redactionFilePath)
-            LincheckClassFileTransformer.liveDebuggerSettings.redactionRegistry
-                .replace(PolicyOwner.STARTUP_FILE, templates)
+            liveDebuggerSettings.redactionRegistry.replace(PolicyOwner.STARTUP_FILE, templates)
             markRequiredPolicyValid(PolicyOwner.STARTUP_FILE)
             Logger.info { "Loaded ${templates.size} redaction template(s) from $redactionFilePath" }
         } catch (e: Exception) {
@@ -183,8 +181,8 @@ internal object LiveDebugger {
             Logger.warn { "No control-plane policy applied (pull failed); breakpoints will register without it" }
             return
         }
-        LincheckClassFileTransformer.liveDebuggerSettings.blocklistRegistry.add(blocklists)
-        LincheckClassFileTransformer.dynamicExtentChecker.invalidate()
+        liveDebuggerSettings.blocklistRegistry.add(blocklists)
+        liveDebuggerSettings.dynamicExtentChecker.invalidate()
         Logger.info { "Applied ${blocklists.size} control-plane blocklist(s)" }
     }
 
@@ -196,17 +194,16 @@ internal object LiveDebugger {
      */
     fun addSensitiveAreaBlocklists(blocklists: List<SensitiveAreaBlocklist>) {
         Logger.info { "Adding ${blocklists.size} blocklist(s)" }
-        LincheckClassFileTransformer.liveDebuggerSettings.blocklistRegistry.add(blocklists)
-        LincheckClassFileTransformer.dynamicExtentChecker.invalidate()
+        liveDebuggerSettings.blocklistRegistry.add(blocklists)
+        liveDebuggerSettings.dynamicExtentChecker.invalidate()
         hitSuppressedNotified.clear()
-        retransformBreakpointClasses(LincheckClassFileTransformer.liveDebuggerSettings.lineBreakpoints.values)
+        retransformBreakpointClasses(liveDebuggerSettings.lineBreakpoints.values)
     }
 
     fun removeBreakpoints(uuids: List<UUID>) {
         Logger.info { "Removing breakpoints: $uuids" }
 
-        val result = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeBreakpoints(uuids)
+        val result = liveDebuggerSettings.removeBreakpoints(uuids)
         removeStaleCompiledExpressions()
         if (result.notFound.isNotEmpty()) {
             Logger.warn { "No registered breakpoints found for UUIDs: ${result.notFound}" }
@@ -217,8 +214,7 @@ internal object LiveDebugger {
     fun removeAllBreakpoints() {
         Logger.info { "Removing all breakpoints" }
 
-        val result = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeAllBreakpoints()
+        val result = liveDebuggerSettings.removeAllBreakpoints()
         removeStaleCompiledExpressions()
         blockedNotified.clear()
         hitSuppressedNotified.clear()
@@ -234,8 +230,7 @@ internal object LiveDebugger {
         // If the user re-added the breakpoint at the same location in the window between
         // the hit-limit callback firing and this executor task running,
         // the re-added breakpoint will have a different id and must not be touched.
-        val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeBreakpoint(id)
+        val removedBreakpoint = liveDebuggerSettings.removeBreakpoint(id)
         removeStaleCompiledExpressions()
         if (removedBreakpoint != null) {
             retransformBreakpointClasses(listOf(removedBreakpoint))
@@ -244,7 +239,7 @@ internal object LiveDebugger {
 
     private fun removeStaleCompiledExpressions() {
         ExpressionCompiler.retainCompiledExpressions(
-            LincheckClassFileTransformer.liveDebuggerSettings.lineBreakpoints.keys,
+            liveDebuggerSettings.lineBreakpoints.keys,
         )
     }
 

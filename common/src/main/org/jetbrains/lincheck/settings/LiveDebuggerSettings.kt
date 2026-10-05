@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.settings
 
+import org.jetbrains.lincheck.settings.blocklist.BlocklistEngine
+import org.jetbrains.lincheck.settings.blocklist.DynamicExtentChecker
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.io.File
@@ -54,6 +56,9 @@ class RemoveBreakpointsResult(
     val notFound: List<UUID>,
 )
 
+/** Shared live debugger settings used by instrumentation and snapshot capture. */
+val liveDebuggerSettings = LiveDebuggerSettings()
+
 class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList()) {
 
     /**
@@ -61,6 +66,12 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
      * statically-decidable blocked area; the instrumentation stage remains authoritative.
      */
     val blocklistRegistry = SensitiveAreaBlocklistRegistry()
+
+    /** Authoritative sensitive-area blocklist matcher, backed by [blocklistRegistry]. */
+    val blocklistEngine = BlocklistEngine(blocklistRegistry)
+
+    /** Dynamic-extent checker over [blocklistEngine]; consulted on the capture hot path. */
+    val dynamicExtentChecker = DynamicExtentChecker(blocklistEngine)
 
     /** Active capture-time data-redaction templates, partitioned by policy owner. */
     val redactionRegistry = RedactionTemplateRegistry()

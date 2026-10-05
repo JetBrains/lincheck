@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.descriptors.LocalKind
-import org.jetbrains.lincheck.jvm.agent.blocklist.BlocklistEngine
 import org.jetbrains.lincheck.jvm.agent.analysis.buildControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.emptyControlFlowGraph
@@ -19,6 +18,7 @@ import org.jetbrains.lincheck.settings.BlockMatch
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.blocklist.BlocklistEngine
 import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.trace.isThisName
 import org.objectweb.asm.ClassReader
@@ -89,14 +89,13 @@ internal fun buildClassInformation(
     classNode: ClassNode,
     classReader: ClassReader,
     profile: TransformationProfile,
-    blocklistEngine: BlocklistEngine,
     liveDebuggerSettings: LiveDebuggerSettings,
     classLoader: ClassLoader? = null,
 ): ClassInformation {
     val (lineRanges, linesToMethodNames) = getMethodsLineRanges(classNode)
     val applicableBreakpoints = computeApplicableBreakpoints(classNode, liveDebuggerSettings)
     val (classBlockMatch, methodBlockMatches) =
-        computeBlockMatches(classNode, blocklistEngine, applicableBreakpoints.isNotEmpty())
+        computeBlockMatches(classNode, liveDebuggerSettings.blocklistEngine, applicableBreakpoints.isNotEmpty())
     return ClassInformation(
         smap = readClassSMAP(classNode, classReader),
         locals = getMethodsLocalVariables(classNode, profile),

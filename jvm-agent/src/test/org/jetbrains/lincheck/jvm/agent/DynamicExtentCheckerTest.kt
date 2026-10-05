@@ -10,11 +10,11 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.jvm.agent.blocklist.BlocklistEngine
-import org.jetbrains.lincheck.jvm.agent.blocklist.DynamicExtentChecker
 import org.jetbrains.lincheck.settings.BlocklistRule
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklistRegistry
+import org.jetbrains.lincheck.settings.blocklist.BlocklistEngine
+import org.jetbrains.lincheck.settings.blocklist.DynamicExtentChecker
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.jvm.agent.blocklist
+package org.jetbrains.lincheck.settings.blocklist
 
 import org.jetbrains.lincheck.settings.BlockMatch
 import java.util.concurrent.ConcurrentHashMap

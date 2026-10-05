@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.LIVE_DEBUGGING
-import org.jetbrains.lincheck.jvm.agent.blocklist.BlocklistEngine
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaIfElseMultiLineFixture
 import org.jetbrains.lincheck.settings.BlocklistRule
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
@@ -163,8 +162,7 @@ class BlocklistEnforcementTest {
         val settings = LiveDebuggerSettings(breakpoints)
         settings.blocklistRegistry.add(blocklists)
         val profile = LiveDebuggerTransformationProfile(settings)
-        val blocklistEngine = BlocklistEngine(settings.blocklistRegistry)
-        val classInformation = buildClassInformation(classNode, reader, profile, blocklistEngine, settings)
+        val classInformation = buildClassInformation(classNode, reader, profile, settings)
 
         classNode.accept(
             LincheckClassVisitor(

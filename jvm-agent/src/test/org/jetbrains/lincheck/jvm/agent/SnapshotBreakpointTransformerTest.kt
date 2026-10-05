@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.LIVE_DEBUGGING
-import org.jetbrains.lincheck.jvm.agent.blocklist.BlocklistEngine
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaBranchedSameLineFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaChainedCallFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaChainedCallShapeFixture
@@ -786,8 +785,7 @@ internal fun transformWithSnapshotBreakpoints(
     val liveDebuggerSettings = LiveDebuggerSettings(breakpoints)
     val profile = LiveDebuggerTransformationProfile(liveDebuggerSettings)
 
-    val blocklistEngine = BlocklistEngine(liveDebuggerSettings.blocklistRegistry)
-    val classInformation = buildClassInformation(classNode, reader, profile, blocklistEngine, liveDebuggerSettings)
+    val classInformation = buildClassInformation(classNode, reader, profile, liveDebuggerSettings)
 
     classNode.accept(
         LincheckClassVisitor(

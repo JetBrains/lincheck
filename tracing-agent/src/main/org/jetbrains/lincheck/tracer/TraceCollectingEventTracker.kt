@@ -12,10 +12,10 @@ package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.LineCodeLocation
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.liveDebuggerSettings
 import org.jetbrains.lincheck.trace.*
 import org.jetbrains.lincheck.trace.MethodCallTracePoint.Companion.INCOMPLETE_METHOD_FLAG
 import org.jetbrains.lincheck.trace.MethodCallTracePoint.Companion.SUPER_CONSTRUCTOR_CALL_FLAG
@@ -722,7 +722,7 @@ class TraceCollectingEventTracker(
 
         // Required policy can become invalid on a re-attach while old hooks are still injected.
         // Close capture immediately; breakpoint removal/retransformation follows asynchronously.
-        if (!LincheckClassFileTransformer.liveDebuggerSettings.requiredRedactionPolicyValid) return
+        if (!liveDebuggerSettings.requiredRedactionPolicyValid) return
 
         // Non-mutating hit-limit peek: keeps over-limit hits O(1), before the stack capture below.
         // incrementAndCheckHitLimit (after the dynamic-extent guard) stays the single authority.
@@ -740,8 +740,7 @@ class TraceCollectingEventTracker(
         // Stage 3 dynamic-extent guard: a hit whose call stack passes through a blocked sensitive
         // area is not captured — data flowing out of the area must not be observable downstream.
         // Reuses the stack just captured for the frames panel. Suppressed hits consume no hit-limit budget.
-        val blockedFrame = LincheckClassFileTransformer.dynamicExtentChecker
-            .firstBlockedFrame(stackTrace)
+        val blockedFrame = liveDebuggerSettings.dynamicExtentChecker.firstBlockedFrame(stackTrace)
         if (blockedFrame != null) {
             BreakpointStorage.notifyHitSuppressed(
                 breakpointId, breakpoint, blockedFrame.frame.className, blockedFrame.match.reason,
@@ -760,7 +759,7 @@ class TraceCollectingEventTracker(
         
         val timeStamp = System.currentTimeMillis()
 
-        val redactionPolicy = LincheckClassFileTransformer.liveDebuggerSettings.redactionRegistry.snapshot()
+        val redactionPolicy = liveDebuggerSettings.redactionRegistry.snapshot()
         val snapshotCapturer = SnapshotCapturer(context, redactionPolicy)
         // Code-location class names are stored in ASM internal form, while class- and package-scoped
         // redaction rules are written in canonical form, so convert before handing the name to matching.
