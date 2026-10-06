@@ -673,6 +673,7 @@ private class EventStructureMemoryTracker(
         expectedValue: Any?,
         newValue: Any?
     ) {
+        // TODO: should also do the hack from compare and exchange?
         eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
             readModifyWriteDescriptor = ReadModifyWriteDescriptor.CompareAndSetDescriptor(
                 expectedValue = getValueID(location, expectedValue?.opaque()),
@@ -689,7 +690,13 @@ private class EventStructureMemoryTracker(
         expectedValue: Any?,
         newValue: Any?
     ) {
-        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
+        // Hacky way of downgrading the read portion of weak compare and set
+        val readMemoryOrder = if (memoryOrder == MemoryOrdering.RELEASE) {
+            MemoryOrdering.PLAIN
+        } else {
+            memoryOrder
+        }
+        eventStructure.addReadRequest(iThread, codeLocation, location, readMemoryOrder,
             readModifyWriteDescriptor = ReadModifyWriteDescriptor.CompareAndExchangeDescriptor(
                 expectedValue = getValueID(location, expectedValue?.opaque()),
                 newValue = getValueID(location, newValue?.opaque()),
@@ -747,6 +754,12 @@ private class EventStructureMemoryTracker(
             writeLocation.write(value, eventStructureObjectTracker::getValue)
         }
     }
+
+    //TODO: code location not needed
+    override fun beforeFence(iThread: Int, codeLocation: Int, memoryOrder: MemoryOrdering) {
+        eventStructure.addFenceEvent(iThread, codeLocation, memoryOrder)
+    }
+
 
     override fun reset() {}
 

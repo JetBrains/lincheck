@@ -122,7 +122,7 @@ class LocksTest {
     @Test
     fun testNotifyWait() {
         val outcomes = setOf(1)
-        litmusTest(assertSame(outcomes)) {
+        litmusTest(assertSame(outcomes, 2)) {
             val v = PrimitivesTest.SynchronizedVariable()
             var r1 = -1
 
@@ -142,7 +142,7 @@ class LocksTest {
     @Test
     fun testWaitNotify() {
         val outcomes = setOf(1)
-        litmusTest(assertSame(outcomes)) {
+        litmusTest(assertSame(outcomes, 2)) {
             val v = PrimitivesTest.SynchronizedVariable()
             var r1 = -1
 

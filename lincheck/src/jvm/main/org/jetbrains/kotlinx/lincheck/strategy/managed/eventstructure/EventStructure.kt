@@ -719,10 +719,15 @@ internal class EventStructure(
                             !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
                 }
             }
-            MemoryModel.ReleaseAcquire ->
-                candidates
-            MemoryModel.JAM21 ->
-                candidates
+            // TODO: add more filtering! Otherwise we get completeness issues
+            MemoryModel.ReleaseAcquire, MemoryModel.JAM21 -> {
+                val eventFrontier = execution.calculateFrontier(event.happensBeforeClock)
+                val racyWrites = calculateRacyWrites(label.location, eventFrontier)
+                candidates.filter {
+                    // !causalityOrder.lessThan(it, threadLastWrite) &&
+                    !racyWrites.any { write -> happensBeforeOrder(it, write) }
+                }
+            }
         }
     }
 
@@ -1319,4 +1324,12 @@ internal class EventStructure(
         return memoryOrder
     }
 
+    //TODO: do we need code location?
+    fun addFenceEvent(iThread: Int, codeLocation: Int, memoryOrder: MemoryOrdering) {
+        val label = FenceLabel(
+            memoryOrder
+        )
+        addSendEvent(iThread, label)
+
+    }
 }
