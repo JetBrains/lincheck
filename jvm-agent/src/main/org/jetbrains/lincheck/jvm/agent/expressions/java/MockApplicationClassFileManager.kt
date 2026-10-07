@@ -55,9 +55,12 @@ internal class MockApplicationClassFileManager(
         packageName: String,
         kinds: MutableSet<JavaFileObject.Kind>,
         recurse: Boolean,
-    ): Iterable<JavaFileObject> = super.list(location, packageName, kinds, recurse).map { file ->
-        shadowIfApplicationClass(location, file)
-    }
+    ): Iterable<JavaFileObject> =
+        // ECJ also calls list(...).iterator().hasNext() just to check whether a package exists.
+        // Resolving every class's binary name here makes those probes scan the classpath repeatedly.
+        super.list(location, packageName, kinds, recurse).asSequence().map { file ->
+            shadowIfApplicationClass(location, file)
+        }.asIterable()
 
     override fun getJavaFileForInput(
         location: JavaFileManager.Location,
