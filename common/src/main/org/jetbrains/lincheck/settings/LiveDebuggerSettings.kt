@@ -84,7 +84,6 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
      */
     @Volatile
     var requiredRedactionPolicyValid: Boolean = true
-        internal set
 
     /**
      * Source of unique [BreakpointId] handles assigned at registration time.

@@ -29,7 +29,7 @@ val StackTraceElement.isLincheckInternals get() =
 
 internal const val LINCHECK_PACKAGE_NAME             = "org.jetbrains.lincheck."
 internal const val LINCHECK_KOTLINX_PACKAGE_NAME     = "org.jetbrains.kotlinx.lincheck."
-internal const val LINCHECK_RUNNER_PACKAGE_NAME      = "org.jetbrains.kotlinx.lincheck.runner."
+const val LINCHECK_RUNNER_PACKAGE_NAME               = "org.jetbrains.kotlinx.lincheck.runner."
 internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME   = "sun.nio.ch.lincheck."
 
 
@@ -191,19 +191,19 @@ fun isKotlinxCoroutinesDebugClass(className: String) =
 /**
  * Checks whether the given method corresponds to the `toString()` Java method.
  */
-internal fun isToStringMethod(methodName: String, desc: String) =
+fun isToStringMethod(methodName: String, desc: String) =
     methodName == "toString" && desc == "()Ljava/lang/String;"
 
 /**
  * Tests if the provided [className] represents [StackTraceElement] class.
  */
-internal fun isStackTraceElementClass(className: String): Boolean =
+fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
 
 /**
  * Checks whether the provided [className] corresponds to the [java.util.Arrays] class.
  */
-internal fun isJavaUtilArraysClass(className: String): Boolean =
+fun isJavaUtilArraysClass(className: String): Boolean =
     className == "java.util.Arrays"
 
 /**
@@ -215,7 +215,7 @@ internal fun isKotlinArraysUtilJVMClass(className: String): Boolean =
 /**
  * Checks if the provided class name matches the [jdk.internal.access.JavaLangAccess] class.
  */
-internal fun isJavaLangAccessClass(className: String): Boolean =
+fun isJavaLangAccessClass(className: String): Boolean =
     className == "jdk.internal.access.JavaLangAccess"
 
 
@@ -241,7 +241,7 @@ fun isHiddenClass(className: String): Boolean =
 /**
  * Extracts and returns the enclosing class name of a Java lambda class.
  */
-internal fun getJavaLambdaEnclosingClass(className: String): String {
+fun getJavaLambdaEnclosingClass(className: String): String {
     require(isJavaLambdaClass(className)) { "Not a Java lambda class: $className" }
     return className.substringBefore("\$\$Lambda")
 }
@@ -254,14 +254,14 @@ internal fun getJavaLambdaEnclosingClass(className: String): String {
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
  */
-internal fun isClassLoaderClassName(className: String): Boolean =
+fun isClassLoaderClassName(className: String): Boolean =
     className.contains("ClassLoader")
 
 /**
  * Checks if the given method name and descriptor correspond to
  * the `ClassLoader.loadClass(String name)` method.
  */
-internal fun isLoadClassMethod(methodName: String, desc: String) =
+fun isLoadClassMethod(methodName: String, desc: String) =
     methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
 
 

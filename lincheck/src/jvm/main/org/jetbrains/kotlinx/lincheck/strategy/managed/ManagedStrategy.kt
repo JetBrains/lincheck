@@ -1637,15 +1637,15 @@ internal abstract class ManagedStrategy(
         // Handle atomic access
         if (owner == null || atomicMethodDescriptor == null) return
         val info = atomicMethodDescriptor.getAtomicAccessInfo(context, owner, params)
-        when (info.location) {
+        when (val location = info.location) {
             is StaticFieldAccessLocation -> {
-                memorySnapshot.trackField(null, info.clazz!!, info.location.fieldName)
+                memorySnapshot.trackField(null, info.clazz!!, location.fieldName)
             }
             is ObjectFieldAccessLocation -> {
-                memorySnapshot.trackField(info.obj, info.obj!!.javaClass, info.location.fieldName)
+                memorySnapshot.trackField(info.obj, info.obj!!.javaClass, location.fieldName)
             }
             is ArrayElementByIndexAccessLocation -> {
-                memorySnapshot.trackArrayCell(info.obj!!, info.location.index)
+                memorySnapshot.trackArrayCell(info.obj!!, location.index)
             }
             else -> {}
         }

@@ -19,9 +19,9 @@ inline infix fun Boolean.implies(other: () -> Boolean): Boolean =
 infix fun Boolean.equivalent(other: Boolean): Boolean =
     (this && other) || (!this && !other)
 
-internal infix fun <T> ((T) -> Boolean).and(other: (T) -> Boolean): (T) -> Boolean = { this(it) && other(it) }
-internal infix fun <T> ((T) -> Boolean).or(other: (T) -> Boolean): (T) -> Boolean = { this(it) || other(it) }
-internal fun <T> not(predicate: (T) -> Boolean): (T) -> Boolean = { !predicate(it) }
+infix fun <T> ((T) -> Boolean).and(other: (T) -> Boolean): (T) -> Boolean = { this(it) && other(it) }
+infix fun <T> ((T) -> Boolean).or(other: (T) -> Boolean): (T) -> Boolean = { this(it) || other(it) }
+fun <T> not(predicate: (T) -> Boolean): (T) -> Boolean = { !predicate(it) }
 
 fun Boolean.toInt(): Int = this.compareTo(false)
 fun Int.toBoolean() = (this != 0)

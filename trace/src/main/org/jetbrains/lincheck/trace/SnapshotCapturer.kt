@@ -26,7 +26,7 @@ import java.math.BigInteger
 import kotlin.reflect.KClass
 
 /** Captures the value snapshots of one live-debugger tracepoint hit. */
-internal interface SnapshotCapturer {
+interface SnapshotCapturer {
     /**
      * Captures the values of named expression slots (locals or watch expressions).
      *
@@ -46,7 +46,7 @@ internal interface SnapshotCapturer {
 }
 
 /** Selects the capturer for [policy]: the plain implementation when no redaction rules are set. */
-internal fun SnapshotCapturer(context: TraceContext, policy: CompiledRedactionPolicy): SnapshotCapturer =
+fun SnapshotCapturer(context: TraceContext, policy: CompiledRedactionPolicy): SnapshotCapturer =
     if (policy.isEmpty) PlainSnapshotCapturer(context) else RedactingSnapshotCapturer(context, policy)
 
 private fun requireAlignedNames(values: Array<Any?>, names: List<String>?) {
