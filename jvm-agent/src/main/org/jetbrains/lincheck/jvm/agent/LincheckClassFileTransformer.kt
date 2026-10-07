@@ -109,12 +109,18 @@ object LincheckClassFileTransformer : ClassFileTransformer {
             return null
         }
 
-        if (!instrumentationMode.useBytecodeCache) {
-            return transformImpl(loader, internalClassName, classBytes)
-        }
-        return transformedClassesCache.computeIfAbsent(internalClassName.toCanonicalClassName()) {
+        val canonicalClassName = internalClassName.toCanonicalClassName()
+        val transformedBytes = if (!instrumentationMode.useBytecodeCache) {
             transformImpl(loader, internalClassName, classBytes)
+        } else {
+            transformedClassesCache.computeIfAbsent(canonicalClassName) {
+                transformImpl(loader, internalClassName, classBytes)
+            }
         }
+        // Remember every class handed back modified, whether re-transformed on `install` or
+        // transformed on load while the agent is active, so `uninstall` reverts exactly these classes.
+        instrumentedClasses += canonicalClassName
+        return transformedBytes
     }
 
     fun transformImpl(

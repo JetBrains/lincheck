@@ -26,6 +26,7 @@ import org.jetbrains.lincheck.util.collections.*
 import java.lang.instrument.Instrumentation
 import java.io.File
 import java.io.StringWriter
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.jar.JarFile
 import java.util.*
@@ -232,8 +233,10 @@ object LincheckInstrumentation {
 
     /**
      * Names (canonical) of the classes that were instrumented since the last agent installation.
+     *
+     * Concurrent: [LincheckClassFileTransformer] adds classes transformed on load from class-loading threads.
      */
-    val instrumentedClasses = HashSet<String>()
+    val instrumentedClasses: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
      * Trace context for the current agent run.
@@ -388,16 +391,14 @@ object LincheckInstrumentation {
         // (see `LincheckClassFileTransformer.transform`).
         instrumentationState = InstrumentationState.UNINSTALLING
         try {
-            // Collect the set of instrumented classes.
-            val classes = if (instrumentationStrategy == InstrumentationStrategy.EAGER)
-                getLoadedClassesToInstrument()
-            else
-                getLoadedClassesToInstrument()
-                // Skip classes not transformed by Lincheck.
-                .filter { clazz ->
-                    val canonicalClassName = clazz.name
-                    canonicalClassName in instrumentedClasses
-                }
+            // Revert only the classes that the transformer actually handed back modified during this
+            // installation (see `LincheckClassFileTransformer.transform`), under either strategy.
+            // Re-transforming every loaded class instead is prohibitively expensive on JDK < 13,
+            // where HotSpot walks the whole code cache once per redefined class to find dependent
+            // compiled methods, so a per-test revert of thousands of untouched classes took tens of seconds.
+            val classes = getLoadedClassesToInstrument().filter { clazz ->
+                clazz.name in instrumentedClasses
+            }
             // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
             // transformations of all agents that did not remove their transformers to this moment;
             retransformClasses(classes)
