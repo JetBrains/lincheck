@@ -767,7 +767,7 @@ internal fun snapshotBreakpoint(
  *
  * Per-class data ([MethodLabels], `nonSyntheticMethodLines`, …) is assembled
  * by the [buildClassInformation] helper — the same one the agent invokes from
- * [LincheckClassFileTransformer.transformImpl] — so the visitor sees the same shape
+ * [LincheckClassFileTransformer.doTransform] — so the visitor sees the same shape
  * of inputs in tests as at runtime.
  */
 internal fun transformWithSnapshotBreakpoints(

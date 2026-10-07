@@ -98,7 +98,7 @@ All sources live in `src/main/org/jetbrains/lincheck/tracer/`:
   The wrapper restores the attaching thread's context classloader after startup,
   while agent-created threads inherit the payload loader.
 - **Lincheck's own classes are never instrumented.**
-  `LincheckClassFileTransformer.shouldTransform` rejects them first (`isInLincheckPackage`)
+  `LincheckInstrumentation.shouldTransform` rejects them first (`isInLincheckPackage`)
   to avoid class-loading circularity.
   Standalone agents additionally reject classes owned by the isolated payload loader by identity;
   this check is disabled on the in-process framework path.

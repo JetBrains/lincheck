@@ -15,9 +15,6 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.install
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentation
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.isEagerlyInstrumentedClass
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.shouldTransform
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.transformedClassesCache
 import org.jetbrains.lincheck.jvm.agent.transformers.coroutineCallingClasses
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
@@ -25,7 +22,6 @@ import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.collections.*
 import java.lang.instrument.Instrumentation
 import java.io.File
-import java.io.StringWriter
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.jar.JarFile
@@ -150,32 +146,16 @@ enum class InstrumentationStrategy {
 }
 
 /**
- * The state of the Lincheck instrumentation lifecycle.
- *
- * Transitions: [INACTIVE] --install--> [ACTIVE] --uninstall--> [UNINSTALLING] --> [INACTIVE].
- */
-enum class InstrumentationState {
-    /** No instrumentation is installed. */
-    INACTIVE,
-
-    /** The instrumentation is installed; the transformer instruments matching classes. */
-    ACTIVE,
-
-    /**
-     * [LincheckInstrumentation.uninstall] is reverting the instrumentation:
-     * the transformer stays attached but hands the original class bytes back unchanged.
-     */
-    UNINSTALLING,
-}
-
-/**
  * [LincheckInstrumentation] implements the Lincheck bytecode instrumenting service.
  *
  * @property instrumentation The ByteBuddy instrumentation instance.
  * @property instrumentationMode The instrumentation mode, see [InstrumentationMode] for details.
  */
 object LincheckInstrumentation {
-    /** Isolated payload loader used by the standalone tracing agents; null for the Lincheck framework. */
+
+    /**
+     * Isolated payload loader used by the standalone tracing agents; null for the Lincheck framework.
+     */
     @JvmStatic
     var agentClassLoader: ClassLoader? = null
 
@@ -207,20 +187,19 @@ object LincheckInstrumentation {
      * Determines instrumentation strategy, see [InstrumentationMode].
      */
     lateinit var instrumentationMode: InstrumentationMode
-        // TODO: currently set externally in Playground.kt, refactor it later
-        // private set
-
-    /**
-     * Represents a configuration profile controlling bytecode transformations applied to classes and methods,
-     * see [TransformationProfile] for details.
-     */
-    lateinit var transformationProfile: TransformationProfile
         private set
 
     /**
      * Strategy that controls whether classes are transformed lazily (during call time) or eagerly (during load time).
      */
     lateinit var instrumentationStrategy: InstrumentationStrategy
+        private set
+
+    /**
+     * The transformer registered by [install]; null when the instrumentation is not installed.
+     */
+    @Volatile
+    var transformer: LincheckClassFileTransformer? = null
         private set
 
     /**
@@ -244,14 +223,13 @@ object LincheckInstrumentation {
     val context = TraceContext()
 
     /**
-     * The current state of the instrumentation lifecycle, see [InstrumentationState].
-     *
-     * While the state is [InstrumentationState.UNINSTALLING] the transformer stays attached and
-     * returns the original class bytes as-is, see [LincheckClassFileTransformer.transform] for the reasoning.
+     * In order not to transform the same class several times,
+     * Lincheck caches the transformed bytes in this object.
+     * Notice that the transformation depends on the [InstrumentationMode].
+     * Additionally, this object caches bytes of non-transformed classes.
      */
-    @Volatile
-    internal var instrumentationState = InstrumentationState.INACTIVE
-        private set
+    private val transformedClassesCachesByMode =
+        ConcurrentHashMap<InstrumentationMode, ConcurrentHashMap<String, ByteArray>>()
 
     fun attachJavaAgentStatically(instrumentation: Instrumentation) {
         check(javaAgentAttachType == null) {
@@ -299,10 +277,12 @@ object LincheckInstrumentation {
      * Also, retransforms already loaded classes.
      */
     fun install(instrumentationMode: InstrumentationMode) {
+        // Load the file facade before registering the transformer, which calls its extension getters.
+        // Loading it from a transformation callback can recursively define it and cause a LinkageError.
+        ensureLincheckInstrumentationKt()
+
         this.instrumentationMode = instrumentationMode
-        instrumentationState = InstrumentationState.ACTIVE
         setInstrumentationStrategy()
-        setTransformationProfile()
 
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
@@ -314,9 +294,21 @@ object LincheckInstrumentation {
         // already appended the jar earlier themselves won't trigger a duplicate appending here.
         appendBootstrapJarToClassLoaderSearch()
 
+        // Create bytecode transformer.
+        val transformer = LincheckClassFileTransformer(
+            instrumentationMode = instrumentationMode,
+            instrumentationStrategy = instrumentationStrategy,
+            transformationProfile = createTransformationProfile(),
+            transformedClassesCache = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) {
+                ConcurrentHashMap()
+            },
+            context = context,
+        )
+        this.transformer = transformer
+
         // Add the Lincheck bytecode transformer to this JVM instance,
         // allowing already loaded classes re-transformation.
-        instrumentation.addTransformer(LincheckClassFileTransformer, true)
+        instrumentation.addTransformer(transformer, true)
 
         // If requested by the instrumentation mode, index the classes that were already loaded —
         // the ones the transformer will never see.
@@ -345,7 +337,7 @@ object LincheckInstrumentation {
                 val classes = getLoadedClassesToInstrument().filter {
                     val canonicalClassName = it.name
                     // new classes that were loaded after the latest STRESS mode re-transformation
-                    !transformedClassesCache.containsKey(canonicalClassName) ||
+                    !transformer.transformedClassesCache.containsKey(canonicalClassName) ||
                     // old classes that were already loaded before and have coroutine method calls inside
                     canonicalClassName in coroutineCallingClasses
                 }
@@ -379,17 +371,20 @@ object LincheckInstrumentation {
         }
     }
 
+    private fun ensureLincheckInstrumentationKt() = lincheckInstrumentationKtLoaded
+
     /**
      * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
      * the transformed classes to remove the Lincheck injections.
      */
     fun uninstall() {
+        val transformer = checkNotNull(transformer) { "Lincheck instrumentation is not installed" }
         // Keep the transformer attached until the re-transformation below is done;
         // while the state is `UNINSTALLING` it returns the original class bytes unchanged,
         // which strips the Lincheck injections just as detaching the transformer would,
         // but additionally keeps the JVM's cache of the original class file alive on JDK 20+
         // (see `LincheckClassFileTransformer.transform`).
-        instrumentationState = InstrumentationState.UNINSTALLING
+        transformer.startUninstall()
         try {
             // Revert only the classes that the transformer actually handed back modified during this
             // installation (see `LincheckClassFileTransformer.transform`), under either strategy.
@@ -404,8 +399,8 @@ object LincheckInstrumentation {
             retransformClasses(classes)
         } finally {
             // Remove the Lincheck transformer.
-            instrumentation.removeTransformer(LincheckClassFileTransformer)
-            instrumentationState = InstrumentationState.INACTIVE
+            instrumentation.removeTransformer(transformer)
+            this.transformer = null
         }
         // With no transformer attached, classes load unobserved, so the source-file index would
         // silently go incomplete; drop it and let the next installation rebuild it.
@@ -413,7 +408,7 @@ object LincheckInstrumentation {
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
         // Report statistics if requested.
-        reportStatistics()
+        transformer.reportStatistics()
     }
 
     /**
@@ -441,15 +436,15 @@ object LincheckInstrumentation {
     }
 
     /**
-     * Configures and sets the transformation profile based on the current instrumentation mode.
+     * Creates the transformation profile for the current instrumentation mode.
      */
-    private fun setTransformationProfile() {
+    private fun createTransformationProfile(): TransformationProfile {
         val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
             TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
         } else {
             emptyList<String>() to emptyList<String>()
         }
-        transformationProfile = createTransformationProfile(
+        return createTransformationProfile(
             instrumentationMode,
             includeClasses = includeClasses,
             excludeClasses = excludeClasses,
@@ -585,6 +580,32 @@ object LincheckInstrumentation {
     internal fun canRetransformClass(className: String): Boolean =
         !isJavaLambdaClass(className) && !isHiddenClass(className)
 
+    internal fun shouldTransform(
+        className: String,
+        instrumentationMode: InstrumentationMode,
+        loader: ClassLoader?,
+    ): Boolean {
+        val transformationProfile = transformer?.transformationProfile ?: return false
+        return shouldTransform(className, loader, transformationProfile)
+    }
+
+    @Suppress("SpellCheckingInspection")
+    internal fun shouldTransform(
+        className: String,
+        loader: ClassLoader?,
+        transformationProfile: TransformationProfile,
+    ): Boolean {
+        // NEVER instrument the Lincheck classes.
+        // Perform these checks FIRST to avoid potential class loading circularity errors.
+        if (isInLincheckPackage(className)) return false
+        if (agentClassLoader != null && loader === agentClassLoader) return false
+
+        // Under lazy strategy instrument eagerly instrumented classes early-on.
+        if (instrumentationStrategy == InstrumentationStrategy.LAZY && isEagerlyInstrumentedClass(className)) return true
+
+        return transformationProfile.shouldTransform(className)
+    }
+
     private fun shouldTransform(clazz: Class<*>, instrumentationMode: InstrumentationMode): Boolean =
         // Filtering is done in the following order to hide lincheck source classes from
         // the `canRetransform` method which uses `TransformationUtilsKt::isJavaLambdaClass` internally.
@@ -592,16 +613,24 @@ object LincheckInstrumentation {
         // when it itself is passed as an argument to `canRetransformClass`.
         shouldTransform(clazz.name, instrumentationMode, clazz.classLoader) && canRetransformClass(clazz)
 
-    fun reportStatistics() {
-        if (collectTransformationStatistics) {
-            val writer = StringWriter()
-            LincheckClassFileTransformer.computeStatistics()?.writeTo(writer)
-            LincheckClassFileTransformer.resetStatistics()
+    // We should always eagerly transform the following classes.
+    internal fun isEagerlyInstrumentedClass(className: String): Boolean =
+        // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
+        isClassLoaderClassName(className) ||
+        // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
+        isMethodHandleRelatedClass(className) ||
+        // `StackTraceElement` class, to wrap all its methods into the ignored section.
+        isStackTraceElementClass(className) ||
+        // IntelliJ runtime agents, to wrap all their methods into the ignored section.
+        isIntellijRuntimeAgentClass(className) ||
+        // `ThreadContainer` classes, to detect threads started in the thread containers.
+        isThreadContainerClass(className)
 
-            Logger.info { "Transformation statistics:\n" +
-                writer.toString().lines().joinToString("\n") { "\t$it" }
-            }
-        }
+    /**
+     * Logs the transformation statistics of the current installation, if requested, and resets them.
+     */
+    fun reportStatistics() {
+        transformer?.reportStatistics()
     }
 
     /**
@@ -677,7 +706,7 @@ object LincheckInstrumentation {
         visitedClasses += clazz.name
 
         if (shouldTransform(clazz, instrumentationMode)) {
-            instrumentedClasses += clazz.name
+            transformer?.requestLazyTransformation(clazz.name)
             classesToTransform += clazz
         } else if (isJavaLambdaClass(clazz.name)) {
             val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
@@ -816,12 +845,4 @@ object LincheckInstrumentation {
     private const val CLASS_RETRANSFORM_BATCH_SIZE = 512
 }
 
-internal val dumpTransformedSources by lazy {
-    System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean()
-}
-private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
-
-internal val collectTransformationStatistics by lazy {
-    System.getProperty(COLLECT_TRANSFORMATION_STATISTICS_PROPERTY, "false").toBoolean()
-}
-private const val COLLECT_TRANSFORMATION_STATISTICS_PROPERTY = "lincheck.collectTransformationStatistics"
+private val lincheckInstrumentationKtLoaded = Unit
