@@ -10,12 +10,12 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions.java
 
-import org.jetbrains.lincheck.jvm.agent.ClassModel
-import org.jetbrains.lincheck.jvm.agent.ConstructorModel
-import org.jetbrains.lincheck.jvm.agent.FieldModel
-import org.jetbrains.lincheck.jvm.agent.MethodModel
-import org.jetbrains.lincheck.jvm.agent.NestedClassModel
-import org.jetbrains.lincheck.jvm.agent.loadClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ConstructorModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.FieldModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.NestedClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.loadClassModel
 import org.jetbrains.lincheck.jvm.agent.expressions.ApplicationClasses
 import org.jetbrains.lincheck.jvm.agent.expressions.CapturedLocal
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionKind

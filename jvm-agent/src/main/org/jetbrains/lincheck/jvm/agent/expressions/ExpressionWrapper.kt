@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions
 
-import org.jetbrains.lincheck.jvm.agent.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
 import org.jetbrains.lincheck.jvm.agent.expressions.java.JavaWrapperSource
 import org.jetbrains.lincheck.jvm.agent.expressions.kotlin.KotlinWrapperSource
 import org.objectweb.asm.Type

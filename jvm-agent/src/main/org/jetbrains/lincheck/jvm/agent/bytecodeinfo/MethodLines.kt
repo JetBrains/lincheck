@@ -8,8 +8,9 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.jvm.agent
+package org.jetbrains.lincheck.jvm.agent.bytecodeinfo
 
+import org.jetbrains.lincheck.jvm.agent.ASM_API
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import java.util.SortedSet

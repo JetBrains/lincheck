@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions.kotlin
 
-import org.jetbrains.lincheck.jvm.agent.ClassModel
-import org.jetbrains.lincheck.jvm.agent.FieldModel
-import org.jetbrains.lincheck.jvm.agent.MethodModel
-import org.jetbrains.lincheck.jvm.agent.loadClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.FieldModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.loadClassModel
 import org.jetbrains.lincheck.jvm.agent.expressions.ApplicationClasses
 import org.jetbrains.lincheck.jvm.agent.expressions.CapturedLocal
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionKind

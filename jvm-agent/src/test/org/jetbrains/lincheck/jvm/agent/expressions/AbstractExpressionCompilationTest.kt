@@ -11,8 +11,8 @@
 package org.jetbrains.lincheck.jvm.agent.expressions
 
 import org.jetbrains.lincheck.descriptors.LocalKind
-import org.jetbrains.lincheck.jvm.agent.ClassModel
-import org.jetbrains.lincheck.jvm.agent.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
 import org.jetbrains.lincheck.jvm.agent.expressions.fixtures.ExpressionTarget
 import org.jetbrains.lincheck.jvm.agent.loadClassesFromBytes
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint

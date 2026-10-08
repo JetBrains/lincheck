@@ -12,6 +12,9 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId

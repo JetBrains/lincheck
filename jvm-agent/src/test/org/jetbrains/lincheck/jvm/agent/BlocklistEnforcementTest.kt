@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.LIVE_DEBUGGING
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.buildClassInformation
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaIfElseMultiLineFixture
 import org.jetbrains.lincheck.settings.BlocklistRule
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings

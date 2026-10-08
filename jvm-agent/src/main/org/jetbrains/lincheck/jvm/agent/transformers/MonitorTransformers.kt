@@ -16,6 +16,7 @@ import org.objectweb.asm.Type.getType
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import sun.nio.ch.lincheck.*

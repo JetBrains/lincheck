@@ -10,9 +10,9 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions
 
-import org.jetbrains.lincheck.jvm.agent.ClassModel
-import org.jetbrains.lincheck.jvm.agent.FieldModel
-import org.jetbrains.lincheck.jvm.agent.MethodModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.FieldModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodModel
 
 /**
  * Records application members that temporary compiler inputs made accessible.

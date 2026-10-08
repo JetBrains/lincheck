@@ -10,7 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions
 
-import org.jetbrains.lincheck.jvm.agent.LocalVariableInfo
+import org.jetbrains.lincheck.descriptors.LocalKind
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
 import org.jetbrains.lincheck.jvm.agent.expressions.java.JavaExpressionToolchain
 import org.jetbrains.lincheck.jvm.agent.expressions.java.JavaSource
 import org.jetbrains.lincheck.jvm.agent.expressions.kotlin.KotlinExpressionToolchain
@@ -205,7 +206,7 @@ class ExpressionCompilerTest {
         index = 0,
         type = type,
         labelIndexRange = Label() to Label(),
-        localKind = org.jetbrains.lincheck.descriptors.LocalKind.VARIABLE,
+        localKind = LocalKind.VARIABLE,
     )
 
     private fun isJava8() = System.getProperty("java.specification.version")

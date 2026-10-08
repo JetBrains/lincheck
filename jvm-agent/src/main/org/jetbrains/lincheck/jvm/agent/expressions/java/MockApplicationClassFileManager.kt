@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions.java
 
-import org.jetbrains.lincheck.jvm.agent.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionBytecodeRewriter
 import org.jetbrains.lincheck.jvm.agent.expressions.MockedApplicationMembers
 import org.objectweb.asm.ClassReader

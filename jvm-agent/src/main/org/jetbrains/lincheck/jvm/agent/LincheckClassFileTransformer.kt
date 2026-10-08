@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClasses
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.buildClassInformation
 import org.jetbrains.lincheck.settings.liveDebuggerSettings
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*

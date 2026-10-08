@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions.kotlin
 
-import org.jetbrains.lincheck.jvm.agent.loadClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.loadClassModel
 import org.jetbrains.lincheck.jvm.agent.expressions.CapturedLocal
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionEvaluatorTransplanter

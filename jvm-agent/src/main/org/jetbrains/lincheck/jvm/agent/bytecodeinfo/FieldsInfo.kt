@@ -1,22 +1,11 @@
-/*
- * Lincheck
- *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
- *
- * This Source Code Form is subject to the terms of the
- * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
- * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+package org.jetbrains.lincheck.jvm.agent.bytecodeinfo
 
-package org.jetbrains.lincheck.jvm.agent
-
-import jdk.internal.org.objectweb.asm.Opcodes.ACC_FINAL
-import jdk.internal.org.objectweb.asm.Opcodes.ACC_VOLATILE
-import org.jetbrains.lincheck.jvm.agent.FieldsInfo.addField
-import org.jetbrains.lincheck.jvm.agent.FieldsInfo.collectFieldInformation
-import org.jetbrains.lincheck.jvm.agent.FieldsInfo.isFinalField
+import org.jetbrains.lincheck.jvm.agent.ASM_API
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.FieldVisitor
+import org.objectweb.asm.Opcodes
 import java.util.concurrent.ConcurrentHashMap
-import org.objectweb.asm.*
 
 /**
  * [FieldsInfo] object is used to track final/volatile fields across different classes.
@@ -46,7 +35,7 @@ internal object FieldsInfo {
      */
     fun addField(internalClassName: String, fieldName: String, access: Int) {
         val fields = classToFieldsMap.computeIfAbsent(internalClassName) { HashMap() }
-        fields[fieldName] = FieldsInfo.FieldInfo(access and ACC_FINAL != 0, access and ACC_VOLATILE != 0)
+        fields[fieldName] = FieldInfo(access and Opcodes.ACC_FINAL != 0, access and Opcodes.ACC_VOLATILE != 0)
     }
 
     /**

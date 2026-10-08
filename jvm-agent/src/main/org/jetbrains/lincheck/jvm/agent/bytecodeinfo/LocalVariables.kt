@@ -8,12 +8,13 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.jvm.agent
+package org.jetbrains.lincheck.jvm.agent.bytecodeinfo
 
 import org.jetbrains.lincheck.descriptors.ActiveLocal
 import org.jetbrains.lincheck.descriptors.LocalKind
 import org.objectweb.asm.Label
 import org.objectweb.asm.Type
+import kotlin.text.get
 
 typealias StackSlotIndex = Int
 typealias LocalVariablesMap = Map<StackSlotIndex, List<LocalVariableInfo>>
@@ -75,7 +76,7 @@ data class LocalVariableInfo(
     val endLabel = labelIndexRange.second
 }
 
-data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
+data class MethodVariables(val variables: LocalVariablesMap) {
 
     private val varsByStartLabel = variables.values.flatten().groupBy { it.labelIndexRange.first }
     private val varsByEndLabel = variables.values.flatten().groupBy { it.labelIndexRange.second }
@@ -103,10 +104,6 @@ data class MethodVariables(val variables: LocalVariablesMap = emptyMap()) {
 
     fun getVarByName(name: String): Set<LocalVariableInfo> = varsByName.getOrElse(name, ::emptyList).toSet()
     fun hasVarByName(name: String): Boolean = varsByName.containsKey(name)
-
-    companion object {
-        val EMPTY = MethodVariables()
-    }
 }
 
 internal fun LocalVariableInfo.toActiveLocal(): ActiveLocal = ActiveLocal(name, localKind)

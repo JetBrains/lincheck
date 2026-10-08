@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions
 
-import org.jetbrains.lincheck.jvm.agent.ClassModel
-import org.jetbrains.lincheck.jvm.agent.FieldModel
-import org.jetbrains.lincheck.jvm.agent.MethodModel
-import org.jetbrains.lincheck.jvm.agent.loadClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.FieldModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.loadClassModel
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor

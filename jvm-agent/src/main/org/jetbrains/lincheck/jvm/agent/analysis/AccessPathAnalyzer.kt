@@ -11,12 +11,12 @@
 package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.jvm.agent.FieldsInfo
-import org.jetbrains.lincheck.jvm.agent.LocalVariableInfo
-import org.jetbrains.lincheck.jvm.agent.MethodVariables
 import org.jetbrains.lincheck.jvm.agent.getArrayAccessOpcodeType
 import org.jetbrains.lincheck.jvm.agent.getLocalVarAccessOpcodeType
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.FieldsInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodVariables
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor

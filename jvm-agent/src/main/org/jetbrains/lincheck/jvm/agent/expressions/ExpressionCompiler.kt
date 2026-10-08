@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions
 
-import org.jetbrains.lincheck.jvm.agent.ClassModel
-import org.jetbrains.lincheck.jvm.agent.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
 import org.jetbrains.lincheck.jvm.agent.expressions.java.JavaEnclosingClassEvaluator
 import org.jetbrains.lincheck.jvm.agent.expressions.java.JavaExpressionToolchain
 import org.jetbrains.lincheck.jvm.agent.expressions.java.JavaWrapperSource

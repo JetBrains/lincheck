@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor

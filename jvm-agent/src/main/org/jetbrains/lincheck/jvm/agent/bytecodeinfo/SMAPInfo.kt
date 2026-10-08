@@ -1,20 +1,53 @@
-/*
- * Lincheck
- *
- * Copyright (C) 2019 - 2025 JetBrains s.r.o.
- *
- * This Source Code Form is subject to the terms of the
- * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
- * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
- */
+package org.jetbrains.lincheck.jvm.agent.bytecodeinfo
 
-package org.jetbrains.lincheck.jvm.agent
-
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.tree.ClassNode
 import java.util.Objects
 
-/*
-  This code was heavily adapted from `SDE.java` from IDEA monorepo.
+/**
+ * This function tries to get SMAP (SourceDebugExtension, SDE, JSR45) from the parsed class.
+ * It tries official `SourceDebugExtension` first. It could fail, as JVM strips it
+ * together with invisible annotations when runs without debugger attached.
+ *
+ * Kotlin compiler saves its SMAP twice: as proper a `SourceDebugExtension` attribute and
+ * as value of `RuntimeInvisibleAnnotation`. Again, `RuntimeInvisibleAnnotation` are stripped by JVM
+ * if there is no debugger attached, but its value still lives in constant pool.
+ *
+ * This code tries to find SMAP in constant pool as a last resort (see ticket KT-53438).
  */
+internal fun readClassSMAP(classNode: ClassNode, classReader: ClassReader): SMAPInfo {
+    // Try to get SMAP for Kotlin easy way
+    if (classNode.sourceDebug != null) {
+        return SMAPInfo(classNode.sourceDebug)
+    }
+
+    // Try to get it from a constant pool, attribute `sourceDebugExtension` can be stripped down by JVM:
+    // https://youtrack.jetbrains.com/issue/KT-53438
+    // Unfortunately, `classNode.invisibleAnnotations` can be stripped too, so we need to
+    // parse constant pool manually. Start from the end, as SMAP is written last by the kotlin compiler.
+    var buffer: ByteArray? = null
+    // Zero index in a constant pool is always 0, why?
+    for (idx in classReader.itemCount - 1 downTo 1) {
+        val offset = classReader.getItem(idx) - 1
+        // Sometimes offset = 0 even in the middle of constant pool
+        if (offset < 0) continue
+        val tag = classReader.readByte(offset)
+        // Check only UTF-8 tags
+        if (tag != CONSTANT_UTF8_TAG) continue
+        val len = classReader.readUnsignedShort(offset + 1)
+        if (buffer == null || buffer.size < len) buffer = ByteArray(len)
+        // We cannot call `ClassReader.readUTF8()` as it requires an offset to index, not to data
+        // And `ClassReader.readUtf()` is package-private in ClassReader
+        val str = readUTF(classReader, offset + 3, len, buffer)
+        if (str.startsWith(SMAP_START) && str.endsWith(SMAP_END)) {
+            return SMAPInfo(str)
+        }
+    }
+    return SMAPInfo("")
+}
+
+
+// This code was heavily adapted from `SDE.java` from IDEA monorepo.
 class SMAPInfo {
     private data class FileTableRecord(
         val fileId: Int,
@@ -551,3 +584,14 @@ class SMAPInfo {
         val NullString: String? = null
     }
 }
+
+private fun readUTF(classReader: ClassReader, utfOffset: Int, utfLength: Int, buffer: ByteArray): String {
+    for (offset in 0 ..< utfLength) {
+        buffer[offset] = (classReader.readByte(offset + utfOffset) and 0xff).toByte()
+    }
+    return String(buffer, 0, utfLength, Charsets.UTF_8)
+}
+
+private const val CONSTANT_UTF8_TAG = 1
+private const val SMAP_START = "SMAP\n"
+private const val SMAP_END = "*E\n"

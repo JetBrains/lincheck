@@ -18,6 +18,9 @@ import org.jetbrains.lincheck.descriptors.LoopHeaderCodeLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.jvm.agent.analysis.AccessPathAnalyzerAdapter
 import org.jetbrains.lincheck.jvm.agent.analysis.TypeAnalyzerAdapter
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.UNKNOWN_METHOD_MARKER
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.toActiveLocal
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.objectweb.asm.Label

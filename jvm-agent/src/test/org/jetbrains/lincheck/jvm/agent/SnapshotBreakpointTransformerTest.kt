@@ -11,6 +11,7 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.LIVE_DEBUGGING
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.buildClassInformation
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaBranchedSameLineFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaChainedCallFixture
 import org.jetbrains.lincheck.jvm.agent.fixtures.JavaChainedCallShapeFixture
@@ -62,8 +63,8 @@ import java.util.UUID
  *      suppressed when the source line they sit on is also covered by a
  *      non-synthetic method on the same class — the parent's hook already
  *      fires there, so emitting again inside the lambda double-counts.
- *      Driven by [MethodInformation.nonSyntheticMethodLines],
- *      populated per class by [buildClassInformation].
+ *      Driven by [org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation.nonSyntheticMethodLines],
+ *      populated per class by [org.jetbrains.lincheck.jvm.agent.bytecodeinfo.buildClassInformation].
  *
  *   2. **Basic-block same-line dedup**. Within a single basic block —
  *      bounded by jump / switch / exception-handler-target labels — only the
@@ -74,12 +75,12 @@ import java.util.UUID
  *      `try/finally` exception handlers, and mutually-exclusive branches with
  *      the same trailing line each fire their own hook — matching JDI's
  *      "a line may have more than one executable location" semantics. The
- *      basic-block-entry classification is sourced from [MethodLabels], which
+ *      basic-block-entry classification is sourced from [org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodLabels], which
  *      records jump / switch / catch-handler targets without building a full
- *      control-flow graph; see [MethodLabels.isJumpOrCatchTarget].
+ *      control-flow graph; see [org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodLabels.isJumpOrCatchTarget].
  *
  * Tests in this file drive the [LincheckClassVisitor] via [transformWithSnapshotBreakpoints],
- * which feeds it real per-class data assembled by [buildClassInformation] —
+ * which feeds it real per-class data assembled by [org.jetbrains.lincheck.jvm.agent.bytecodeinfo.buildClassInformation] —
  * the same preprocessing path the agent uses at runtime —
  * so `MethodLabels` (basic-block entries) and `nonSyntheticMethodLines` (lambda-shadow coverage)
  * come from actual implmenetation code, not test stubs.
@@ -765,8 +766,8 @@ internal fun snapshotBreakpoint(
  * (which gates everything except [SnapshotBreakpointTransformer] off),
  * and returns the resulting bytes.
  *
- * Per-class data ([MethodLabels], `nonSyntheticMethodLines`, …) is assembled
- * by the [buildClassInformation] helper — the same one the agent invokes from
+ * Per-class data ([org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodLabels], `nonSyntheticMethodLines`, …) is assembled
+ * by the [org.jetbrains.lincheck.jvm.agent.bytecodeinfo.buildClassInformation] helper — the same one the agent invokes from
  * [LincheckClassFileTransformer.doTransform] — so the visitor sees the same shape
  * of inputs in tests as at runtime.
  */

@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent.expressions
 
-import org.jetbrains.lincheck.jvm.agent.FieldModel
-import org.jetbrains.lincheck.jvm.agent.MethodModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.FieldModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodModel
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes

@@ -12,6 +12,8 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.jvm.agent.invokeIfInAnalyzedCode
 import org.jetbrains.lincheck.jvm.agent.invokeStatic
 import org.jetbrains.lincheck.trace.TraceContext
