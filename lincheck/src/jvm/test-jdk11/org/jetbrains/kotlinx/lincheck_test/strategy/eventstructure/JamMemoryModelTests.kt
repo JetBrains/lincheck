@@ -537,7 +537,7 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: one day we will handle fences
+    // TODO: one day we will handle full fences
     @Ignore
     @Test
     fun testRWCSyncs() {
@@ -1164,4 +1164,148 @@ class JamMemoryModelTests {
         }
     }
 
+    @Test
+    fun testMpFences() {
+        val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 0))
+        litmusTest(assertNever(expectedOutcomes), MemoryModel.ReleaseAcquire) {
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+
+            var r0 = -1
+            var r1 = -1
+
+            val t0 = thread {
+                x.setPlain(1)
+                VarHandle.releaseFence()
+                y.setOpaque(1)
+            }
+
+            val t1 = thread {
+                r0 = y.getOpaque()
+                VarHandle.acquireFence()
+                if (r0 == 1) {
+                    r1 = x.getPlain()
+                }
+            }
+
+            t0.join()
+            t1.join()
+            r0 to r1
+        }
+    }
+
+    @Test
+    fun testMpFencesNotTransitive() {
+        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1, 1, 0))
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            val z = AtomicInteger(0)
+
+            var r0 = -1
+            var r1 = -1
+            var r2 = -1
+
+            val t0 = thread {
+                x.setPlain(1)
+                VarHandle.releaseFence()
+                y.setPlain(1)
+            }
+
+            val t1 = thread {
+                r0 = y.getPlain()
+                z.setPlain(1)
+            }
+
+            val t2 = thread {
+                r1 = z.getPlain()
+                VarHandle.acquireFence()
+                r2 = x.getPlain()
+            }
+
+            t0.join()
+            t1.join()
+            t2.join()
+
+            Triple(r0, r1, r2)
+        }
+    }
+
+    @Test
+    fun testMpReleaseWriteAcquireFence() {
+        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(
+            Triple(1, 1, 1),
+            Triple(1, 0, 1),
+            Triple(0, 1, 1),
+            Triple(0, 1, 0),
+            Triple(0, 0, 1),
+            Triple(0, 0, 0)
+        )
+        litmusTest(assertSame(expectedOutcomes), MemoryModel.ReleaseAcquire) {
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            val flag = AtomicInteger(0)
+
+            var r0 = -1
+            var r1 = -1
+            var r2 = -1
+
+            val t0 = thread {
+                x.setPlain(1)
+                y.setPlain(1)
+                flag.setRelease(1)
+            }
+
+            val t1 = thread {
+                r0 = flag.getPlain()
+                r1 = x.getPlain()
+                VarHandle.acquireFence()
+                r2 = y.getPlain()
+            }
+
+            t0.join()
+            t1.join()
+
+            Triple(r0, r1, r2)
+        }
+    }
+
+    @Test
+    fun testMpReleaseFenceAcquireWrite() {
+        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(
+            Triple(1, 1, 1),
+            Triple(1, 1, 0),
+            Triple(0, 1, 1),
+            Triple(0, 1, 0),
+            Triple(0, 0, 1),
+            Triple(0, 0, 0)
+        )
+        litmusTest(assertSame(expectedOutcomes), MemoryModel.ReleaseAcquire) {
+            val x = AtomicInteger(0)
+            val y = AtomicInteger(0)
+            val flag = AtomicInteger(0)
+
+            var r0 = -1
+            var r1 = -1
+            var r2 = -1
+
+            val t0 = thread {
+                x.setPlain(1)
+                VarHandle.releaseFence()
+                y.setPlain(1)
+                flag.setPlain(1)
+            }
+
+            val t1 = thread {
+                r0 = flag.getAcquire()
+                r1 = x.getPlain()
+                r2 = y.getPlain()
+            }
+
+            t0.join()
+            t1.join()
+
+            Triple(r0, r1, r2)
+        }
+    }
 }

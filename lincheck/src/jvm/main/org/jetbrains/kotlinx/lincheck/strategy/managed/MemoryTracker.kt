@@ -52,6 +52,8 @@ interface MemoryTracker {
 
     fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int)
 
+    fun beforeFence(iThread: Int, codeLocation: Int, memoryOrder: MemoryOrdering)
+
     fun reset()
 }
 
@@ -64,7 +66,12 @@ internal fun MemoryTracker.trackAtomicMethodMemoryAccess(
     location: MemoryLocation?,
 ): Boolean {
     if (methodDescriptor == null) return false
-    if (location == null) return false
+    if (location == null) {
+        if (methodDescriptor.kind == AtomicMethodKind.FENCE) {
+            beforeFence(iThread, codeLocation, methodDescriptor.ordering)
+        }
+        return false
+    }
 
     var argOffset = 0
     // atomic reflection case (AFU, VarHandle or Unsafe) - the first argument is a reflection object
@@ -121,6 +128,7 @@ internal fun MemoryTracker.trackAtomicMethodMemoryAccess(
         AtomicMethodKind.DECREMENT_AND_GET -> {
             beforeAddAndGet(iThread, codeLocation, location, methodDescriptor.ordering, delta = (-1).convert(location.type))
         }
+        AtomicMethodKind.FENCE -> return false
     }
     return (methodDescriptor.kind != AtomicMethodKind.SET)
 }
