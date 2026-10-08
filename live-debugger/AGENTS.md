@@ -16,13 +16,29 @@ and runs the instrumentation in `InstrumentationMode.LIVE_DEBUGGING`.
 
 A `SnapshotBreakpoint` (see [`common`](../common), package `org.jetbrains.lincheck.settings`)
 is identified by UUID and addressed by class name, file name, and line number.
-It may carry a condition and watch expressions — shipped as precompiled bytecode class fragments —
-and a hit limit.
+A breakpoint may carry a condition and watch expressions and a hit limit.
+Clients send expressions as plain source text (`conditionSource` / `watchSources`,
+capability `AGENT_COMPILED_EXPRESSIONS_V1`),
+which the agent compiles at instrumentation time,
+in the language of the breakpoint's source file —
+Java through the JDK's own compiler (`javax.tools`),
+Kotlin through `kotlin-compiler-embeddable`,
+shipped as the nested `kotlin-expression-compiler.jar` resource and loaded in an
+isolated class loader so it never touches the application's class path
+(see `ExpressionCompiler` in [`jvm-agent`](../jvm-agent)).
+The compiled-fragment fields remain an internal representation after agent-side compilation.
 
 - Adding or removing breakpoints re-transforms the affected loaded classes;
+  the agent finds them by the breakpoint's *file name* in its own `SourceFileClassIndex`
+  (in [`jvm-agent`](../jvm-agent), an index from the class-file `SourceFile` attribute
+  to the class definitions — class name plus defining loader — compiled from it),
+  not by the IDE-provided class name.
+  The index stores no `Class` objects: a query resolves its entries against
+  `Instrumentation.getAllLoadedClasses`, which it has to walk anyway to pick up
+  classes loaded before a dynamic attach.
   `SnapshotBreakpointTransformer` (in [`jvm-agent`](../jvm-agent)) injects the capture code,
   which calls back through `sun.nio.ch.lincheck.Injections.onSnapshotLineBreakpoint`.
-- Each hit produces a `TRSnapshotLineBreakpointTracePoint`
+- Each hit produces a `SnapshotLineBreakpointTracePoint`
   with the captured stack trace, locals, watches, and timestamp.
 - Hit limits are enforced via `sun.nio.ch.lincheck.BreakpointStorage`;
   reaching the limit disables the breakpoint and notifies the client.
@@ -60,13 +76,13 @@ Both legs keep hostname verification on, so the certificate has to name the host
 
 The fat jar (see `registerTraceAgentTasks` in `buildSrc/src/main/kotlin/TraceAgentTasks.kt`):
 
-- relocates `org.objectweb.asm`, `net.bytebuddy`, `org.java_websocket`, and `org.slf4j`
-  under `org.jetbrains.lincheck.shadow.*` to avoid classpath collisions with the target app;
-- embeds `bootstrap.jar` as a nested resource, installed on the bootstrap classloader at attach;
-- sets `Premain-Class`/`Agent-Class` to `org.jetbrains.lincheck.livedebugger.LiveDebuggerAgent`.
+- exposes only the dependency-free `AgentWrapper` at the root;
+- embeds `bootstrap.jar` and the unshaded `agent-payload.jar` as nested resources;
+- sets `Premain-Class`/`Agent-Class` to the wrapper,
+  which loads the payload with the platform classloader as parent and invokes `LiveDebuggerAgent` reflectively.
 
 `liveDebuggerFatJarVerify` asserts the packaging invariants
-(class-package whitelist; nested — never unpacked — `bootstrap.jar`)
+(wrapper-only class whitelist; nested — never unpacked — bootstrap and payload jars)
 and runs automatically after the fat jar and as part of `check`.
 `liveDebuggerFatJarNoDeps` builds a dependency-free jar for debugging.
 
@@ -95,7 +111,8 @@ without a server or heartbeat, static attach starts whole-application tracing du
 
 ## Module dependencies
 
-`bootstrap` (compile-only), `common`, `jvm-agent`, `trace`, `tracing-agent`.
+`bootstrap` (compile-only), `common`, `jvm-agent`, `trace`, `tracing-agent`;
+all runtime dependencies stay inside the isolated payload.
 
 ## Publishing
 

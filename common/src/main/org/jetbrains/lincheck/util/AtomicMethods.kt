@@ -20,13 +20,13 @@ import java.util.concurrent.atomic.*
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-internal data class AtomicMethodDescriptor(
+data class AtomicMethodDescriptor(
     val kind: AtomicMethodKind,
     val apiKind: AtomicApiKind,
     val ordering: MemoryOrdering,
 )
 
-internal enum class AtomicMethodKind {
+enum class AtomicMethodKind {
     GET, SET,
     GET_AND_SET,
     COMPARE_AND_SET,
@@ -38,7 +38,7 @@ internal enum class AtomicMethodKind {
     FENCE;
 }
 
-internal val AtomicMethodKind.isSetter get() = when (this) {
+val AtomicMethodKind.isSetter get() = when (this) {
     SET,
     GET_AND_SET,
     COMPARE_AND_SET,
@@ -56,7 +56,7 @@ internal val AtomicMethodKind.isCasSetter get() = when (this) {
     else -> false
 }
 
-internal enum class AtomicApiKind {
+enum class AtomicApiKind {
     ATOMIC_OBJECT,
     ATOMIC_ARRAY,
     ATOMIC_FIELD_UPDATER,
@@ -93,7 +93,7 @@ data class AtomicMethodAccessInfo(
 
 // TODO: This is very out of place, mainly because we have to add a new parameter, and weird if check.
 // Maybe just make it seperate?
-internal fun getAtomicMethodDescriptor(obj: Any?, methodClassName: String, methodName: String): AtomicMethodDescriptor? {
+fun getAtomicMethodDescriptor(obj: Any?, methodClassName: String, methodName: String): AtomicMethodDescriptor? {
     return when {
         isAtomic(obj)               -> atomicMethods[methodName]
         isAtomicArray(obj)          -> atomicArrayMethods[methodName]
@@ -113,7 +113,7 @@ internal fun getAtomicMethodDescriptor(obj: Any?, methodClassName: String, metho
  * @return the index of the accessed object among parameters (starting from 0),
  *   or -1 if the accessed object is the receiver object itself.
  */
-internal fun AtomicMethodDescriptor.getAccessedObjectIndex(obj: Any?, params: Array<Any?>): Int = when {
+fun AtomicMethodDescriptor.getAccessedObjectIndex(obj: Any?, params: Array<Any?>): Int = when {
     apiKind == ATOMIC_FIELD_UPDATER ||
     apiKind == VAR_HANDLE ||
     apiKind == UNSAFE ->
@@ -122,7 +122,7 @@ internal fun AtomicMethodDescriptor.getAccessedObjectIndex(obj: Any?, params: Ar
         -1
 }
 
-internal fun AtomicMethodDescriptor.getAccessedObject(obj: Any?, params: Array<Any?>): Any? = when {
+fun AtomicMethodDescriptor.getAccessedObject(obj: Any?, params: Array<Any?>): Any? = when {
     apiKind == ATOMIC_FIELD_UPDATER ||
     apiKind == VAR_HANDLE ||
     apiKind == UNSAFE ->
@@ -131,7 +131,7 @@ internal fun AtomicMethodDescriptor.getAccessedObject(obj: Any?, params: Array<A
         obj
 }
 
-internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>): Any? {
+fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>): Any? {
     require(kind.isSetter)
 
     var argOffset = 0
@@ -167,7 +167,7 @@ internal fun AtomicMethodDescriptor.getSetValue(obj: Any?, params: Array<Any?>):
     return params[argOffset]
 }
 
-internal fun AtomicMethodDescriptor.getAtomicAccessInfo(
+fun AtomicMethodDescriptor.getAtomicAccessInfo(
     context: TraceContext,
     receiver: Any,
     arguments: Array<Any?>,
@@ -197,7 +197,7 @@ internal fun AtomicMethodDescriptor.getAtomicObjectAccessInfo(
     )
 }
 
-internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
+fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
     atomicArray: Any,
     arguments: Array<Any?>
 ): AtomicMethodAccessInfo {
@@ -222,7 +222,7 @@ internal fun AtomicMethodDescriptor.getAtomicArrayAccessInfo(
     )
 }
 
-internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
+fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
     context: TraceContext,
     receiver: Any,
     arguments: Array<Any?>
@@ -266,7 +266,7 @@ internal fun AtomicMethodDescriptor.getAtomicFieldUpdaterAccessInfo(
     }
 }
 
-internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
+fun AtomicMethodDescriptor.getUnsafeAccessInfo(
     context: TraceContext,
     receiver: Any,
     arguments: Array<Any?>
@@ -333,7 +333,7 @@ internal fun AtomicMethodDescriptor.getUnsafeAccessInfo(
     }
 }
 
-internal fun AtomicMethodDescriptor.getVarHandleAccessInfo(
+fun AtomicMethodDescriptor.getVarHandleAccessInfo(
     context: TraceContext,
     varHandle: Any,
     arguments: Array<Any?>
@@ -467,11 +467,11 @@ private class VarHandleInstanceFieldExtractor(varHandleClass: Class<*>) {
     }
 }
 
-internal fun isAtomic(receiver: Any?) =
+fun isAtomic(receiver: Any?) =
     isJavaAtomic(receiver) ||
     isAtomicFU(receiver)
 
-internal fun isJavaAtomic(receiver: Any?) =
+fun isJavaAtomic(receiver: Any?) =
     // java.util.concurrent
     receiver is AtomicReference<*> ||
     receiver is AtomicBoolean ||
@@ -512,7 +512,7 @@ internal fun isAtomicFUClass(className: String) =
 internal fun isAtomicMethod(className: String, methodName: String) =
     isAtomicClass(className) && methodName in atomicMethods
 
-internal fun getAtomicType(atomic: Any?): Types.Type? = when (atomic) {
+fun getAtomicType(atomic: Any?): Types.Type? = when (atomic) {
     is AtomicReference<*>       -> Types.OBJECT_TYPE
     is AtomicBoolean            -> Types.BOOLEAN_TYPE
     is AtomicInteger            -> Types.INT_TYPE
@@ -520,7 +520,7 @@ internal fun getAtomicType(atomic: Any?): Types.Type? = when (atomic) {
     else                        -> null
 }
 
-internal fun isAtomicArray(receiver: Any?) =
+fun isAtomicArray(receiver: Any?) =
     isAtomicArrayJava(receiver) ||
     isAtomicFUArray(receiver)
 
@@ -560,7 +560,7 @@ internal fun isAtomicFUArrayClass(className: String) =
 internal fun isAtomicArrayMethod(className: String, methodName: String) =
     isAtomicArrayClass(className) && methodName in atomicMethods
 
-internal fun getAtomicArrayType(atomic: Any?): Types.Type? = when (atomic) {
+fun getAtomicArrayType(atomic: Any?): Types.Type? = when (atomic) {
     is AtomicReferenceArray<*>  -> Types.OBJECT_TYPE
     is AtomicIntegerArray       -> Types.INT_TYPE
     is AtomicLongArray          -> Types.LONG_TYPE
@@ -712,7 +712,7 @@ internal fun isVarHandleInstanceFieldClass(className: String) =
 internal fun isVarHandleMethod(className: String, methodName: String) =
     isVarHandleClass(className) && methodName in varHandleMethods
 
-internal fun getVarHandleAccessType(varHandle: Any?): Types.Type? {
+fun getVarHandleAccessType(varHandle: Any?): Types.Type? {
     val className = varHandle?.javaClass?.name ?: return null
     return when {
         "Int"       in className -> Types.INT_TYPE
@@ -729,7 +729,7 @@ internal fun getVarHandleAccessType(varHandle: Any?): Types.Type? {
     }
 }
 
-internal fun isUnsafe(receiver: Any?): Boolean =
+fun isUnsafe(receiver: Any?): Boolean =
     if (receiver != null) isUnsafeClass(receiver::class.java.name) else false
 
 internal fun isUnsafeClass(className: String) =
@@ -739,7 +739,7 @@ internal fun isUnsafeClass(className: String) =
 internal fun isUnsafeMethod(className: String, methodName: String) =
     isUnsafeClass(className) && methodName in unsafeMethods
 
-internal fun parseUnsafeMethodAccessType(methodName: String): Types.Type? = when {
+fun parseUnsafeMethodAccessType(methodName: String): Types.Type? = when {
     "Boolean"   in methodName -> Types.BOOLEAN_TYPE
     "Byte"      in methodName -> Types.BYTE_TYPE
     "Short"     in methodName -> Types.SHORT_TYPE

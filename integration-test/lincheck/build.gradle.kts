@@ -40,5 +40,6 @@ tasks {
         enableAssertions = true
         testLogging.showStandardStreams = true
         outputs.upToDateWhen { false } // Always run tests when called
+        outputs.cacheIf { false }
     }
 }

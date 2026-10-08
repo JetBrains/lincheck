@@ -15,9 +15,6 @@ import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.install
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentation
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentationMode
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.isEagerlyInstrumentedClass
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.shouldTransform
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer.transformedClassesCache
 import org.jetbrains.lincheck.jvm.agent.transformers.coroutineCallingClasses
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
@@ -25,7 +22,7 @@ import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.collections.*
 import java.lang.instrument.Instrumentation
 import java.io.File
-import java.io.StringWriter
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.jar.JarFile
 import java.util.*
@@ -126,6 +123,11 @@ val InstrumentationMode.supportsLazyTransformation: Boolean get() = when (this) 
     else -> false
 }
 
+val InstrumentationMode.maintainsSourceFileIndex: Boolean get() = when (this) {
+    LIVE_DEBUGGING -> true
+    else -> false
+}
+
 enum class InstrumentationStrategy {
     /**
      * Lazy transformation: instrument classes only when we actually call them.
@@ -144,31 +146,19 @@ enum class InstrumentationStrategy {
 }
 
 /**
- * The state of the Lincheck instrumentation lifecycle.
- *
- * Transitions: [INACTIVE] --install--> [ACTIVE] --uninstall--> [UNINSTALLING] --> [INACTIVE].
- */
-enum class InstrumentationState {
-    /** No instrumentation is installed. */
-    INACTIVE,
-
-    /** The instrumentation is installed; the transformer instruments matching classes. */
-    ACTIVE,
-
-    /**
-     * [LincheckInstrumentation.uninstall] is reverting the instrumentation:
-     * the transformer stays attached but hands the original class bytes back unchanged.
-     */
-    UNINSTALLING,
-}
-
-/**
  * [LincheckInstrumentation] implements the Lincheck bytecode instrumenting service.
  *
  * @property instrumentation The ByteBuddy instrumentation instance.
  * @property instrumentationMode The instrumentation mode, see [InstrumentationMode] for details.
  */
 object LincheckInstrumentation {
+
+    /**
+     * Isolated payload loader used by the standalone tracing agents; null for the Lincheck framework.
+     */
+    @JvmStatic
+    var agentClassLoader: ClassLoader? = null
+
     /**
      * The [Instrumentation] instance is used to perform bytecode transformations during runtime.
      *
@@ -197,20 +187,19 @@ object LincheckInstrumentation {
      * Determines instrumentation strategy, see [InstrumentationMode].
      */
     lateinit var instrumentationMode: InstrumentationMode
-        // TODO: currently set externally in Playground.kt, refactor it later
-        // private set
-
-    /**
-     * Represents a configuration profile controlling bytecode transformations applied to classes and methods,
-     * see [TransformationProfile] for details.
-     */
-    lateinit var transformationProfile: TransformationProfile
         private set
 
     /**
      * Strategy that controls whether classes are transformed lazily (during call time) or eagerly (during load time).
      */
     lateinit var instrumentationStrategy: InstrumentationStrategy
+        private set
+
+    /**
+     * The transformer registered by [install]; null when the instrumentation is not installed.
+     */
+    @Volatile
+    var transformer: LincheckClassFileTransformer? = null
         private set
 
     /**
@@ -223,8 +212,10 @@ object LincheckInstrumentation {
 
     /**
      * Names (canonical) of the classes that were instrumented since the last agent installation.
+     *
+     * Concurrent: [LincheckClassFileTransformer] adds classes transformed on load from class-loading threads.
      */
-    val instrumentedClasses = HashSet<String>()
+    val instrumentedClasses: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     /**
      * Trace context for the current agent run.
@@ -232,14 +223,13 @@ object LincheckInstrumentation {
     val context = TraceContext()
 
     /**
-     * The current state of the instrumentation lifecycle, see [InstrumentationState].
-     *
-     * While the state is [InstrumentationState.UNINSTALLING] the transformer stays attached and
-     * returns the original class bytes as-is, see [LincheckClassFileTransformer.transform] for the reasoning.
+     * In order not to transform the same class several times,
+     * Lincheck caches the transformed bytes in this object.
+     * Notice that the transformation depends on the [InstrumentationMode].
+     * Additionally, this object caches bytes of non-transformed classes.
      */
-    @Volatile
-    internal var instrumentationState = InstrumentationState.INACTIVE
-        private set
+    private val transformedClassesCachesByMode =
+        ConcurrentHashMap<InstrumentationMode, ConcurrentHashMap<String, ByteArray>>()
 
     fun attachJavaAgentStatically(instrumentation: Instrumentation) {
         check(javaAgentAttachType == null) {
@@ -287,10 +277,12 @@ object LincheckInstrumentation {
      * Also, retransforms already loaded classes.
      */
     fun install(instrumentationMode: InstrumentationMode) {
+        // Load the file facade before registering the transformer, which calls its extension getters.
+        // Loading it from a transformation callback can recursively define it and cause a LinkageError.
+        ensureLincheckInstrumentationKt()
+
         this.instrumentationMode = instrumentationMode
-        instrumentationState = InstrumentationState.ACTIVE
         setInstrumentationStrategy()
-        setTransformationProfile()
 
         // The bytecode injections must be loaded with the bootstrap class loader,
         // as the `java.base` module is loaded with it. To achieve that, we pack the
@@ -302,9 +294,31 @@ object LincheckInstrumentation {
         // already appended the jar earlier themselves won't trigger a duplicate appending here.
         appendBootstrapJarToClassLoaderSearch()
 
+        // Create bytecode transformer.
+        val transformer = LincheckClassFileTransformer(
+            instrumentationMode = instrumentationMode,
+            instrumentationStrategy = instrumentationStrategy,
+            transformationProfile = createTransformationProfile(),
+            transformedClassesCache = transformedClassesCachesByMode.computeIfAbsent(instrumentationMode) {
+                ConcurrentHashMap()
+            },
+            context = context,
+        )
+        this.transformer = transformer
+
         // Add the Lincheck bytecode transformer to this JVM instance,
         // allowing already loaded classes re-transformation.
-        instrumentation.addTransformer(LincheckClassFileTransformer, true)
+        instrumentation.addTransformer(transformer, true)
+
+        // If requested by the instrumentation mode, index the classes that were already loaded —
+        // the ones the transformer will never see.
+        // Everything loaded from now on reaches the index through it.
+        // Must run after the transformer is registered: the index's fallback re-transformation
+        // relies on it being there to receive the bytes.
+        if (instrumentationMode.maintainsSourceFileIndex) {
+            SourceFileClassIndex.indexClasses(getLoadedClassesToIndex())
+        }
+
         // The transformation logic depends on the testing strategy.
         when {
             // In the stress testing mode, we use an additional optimization.
@@ -323,7 +337,7 @@ object LincheckInstrumentation {
                 val classes = getLoadedClassesToInstrument().filter {
                     val canonicalClassName = it.name
                     // new classes that were loaded after the latest STRESS mode re-transformation
-                    !transformedClassesCache.containsKey(canonicalClassName) ||
+                    !transformer.transformedClassesCache.containsKey(canonicalClassName) ||
                     // old classes that were already loaded before and have coroutine method calls inside
                     canonicalClassName in coroutineCallingClasses
                 }
@@ -357,40 +371,44 @@ object LincheckInstrumentation {
         }
     }
 
+    private fun ensureLincheckInstrumentationKt() = lincheckInstrumentationKtLoaded
+
     /**
      * Detaches [LincheckClassFileTransformer] from this JVM instance and re-transforms
      * the transformed classes to remove the Lincheck injections.
      */
     fun uninstall() {
+        val transformer = checkNotNull(transformer) { "Lincheck instrumentation is not installed" }
         // Keep the transformer attached until the re-transformation below is done;
         // while the state is `UNINSTALLING` it returns the original class bytes unchanged,
         // which strips the Lincheck injections just as detaching the transformer would,
         // but additionally keeps the JVM's cache of the original class file alive on JDK 20+
         // (see `LincheckClassFileTransformer.transform`).
-        instrumentationState = InstrumentationState.UNINSTALLING
+        transformer.startUninstall()
         try {
-            // Collect the set of instrumented classes.
-            val classes = if (instrumentationStrategy == InstrumentationStrategy.EAGER)
-                getLoadedClassesToInstrument()
-            else
-                getLoadedClassesToInstrument()
-                // Skip classes not transformed by Lincheck.
-                .filter { clazz ->
-                    val canonicalClassName = clazz.name
-                    canonicalClassName in instrumentedClasses
-                }
+            // Revert only the classes that the transformer actually handed back modified during this
+            // installation (see `LincheckClassFileTransformer.transform`), under either strategy.
+            // Re-transforming every loaded class instead is prohibitively expensive on JDK < 13,
+            // where HotSpot walks the whole code cache once per redefined class to find dependent
+            // compiled methods, so a per-test revert of thousands of untouched classes took tens of seconds.
+            val classes = getLoadedClassesToInstrument().filter { clazz ->
+                clazz.name in instrumentedClasses
+            }
             // `retransformClasses` uses initial (loaded in VM from disk) class bytecode and reapplies
             // transformations of all agents that did not remove their transformers to this moment;
             retransformClasses(classes)
         } finally {
             // Remove the Lincheck transformer.
-            instrumentation.removeTransformer(LincheckClassFileTransformer)
-            instrumentationState = InstrumentationState.INACTIVE
+            instrumentation.removeTransformer(transformer)
+            this.transformer = null
         }
+        // With no transformer attached, classes load unobserved, so the source-file index would
+        // silently go incomplete; drop it and let the next installation rebuild it.
+        SourceFileClassIndex.clear()
         // Clear the set of instrumented classes.
         instrumentedClasses.clear()
         // Report statistics if requested.
-        reportStatistics()
+        transformer.reportStatistics()
     }
 
     /**
@@ -418,38 +436,53 @@ object LincheckInstrumentation {
     }
 
     /**
-     * Configures and sets the transformation profile based on the current instrumentation mode.
+     * Creates the transformation profile for the current instrumentation mode.
      */
-    private fun setTransformationProfile() {
+    private fun createTransformationProfile(): TransformationProfile {
         val (includeClasses, excludeClasses) = if (instrumentationMode == TRACE_RECORDING) {
             TraceAgentParameters.getIncludePatterns() to TraceAgentParameters.getExcludePatterns()
         } else {
             emptyList<String>() to emptyList<String>()
         }
-        transformationProfile = createTransformationProfile(
+        return createTransformationProfile(
             instrumentationMode,
             includeClasses = includeClasses,
             excludeClasses = excludeClasses,
         )
     }
 
+    /**
+     * Re-transforms [classes], in batches, skipping and logging the ones that fail.
+     *
+     * Batched because a `retransformClasses` call runs as a single VM operation:
+     * passing an unbounded list would mean an unbounded safepoint pause.
+     * A batch is also the unit the failure fallback degrades,
+     * so one bad class does not force every other class one by one.
+     */
     fun retransformClasses(classes: List<Class<*>>) {
         // for some reason, trying to call `retransformClasses` on an empty list can throw NPE on JVM 8
         if (classes.isEmpty()) return
 
-        // failsafe guardrails:
-        // 1. first try to retransform all classes in one bulk
-        // 2. if transformation fails for some class => retransform classes one by one,
-        //    thus skipping and logging failing classes
-        try {
-            instrumentation.retransformClasses(*classes.toTypedArray())
-        } catch (t: Throwable) {
-            Logger.warn(t) { "Failed to retransform ${classes.size} classes in bulk, retrying one by one" }
-            classes.forEach { retransformClass(it) }
+        val retransformableClasses = classes.filter { canRetransformClass(it) }
+        for (classBatch in retransformableClasses.chunked(CLASS_RETRANSFORM_BATCH_SIZE)) {
+            // failsafe guardrails:
+            // 1. first try to retransform the whole batch in one bulk
+            // 2. if transformation fails for some class => retransform classes one by one,
+            //    thus skipping and logging failing classes
+            try {
+                instrumentation.retransformClasses(*classBatch.toTypedArray())
+            } catch (t: Throwable) {
+                Logger.warn(t) { "Failed to retransform classes in batch of size ${classBatch.size}, retrying one by one" }
+                classBatch.forEach { retransformClass(it) }
+            }
         }
     }
 
-    private fun retransformClass(clazz: Class<*>) {
+    /**
+     * Re-transforms the given [clazz], skipping and logging if the re-transformation fails.
+     */
+    fun retransformClass(clazz: Class<*>) {
+        if (!canRetransformClass(clazz)) return
         try {
             instrumentation.retransformClasses(clazz)
         } catch (t: Throwable) {
@@ -473,11 +506,10 @@ object LincheckInstrumentation {
      * some code paths may reference bootstrap classes *before* [install] runs.
      * Those callers need to invoke this method explicitly right after attach.
      * [install] still calls it as a safety net to guarantee correct behavior for clients that
-     * don not call [appendBootstrapJarToClassLoaderSearch] themself in advance.
+    * don not call [appendBootstrapJarToClassLoaderSearch] themself in advance.
      */
     fun appendBootstrapJarToClassLoaderSearch() {
-        // Atomic guard: the first thread to flip false -> true does the append; others bail.
-        if (!isBootstrapJarAddedToClasspath.compareAndSet(false, true)) return
+        if (isBootstrapJarAddedToClasspath.get()) return
 
         // The "bootstrap" module is packed to "bootstrap.jar", which is in this JAR's
         // resources. We can't instantiate a `File` for a path inside a JAR, so we copy
@@ -490,17 +522,89 @@ object LincheckInstrumentation {
                 input!!.copyTo(fileOut)
             }
         }
-        instrumentation.appendToBootstrapClassLoaderSearch(JarFile(tempBootstrapJarFile))
+        appendBootstrapJarToClassLoaderSearch(instrumentation, JarFile(tempBootstrapJarFile))
+    }
+
+    /**
+     * Appends a wrapper-provided `bootstrap.jar` to the bootstrap classloader's search path.
+     *
+     * This overload lets the client supply `bootstrap.jar` file
+     * instead of looking-up it in the current jar resouces.
+     */
+    @JvmStatic
+    fun appendBootstrapJarToClassLoaderSearch(instrumentation: Instrumentation, bootstrapJar: JarFile) {
+        // Atomic guard: the first thread to flip false -> true does the append; others bail.
+        if (!isBootstrapJarAddedToClasspath.compareAndSet(false, true)) return
+        instrumentation.appendToBootstrapClassLoaderSearch(bootstrapJar)
     }
 
     private fun getLoadedClassesToInstrument(): List<Class<*>> =
         instrumentation.allLoadedClasses.filter { shouldTransform(it, instrumentationMode) }
 
-    private fun canRetransformClass(clazz: Class<*>): Boolean =
-        instrumentation.isModifiableClass(clazz) &&
-        // java lambda classes are special case --- they are not retransformed themselves,
-        // rather their enclosing class is retransformed, see below
-        !isJavaLambdaClass(clazz.name)
+    private fun getLoadedClassesToIndex(): List<Class<*>> =
+        instrumentation.allLoadedClasses.filter { isIndexedClass(it) }
+
+    /**
+     * Checks whether the given [clazz] is indexable.
+     */
+    internal fun isIndexedClass(clazz: Class<*>): Boolean =
+        !clazz.isPrimitive && !clazz.isArray && isIndexedClassName(clazz.name)
+
+    /**
+     * Checks whether a class named [className] is indexable.
+     */
+    internal fun isIndexedClassName(className: String): Boolean =
+        // The Lincheck-package test stays first, so that the re-transformability test below
+        // never sees one of our own classes --- see the ordering note on `shouldTransform`.
+        !isInLincheckPackage(className) &&
+        !isRecognizedUninstrumentedStandardLibraryClass(className) &&
+        canRetransformClass(className)
+
+    /**
+     * Checks whether the given [clazz] can be re-transformed.
+     */
+    internal fun canRetransformClass(clazz: Class<*>): Boolean =
+        instrumentation.isModifiableClass(clazz) && canRetransformClass(clazz.name)
+
+    /**
+     * Checks whether a class named [className] can be re-transformed, judged by its name alone.
+     *
+     * Approximate: with no [Class] object precise check is impossible,
+     * so this only rules out the kinds the JVM never re-transforms whatever their state:
+     * - java lambda classes, which are a special case in that they are not retransformed themselves,
+     *   rather their enclosing class is;
+     * - hidden classes, which have no class file to hand back (determined by heuristic class name check).
+     *
+     * Prefer the [Class] overload wherever the object is available, as it returns the precise decision.
+     */
+    internal fun canRetransformClass(className: String): Boolean =
+        !isJavaLambdaClass(className) && !isHiddenClass(className)
+
+    internal fun shouldTransform(
+        className: String,
+        instrumentationMode: InstrumentationMode,
+        loader: ClassLoader?,
+    ): Boolean {
+        val transformationProfile = transformer?.transformationProfile ?: return false
+        return shouldTransform(className, loader, transformationProfile)
+    }
+
+    @Suppress("SpellCheckingInspection")
+    internal fun shouldTransform(
+        className: String,
+        loader: ClassLoader?,
+        transformationProfile: TransformationProfile,
+    ): Boolean {
+        // NEVER instrument the Lincheck classes.
+        // Perform these checks FIRST to avoid potential class loading circularity errors.
+        if (isInLincheckPackage(className)) return false
+        if (agentClassLoader != null && loader === agentClassLoader) return false
+
+        // Under lazy strategy instrument eagerly instrumented classes early-on.
+        if (instrumentationStrategy == InstrumentationStrategy.LAZY && isEagerlyInstrumentedClass(className)) return true
+
+        return transformationProfile.shouldTransform(className)
+    }
 
     private fun shouldTransform(clazz: Class<*>, instrumentationMode: InstrumentationMode): Boolean =
         // Filtering is done in the following order to hide lincheck source classes from
@@ -509,16 +613,24 @@ object LincheckInstrumentation {
         // when it itself is passed as an argument to `canRetransformClass`.
         shouldTransform(clazz.name, instrumentationMode, clazz.classLoader) && canRetransformClass(clazz)
 
-    fun reportStatistics() {
-        if (collectTransformationStatistics) {
-            val writer = StringWriter()
-            LincheckClassFileTransformer.computeStatistics()?.writeTo(writer)
-            LincheckClassFileTransformer.resetStatistics()
+    // We should always eagerly transform the following classes.
+    internal fun isEagerlyInstrumentedClass(className: String): Boolean =
+        // `ClassLoader` classes, to wrap `loadClass` methods in the ignored section.
+        isClassLoaderClassName(className) ||
+        // `MethodHandle` class, to wrap its methods (except `invoke` methods) in the ignored section.
+        isMethodHandleRelatedClass(className) ||
+        // `StackTraceElement` class, to wrap all its methods into the ignored section.
+        isStackTraceElementClass(className) ||
+        // IntelliJ runtime agents, to wrap all their methods into the ignored section.
+        isIntellijRuntimeAgentClass(className) ||
+        // `ThreadContainer` classes, to detect threads started in the thread containers.
+        isThreadContainerClass(className)
 
-            Logger.info { "Transformation statistics:\n" +
-                writer.toString().lines().joinToString("\n") { "\t$it" }
-            }
-        }
+    /**
+     * Logs the transformation statistics of the current installation, if requested, and resets them.
+     */
+    fun reportStatistics() {
+        transformer?.reportStatistics()
     }
 
     /**
@@ -594,7 +706,7 @@ object LincheckInstrumentation {
         visitedClasses += clazz.name
 
         if (shouldTransform(clazz, instrumentationMode)) {
-            instrumentedClasses += clazz.name
+            transformer?.requestLazyTransformation(clazz.name)
             classesToTransform += clazz
         } else if (isJavaLambdaClass(clazz.name)) {
             val enclosingClassName = getJavaLambdaEnclosingClass(clazz.name)
@@ -689,21 +801,31 @@ object LincheckInstrumentation {
      * Checks if a class with the given canonical name has already been loaded by the JVM.
      *
      * @param canonicalClassName The canonical class name (e.g., "java.lang.String")
+     * @param classLoader Only classes defined by a loader visible from this one count as loaded:
+     *   its delegation chain plus the bootstrap loader it bottoms out at.
      * @return true if the class is loaded, false otherwise or if instrumentation is not initialized
      */
     fun isClassLoaded(canonicalClassName: String, classLoader: ClassLoader): Boolean {
         if (!isInitialized) {
             return false
         }
-        val expectedClassLoaders = Collections.newSetFromMap<ClassLoader>(IdentityHashMap())
+        val visibleClassLoaders = Collections.newSetFromMap<ClassLoader>(IdentityHashMap())
         var loader: ClassLoader? = classLoader
         while (loader != null) {
-            expectedClassLoaders.add(loader)
+            visibleClassLoaders.add(loader)
             loader = loader.parent
         }
-        return instrumentation.allLoadedClasses.any {
-            it.name == canonicalClassName && expectedClassLoaders.contains(it.classLoader)
+        for (clazz in instrumentation.allLoadedClasses) {
+            if (clazz.name != canonicalClassName) continue
+            val definingClassLoader = clazz.classLoader
+
+            // Delegation bottoms out at the bootstrap loader, which is represented by `null`
+            // and so never appears in the parent chain walked above:
+            // a bootstrap-loaded class is visible from every class loader.
+            if (definingClassLoader == null) return true
+            if (visibleClassLoaders.contains(definingClassLoader)) return true
         }
+        return false
     }
 
     /**
@@ -716,14 +838,11 @@ object LincheckInstrumentation {
      * the Lincheck agent re-transforms all the loaded classes on each run.
      */
     internal val INSTRUMENT_ALL_CLASSES = System.getProperty("lincheck.instrumentAllClasses")?.toBoolean() ?: false
+
+    /**
+     * Size of classes batch re-transformed via JVM's [Instrumentation.retransformClasses].
+     */
+    private const val CLASS_RETRANSFORM_BATCH_SIZE = 512
 }
 
-internal val dumpTransformedSources by lazy {
-    System.getProperty(DUMP_TRANSFORMED_SOURCES_PROPERTY, "false").toBoolean()
-}
-private const val DUMP_TRANSFORMED_SOURCES_PROPERTY = "lincheck.dumpTransformedSources"
-
-internal val collectTransformationStatistics by lazy {
-    System.getProperty(COLLECT_TRANSFORMATION_STATISTICS_PROPERTY, "false").toBoolean()
-}
-private const val COLLECT_TRANSFORMATION_STATISTICS_PROPERTY = "lincheck.collectTransformationStatistics"
+private val lincheckInstrumentationKtLoaded = Unit

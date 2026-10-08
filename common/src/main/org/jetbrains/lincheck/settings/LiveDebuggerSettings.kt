@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.settings
 
+import org.jetbrains.lincheck.settings.blocklist.BlocklistEngine
+import org.jetbrains.lincheck.settings.blocklist.DynamicExtentChecker
 import org.jetbrains.lincheck.util.*
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.io.File
@@ -22,6 +24,12 @@ import java.util.*
  * Name of the environment variable carrying the base URL of the control-plane service.
  */
 const val LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR = "LIVE_DEBUGGER_CONTROL_PLANE_URL"
+
+/**
+ * Name of the environment variable carrying the API token presented to the control plane
+ * named by [LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR].
+ */
+const val LIVE_DEBUGGER_CONTROL_PLANE_TOKEN_ENV_VAR = "LIVE_DEBUGGER_CONTROL_PLANE_TOKEN"
 
 /**
  * Internal simple integer-based identifiers for breakpoints.
@@ -48,6 +56,9 @@ class RemoveBreakpointsResult(
     val notFound: List<UUID>,
 )
 
+/** Shared live debugger settings used by instrumentation and snapshot capture. */
+val liveDebuggerSettings = LiveDebuggerSettings()
+
 class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList()) {
 
     /**
@@ -55,6 +66,12 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
      * statically-decidable blocked area; the instrumentation stage remains authoritative.
      */
     val blocklistRegistry = SensitiveAreaBlocklistRegistry()
+
+    /** Authoritative sensitive-area blocklist matcher, backed by [blocklistRegistry]. */
+    val blocklistEngine = BlocklistEngine(blocklistRegistry)
+
+    /** Dynamic-extent checker over [blocklistEngine]; consulted on the capture hot path. */
+    val dynamicExtentChecker = DynamicExtentChecker(blocklistEngine)
 
     /** Active capture-time data-redaction templates, partitioned by policy owner. */
     val redactionRegistry = RedactionTemplateRegistry()
@@ -67,7 +84,6 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
      */
     @Volatile
     var requiredRedactionPolicyValid: Boolean = true
-        internal set
 
     /**
      * Source of unique [BreakpointId] handles assigned at registration time.
@@ -252,15 +268,24 @@ class LiveDebuggerSettings(lineBreakpoints: List<SnapshotBreakpoint> = emptyList
  * @property watchLabels Ordered watch expressions corresponding to values returned by the watch supplier.
  *   Null when no label metadata is available — a payload encoded before labels existed, or a startup INI
  *   without the `watchLabels` key. Capture must not confuse that with "this breakpoint has no watches".
+ * @property expressionLanguage The language of every source-carried expression on this breakpoint.
+ * @property conditionSource The condition as source text, for agents advertising
+ *   `AGENT_COMPILED_EXPRESSIONS_V1`: the agent compiles it at instrumentation time in the language
+ *   of [fileName]. Ignored when [conditionClasses] already carries precompiled bytecode.
+ * @property watchSources Watch expressions as source text, compiled agent-side under the same
+ *   capability. Ignored when [watchClasses] already carries precompiled bytecode.
  */
 class SnapshotBreakpoint(
     val uuid: UUID,
     val className: String,
     val fileName: String,
     val lineNumber: Int,
+    val expressionLanguage: String? = null,
+    val conditionSource: String? = null,
     val conditionClassName: String? = null,
     val conditionFactoryMethodName: String? = null,
     val conditionClasses: Map<String, ByteArray>? = null,
+    val watchSources: List<String>? = null,
     val watchClassName: String? = null,
     val watchFactoryMethodName: String? = null,
     val watchClasses: Map<String, ByteArray>? = null,
@@ -275,6 +300,9 @@ class SnapshotBreakpoint(
 
     companion object {
         const val DEFAULT_HIT_LIMIT = 10_000
+        const val EXPRESSION_LANGUAGE_JAVA = "JAVA"
+        const val EXPRESSION_LANGUAGE_KOTLIN = "KOTLIN"
+        const val EXPRESSION_LANGUAGE_JVM_BYTECODE = "JVM_BYTECODE"
 
         /**
          * Decodes a breakpoint from the string produced by [encodeToString].
@@ -296,12 +324,18 @@ class SnapshotBreakpoint(
             val watchClasses = decodeClassMap(parts.getOrNull(9))
             val hitLimit = parts.getOrNull(10)?.toIntOrNull() ?: DEFAULT_HIT_LIMIT
             val watchLabels = decodeWatchLabels(parts.getOrNull(11))
+            // Source-carried expressions (AGENT_COMPILED_EXPRESSIONS_V1); appended fields,
+            // so payloads encoded before them still decode.
+            val conditionSource = decodeSourceText(parts.getOrNull(12))
+            val watchSources = decodeWatchLabels(parts.getOrNull(13))
+            val expressionLanguage = parts.getOrNull(14)?.let { if (it == "null") null else it }
 
             return SnapshotBreakpoint(
                 uuid = uuid,
                 className = className,
                 fileName = fileName,
                 lineNumber = lineNumber,
+                expressionLanguage = expressionLanguage,
                 conditionClassName = conditionClassName,
                 conditionFactoryMethodName = conditionFactoryMethodName,
                 conditionClasses = conditionClasses,
@@ -310,6 +344,8 @@ class SnapshotBreakpoint(
                 watchClasses = watchClasses,
                 hitLimit = hitLimit,
                 watchLabels = watchLabels,
+                conditionSource = conditionSource,
+                watchSources = watchSources,
             )
         }
 
@@ -352,6 +388,21 @@ class SnapshotBreakpoint(
             }
         }
 
+        /** Encodes one source-text field (condition) as delimiter-safe Base64, or `"null"`. */
+        fun encodeSourceText(source: String?): String =
+            if (source.isNullOrEmpty()) "null"
+            else Base64.getEncoder().encodeToString(source.toByteArray(Charsets.UTF_8))
+
+        /** Decodes the field produced by [encodeSourceText]. */
+        fun decodeSourceText(encoded: String?): String? {
+            if (encoded == null || encoded == "null") return null
+            return try {
+                String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+            } catch (e: IllegalArgumentException) {
+                throw IllegalArgumentException("Invalid Base64 expression source", e)
+            }
+        }
+
         /**
          * Decodes the field produced by [encodeWatchLabels].
          *
@@ -379,7 +430,7 @@ class SnapshotBreakpoint(
      * (e.g. `com.Foo|CAFEBABE;com.Foo$Companion|DEADBEEF`), or the literal `"null"`.
      */
     fun encodeToString(): String {
-        val parts = listOf(
+        val parts = mutableListOf(
             uuid.toString(),
             className,
             fileName,
@@ -392,7 +443,13 @@ class SnapshotBreakpoint(
             encodeClassMap(watchClasses),
             hitLimit.toString(),
             encodeWatchLabels(watchLabels),
+            encodeSourceText(conditionSource),
+            encodeWatchLabels(watchSources),
+            expressionLanguage ?: "null",
         )
+        // The source-expression fields are appended only when carried, so a breakpoint without
+        // them encodes exactly as before the fields existed.
+        while (parts.size > 12 && parts.last() == "null") parts.removeAt(parts.size - 1)
         return parts.joinToString(":")
     }
 
@@ -486,6 +543,31 @@ fun Iterable<SnapshotBreakpoint>.applicableTo(className: String, sourceFileName:
     filter { it.isApplicableTo(className, sourceFileName) }
 
 /**
+ * Keys of the breakpoints INI format, shared by [BreakpointsFileParser] and [BreakpointsFileWriter].
+ *
+ * Source-carried expressions, compiled by the agent (AGENT_COMPILED_EXPRESSIONS_V1):
+ * `conditionSource` is plain source text; `watchSources` uses the same
+ * semicolon-separated Base64 list encoding as `watchLabels`.
+ */
+private object IniKey {
+    const val UUID = "uuid"
+    const val CLASS_NAME = "className"
+    const val FILE_NAME = "fileName"
+    const val LINE_NUMBER = "lineNumber"
+    const val HIT_LIMIT = "hitLimit"
+    const val EXPRESSION_LANGUAGE = "expressionLanguage"
+    const val CONDITION_SOURCE = "conditionSource"
+    const val CONDITION_CLASS_NAME = "conditionClassName"
+    const val CONDITION_FACTORY_METHOD_NAME = "conditionFactoryMethodName"
+    const val CONDITION_CLASSES = "conditionClasses"
+    const val WATCH_SOURCES = "watchSources"
+    const val WATCH_CLASS_NAME = "watchClassName"
+    const val WATCH_FACTORY_METHOD_NAME = "watchFactoryMethodName"
+    const val WATCH_CLASSES = "watchClasses"
+    const val WATCH_LABELS = "watchLabels"
+}
+
+/**
  * Parses information about breakpoints from an INI configuration file.
  *
  * Expected file format:
@@ -519,19 +601,6 @@ fun Iterable<SnapshotBreakpoint>.applicableTo(className: String, sourceFileName:
 object BreakpointsFileParser {
 
     private val SECTION_NAME_REGEX = Regex("Breakpoint \\d+")
-
-    private const val KEY_UUID = "uuid"
-    private const val KEY_CLASS_NAME = "className"
-    private const val KEY_FILE_NAME = "fileName"
-    private const val KEY_LINE_NUMBER = "lineNumber"
-    private const val KEY_HIT_LIMIT = "hitLimit"
-    private const val KEY_CONDITION_CLASS_NAME = "conditionClassName"
-    private const val KEY_CONDITION_FACTORY_METHOD_NAME = "conditionFactoryMethodName"
-    private const val KEY_CONDITION_CLASSES = "conditionClasses"
-    private const val KEY_WATCH_CLASS_NAME = "watchClassName"
-    private const val KEY_WATCH_FACTORY_METHOD_NAME = "watchFactoryMethodName"
-    private const val KEY_WATCH_CLASSES = "watchClasses"
-    private const val KEY_WATCH_LABELS = "watchLabels"
 
     /**
      * Parses breakpoints from an INI file.
@@ -600,33 +669,36 @@ object BreakpointsFileParser {
     }
 
     private fun convertToSnapshotBreakpoint(properties: Map<String, String>): SnapshotBreakpoint {
-        val className = properties[KEY_CLASS_NAME]
-        val fileName = properties[KEY_FILE_NAME]
+        val className = properties[IniKey.CLASS_NAME]
+        val fileName = properties[IniKey.FILE_NAME]
 
-        requireNotNull(className) { "Missing required property '$KEY_CLASS_NAME'" }
-        requireNotNull(fileName) { "Missing required property '$KEY_FILE_NAME'" }
+        requireNotNull(className) { "Missing required property '${IniKey.CLASS_NAME}'" }
+        requireNotNull(fileName) { "Missing required property '${IniKey.FILE_NAME}'" }
         require(className.isNotBlank()) { "Class name is blank" }
         require(fileName.isNotBlank()) { "File name is blank" }
 
-        val lineNumber = properties[KEY_LINE_NUMBER]
-            .ensureNotNull { "Missing required property '$KEY_LINE_NUMBER'" }
+        val lineNumber = properties[IniKey.LINE_NUMBER]
+            .ensureNotNull { "Missing required property '${IniKey.LINE_NUMBER}'" }
             .toIntOrNull()
 
-        requireNotNull(lineNumber) { "Invalid line number: ${properties[KEY_LINE_NUMBER]}" }
+        requireNotNull(lineNumber) { "Invalid line number: ${properties[IniKey.LINE_NUMBER]}" }
         require(lineNumber > 0) { "Line number must be positive: $lineNumber" }
 
-        val conditionClassName = properties[KEY_CONDITION_CLASS_NAME]
-        val conditionFactoryMethodName = properties[KEY_CONDITION_FACTORY_METHOD_NAME]
-        val conditionClasses = parseClassMap(properties[KEY_CONDITION_CLASSES])
+        val conditionClassName = properties[IniKey.CONDITION_CLASS_NAME]
+        val conditionFactoryMethodName = properties[IniKey.CONDITION_FACTORY_METHOD_NAME]
+        val conditionClasses = parseClassMap(properties[IniKey.CONDITION_CLASSES])
 
-        val watchClassName = properties[KEY_WATCH_CLASS_NAME]
-        val watchFactoryMethodName = properties[KEY_WATCH_FACTORY_METHOD_NAME]
-        val watchClasses = parseClassMap(properties[KEY_WATCH_CLASSES])
-        val watchLabels = SnapshotBreakpoint.decodeWatchLabels(properties[KEY_WATCH_LABELS]?.ifBlank { null })
+        val watchClassName = properties[IniKey.WATCH_CLASS_NAME]
+        val watchFactoryMethodName = properties[IniKey.WATCH_FACTORY_METHOD_NAME]
+        val watchClasses = parseClassMap(properties[IniKey.WATCH_CLASSES])
+        val watchLabels = SnapshotBreakpoint.decodeWatchLabels(properties[IniKey.WATCH_LABELS]?.ifBlank { null })
+        val expressionLanguage = properties[IniKey.EXPRESSION_LANGUAGE]?.ifBlank { null }
+        val conditionSource = properties[IniKey.CONDITION_SOURCE]?.ifBlank { null }
+        val watchSources = SnapshotBreakpoint.decodeWatchLabels(properties[IniKey.WATCH_SOURCES]?.ifBlank { null })
 
-        val hitLimit = properties[KEY_HIT_LIMIT]?.toIntOrNull() ?: SnapshotBreakpoint.DEFAULT_HIT_LIMIT
+        val hitLimit = properties[IniKey.HIT_LIMIT]?.toIntOrNull() ?: SnapshotBreakpoint.DEFAULT_HIT_LIMIT
 
-        val uuid = properties[KEY_UUID]?.let {
+        val uuid = properties[IniKey.UUID]?.let {
             try {
                 UUID.fromString(it)
             } catch (e: IllegalArgumentException) {
@@ -639,6 +711,7 @@ object BreakpointsFileParser {
             className = className,
             fileName = fileName,
             lineNumber = lineNumber,
+            expressionLanguage = expressionLanguage,
             conditionClassName = conditionClassName,
             conditionFactoryMethodName = conditionFactoryMethodName,
             conditionClasses = conditionClasses,
@@ -647,9 +720,45 @@ object BreakpointsFileParser {
             watchClasses = watchClasses,
             hitLimit = hitLimit,
             watchLabels = watchLabels,
+            conditionSource = conditionSource,
+            watchSources = watchSources,
         )
     }
 
     private fun parseClassMap(value: String?): Map<String, ByteArray>? =
         SnapshotBreakpoint.decodeClassMap(value?.ifBlank { null })
+}
+
+/** Writes breakpoints in the INI format [BreakpointsFileParser] reads; optional fields are omitted when absent. */
+object BreakpointsFileWriter {
+
+    fun render(breakpoints: List<SnapshotBreakpoint>): String = buildString {
+        breakpoints.forEachIndexed { index, breakpoint ->
+            if (index > 0) appendLine()
+            appendLine("[Breakpoint ${index + 1}]")
+            appendLine("${IniKey.UUID} = ${breakpoint.uuid}")
+            appendLine("${IniKey.CLASS_NAME} = ${breakpoint.className}")
+            appendLine("${IniKey.FILE_NAME} = ${breakpoint.fileName}")
+            appendLine("${IniKey.LINE_NUMBER} = ${breakpoint.lineNumber}")
+            appendLine("${IniKey.HIT_LIMIT} = ${breakpoint.hitLimit}")
+            breakpoint.expressionLanguage?.let { appendLine("${IniKey.EXPRESSION_LANGUAGE} = $it") }
+            breakpoint.conditionSource?.let { appendLine("${IniKey.CONDITION_SOURCE} = $it") }
+            breakpoint.conditionClassName?.let { appendLine("${IniKey.CONDITION_CLASS_NAME} = $it") }
+            breakpoint.conditionFactoryMethodName?.let { appendLine("${IniKey.CONDITION_FACTORY_METHOD_NAME} = $it") }
+            breakpoint.conditionClasses?.let {
+                appendLine("${IniKey.CONDITION_CLASSES} = ${SnapshotBreakpoint.encodeClassMap(it)}")
+            }
+            breakpoint.watchSources?.takeIf { it.isNotEmpty() }?.let {
+                appendLine("${IniKey.WATCH_SOURCES} = ${SnapshotBreakpoint.encodeWatchLabels(it)}")
+            }
+            breakpoint.watchClassName?.let { appendLine("${IniKey.WATCH_CLASS_NAME} = $it") }
+            breakpoint.watchFactoryMethodName?.let { appendLine("${IniKey.WATCH_FACTORY_METHOD_NAME} = $it") }
+            breakpoint.watchClasses?.let {
+                appendLine("${IniKey.WATCH_CLASSES} = ${SnapshotBreakpoint.encodeClassMap(it)}")
+            }
+            breakpoint.watchLabels?.takeIf { it.isNotEmpty() }?.let {
+                appendLine("${IniKey.WATCH_LABELS} = ${SnapshotBreakpoint.encodeWatchLabels(it)}")
+            }
+        }
+    }
 }

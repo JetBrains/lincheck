@@ -13,6 +13,8 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.Types.convertAsmMethodType
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.trace.*
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*

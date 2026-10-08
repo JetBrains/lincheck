@@ -21,8 +21,7 @@ import java.lang.invoke.MethodType
 fun isInLincheckPackage(className: String) =
     className.startsWith(LINCHECK_PACKAGE_NAME) ||
     className.startsWith(LINCHECK_KOTLINX_PACKAGE_NAME) ||
-    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME) ||
-    className.startsWith(LINCHECK_RELOCATED_PACKAGE_PREFIX)
+    className.startsWith(LINCHECK_BOOTSTRAP_PACKAGE_NAME)
 
 val StackTraceElement.isLincheckInternals get() =
     this.className.startsWith(LINCHECK_PACKAGE_NAME) ||
@@ -30,9 +29,8 @@ val StackTraceElement.isLincheckInternals get() =
 
 internal const val LINCHECK_PACKAGE_NAME             = "org.jetbrains.lincheck."
 internal const val LINCHECK_KOTLINX_PACKAGE_NAME     = "org.jetbrains.kotlinx.lincheck."
-internal const val LINCHECK_RUNNER_PACKAGE_NAME      = "org.jetbrains.kotlinx.lincheck.runner."
+const val LINCHECK_RUNNER_PACKAGE_NAME               = "org.jetbrains.kotlinx.lincheck.runner."
 internal const val LINCHECK_BOOTSTRAP_PACKAGE_NAME   = "sun.nio.ch.lincheck."
-internal const val LINCHECK_RELOCATED_PACKAGE_PREFIX = "org.jetbrains.lincheck.shadow."
 
 
 // ========================================================
@@ -79,16 +77,13 @@ fun isRecognizedUninstrumentedStandardLibraryClass(className: String) =
 // ========================================================
 
 fun isAsmClass(className: String): Boolean =
-    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
-    className.startsWith(listOf("org", "objectweb", "asm").joinToString("."))
+    className.startsWith("org.objectweb.asm")
 
 fun isByteBuddyClass(className: String): Boolean =
-    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
-    className.startsWith(listOf("net", "bytebuddy").joinToString("."))
+    className.startsWith("net.bytebuddy")
 
 fun isJavaWebSocketClass(className: String): Boolean =
-    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
-    className.startsWith(listOf("org", "java_websocket").joinToString("."))
+    className.startsWith("org.java_websocket")
 
 /**
  * Checks whether the given class name belongs to the Gradle framework.
@@ -114,8 +109,7 @@ fun isRecognizedTestingLibraryClass(className: String) =
  * Checks if the given class name corresponds to a recognized logging library class.
  */
 fun isRecognizedLoggingLibraryClass(className: String) =
-    // use a hack to circumvent package shadowing, see `TraceAgentTasks.kt`
-    className.startsWith(listOf("org", "slf4j").joinToString(".") + ".")
+    className.startsWith("org.slf4j.")
 
 /**
  * Determines whether a given class name belongs to a recognized Apache library.
@@ -197,19 +191,19 @@ fun isKotlinxCoroutinesDebugClass(className: String) =
 /**
  * Checks whether the given method corresponds to the `toString()` Java method.
  */
-internal fun isToStringMethod(methodName: String, desc: String) =
+fun isToStringMethod(methodName: String, desc: String) =
     methodName == "toString" && desc == "()Ljava/lang/String;"
 
 /**
  * Tests if the provided [className] represents [StackTraceElement] class.
  */
-internal fun isStackTraceElementClass(className: String): Boolean =
+fun isStackTraceElementClass(className: String): Boolean =
     className == "java.lang.StackTraceElement"
 
 /**
  * Checks whether the provided [className] corresponds to the [java.util.Arrays] class.
  */
-internal fun isJavaUtilArraysClass(className: String): Boolean =
+fun isJavaUtilArraysClass(className: String): Boolean =
     className == "java.util.Arrays"
 
 /**
@@ -221,7 +215,7 @@ internal fun isKotlinArraysUtilJVMClass(className: String): Boolean =
 /**
  * Checks if the provided class name matches the [jdk.internal.access.JavaLangAccess] class.
  */
-internal fun isJavaLangAccessClass(className: String): Boolean =
+fun isJavaLangAccessClass(className: String): Boolean =
     className == "jdk.internal.access.JavaLangAccess"
 
 
@@ -236,9 +230,18 @@ fun isJavaLambdaClass(className: String): Boolean =
     className.contains("\$\$Lambda")
 
 /**
+ * Test if the given class name corresponds to a hidden class (`Lookup.defineHiddenClass`).
+ *
+ * The JVM appends `/<identity>` to the name of such a class, which cannot appear in a name
+ * written in source, so the separator alone identifies them.
+ */
+fun isHiddenClass(className: String): Boolean =
+    className.contains('/')
+
+/**
  * Extracts and returns the enclosing class name of a Java lambda class.
  */
-internal fun getJavaLambdaEnclosingClass(className: String): String {
+fun getJavaLambdaEnclosingClass(className: String): String {
     require(isJavaLambdaClass(className)) { "Not a Java lambda class: $className" }
     return className.substringBefore("\$\$Lambda")
 }
@@ -251,14 +254,14 @@ internal fun getJavaLambdaEnclosingClass(className: String): String {
 /**
  * Tests if the provided [className] contains `"ClassLoader"` as a substring.
  */
-internal fun isClassLoaderClassName(className: String): Boolean =
+fun isClassLoaderClassName(className: String): Boolean =
     className.contains("ClassLoader")
 
 /**
  * Checks if the given method name and descriptor correspond to
  * the `ClassLoader.loadClass(String name)` method.
  */
-internal fun isLoadClassMethod(methodName: String, desc: String) =
+fun isLoadClassMethod(methodName: String, desc: String) =
     methodName == "loadClass" && desc == "(Ljava/lang/String;)Ljava/lang/Class;"
 
 

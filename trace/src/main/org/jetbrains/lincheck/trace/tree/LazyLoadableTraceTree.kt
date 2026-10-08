@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.trace.tree
 
-import org.jetbrains.lincheck.trace.TRContainerTracePoint
-import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.ContainerHeaderTracePoint
+import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 import org.jetbrains.lincheck.util.collections.LazyLoadableList
 import org.jetbrains.lincheck.util.tree.Tree
@@ -27,7 +27,7 @@ import org.jetbrains.lincheck.util.tree.unloadChildren
  *   on the first access to the children elements (grandchildren stay unloaded);
  *   when `false`, children are discovered by a skim and materialized one by one.
  */
-class LazyLoadableTraceTree<T : TRTracePoint>(
+class LazyLoadableTraceTree<T : TracePoint>(
     reader: LazyTraceReader,
     rootTracePoint: T?,
     batchLoading: Boolean = false,
@@ -41,7 +41,7 @@ class LazyLoadableTraceTree<T : TRTracePoint>(
  *
  * @param batchLoading see [LazyLoadableTraceTree].
  */
-fun LazyTraceReader.readTraceTrees(batchLoading: Boolean = false): List<LazyLoadableTraceTree<TRTracePoint>> =
+fun LazyTraceReader.readTraceTrees(batchLoading: Boolean = false): List<LazyLoadableTraceTree<TracePoint>> =
     readShallowRoots().map { root -> LazyLoadableTraceTree(this, root, batchLoading) }
 
 /**
@@ -62,7 +62,7 @@ fun LazyTraceReader.readTraceTrees(batchLoading: Boolean = false): List<LazyLoad
  * on the first access to the [children] elements, while grandchildren stay unloaded;
  * after [unloadChildren], the next access re-scans the whole level.
  */
-class LazyLoadableTraceNode<T : TRTracePoint>(
+class LazyLoadableTraceNode<T : TracePoint>(
     private val reader: LazyTraceReader,
     // TODO: capture some kind of ReaderModel to do centralized reading
     override val data: T,
@@ -75,10 +75,10 @@ class LazyLoadableTraceNode<T : TRTracePoint>(
     override val children: LazyLoadableList<LazyLoadableTraceNode<T>> = computeChildren()
 
     private fun computeChildren(): LazyLoadableList<LazyLoadableTraceNode<T>> {
-        // Note: currently LazyTraceReader returns the LazyLoadedList itself, but with TRTracePoint elements instead of LazyLoadableTraceNode's.
+        // Note: currently LazyTraceReader returns the LazyLoadedList itself, but with TracePoint elements instead of LazyLoadableTraceNode's.
         //       This introduces some performance penalty of having to create one more layer of LazyLoadedList's here which wrap
         //       the logic of lists returned by the LazyTraceReader. Beware of its performance impact.
-        val container = data as? TRContainerTracePoint
+        val container = data as? ContainerHeaderTracePoint
             ?: return LazyLoadableList(size = 0, load = { error("Leaf trace points have no children") })
         if (batchLoading) {
             val childTracePoints = reader.readAllChildren(container)

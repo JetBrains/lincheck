@@ -11,6 +11,8 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
+import org.jetbrains.lincheck.settings.BreakpointsFileWriter
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -377,5 +379,59 @@ class BreakpointsFileParserTests {
         """.trimIndent())
 
         BreakpointsFileParser.parseBreakpointsFile(path)
+    }
+
+    // --- Writer round trip ---
+
+    @Test
+    fun testWrittenBreakpointsParseBack() {
+        val precompiled = SnapshotBreakpoint(
+            uuid = UUID.randomUUID(),
+            className = "org.example.MyClass",
+            fileName = "MyClass.java",
+            lineNumber = 101,
+            conditionClassName = "org.example.MyCondition",
+            conditionFactoryMethodName = "create",
+            conditionClasses = mapOf("org.example.MyCondition" to byteArrayOf(0xCA.toByte(), 0xFE.toByte())),
+            watchClassName = "org.example.MyWatches",
+            watchFactoryMethodName = "createWatches",
+            watchClasses = mapOf("org.example.MyWatches" to byteArrayOf(0x01, 0x02)),
+            hitLimit = 50,
+            watchLabels = listOf("owner.email", "count + 1"),
+        )
+        val sourceCarried = SnapshotBreakpoint(
+            uuid = UUID.randomUUID(),
+            className = "org.example.Other",
+            fileName = "Other.kt",
+            lineNumber = 7,
+            expressionLanguage = SnapshotBreakpoint.EXPRESSION_LANGUAGE_KOTLIN,
+            conditionSource = "count > limit && name == \"a;b=c\"",
+            watchSources = listOf("count", "name.length"),
+            watchLabels = listOf("count", "name.length"),
+        )
+        val path = writeBreakpointsFile(BreakpointsFileWriter.render(listOf(precompiled, sourceCarried)))
+
+        val result = BreakpointsFileParser.parseBreakpointsFile(path)
+
+        assertEquals(2, result.size)
+        for ((expected, actual) in listOf(precompiled, sourceCarried).zip(result)) {
+            assertEquals(expected.uuid, actual.uuid)
+            assertEquals(expected.className, actual.className)
+            assertEquals(expected.fileName, actual.fileName)
+            assertEquals(expected.lineNumber, actual.lineNumber)
+            assertEquals(expected.hitLimit, actual.hitLimit)
+            assertEquals(expected.expressionLanguage, actual.expressionLanguage)
+            assertEquals(expected.conditionSource, actual.conditionSource)
+            assertEquals(expected.conditionClassName, actual.conditionClassName)
+            assertEquals(expected.conditionFactoryMethodName, actual.conditionFactoryMethodName)
+            assertEquals(expected.conditionClasses?.keys, actual.conditionClasses?.keys)
+            assertArrayEquals(expected.conditionCodeFragment, actual.conditionCodeFragment)
+            assertEquals(expected.watchSources, actual.watchSources)
+            assertEquals(expected.watchClassName, actual.watchClassName)
+            assertEquals(expected.watchFactoryMethodName, actual.watchFactoryMethodName)
+            assertEquals(expected.watchClasses?.keys, actual.watchClasses?.keys)
+            assertArrayEquals(expected.watchCodeFragment, actual.watchCodeFragment)
+            assertEquals(expected.watchLabels, actual.watchLabels)
+        }
     }
 }

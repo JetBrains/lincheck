@@ -150,8 +150,6 @@ class AccessPath(val locations: List<AccessLocation>) {
 
 fun AccessPath.isEmpty(): Boolean = locations.isEmpty()
 
-typealias OwnerName = AccessPath
-
 fun Field.toAccessLocation(context: TraceContext): FieldAccessLocation {
     val className = declaringClass.name
     val fieldName = name

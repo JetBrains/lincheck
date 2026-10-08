@@ -12,6 +12,10 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
+import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
@@ -40,6 +44,7 @@ internal class SnapshotBreakpointTransformer(
     methodVisitor: MethodVisitor,
     config: TransformationConfiguration,
     private val breakpoints: Map<BreakpointId, SnapshotBreakpoint>,
+    private val enclosingClass: ClassModel,
     private val classLoader: ClassLoader,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
@@ -109,8 +114,38 @@ internal class SnapshotBreakpointTransformer(
             breakpoint.isApplicableTo(className.toCanonicalClassName(), fileName)
         }
         for ((breakpointId, breakpoint) in matchingBreakpoints) {
-            processBreakpoint(breakpointId, breakpoint)
+            // Source-carried expressions (AGENT_COMPILED_EXPRESSIONS_V1) compile here — the
+            // first point where the line's locals and their types are known. The result carries
+            // ordinary fragments, so everything downstream is the same as for IDE-compiled ones;
+            // `null` means compilation failed (reported once) and the breakpoint is skipped.
+            val effectiveBreakpoint = ExpressionCompiler.resolveCompiledExpressions(
+                breakpointId = breakpointId,
+                breakpoint = breakpoint,
+                activeLocals = currentActiveLocalVariablesInfo,
+                enclosingClass = enclosingClass,
+                classLoader = classLoader,
+            ) ?: continue
+            if (!capturesAvailable(effectiveBreakpoint)) continue
+            processBreakpoint(breakpointId, effectiveBreakpoint)
         }
+    }
+
+    /**
+     * Whether every local the expressions capture is in scope at this site. A line can belong to several methods —
+     * a Kotlin property initializer and the property's getter, a lambda and its enclosing method — and an
+     * expression naming a local of one of them cannot be evaluated in the others, so such a site is left alone.
+     */
+    private fun capturesAvailable(breakpoint: SnapshotBreakpoint): Boolean {
+        val missing = listOfNotNull(breakpoint.conditionCodeFragment, breakpoint.watchCodeFragment)
+            .flatMap(::extractCapturedVarNamesFromBytecode)
+            .filter { name -> currentActiveLocalVariablesInfo.none { it.name == name } }
+        if (missing.isNotEmpty()) {
+            Logger.debug {
+                "Breakpoint at ${breakpoint.fileName}:${breakpoint.lineNumber} skips $className.$methodName: " +
+                    "no local '${missing.first()}' here"
+            }
+        }
+        return missing.isEmpty()
     }
 
     private fun GeneratorAdapter.processBreakpoint(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint) {

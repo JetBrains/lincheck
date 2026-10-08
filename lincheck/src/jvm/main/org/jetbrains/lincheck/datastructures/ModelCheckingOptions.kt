@@ -18,6 +18,7 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.toMemoryModel
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
@@ -70,6 +71,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             stdLibAnalysisEnabled = stdLibAnalysisEnabled,
             awaitLoopsAnalysisEnabled = awaitLoopsAnalysisEnabled,
             experimentalModelChecking = experimentalModelChecking,
+            memoryModel = memoryModel,
         )
     }
 }
@@ -99,6 +101,7 @@ class ModelCheckingCTestConfiguration(
     stdLibAnalysisEnabled: Boolean,
     awaitLoopsAnalysisEnabled: Boolean,
     experimentalModelChecking: Boolean,
+    val memoryModel: MemoryModel,
 ) : ManagedCTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -141,7 +144,7 @@ class ModelCheckingCTestConfiguration(
             useClocks = UseClocks.ALWAYS
         )
         if (useExperimentalModelChecking) {
-            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context, memoryModel).also {
                 runner.initializeStrategy(it)
             }
         } else {

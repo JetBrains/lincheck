@@ -10,14 +10,15 @@
 
 package org.jetbrains.lincheck.trace.diff
 
-import org.jetbrains.lincheck.trace.TRLoopIterationTracePoint
-import org.jetbrains.lincheck.trace.TRLoopTracePoint
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
-import org.jetbrains.lincheck.trace.TRScalar
-import org.jetbrains.lincheck.trace.TRReadFieldTracePoint
-import org.jetbrains.lincheck.trace.TRReadLocalVariableTracePoint
-import org.jetbrains.lincheck.trace.TRTracePoint
-import org.jetbrains.lincheck.trace.TRWriteFieldTracePoint
+import org.jetbrains.lincheck.trace.LoopIterationTracePoint
+import org.jetbrains.lincheck.trace.LoopTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
+import org.jetbrains.lincheck.trace.TraceScalar
+import org.jetbrains.lincheck.trace.ReadFieldTracePoint
+import org.jetbrains.lincheck.trace.ReadLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.TracePoint
+import org.jetbrains.lincheck.trace.WriteFieldTracePoint
+import org.jetbrains.lincheck.trace.iterationsAsString
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 import org.jetbrains.lincheck.trace.serialization.PACK_FILENAME_EXT
 import org.jetbrains.lincheck.trace.tree.TraceBuilder
@@ -40,15 +41,15 @@ import java.io.File
  */
 class TraceDiffTest {
 
-    private fun savedTrace(build: TraceBuilder.() -> Tree.Node<TRTracePoint>): String {
+    private fun savedTrace(build: TraceBuilder.() -> Tree.Node<TracePoint>): String {
         val builder = TraceBuilder()
         builder.context.setThreadName(0, "main")
         return builder.save(builder.build())
     }
 
     private fun diffedStructure(
-        left: TraceBuilder.() -> Tree.Node<TRTracePoint>,
-        right: TraceBuilder.() -> Tree.Node<TRTracePoint>,
+        left: TraceBuilder.() -> Tree.Node<TracePoint>,
+        right: TraceBuilder.() -> Tree.Node<TracePoint>,
     ): String {
         val outputBase = File.createTempFile("trace-diff-test", ".bin").also { it.deleteOnExit() }
         LazyTraceReader(savedTrace(left)).use { leftReader ->
@@ -65,32 +66,32 @@ class TraceDiffTest {
         }
     }
 
-    private fun StringBuilder.render(node: Tree.Node<TRTracePoint>, depth: Int) {
+    private fun StringBuilder.render(node: Tree.Node<TracePoint>, depth: Int) {
         append("  ".repeat(depth))
         append(node.data.label())
         append(" [").append(node.data.diffStatus?.toString() ?: "-").append("]\n")
         node.children.forEach { render(it, depth + 1) }
     }
 
-    private fun TRTracePoint.label(): String = when (this) {
-        is TRMethodCallTracePoint -> methodName
-        is TRReadLocalVariableTracePoint -> "readVar($name)"
-        is TRReadFieldTracePoint -> "read($name=${(value as? TRScalar)?.value})"
-        is TRWriteFieldTracePoint -> "write($name=${(value as? TRScalar)?.value})"
-        is TRLoopTracePoint -> "loop[$iterations]"
-        is TRLoopIterationTracePoint -> "iter$loopIteration"
+    private fun TracePoint.label(): String = when (this) {
+        is MethodCallTracePoint -> methodName
+        is ReadLocalVariableTracePoint -> "readVar($name)"
+        is ReadFieldTracePoint -> "read($name=${(value as? TraceScalar)?.value})"
+        is WriteFieldTracePoint -> "write($name=${(value as? TraceScalar)?.value})"
+        is LoopTracePoint -> "loop[$iterationsAsString]"
+        is LoopIterationTracePoint -> "iter$loopIteration"
         else -> this::class.simpleName!!
     }
 
     private fun assertDiffedStructure(
         expected: String,
-        left: TraceBuilder.() -> Tree.Node<TRTracePoint>,
-        right: TraceBuilder.() -> Tree.Node<TRTracePoint>,
+        left: TraceBuilder.() -> Tree.Node<TracePoint>,
+        right: TraceBuilder.() -> Tree.Node<TracePoint>,
     ) = assertEquals(expected.trimIndent(), diffedStructure(left, right))
 
     @Test
     fun `identical traces produce all-unchanged diff`() {
-        val trace: TraceBuilder.() -> Tree.Node<TRTracePoint> = {
+        val trace: TraceBuilder.() -> Tree.Node<TracePoint> = {
             node(call("A", "root")) {
                 node(readVar("x"))
                 node(call("A", "child"))
@@ -116,10 +117,10 @@ class TraceDiffTest {
               write(x=2) [EDITED_NEW]
             """,
             left = {
-                node(call("A", "root")) { node(writeField("A", "x", TRScalar(1))) }
+                node(call("A", "root")) { node(writeField("A", "x", TraceScalar(1))) }
             },
             right = {
-                node(call("A", "root")) { node(writeField("A", "x", TRScalar(2))) }
+                node(call("A", "root")) { node(writeField("A", "x", TraceScalar(2))) }
             },
         )
     }
@@ -184,7 +185,7 @@ class TraceDiffTest {
             },
             right = {
                 node(call("A", "root")) {
-                    node(call("A", "child").also { it.result = TRScalar(7) }) {
+                    node(call("A", "child").also { it.setResult(TraceScalar(7)) }) {
                         node(readVar("x"))
                     }
                 }
@@ -202,12 +203,12 @@ class TraceDiffTest {
                 readVar(x) [UNCHANGED]
             """,
             left = {
-                node(call("A", "root").also { it.result = TRScalar(1) }) {
+                node(call("A", "root").also { it.setResult(TraceScalar(1)) }) {
                     node(readVar("x"))
                 }
             },
             right = {
-                node(call("A", "root").also { it.result = TRScalar(2) }) {
+                node(call("A", "root").also { it.setResult(TraceScalar(2)) }) {
                     node(readVar("x"))
                 }
             },

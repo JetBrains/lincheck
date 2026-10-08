@@ -22,7 +22,8 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.trace.*
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import sun.nio.ch.lincheck.*
@@ -1636,15 +1637,15 @@ internal abstract class ManagedStrategy(
         // Handle atomic access
         if (owner == null || atomicMethodDescriptor == null) return
         val info = atomicMethodDescriptor.getAtomicAccessInfo(context, owner, params)
-        when (info.location) {
+        when (val location = info.location) {
             is StaticFieldAccessLocation -> {
-                memorySnapshot.trackField(null, info.clazz!!, info.location.fieldName)
+                memorySnapshot.trackField(null, info.clazz!!, location.fieldName)
             }
             is ObjectFieldAccessLocation -> {
-                memorySnapshot.trackField(info.obj, info.obj!!.javaClass, info.location.fieldName)
+                memorySnapshot.trackField(info.obj, info.obj!!.javaClass, location.fieldName)
             }
             is ArrayElementByIndexAccessLocation -> {
-                memorySnapshot.trackArrayCell(info.obj!!, info.location.index)
+                memorySnapshot.trackArrayCell(info.obj!!, location.index)
             }
             else -> {}
         }

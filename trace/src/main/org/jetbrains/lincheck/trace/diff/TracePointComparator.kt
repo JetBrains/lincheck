@@ -16,77 +16,83 @@ import org.jetbrains.lincheck.trace.*
 internal object TracePointComparator {
     private val hasher = HasherMzHash64()
 
-    fun editIndependentHash(tracePoint: TRTracePoint): Long = prepareEditIndependentHash(tracePoint).finish()
+    fun editIndependentHash(tracePoint: TracePoint): Long = prepareEditIndependentHash(tracePoint).finish()
 
-    fun strictHash(tracePoint: TRTracePoint): Long {
+    fun strictHash(tracePoint: TracePoint): Long {
         val h = prepareEditIndependentHash(tracePoint)
         when (tracePoint) {
-            is TRReadArrayTracePoint -> h
+            is ReadArrayTracePoint -> h
                 .add(tracePoint.value)
-            is TRWriteArrayTracePoint -> h
+            is WriteArrayTracePoint -> h
                 .add(tracePoint.value)
-            is TRFieldTracePoint -> h
+            is FieldTracePoint -> h
                 .add(tracePoint.obj)
                 .add(tracePoint.value)
-            is TRLocalVariableTracePoint -> h
+            is LocalVariableTracePoint -> h
                 .add(tracePoint.value)
-            is TRLoopTracePoint -> Unit
-            is TRLoopIterationTracePoint -> Unit
-            is TRMethodCallTracePoint -> h
+            is LoopTracePoint -> Unit
+            is LoopIterationTracePoint -> Unit
+            is MethodCallTracePoint -> h
                 .add(tracePoint.obj)
-                .addTRList(tracePoint.parameters)
+                .addTraceValueList(tracePoint.parameters)
                 .add(tracePoint.result)
                 .add(tracePoint.exceptionClassName ?: "")
-            is TRSnapshotLineBreakpointTracePoint -> h
+            is SnapshotLineBreakpointTracePoint -> h
                 .add(tracePoint.breakpointUuid.toString())
                 .add(tracePoint.stackTrace) // Should we add it as-is?
-                .addTRList(tracePoint.locals)
-                .addTRList(tracePoint.watches)
+                .addTraceValueList(tracePoint.locals)
+                .addTraceValueList(tracePoint.watches)
                 .add(tracePoint.traceId ?: "")
-            is TRThrowTracePoint -> h
+            is ThrowTracePoint -> h
                 .add(tracePoint.exception)
-            is TRCatchTracePoint -> h
+            is CatchTracePoint -> h
                 .add(tracePoint.exception)
+            is MethodCallResultTracePoint -> h
+                .add(tracePoint.result)
+                .add(tracePoint.exceptionClassName ?: "")
+            is LoopEndTracePoint -> h
+                .add(tracePoint.iterations)
+            is LoopIterationEndTracePoint -> Unit
         }
         return h.finish()
     }
 
-    fun editIndependentEqual(a: TRTracePoint, b: TRTracePoint): Boolean =
+    fun editIndependentEqual(a: TracePoint, b: TracePoint): Boolean =
         a.javaClass == b.javaClass && editIndependentHash(a) == editIndependentHash(b)
 
-    fun strictEqual(a: TRTracePoint, b: TRTracePoint): Boolean =
+    fun strictEqual(a: TracePoint, b: TracePoint): Boolean =
         a.javaClass == b.javaClass && strictHash(a) == strictHash(b)
 
-    private fun prepareEditIndependentHash(tracePoint: TRTracePoint): HasherMzHash64 =
+    private fun prepareEditIndependentHash(tracePoint: TracePoint): HasherMzHash64 =
         when (tracePoint) {
             // For next 3 classes value is not used in weak comparison,
             // read/write is not relevant because class is checked separately
-            is TRArrayTracePoint ->
+            is ArrayTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.array)
                     .add(tracePoint.index)
-            is TRFieldTracePoint ->
+            is FieldTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.className)
                     .add(tracePoint.name)
                     .add(tracePoint.isStatic)
-            is TRLocalVariableTracePoint ->
+            is LocalVariableTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.name)
-            is TRLoopTracePoint ->
+            is LoopTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.loopId)
-            is TRLoopIterationTracePoint ->
+            is LoopIterationTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.loopId)
                     .add(tracePoint.loopIteration)
             // Arguments (including receiver) and result value are not used in weak comparison
-            is TRMethodCallTracePoint ->
+            is MethodCallTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.className)
@@ -96,14 +102,18 @@ internal object TracePointComparator {
                     .add(tracePoint.returnType)
                     .add(tracePoint.argumentTypes) // It is Ok, as we use hashcode for Types.Type anyway
             // Only code location and breakpoint UUID for now
-            is TRSnapshotLineBreakpointTracePoint ->
+            is SnapshotLineBreakpointTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
                     .add(tracePoint.breakpointUuid.toString())
-            is TRThrowTracePoint ->
+            is ThrowTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
-            is TRCatchTracePoint ->
+            is CatchTracePoint ->
+                hasher
+                    .add(tracePoint.codeLocation)
+            // The data a container's closing side carries (result, iteration count) is not used in weak comparison
+            is ContainerFooterTracePoint ->
                 hasher
                     .add(tracePoint.codeLocation)
         }
@@ -117,28 +127,34 @@ internal object TracePointComparator {
     private fun HasherMzHash64.add(type: Types.Type): HasherMzHash64 =
         add(type.hashCode())
 
-    private fun HasherMzHash64.add(obj: TRValue?): HasherMzHash64 = when (obj) {
-        null, TRNull -> add("TRNull")
-        TRVoid -> add("TRVoid")
-        TRUnit -> add("TRUnit")
-        is TRRedacted -> add("TRRedacted")
+    private fun HasherMzHash64.add(obj: TraceValue?): HasherMzHash64 = when (obj) {
+        null, TraceNull -> add("TraceNull")
+        TraceVoid -> add("TraceVoid")
+        TraceUnit -> add("TraceUnit")
+        is TraceRedacted -> add("TraceRedacted")
             .add(obj.capturedClassName.orEmpty())
             .add(obj.templateUuid?.hashCode() ?: 0)
             .add(obj.templateName.orEmpty())
-        is TRScalar -> add("TRScalar").add(obj.value.hashCode())
-        is TRString -> add("TRString").add(obj.value.hashCode())
-        is TREnum -> add(obj.className.adornedClassNameRepresentation()).add(obj.name.hashCode())
-        is TRArbitraryInteger -> add("TRArbitraryInteger").add(obj.value.hashCode())
-        is TRArbitraryDecimal -> add("TRArbitraryDecimal").add(obj.value.hashCode())
-        is TRTextSnapshot -> add(obj.className.adornedClassNameRepresentation()).add(obj.content.hashCode())
-        is TRReferenceLike -> add(obj.className.adornedClassNameRepresentation())
-        is TRTypeReference -> add("TRTypeReference").add(obj.flavor.name).add(obj.referencedClassName.hashCode())
-        is TRRenderedValue -> add("TRRenderedValue").add(obj.rendered.hashCode())
-        TRUnfinishedMethodResult -> add("TRUnfinishedMethodResult")
-        TRUntrackedMethodResult -> add("TRUntrackedMethodResult")
+        is TraceScalar -> add("TraceScalar").add(obj.value.hashCode())
+        is TraceString -> add("TraceString").add(obj.value.hashCode())
+        is TraceEnum -> add(obj.className.adornedClassNameRepresentation()).add(obj.name.hashCode())
+        is TraceArbitraryInteger -> add("TraceArbitraryInteger").add(obj.value.hashCode())
+        is TraceArbitraryDecimal -> add("TraceArbitraryDecimal").add(obj.value.hashCode())
+        is TraceTextSnapshot -> add(obj.className.adornedClassNameRepresentation()).add(obj.content.hashCode())
+        is TraceObject ->
+            add(obj.className.adornedClassNameRepresentation())
+                .add(obj.rendered ?: "")
+        is TraceObjectSnapshot ->
+            add(obj.className.adornedClassNameRepresentation())
+                .add(obj.rendered ?: "")
+        is TraceReferenceLike -> add(obj.className.adornedClassNameRepresentation())
+        is TraceTypeReference -> add("TraceTypeReference").add(obj.flavor.name).add(obj.referencedClassName.hashCode())
+        is TraceRenderedValue -> add("TraceRenderedValue").add(obj.rendered.hashCode())
+        TraceUnfinishedMethodResult -> add("TraceUnfinishedMethodResult")
+        TraceUntrackedMethodResult -> add("TraceUntrackedMethodResult")
     }
 
-    private fun HasherMzHash64.addTRList(list: List<TRValue?>): HasherMzHash64 {
+    private fun HasherMzHash64.addTraceValueList(list: List<TraceValue?>): HasherMzHash64 {
         list.forEach { add(it) }
         return this
     }

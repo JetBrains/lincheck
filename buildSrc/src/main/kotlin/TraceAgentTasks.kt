@@ -10,7 +10,6 @@
 
 @file:Suppress("DEPRECATION", "UNUSED_VARIABLE")
 
-import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.Project
@@ -29,34 +28,27 @@ import org.gradle.kotlin.dsl.register
 import java.io.File
 import java.util.zip.ZipFile
 
-// Top-level package prefixes (in JVM internal form, with trailing `/`) allowed
-// inside trace-agent fat jars. Anything else must either be shaded
-// (see `packagesToShade` below) or excluded.
-//
-// Enforced by `verifyFatJarPackages`;
-// the check exists to catch unrelocated transitive deps before they ship and
-// collide with the user app's classpath.
+// The only classes allowed at the javaagent jar root.
+// `-javaagent` appends that jar to the system class path,
+// so whatever is visible there is visible to the application and can collide with its own classpath.
+// Enforced by `VerifyFatJarTask`.
 private val FAT_JAR_ALLOWED_PACKAGE_PREFIXES: List<String> = listOf(
-    "org/jetbrains/lincheck/",       // our own modules + shaded deps (`org.jetbrains.lincheck.shadow.*`)
-    "sun/nio/ch/lincheck/",          // bootstrap classes
-    "kotlin/",                        // kotlin-stdlib + kotlin-reflect runtime
-    "org/jetbrains/annotations/",     // JetBrains annotations (transitive from kotlin-reflect)
-    "org/intellij/lang/annotations/", // JetBrains annotations (transitive from kotlin-reflect)
+    "org/jetbrains/lincheck/jvm/agent/wrapper/",
 )
 
 // After the fat jar is built, walks it and asserts two packaging invariants:
 //
-//   1. Package whitelist — every `.class` entry's package falls under
-//      `FAT_JAR_ALLOWED_PACKAGE_PREFIXES`. Catches unrelocated transitive deps.
+//   1. Package whitelist -- every `.class` entry falls under `FAT_JAR_ALLOWED_PACKAGE_PREFIXES`,
+//      so the root exposes the wrapper and nothing else.
+//      Bootstrap classes, the agent payload, the Kotlin runtime and third-party dependencies
+//      all belong inside the nested jars, where the application classloader cannot reach them.
 //
-//   2. Bootstrap packaging — `bootstrap.jar` is embedded as a nested
-//      resource at the fat-jar root, and no `sun/nio/ch/lincheck/*.class`
-//      leaks alongside it.
-//      Catches regressions of the duplicate-bootstrap bug,
-//      where ShadowJar recursively unpacked the embedded `bootstrap.jar` from `:jvm-agent.jar`,
-//      leaving bootstrap classes resolvable by both the AppClassLoader (from the fat-jar root)
-//      and the bootstrap classloader (from the wrapper-protected `bootstrap.jar`),
-//      producing two definitions of the same class with diverging `static` state.
+//   2. Nested jars -- both `bootstrap.jar` and `agent-payload.jar` are present as nested
+//      resources at the fat-jar root, and never unpacked.
+//
+// A bootstrap class leaking to the root fails the first invariant:
+// it would otherwise be resolvable both from there and from the nested `bootstrap.jar`,
+// giving two definitions of the same class with diverging `static` state.
 abstract class VerifyFatJarTask : DefaultTask() {
     @get:InputFile
     abstract val jar: RegularFileProperty
@@ -69,7 +61,7 @@ abstract class VerifyFatJarTask : DefaultTask() {
         val jarFile = jar.get().asFile
         ZipFile(jarFile).use { zip ->
             verifyPackages(jarFile, zip)
-            verifyBootstrap(jarFile, zip)
+            verifyNestedJars(jarFile, zip)
         }
     }
 
@@ -96,43 +88,17 @@ abstract class VerifyFatJarTask : DefaultTask() {
                   $sample$more
                 Allowed package prefixes:
                   $prefixes
-                Either add a shadowing rule or extend the whitelist.
+                Only wrapper classes may be visible from the javaagent jar root.
             """.trimIndent())
         }
     }
 
-    // Fails unless `bootstrap.jar` is embedded as a nested resource at the fat-jar
-    // root, and no `sun/nio/ch/lincheck/*.class` leaks alongside it.
-    private fun verifyBootstrap(jarFile: File, zip: ZipFile) {
-        var bootstrapJarFound = false
-        val leakedBootstrapClasses = mutableListOf<String>()
-        for (entry in zip.entries()) {
-            if (entry.name == "bootstrap.jar") {
-                bootstrapJarFound = true
-                continue
-            }
-            if (entry.isDirectory) continue
-            if (!entry.name.endsWith(".class")) continue
-            if (logicalName(entry.name).startsWith("sun/nio/ch/lincheck/")) {
-                leakedBootstrapClasses += entry.name
-            }
-        }
-        if (!bootstrapJarFound) {
+    private fun verifyNestedJars(jarFile: File, zip: ZipFile) {
+        val missing = listOf("bootstrap.jar", "agent-payload.jar").filter { zip.getEntry(it) == null }
+        if (missing.isNotEmpty()) {
             throw GradleException("""
-                Fat jar ${jarFile.name} is missing the nested `bootstrap.jar` entry at its root.
-                The `jarWrapper` task should embed `bootstrap.jar` as a nested resource so that
-                javaagent can install it on the bootstrap classloader at premain/agentmain.
-            """.trimIndent())
-        }
-        if (leakedBootstrapClasses.isNotEmpty()) {
-            val sample = leakedBootstrapClasses.take(20).joinToString(LIST_SEP)
-            val more = if (leakedBootstrapClasses.size > 20) "${LIST_SEP}...and ${leakedBootstrapClasses.size - 20} more" else ""
-            throw GradleException("""
-                Fat jar ${jarFile.name} contains ${leakedBootstrapClasses.size} bootstrap class file(s) leaked outside the nested `bootstrap.jar`:
-                  $sample$more
-                Bootstrap classes must live ONLY inside the wrapper-protected `bootstrap.jar`.
-                Leaked copies become resolvable by the AppClassLoader, producing two separate definitions
-                of the same class with diverging static state (see commit 9b5af7c77).
+                Fat jar ${jarFile.name} is missing nested entries: ${missing.joinToString()}.
+                Both bootstrap and agent payload jars must stay nested at the javaagent jar root.
             """.trimIndent())
         }
     }
@@ -158,102 +124,53 @@ abstract class VerifyFatJarTask : DefaultTask() {
 fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, premainClass: String) {
     // Ensure the Java plugin is applied (for sourceSets and runtimeClasspath)
     plugins.apply("java")
-    plugins.apply("com.gradleup.shadow")
 
     val javaPluginExtension = extensions.getByType<JavaPluginExtension>()
     val mainSourceSet = javaPluginExtension.sourceSets.getByName("main")
     val runtimeClasspath = configurations.getByName("runtimeClasspath")
-    val mainBuildDir: String = layout.buildDirectory.get().asFile.path
+    val nestedJarsDir = layout.buildDirectory.dir("agent-nested-jars")
+    val bootstrapBuildDir = project(":bootstrap").layout.buildDirectory
 
-
-    val processedBootstrapJarPath = listOf(mainBuildDir, "bootstrap-tmp").joinToString(separator = File.separator)
-    val boostrapBuildDir: String = project(":bootstrap").layout.buildDirectory.get().asFile.path
-
-    
     val copyBootstrapJar = tasks.register<Copy>("copyBootstrapJar") {
         dependsOn(":bootstrapJar")
-        from(file(
-            listOf(boostrapBuildDir, "libs", "bootstrap.jar").joinToString(separator = File.separator)
-        ))
-        into(file(processedBootstrapJarPath))
-    }
-    
-    // Hack to prevent unpacking bootstrap.jar during shadowing task.
-    // When relocation starts, it will unwrap the outer archive and extract the inner one without change
-    val jarWrapper = tasks.register<Jar>("jarWrapper") {
-        destinationDirectory.set(file(
-            listOf(processedBootstrapJarPath).joinToString(separator = File.separator)
-        ))
-        archiveFileName.set("deps-wrapper.jar")
-
-        val bootstrapJarPath = listOf(processedBootstrapJarPath, "bootstrap.jar").joinToString(separator = File.separator)
-        dependsOn(copyBootstrapJar)
-        from(file(bootstrapJarPath))
+        from(bootstrapBuildDir.file("libs/bootstrap.jar"))
+        into(nestedJarsDir)
     }
 
-    val traceAgentFatJar = tasks.register<ShadowJar>(fatJarTaskName) {
+    val agentPayloadJar = tasks.register<Jar>("${fatJarTaskName}Payload") {
+        destinationDirectory.set(nestedJarsDir)
+        archiveFileName.set("agent-payload.jar")
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+        from(mainSourceSet.output)
+        from({
+            runtimeClasspath.resolve().filter { it.name.endsWith(".jar") }.map { jar ->
+                zipTree(jar).matching { exclude("bootstrap.jar") }
+            }
+        })
+    }
+
+    val agentWrapperJar = project(":jvm-agent-wrapper").layout.buildDirectory.file("libs/agent-wrapper.jar")
+    val traceAgentFatJar = tasks.register<Jar>(fatJarTaskName) {
         archiveBaseName.set(fatJarName)
         archiveVersion.set("")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-        dependsOn(jarWrapper)
-
-        // Include compiled sources
-        from(mainSourceSet.output)
-
-        // Include runtime dependencies (ASM, ByteBuddy, etc.).
-
-        /* IMPORTANT NOTE!
-         *
-         * `:jvm-agent.jar` embeds `bootstrap.jar` as a resource
-         * (so the agent can serve it via `getResourceAsStream("/bootstrap.jar")` when used standalone —
-         * see `LincheckInstrumentation.appendBootstrapJarToClassLoaderSearch`).
-         * When the shadow jar consumes `:jvm-agent.jar` via `zipTree(...)`, it recursively unpacks that embedded
-         * `bootstrap.jar` and dumps `sun/nio/ch/lincheck/X.class` at the fat-jar root.
-         *
-         * Those classes would then be visible to the AppClassLoader,
-         * giving us a second copy of loaded classes (the bootstrap copy gets a separate definition via
-         * `appendToBootstrapClassLoaderSearch` of the wrapped `bootstrap.jar` below).
-         * Two copies means two different `static` fields state — a source of various bugs.
-         *
-         * Excluding `bootstrap.jar` here leaves the `jarWrapper`-protected copy as the sole
-         * source of bootstrap classes in the fat jar.
-         */
-        from({
-            runtimeClasspath.resolve().filter { it.name.endsWith(".jar") }.map { jar ->
-                if (jar.isDirectory) jar else zipTree(jar).matching { exclude("bootstrap.jar") }
-            }
-        })
-        from(jarWrapper)
-
-        /* IMPORTANT NOTE!
-         *
-         * Shadowing will also substitute ALL strings containing package names in ALL source files
-         * (known shadow-plugin behavior, see https://github.com/GradleUp/shadow/issues/232);
-         * when adding a new shadowed package, use `listOf(...)` hack to circumvent package shadowing:
-         * for instance, instead of `org.objectweb.asm`, use `listOf("org", "objectweb", "asm").joinToString(".")`.
-         *
-         * To minimize the affected surface area, all package-related string checks should be extracted into
-         * separate utility functions and be kept in `common/src/main/org/jetbrains/lincheck/util/Utils.kt`.
-         */
-        val packagesToShade = listOf(
-            "org.objectweb.asm",
-            "net.bytebuddy",
-            "org.java_websocket",
-            "org.slf4j",
-            "com.google.re2j",
-        )
-
-        packagesToShade.forEach { packageName ->
-            relocate(packageName, "org.jetbrains.lincheck.shadow.$packageName")
+        dependsOn(":jvm-agent-wrapper:jar", copyBootstrapJar, agentPayloadJar)
+        from(zipTree(agentWrapperJar)) {
+            exclude("META-INF/**")
         }
+        // A plain Jar task keeps archive inputs nested without an intermediate wrapper archive.
+        from(nestedJarsDir.map { it.file("bootstrap.jar") })
+        from(agentPayloadJar.flatMap { it.archiveFile })
 
         manifest {
             appendMetaAttributes(project)
             attributes(
                 mapOf(
-                    "Premain-Class" to premainClass,
-                    "Agent-Class" to premainClass,
+                    "Premain-Class" to "org.jetbrains.lincheck.jvm.agent.wrapper.AgentWrapper",
+                    "Agent-Class" to "org.jetbrains.lincheck.jvm.agent.wrapper.AgentWrapper",
+                    "Tracing-Agent-Class" to premainClass,
                     "Can-Redefine-Classes" to "true",
                     "Can-Retransform-Classes" to "true"
                 )

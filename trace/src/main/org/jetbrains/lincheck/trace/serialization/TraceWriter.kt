@@ -23,29 +23,31 @@ import java.io.OutputStream
  * One `writeTR<Type>TracePoint` method per tracepoint type;
  * read/write variants share the method of their sealed base class
  * (their bodies are identical, the kind byte tells them apart on the read side).
- * Container tracepoints additionally get a `writeTR<Type>TracePointFooter` method,
- * which must be called after all children are written.
+ * The closing side of a container ([ContainerFooterTracePoint]) is an ordinary tracepoint record,
+ * written after all the container's children: with [TraceWriter.writeTracePoint] by a caller which holds it,
+ * or by calling [TraceWriter.writeTracePoint] with the container's footer.
  *
  * Each default `writeTR<Type>TracePoint` implementation:
  *   1. pre-registers prerequisite descriptors and values (memoized by the writer),
  *   2. calls [startWriteAnyTracepoint],
- *   3. calls [writeTRTracePoint] — the top-level dispatcher in `TraceBinarySerialization.kt`
+ *   3. calls [writeTracePointData] — the top-level dispatcher in `TraceBinarySerialization.kt`
  *      that emits the kind byte, common header, and the subclass-specific body bytes
  *      (including children diff-statuses for containers),
- *   4. calls [endWriteLeafTracepoint] or [endWriteContainerTracepointHeader].
+ *   4. calls [endWriteLeafTracepoint], [endWriteContainerTracepointHeader],
+ *      or [endWriteContainerTracepoint] for a closing tracepoint.
  */
 internal interface TraceWriter : DataOutput, Closeable {
     /**
-     * Saves dependencies of [TRValue], if needed.
-     * This must be called before [startWriteAnyTracepoint] for all used [TRValue]s.
+     * Saves dependencies of [TraceValue], if needed.
+     * This must be called before [startWriteAnyTracepoint] for all used [TraceValue]s.
      */
-    fun preWriteTRValue(value: TRValue)
+    fun preWriteTraceValue(value: TraceValue)
 
     /**
-     * Saves [TRValue] itself.
-     * Must be called after [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter].
+     * Saves [TraceValue] itself.
+     * Must be called after [startWriteAnyTracepoint].
      */
-    fun writeTRValue(value: TRValue)
+    fun writeTraceValue(value: TraceValue)
 
     /**
      * Marks the beginning of a tracepoint (before the first byte of tracepoint is written).
@@ -60,169 +62,180 @@ internal interface TraceWriter : DataOutput, Closeable {
     /**
      * Mark the end of the container tracepoint's header.
      *
-     * The container tracepoints are [TRMethodCallTracePoint], [TRLoopTracePoint], and [TRLoopIterationTracePoint].
+     * The container tracepoints are [MethodCallTracePoint], [LoopTracePoint], and [LoopIterationTracePoint].
      */
     fun endWriteContainerTracepointHeader(id: Int)
 
     /**
-     * Mark the beginning of container tracepoint's footer (After all children are saved).
+     * Marks the end of the children of the container tracepoint with the given event [id].
+     *
+     * Must be called after all the container's children are written
+     * and right before the container's closing tracepoint, whose position bounds the children range.
      */
-    fun startWriteContainerTracepointFooter()
+    fun endWriteContainerTracepointChildren(id: Int)
 
     /**
-     * Marks the end of container tracepoint's footer.
+     * Marks the end of the whole container tracepoint with the given event [id],
+     * i.e. the end of the body of its closing tracepoint.
+     *
+     * Only here the container is committed: a buffered writer may fail in the middle of the closing
+     * tracepoint and roll it back, and the whole close is then retried from scratch.
      */
-    fun endWriteContainerTracepointFooter(id: Int)
+    fun endWriteContainerTracepoint(id: Int)
 
     /**
      * Write [name] of the thread.
-     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all thread names.
+     * This must be called before [startWriteAnyTracepoint] for all thread names.
      */
     fun writeThreadName(id: Int, name: String)
 
     /**
      * Write [ClassDescriptor] from context referred by given `id`, if needed.
-     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used class descriptors.
+     * This must be called before [startWriteAnyTracepoint] for all used class descriptors.
      */
     fun writeClassDescriptor(id: Int)
 
     /**
      * Write [MethodDescriptor] from context referred by given `id`, if needed.
-     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used method descriptors.
+     * This must be called before [startWriteAnyTracepoint] for all used method descriptors.
      */
     fun writeMethodDescriptor(id: Int)
 
     /**
      * Write [FieldDescriptor] from context referred by given `id`, if needed.
-     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used field descriptors.
+     * This must be called before [startWriteAnyTracepoint] for all used field descriptors.
      */
     fun writeFieldDescriptor(id: Int)
 
     /**
      * Write [VariableDescriptor] from context referred by given `id` if needed.
-     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used variable descriptors.
+     * This must be called before [startWriteAnyTracepoint] for all used variable descriptors.
      */
     fun writeVariableDescriptor(id: Int)
 
     /**
      * Write [CodeLocation] from context referred by given code location `id`, if needed.
-     * This must be called before [startWriteAnyTracepoint] or [startWriteContainerTracepointFooter] for all used code locations.
+     * This must be called before [startWriteAnyTracepoint] for all used code locations.
      */
     fun writeCodeLocation(id: Int)
 
     /**
      * Writes a tracepoint of any type by dispatching to its type-specific `writeTR<Type>TracePoint` method.
      */
-    fun writeTracePoint(tracePoint: TRTracePoint) {
+    fun writeTracePoint(tracePoint: TracePoint) {
         when (tracePoint) {
-            is TRMethodCallTracePoint             -> writeTRMethodCallTracePoint(tracePoint)
-            is TRLoopTracePoint                   -> writeTRLoopTracePoint(tracePoint)
-            is TRLoopIterationTracePoint          -> writeTRLoopIterationTracePoint(tracePoint)
-            is TRFieldTracePoint                  -> writeTRFieldTracePoint(tracePoint)
-            is TRArrayTracePoint                  -> writeTRArrayTracePoint(tracePoint)
-            is TRLocalVariableTracePoint          -> writeTRLocalVariableTracePoint(tracePoint)
-            is TRExceptionProcessingTracePoint    -> writeTRExceptionProcessingTracePoint(tracePoint)
-            is TRSnapshotLineBreakpointTracePoint -> writeTRSnapshotLineBreakpointTracePoint(tracePoint)
+            is MethodCallTracePoint             -> writeMethodCallTracePoint(tracePoint)
+            is LoopTracePoint                   -> writeLoopTracePoint(tracePoint)
+            is LoopIterationTracePoint          -> writeLoopIterationTracePoint(tracePoint)
+            is FieldTracePoint                  -> writeFieldTracePoint(tracePoint)
+            is ArrayTracePoint                  -> writeArrayTracePoint(tracePoint)
+            is LocalVariableTracePoint          -> writeLocalVariableTracePoint(tracePoint)
+            is ExceptionProcessingTracePoint    -> writeExceptionProcessingTracePoint(tracePoint)
+            is SnapshotLineBreakpointTracePoint -> writeSnapshotLineBreakpointTracePoint(tracePoint)
+            is MethodCallResultTracePoint       -> writeMethodCallResultTracePoint(tracePoint)
+            is LoopEndTracePoint                -> writeLoopEndTracePoint(tracePoint)
+            is LoopIterationEndTracePoint       -> writeLoopIterationEndTracePoint(tracePoint)
         }
     }
 
-    /**
-     * Writes a footer of a container tracepoint of any type
-     * by dispatching to its type-specific `writeTR<Type>TracePointFooter` method.
-     */
-    fun writeTracePointFooter(tracePoint: TRContainerTracePoint) {
-        when (tracePoint) {
-            is TRMethodCallTracePoint    -> writeTRMethodCallTracePointFooter(tracePoint)
-            is TRLoopTracePoint          -> writeTRLoopTracePointFooter(tracePoint)
-            is TRLoopIterationTracePoint -> writeTRLoopIterationTracePointFooter(tracePoint)
-        }
-    }
-
-    fun writeTRMethodCallTracePoint(tracePoint: TRMethodCallTracePoint) {
+    fun writeMethodCallTracePoint(tracePoint: MethodCallTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeMethodDescriptor(tracePoint.methodId)
-        preWriteTRValue(tracePoint.obj)
-        tracePoint.parameters.forEach { preWriteTRValue(it) }
+        preWriteTraceValue(tracePoint.obj)
+        tracePoint.parameters.forEach { preWriteTraceValue(it) }
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTRLoopTracePoint(tracePoint: TRLoopTracePoint) {
+    fun writeLoopTracePoint(tracePoint: LoopTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTRLoopIterationTracePoint(tracePoint: TRLoopIterationTracePoint) {
+    fun writeLoopIterationTracePoint(tracePoint: LoopIterationTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeContainerTracepointHeader(tracePoint)
     }
 
-    fun writeTRFieldTracePoint(tracePoint: TRFieldTracePoint) {
+    fun writeFieldTracePoint(tracePoint: FieldTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeFieldDescriptor(tracePoint.fieldId)
-        preWriteTRValue(tracePoint.obj)
-        preWriteTRValue(tracePoint.value)
+        preWriteTraceValue(tracePoint.obj)
+        preWriteTraceValue(tracePoint.value)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRArrayTracePoint(tracePoint: TRArrayTracePoint) {
+    fun writeArrayTracePoint(tracePoint: ArrayTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
-        preWriteTRValue(tracePoint.array)
-        preWriteTRValue(tracePoint.value)
+        preWriteTraceValue(tracePoint.array)
+        preWriteTraceValue(tracePoint.value)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRLocalVariableTracePoint(tracePoint: TRLocalVariableTracePoint) {
+    fun writeLocalVariableTracePoint(tracePoint: LocalVariableTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         writeVariableDescriptor(tracePoint.localVariableId)
-        preWriteTRValue(tracePoint.value)
+        preWriteTraceValue(tracePoint.value)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRExceptionProcessingTracePoint(tracePoint: TRExceptionProcessingTracePoint) {
+    fun writeExceptionProcessingTracePoint(tracePoint: ExceptionProcessingTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
-        preWriteTRValue(tracePoint.exception)
+        preWriteTraceValue(tracePoint.exception)
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRSnapshotLineBreakpointTracePoint(tracePoint: TRSnapshotLineBreakpointTracePoint) {
+    fun writeSnapshotLineBreakpointTracePoint(tracePoint: SnapshotLineBreakpointTracePoint) {
         writeCodeLocation(tracePoint.codeLocationId)
         tracePoint.stackTraceCodeLocationIds.forEach { writeCodeLocation(it) }
-        tracePoint.locals.forEach { preWriteTRValue(it) }
-        tracePoint.watches.forEach { preWriteTRValue(it) }
+        tracePoint.locals.forEach { preWriteTraceValue(it) }
+        tracePoint.watches.forEach { preWriteTraceValue(it) }
         writeLeafTracepoint(tracePoint)
     }
 
-    fun writeTRMethodCallTracePointFooter(tracePoint: TRMethodCallTracePoint) {
-        preWriteTRValue(tracePoint.result)
-        startWriteContainerTracepointFooter()
-        writeMethodCallTracePointFooter(tracePoint)
-        endWriteContainerTracepointFooter(tracePoint.eventId)
+    fun writeMethodCallResultTracePoint(tracePoint: MethodCallResultTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        preWriteTraceValue(tracePoint.result)
+        writeContainerEndTracepoint(tracePoint)
     }
 
-    fun writeTRLoopTracePointFooter(tracePoint: TRLoopTracePoint) {
-        startWriteContainerTracepointFooter()
-        writeLoopTracePointFooter(tracePoint)
-        endWriteContainerTracepointFooter(tracePoint.eventId)
+    fun writeLoopEndTracePoint(tracePoint: LoopEndTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        writeContainerEndTracepoint(tracePoint)
     }
 
-    fun writeTRLoopIterationTracePointFooter(tracePoint: TRLoopIterationTracePoint) {
-        // No footer body bytes for this kind — only container bookkeeping.
-        startWriteContainerTracepointFooter()
-        endWriteContainerTracepointFooter(tracePoint.eventId)
+    fun writeLoopIterationEndTracePoint(tracePoint: LoopIterationEndTracePoint) {
+        writeCodeLocation(tracePoint.codeLocationId)
+        writeContainerEndTracepoint(tracePoint)
     }
 }
 
-private fun TraceWriter.writeLeafTracepoint(tracePoint: TRTracePoint) {
+private fun TraceWriter.writeLeafTracepoint(tracePoint: TracePoint) {
     startWriteAnyTracepoint()
-    writeTRTracePoint(tracePoint)
+    writeTracePointData(tracePoint)
     endWriteLeafTracepoint()
 }
 
-// Marks the tracepoint as a container which could have children and will have a footer.
-private fun TraceWriter.writeContainerTracepointHeader(tracePoint: TRContainerTracePoint) {
+// Marks the tracepoint as a container which could have children.
+private fun TraceWriter.writeContainerTracepointHeader(tracePoint: ContainerHeaderTracePoint) {
     startWriteAnyTracepoint()
-    writeTRTracePoint(tracePoint)
+    writeTracePointData(tracePoint)
     endWriteContainerTracepointHeader(tracePoint.eventId)
+}
+
+// Closes the container: everything written between its header and this record is its children.
+private fun TraceWriter.writeContainerEndTracepoint(tracePoint: ContainerFooterTracePoint) {
+    // Must be called after the closing tracepoint's own prerequisites, so that they still fall
+    // into the children range, and before its first byte, which bounds that range.
+    endWriteContainerTracepointChildren(tracePoint.containerEventId)
+    startWriteAnyTracepoint()
+    writeTracePointData(tracePoint)
+    endWriteContainerTracepoint(tracePoint.containerEventId)
+}
+
+/** A container tracepoint whose header is written and whose closing tracepoint is not committed yet. */
+private class OpenContainer(val id: Int, val startPosition: Long) {
+    /** Data position of the first byte of the closing tracepoint, i.e. the end of the children range. */
+    var childrenEndPosition: Long = startPosition
 }
 
 /**
@@ -240,11 +253,10 @@ internal abstract class ContextAwareTraceWriter(
     protected val dataOutput: DataOutput
 ): TraceWriter, DataOutput by dataOutput {
     protected abstract val contextState: TraceContextSavedState
-    // Stack of "container" tracepoints
-    private val containerStack = mutableListOf<Pair<Int, Long>>()
+    // Stack of container tracepoints whose closing tracepoint is not written yet
+    private val containerStack = mutableListOf<OpenContainer>()
 
     private var inTracepointBody = false
-    private var footerPosition: Long = -1
 
     protected abstract val currentDataPosition: Long
     abstract val writerId: Int
@@ -256,31 +268,31 @@ internal abstract class ContextAwareTraceWriter(
         writeIndexCell(ObjectKind.EOF,-1, -1, -1)
     }
 
-    override fun preWriteTRValue(value: TRValue) {
-        check(!inTracepointBody) { "Cannot write TRObject dependency into tracepoint body" }
+    override fun preWriteTraceValue(value: TraceValue) {
+        check(!inTracepointBody) { "Cannot write TraceObject dependency into tracepoint body" }
         // Only types that carry a real [ClassDescriptor] need pre-registration on the wire;
-        // [TRValue.classId] returns `null` for sentinels, primitives, strings, etc.
+        // [TraceValue.classId] returns `null` for sentinels, primitives, strings, etc.
         val classId = value.classId ?: return
         writeClassDescriptor(classId)
         // Recursively register class descriptors for all field values.
-        if (value is TRObjectSnapshot) {
-            value.fields.values.forEach { fieldValue -> preWriteTRValue(fieldValue) }
+        if (value is TraceObjectSnapshot) {
+            value.fields.values.forEach { fieldValue -> preWriteTraceValue(fieldValue) }
         }
-        if (value is TRArraySnapshot) {
-            value.capturedElements.forEach { capturedElement -> preWriteTRValue(capturedElement) }
+        if (value is TraceArraySnapshot) {
+            value.capturedElements.forEach { capturedElement -> preWriteTraceValue(capturedElement) }
         }
         // Both halves of an entry are arbitrary values, so a key needs registering just like a value.
-        if (value is TRMapSnapshot) {
+        if (value is TraceMapSnapshot) {
             value.capturedEntries.forEach { (key, entryValue) ->
-                preWriteTRValue(key)
-                preWriteTRValue(entryValue)
+                preWriteTraceValue(key)
+                preWriteTraceValue(entryValue)
             }
         }
     }
 
-    override fun writeTRValue(value: TRValue) {
-        check(inTracepointBody) { "Cannot write TRObject outside tracepoint body" }
-        dataOutput.writeTRValue(value)
+    override fun writeTraceValue(value: TraceValue) {
+        check(inTracepointBody) { "Cannot write TraceObject outside tracepoint body" }
+        dataOutput.writeTraceValue(value)
     }
 
     override fun startWriteAnyTracepoint() {
@@ -299,34 +311,36 @@ internal abstract class ContextAwareTraceWriter(
         inTracepointBody = false
 
         // Store where container content starts
-        containerStack.add(id to currentDataPosition)
+        containerStack.add(OpenContainer(id, currentDataPosition))
     }
 
-    override fun startWriteContainerTracepointFooter() {
-        check(!inTracepointBody) { "Cannot start nested tracepoint footer" }
-        inTracepointBody = true
-        footerPosition = currentDataPosition
-
-        check(containerStack.isNotEmpty()) {
-            "Calls endWriteContainerTracepointHeader() / startWriteContainerTracepointFooter() are not balanced"
-        }
-
-        // Start object
-        dataOutput.writeKind(ObjectKind.TRACEPOINT_FOOTER)
+    override fun endWriteContainerTracepointChildren(id: Int) {
+        check(!inTracepointBody) { "Cannot end container children inside a tracepoint body" }
+        // The descriptors needed by the closing tracepoint are written before it,
+        // so they fall inside the children range, which is what the reader expects.
+        currentContainer(id).childrenEndPosition = currentDataPosition
     }
 
-    override fun endWriteContainerTracepointFooter(id: Int) {
-        check(inTracepointBody) { "Cannot end tracepoint footer not in tracepoint" }
-        check(footerPosition >= 0) { "Cannot end tracepoint footer not in tracepoint footer" }
-
-        val (storedId, startPos) = containerStack.removeLast()
-        check(id == storedId) {
-            "Calls endWriteContainerTracepointHeader($storedId) / startWriteContainerTracepointFooter($id) are not balanced"
-        }
-        writeIndexCell(ObjectKind.TRACEPOINT, id, startPos, footerPosition)
-
+    override fun endWriteContainerTracepoint(id: Int) {
+        check(inTracepointBody) { "Cannot end container tracepoint not in tracepoint" }
         inTracepointBody = false
-        footerPosition = -1
+
+        // Pop and index the container only now, when its closing tracepoint is written completely:
+        // a writer that overflows in the middle of that record rolls the data back and retries the
+        // whole close, which must find the container still open.
+        val container = currentContainer(id)
+        containerStack.removeLast()
+        writeIndexCell(ObjectKind.TRACEPOINT, id, container.startPosition, container.childrenEndPosition)
+    }
+
+    /** The innermost open container, which must be the one with the given event [id]. */
+    private fun currentContainer(id: Int): OpenContainer {
+        val container = containerStack.lastOrNull()
+        check(container != null && container.id == id) {
+            "Container tracepoint $id is closed while ${container?.id?.let { "container $it" } ?: "no container"} " +
+            "is open: endWriteContainerTracepointHeader() / endWriteContainerTracepoint() calls are not balanced"
+        }
+        return container
     }
 
     override fun writeThreadName(id: Int, name: String) {
@@ -556,7 +570,6 @@ internal abstract class ContextAwareTraceWriter(
 
     protected fun resetTracepointState() {
         inTracepointBody = false
-        footerPosition = -1
     }
 
 

@@ -14,6 +14,7 @@ import org.objectweb.asm.Opcodes
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.isSafeMethodCall
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.collections.*

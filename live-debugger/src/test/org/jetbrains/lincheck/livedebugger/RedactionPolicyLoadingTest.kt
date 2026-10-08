@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.livedebugger
 
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.settings.PolicyOwner
+import org.jetbrains.lincheck.settings.liveDebuggerSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -32,7 +32,7 @@ class RedactionPolicyLoadingTest {
             LiveDebugger.loadRedactionTemplatesFromFile(missingFile.absolutePath)
 
             assertFalse(LiveDebugger.isDebuggingAllowed)
-            assertFalse(LincheckClassFileTransformer.liveDebuggerSettings.requiredRedactionPolicyValid)
+            assertFalse(liveDebuggerSettings.requiredRedactionPolicyValid)
         } finally {
             LiveDebugger.loadRedactionTemplatesFromFile(null)
         }
@@ -68,15 +68,14 @@ class RedactionPolicyLoadingTest {
             LiveDebugger.loadRedactionTemplatesFromFile(file.absolutePath)
 
             assertTrue(LiveDebugger.isDebuggingAllowed)
-            val settings = LincheckClassFileTransformer.liveDebuggerSettings
+            val settings = liveDebuggerSettings
             assertTrue(settings.requiredRedactionPolicyValid)
             val installed = settings.redactionRegistry.all()
             assertEquals(listOf("Production defaults"), installed.map { it.name })
             assertFalse(settings.redactionRegistry.snapshot().isEmpty)
         } finally {
             file.delete()
-            LincheckClassFileTransformer.liveDebuggerSettings.redactionRegistry
-                .replace(PolicyOwner.STARTUP_FILE, emptyList())
+            liveDebuggerSettings.redactionRegistry.replace(PolicyOwner.STARTUP_FILE, emptyList())
             LiveDebugger.loadRedactionTemplatesFromFile(null)
         }
     }

@@ -26,7 +26,7 @@ import java.math.BigInteger
 import kotlin.reflect.KClass
 
 /** Captures the value snapshots of one live-debugger tracepoint hit. */
-internal interface SnapshotCapturer {
+interface SnapshotCapturer {
     /**
      * Captures the values of named expression slots (locals or watch expressions).
      *
@@ -39,14 +39,14 @@ internal interface SnapshotCapturer {
         values: Array<Any?>,
         names: List<String>?,
         declaringClassName: String,
-    ): List<TRValue>
+    ): List<TraceValue>
 
-    /** Captures a single value as a [TRValue] under this capturer's policy. */
-    fun captureValue(value: Any?): TRValue
+    /** Captures a single value as a [TraceValue] under this capturer's policy. */
+    fun captureValue(value: Any?): TraceValue
 }
 
 /** Selects the capturer for [policy]: the plain implementation when no redaction rules are set. */
-internal fun SnapshotCapturer(context: TraceContext, policy: CompiledRedactionPolicy): SnapshotCapturer =
+fun SnapshotCapturer(context: TraceContext, policy: CompiledRedactionPolicy): SnapshotCapturer =
     if (policy.isEmpty) PlainSnapshotCapturer(context) else RedactingSnapshotCapturer(context, policy)
 
 private fun requireAlignedNames(values: Array<Any?>, names: List<String>?) {
@@ -55,42 +55,50 @@ private fun requireAlignedNames(values: Array<Any?>, names: List<String>?) {
     }
 }
 
-/** Capture with no active redaction policy: every value delegates to the [TRValue] factories unchanged. */
+/** Capture with no active redaction policy: every value delegates to the [TraceValue] factories unchanged. */
 internal class PlainSnapshotCapturer(private val context: TraceContext) : SnapshotCapturer {
 
     override fun captureNamedExpressionValues(
         values: Array<Any?>,
         names: List<String>?,
         declaringClassName: String,
-    ): List<TRValue> {
+    ): List<TraceValue> {
         requireAlignedNames(values, names)
         return values.map(::captureValue)
     }
 
-    override fun captureValue(value: Any?): TRValue = when {
-        value == null -> TRNull
+    override fun captureValue(value: Any?): TraceValue = when {
+        value == null -> TraceNull
 
-        value is Enum<*> -> TRValue(context, value)
-        value is Throwable -> TRExceptionSnapshot(context, value)
+        value is Enum<*> -> TraceValue(context, value, captureToString = true)
+        value is Throwable -> TraceExceptionSnapshot(context, value)
 
         value::class.java.isArray -> {
             val arraySize = findArrayLength(value)
             val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
             val elements = findElementsForArray(value, elementsToRead)
-            TRArraySnapshot(context, value, arraySize, elements)
+            TraceArraySnapshot(context, value, arraySize, elements, captureToString = true)
         }
 
         else -> {
             val objectFields = findFieldsForObject(value)
             when {
-                objectFields.isNotEmpty() -> TRObjectSnapshot(context, value, objectFields)
-                else -> TRValue(context, value)
+                objectFields.isNotEmpty() -> TraceObjectSnapshot(context, value, objectFields, captureToString = true)
+                else -> TraceValue(context, value, captureToString = true)
             }
         }
     }
 }
 
-/** Capture that enforces one immutable redaction-policy snapshot on every captured slot. */
+/**
+ * Capture that enforces one immutable redaction-policy snapshot on every captured slot.
+ *
+ * Never stores a `toString()` rendering ([SafeToStringCapturer] is not consulted):
+ * the text is opaque to the policy — it may spell out a field a name rule redacts,
+ * here or in a nested object the capture never reads,
+ * and a value rule anchored to one scalar cannot be evaluated against a composite string.
+ * Objects keep the identity-only render under redaction.
+ */
 internal class RedactingSnapshotCapturer(
     private val context: TraceContext,
     private val policy: CompiledRedactionPolicy,
@@ -100,7 +108,7 @@ internal class RedactingSnapshotCapturer(
         values: Array<Any?>,
         names: List<String>?,
         declaringClassName: String,
-    ): List<TRValue> {
+    ): List<TraceValue> {
         requireAlignedNames(values, names)
         // No name metadata at all (e.g. no active-locals info for this code location):
         // with name rules active we cannot prove any slot is safe, so fail closed.
@@ -116,22 +124,22 @@ internal class RedactingSnapshotCapturer(
         }
     }
 
-    override fun captureValue(value: Any?): TRValue = try {
+    override fun captureValue(value: Any?): TraceValue = try {
         captureValueOrThrow(value)
     } catch (_: Throwable) {
         unattributedRedaction(value)
     }
 
-    private fun captureValueOrThrow(value: Any?): TRValue {
+    private fun captureValueOrThrow(value: Any?): TraceValue {
         captureScalar(value)?.let { return it }
         if (value is Throwable) return captureException(value)
-        val nonNullValue = value ?: return TRNull
+        val nonNullValue = value ?: return TraceNull
         if (nonNullValue.javaClass.isArray) {
             val arraySize = findArrayLength(nonNullValue)
             val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
             val elements = findElementsForArray(nonNullValue, elementsToRead).map(::captureLeafValue)
             val descriptor = context.createAndRegisterClassDescriptor(nonNullValue.javaClass.name)
-            return TRArraySnapshot(
+            return TraceArraySnapshot(
                 descriptor,
                 System.identityHashCode(nonNullValue).toLong(),
                 arraySize,
@@ -142,9 +150,9 @@ internal class RedactingSnapshotCapturer(
         val fields = captureObjectFields(nonNullValue)
         return if (fields.isNotEmpty()) {
             val descriptor = context.createAndRegisterClassDescriptor(nonNullValue.javaClass.name)
-            TRObjectSnapshot(descriptor, System.identityHashCode(nonNullValue).toLong(), fields)
+            TraceObjectSnapshot(descriptor, System.identityHashCode(nonNullValue).toLong(), rendered = null, fields)
         } else {
-            TRValue(context, nonNullValue)
+            TraceValue(context, nonNullValue, captureToString = false)
         }
     }
 
@@ -152,7 +160,7 @@ internal class RedactingSnapshotCapturer(
      * Captures one object level. Name rules are evaluated against the declaring field before the
      * field is read, so a matched field's value never enters the capture pipeline.
      */
-    private fun captureObjectFields(value: Any): Map<String, TRValue> {
+    private fun captureObjectFields(value: Any): Map<String, TraceValue> {
         val clazz = value.javaClass
         if (clazz.isPrimitive || clazz == String::class.java) return emptyMap()
         return buildMap {
@@ -168,7 +176,7 @@ internal class RedactingSnapshotCapturer(
                 }
                 // A parent may hide a same-named subclass field. Never replace an already-redacted
                 // child with a less restrictive capture from a differently scoped declaration.
-                if (get(field.name) is TRRedacted) continue
+                if (get(field.name) is TraceRedacted) continue
                 val fieldRead = readFieldSafely(value, field)
                 if (fieldRead.isFailure) continue
                 put(field.name, captureLeafValue(fieldRead.getOrNull()))
@@ -177,16 +185,16 @@ internal class RedactingSnapshotCapturer(
     }
 
     /** Captures a nested field/array element without recursively traversing another object level. */
-    private fun captureLeafValue(value: Any?): TRValue {
+    private fun captureLeafValue(value: Any?): TraceValue {
         return try {
             captureScalar(value)
-                ?: if (value is Throwable) captureException(value) else TRValue(context, value)
+                ?: if (value is Throwable) captureException(value) else TraceValue(context, value, captureToString = false)
         } catch (_: Throwable) {
             unattributedRedaction(value)
         }
     }
 
-    private fun captureScalar(value: Any?): TRValue? = try {
+    private fun captureScalar(value: Any?): TraceValue? = try {
         captureScalarOrThrow(value)
     } catch (_: Throwable) {
         unattributedRedaction(value)
@@ -198,11 +206,11 @@ internal class RedactingSnapshotCapturer(
      * and other parse-back types truncation would corrupt the stored value, and their bounded
      * textual forms are already short.
      */
-    private fun captureScalarOrThrow(value: Any?): TRValue? = when (value) {
-        null -> TRNull
+    private fun captureScalarOrThrow(value: Any?): TraceValue? = when (value) {
+        null -> TraceNull
         is String -> {
             val bounded = value.truncateForCapture()
-            redactionForValue(bounded, String::class.java.name) ?: TRString(bounded)
+            redactionForValue(bounded, String::class.java.name) ?: TraceString(bounded)
         }
         is Boolean,
         is Byte,
@@ -212,52 +220,52 @@ internal class RedactingSnapshotCapturer(
         is Float,
         is Double,
         is Char,
-        -> redactionForValue(value.toString(), value.javaClass.name) ?: TRScalar(value)
+        -> redactionForValue(value.toString(), value.javaClass.name) ?: TraceScalar(value)
         is BigInteger -> {
             if (value.javaClass != BigInteger::class.java) {
                 null
             } else {
-                redactionForValue(value.toString(), BigInteger::class.java.name) ?: TRArbitraryInteger(value)
+                redactionForValue(value.toString(), BigInteger::class.java.name) ?: TraceArbitraryInteger(value)
             }
         }
         is BigDecimal -> {
             if (value.javaClass != BigDecimal::class.java) {
                 null
             } else {
-                redactionForValue(value.toString(), BigDecimal::class.java.name) ?: TRArbitraryDecimal(value)
+                redactionForValue(value.toString(), BigDecimal::class.java.name) ?: TraceArbitraryDecimal(value)
             }
         }
-        is Enum<*> -> redactionForValue(value.name, value.javaClass.name) ?: TREnum(context, value)
+        is Enum<*> -> redactionForValue(value.name, value.javaClass.name) ?: TraceEnum(context, value)
         is CharSequence -> {
             val content = capturedCharSequenceContent(value, truncate = true)
             val className = value.javaClass.name
-            redactionForValue(content, className) ?: TRTextSnapshot(
+            redactionForValue(content, className) ?: TraceTextSnapshot(
                 context.createAndRegisterClassDescriptor(className),
                 System.identityHashCode(value).toLong(),
                 content,
             )
         }
         is Class<*> ->
-            redactionForValue(value.name, Class::class.java.name) ?: TRTypeReference(value)
+            redactionForValue(value.name, Class::class.java.name) ?: TraceTypeReference(value)
         else if (value.isKClass) ->
-            redactionForValue(value.kClassReferencedName, KClass::class.java.name) ?: TRKotlinTypeReference(value)
+            redactionForValue(value.kClassReferencedName, KClass::class.java.name) ?: TraceKotlinTypeReference(value)
         else -> null
     }
 
-    private fun captureException(throwable: Throwable): TRExceptionSnapshot {
+    private fun captureException(throwable: Throwable): TraceExceptionSnapshot {
         val descriptor = context.createAndRegisterClassDescriptor(throwable.javaClass.name)
         val message = try {
             throwable.message
                 ?.truncateForCapture()
-                ?.let { redactionForValue(it, String::class.java.name) ?: TRString(it) }
-                ?: TRNull
+                ?.let { redactionForValue(it, String::class.java.name) ?: TraceString(it) }
+                ?: TraceNull
         } catch (_: Throwable) {
             redactedMarker(String::class.java.name, match = null)
         }
         val stackTrace = runCatching {
             throwable.stackTrace?.map { it.toString() } ?: emptyList()
         }.getOrElse { emptyList() }
-        return TRExceptionSnapshot(
+        return TraceExceptionSnapshot(
             descriptor,
             System.identityHashCode(throwable).toLong(),
             message,
@@ -269,7 +277,7 @@ internal class RedactingSnapshotCapturer(
         variableName: String,
         declaringClassName: String?,
         capturedClassName: String?,
-    ): TRRedacted? = try {
+    ): TraceRedacted? = try {
         policy.matchName(variableName, declaringClassName)?.let { redactedMarker(capturedClassName, it) }
     } catch (_: Throwable) {
         redactedMarker(capturedClassName, match = null)
@@ -278,17 +286,17 @@ internal class RedactingSnapshotCapturer(
     private fun redactionForValue(
         content: String,
         capturedClassName: String?,
-    ): TRRedacted? = try {
+    ): TraceRedacted? = try {
         policy.matchValue(content)?.let { redactedMarker(capturedClassName, it) }
     } catch (_: Throwable) {
         redactedMarker(capturedClassName, match = null)
     }
 
-    private fun unattributedRedaction(value: Any?): TRRedacted =
+    private fun unattributedRedaction(value: Any?): TraceRedacted =
         redactedMarker(runtimeClassName(value), match = null)
 
-    private fun redactedMarker(capturedClassName: String?, match: RedactionMatch?): TRRedacted =
-        TRRedacted(classDescriptorOrNull(capturedClassName), match?.templateUuid, match?.templateName)
+    private fun redactedMarker(capturedClassName: String?, match: RedactionMatch?): TraceRedacted =
+        TraceRedacted(classDescriptorOrNull(capturedClassName), match?.templateUuid, match?.templateName)
 
     private fun classDescriptorOrNull(className: String?): ClassDescriptor? = try {
         className?.let(context::createAndRegisterClassDescriptor)

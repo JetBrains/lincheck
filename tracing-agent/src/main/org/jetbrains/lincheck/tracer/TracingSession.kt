@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck.tracer
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.printing.printTraceTree
 import org.jetbrains.lincheck.trace.serialization.*
 import org.jetbrains.lincheck.util.Logger
@@ -191,7 +191,7 @@ class TracingSession(
         }
     }
 
-    private fun recordedTrees(): List<Tree<TRTracePoint>> {
+    private fun recordedTrees(): List<Tree<TracePoint>> {
         val strategy = checkNotNull(eventTracker.memoryStrategy) {
             "Trace dump to a file requires the in-memory trace collecting strategy"
         }

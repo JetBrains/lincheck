@@ -185,9 +185,11 @@ internal fun Trace.numberExceptionResults(): Trace = this.deepCopy().also { copy
 }
 
 /**
- * Removes artificial GPMC actor method call from the trace and adjusts the trace structure.
+ * Removes the artificial GPMC actor method call from the trace and adjusts the trace structure.
  *
- * @return A new trace with the GPMC actor method call removed.
+ * A hung GPMC run has no matching method return, so only the opening call is removed in that case.
+ *
+ * @return A new trace with the GPMC actor method call and its matching return, when present, removed.
  * @throws IllegalStateException If the input trace does not represent GPMC run trace.
  */
 // TODO support multiple root nodes in GPMC mode, needs discussion on how to deal with `result: ...`
@@ -210,11 +212,10 @@ internal fun Trace.removeGPMCLambda(): Trace {
     val gpmcResultIndex = newTrace.indexOfFirst {
         it is MethodReturnTracePoint && it.methodTracePoint.isGPMCRunMethodCall() && it.methodTracePoint.eventId == 0
     }
-    check(gpmcResultIndex >= 0) {
-        "GPMC trace is expected"
+    if (gpmcResultIndex >= 0) {
+        newTrace.removeAt(gpmcResultIndex)
     }
 
-    newTrace.removeAt(gpmcResultIndex)
     newTrace.removeAt(gpmcCallIndex)
 
     return Trace(newTrace, this.threadNames)

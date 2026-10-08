@@ -140,6 +140,32 @@ fun TracingCallbacks.handleMessage(message: String?) {
                 }
                 breakpointBlocked(breakpointData, dataParts[1], timestamp)
             }
+            TracingCallbacks.BREAKPOINT_EXPRESSION_COMPILATION_FAILED -> {
+                val dataParts = data.split(";", limit = 2)
+                if (dataParts.size < 2) {
+                    Logger.warn { "Malformed breakpointExpressionCompilationFailed notification: $data" }
+                    return
+                }
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[0])
+                if (breakpointData == null) {
+                    Logger.warn { "Failed to parse breakpointExpressionCompilationFailed notification: $data" }
+                    return
+                }
+                breakpointExpressionCompilationFailed(breakpointData, dataParts[1], timestamp)
+            }
+            TracingCallbacks.INVALID_BREAKPOINT_LOCATION -> {
+                val dataParts = data.split(";", limit = 2)
+                if (dataParts.size < 2) {
+                    Logger.warn { "Malformed invalidBreakpointLocation notification: $data" }
+                    return
+                }
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[0])
+                if (breakpointData == null) {
+                    Logger.warn { "Failed to parse invalidBreakpointLocation notification: $data" }
+                    return
+                }
+                invalidBreakpointLocation(breakpointData, dataParts[1], timestamp)
+            }
             TracingCallbacks.BREAKPOINT_HIT_SUPPRESSED -> {
                 // Layout: breakpointData ; blockedFrameClass ; reason
                 val dataParts = data.split(";", limit = 3)

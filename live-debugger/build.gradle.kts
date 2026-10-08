@@ -83,6 +83,86 @@ registerTraceAgentTasks(
     premainClass = "org.jetbrains.lincheck.livedebugger.LiveDebuggerAgent"
 )
 
+// The agent-side expression compilers ship as nested jar resources — like `bootstrap.jar`,
+// never unpacked into the fat-jar root. The agent loads each in an isolated class loader
+// on first use, so compiler classes never touch the instrumented application's class path.
+// The Kotlin compiler does not bundle its runtime, so its dependency set is merged into one jar.
+val kotlinExpressionCompiler: Configuration by configurations.creating
+val java8ExpressionCompiler: Configuration by configurations.creating
+val java11ExpressionCompiler: Configuration by configurations.creating
+val java17ExpressionCompiler: Configuration by configurations.creating
+
+dependencies {
+    val kotlinVersion: String by project
+    val ecjJdk8Version: String by project
+    val ecjJdk11Version: String by project
+    val ecjJdk17Version: String by project
+    kotlinExpressionCompiler("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
+    java8ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk8Version")
+    java11ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk11Version")
+    java17ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk17Version")
+}
+
+val kotlinExpressionCompilerJar = tasks.register<Zip>("kotlinExpressionCompilerJar") {
+    dependsOn(":jvm-agent:kotlinExpressionAnalyzerJar")
+    archiveFileName.set("kotlin-expression-compiler.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("kotlinExpressionCompiler"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from({ kotlinExpressionCompiler.files.map(::zipTree) }) {
+        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "module-info.class", "META-INF/versions/*/module-info.class")
+    }
+    from({
+        zipTree(layout.projectDirectory.file("../jvm-agent/build/libs/kotlin-expression-analyzer.jar"))
+    })
+}
+
+fun javaExpressionCompilerJar(
+    taskName: String,
+    archiveName: String,
+    compiler: Configuration,
+) = tasks.register<Jar>(taskName) {
+    archiveFileName.set(archiveName)
+    destinationDirectory.set(layout.buildDirectory.dir("javaExpressionCompiler"))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from({ compiler.files.map(::zipTree) }) {
+        exclude(
+            "META-INF/*.SF",
+            "META-INF/*.DSA",
+            "META-INF/*.RSA",
+            "module-info.class",
+            "META-INF/versions/*/module-info.class",
+        )
+    }
+}
+
+val java8ExpressionCompilerJar =
+    javaExpressionCompilerJar(
+        "java8ExpressionCompilerJar",
+        "java-expression-compiler-jdk8.jar",
+        java8ExpressionCompiler,
+    )
+val java11ExpressionCompilerJar =
+    javaExpressionCompilerJar(
+        "java11ExpressionCompilerJar",
+        "java-expression-compiler-jdk11.jar",
+        java11ExpressionCompiler,
+    )
+val java17ExpressionCompilerJar =
+    javaExpressionCompilerJar(
+        "java17ExpressionCompilerJar",
+        "java-expression-compiler-jdk17.jar",
+        java17ExpressionCompiler,
+    )
+
+// The fat jar exposes only the dependency-free wrapper. Its nested agent payload is loaded in
+// an isolated class loader, so compiler jars belong there rather than at the fat-jar root.
+tasks.named<Jar>("liveDebuggerFatJarPayload") {
+    from(kotlinExpressionCompilerJar)
+    from(java8ExpressionCompilerJar)
+    from(java11ExpressionCompilerJar)
+    from(java17ExpressionCompilerJar)
+}
+
 publishing {
     publications {
         register("maven", MavenPublication::class) {

@@ -31,7 +31,7 @@ class LazyTraceReader private constructor(
     private val input: TraceDataProvider,
 ) : Closeable {
     private fun interface TracepointRegistrator {
-        fun register(indexInParent: Int, tracePoint: TRTracePoint?, physicalOffset: Long)
+        fun register(indexInParent: Int, tracePoint: TracePoint?, physicalOffset: Long)
     }
 
     constructor(baseFileName: String) :
@@ -116,10 +116,10 @@ class LazyTraceReader private constructor(
      * Children are discovered on demand through the tree API
      * (see [org.jetbrains.lincheck.trace.tree.readTraceTrees]).
      */
-    fun readTopLevelTracePoints(): List<List<TRTracePoint>> =
+    fun readTopLevelTracePoints(): List<List<TracePoint>> =
         readTopLevelTracePoints(this::readTracePointShallow)
 
-    private fun readTopLevelTracePoints(pointReader: () -> TRTracePoint?): List<List<TRTracePoint>> = lock.withLock {
+    private fun readTopLevelTracePoints(pointReader: () -> TracePoint?): List<List<TracePoint>> = lock.withLock {
         var start = System.currentTimeMillis()
 
         if (!contextLoaded) {
@@ -129,7 +129,7 @@ class LazyTraceReader private constructor(
             contextLoaded = true
         }
 
-        val threadTracepoints = mutableMapOf<Int, List<TRTracePoint>>()
+        val threadTracepoints = mutableMapOf<Int, List<TracePoint>>()
 
         dataBlocks.forEach {
             val (threadId, blocks) = it
@@ -139,7 +139,7 @@ class LazyTraceReader private constructor(
             val blockId = data.readInt()
             check(blockId == threadId) { "Thread $threadId block 0 has wrong idt: $blockId" }
 
-            val tracepoints = mutableListOf<TRTracePoint>()
+            val tracepoints = mutableListOf<TracePoint>()
             loadTracePoints(
                 threadId = threadId,
                 maxRead = Integer.MAX_VALUE,
@@ -166,11 +166,11 @@ class LazyTraceReader private constructor(
      * Children are discovered on demand through the tree API
      * (see [org.jetbrains.lincheck.trace.tree.readTraceTrees]).
      */
-    fun readShallowRoots(): List<TRTracePoint> = lock.withLock {
+    fun readShallowRoots(): List<TracePoint> = lock.withLock {
         readTopLevelTracePoints().rootsPerThread()
     }
 
-    private fun List<List<TRTracePoint>>.rootsPerThread(): List<TRTracePoint> =
+    private fun List<List<TracePoint>>.rootsPerThread(): List<TracePoint> =
         mapIndexedNotNull { threadId, tracepoints ->
             if (tracepoints.isEmpty()) {
                 Logger.warn { "Thread $threadId does not contain any tracepoints" }
@@ -187,11 +187,11 @@ class LazyTraceReader private constructor(
      * the returned children are owned by the caller (e.g., lazily loaded tree nodes),
      * and grandchildren are not loaded.
      */
-    fun loadAllChildren(parent: TRContainerTracePoint): List<TRTracePoint> = lock.withLock {
+    fun loadAllChildren(parent: ContainerHeaderTracePoint): List<TracePoint> = lock.withLock {
         val (start, end) = callTracepointChildren[parent.eventId]
-            ?: error("TRContainerTracePoint ${parent.eventId} is not found in index")
+            ?: error("ContainerHeaderTracePoint ${parent.eventId} is not found in index")
 
-        val children = mutableListOf<TRTracePoint>()
+        val children = mutableListOf<TracePoint>()
         data.seek(calculatePhysicalOffset(parent.threadId, start))
         loadTracePoints(
             threadId = parent.threadId,
@@ -202,9 +202,9 @@ class LazyTraceReader private constructor(
             }
         )
 
-        val actualFooterPos = data.position() - 1 // 1 is size of object kind
-        check(actualFooterPos == calculatePhysicalOffset(parent.threadId, end)) {
-            "Input contains broken data: expected Tracepoint Footer for event ${parent.eventId} at position $end, got $actualFooterPos"
+        val actualEndPos = data.position() - 1 // 1 is size of object kind
+        check(actualEndPos == calculatePhysicalOffset(parent.threadId, end)) {
+            "Input contains broken data: expected closing tracepoint of event ${parent.eventId} at position $end, got $actualEndPos"
         }
 
         children
@@ -219,7 +219,7 @@ class LazyTraceReader private constructor(
      * Does not modify [container]:
      * the returned list is owned by the caller (e.g., a tree node that keeps it for its own lifetime).
      */
-    internal fun readAllChildren(container: TRContainerTracePoint): LazyLoadableList<TRTracePoint> =
+    internal fun readAllChildren(container: ContainerHeaderTracePoint): LazyLoadableList<TracePoint> =
         LazyLoadableList(
             loadAll = { loadAllChildren(container) },
             computeIsEmpty = { !hasChildren(container) },
@@ -236,7 +236,7 @@ class LazyTraceReader private constructor(
      * Does not modify [container]:
      * the returned list is owned by the caller (e.g., a tree node that keeps it for its own lifetime).
      */
-    internal fun readChildren(container: TRContainerTracePoint): LazyLoadableList<TRTracePoint> {
+    internal fun readChildren(container: ContainerHeaderTracePoint): LazyLoadableList<TracePoint> {
         val addresses: Lazy<List<Long>> = lazy { readChildAddresses(container) }
         return LazyLoadableList(
             computeSize = { addresses.value.size },
@@ -252,9 +252,9 @@ class LazyTraceReader private constructor(
      *
      * Answered from the index alone — no trace data is read.
      */
-    private fun hasChildren(container: TRContainerTracePoint): Boolean = lock.withLock {
+    private fun hasChildren(container: ContainerHeaderTracePoint): Boolean = lock.withLock {
         val (start, end) = callTracepointChildren[container.eventId]
-            ?: error("TRContainerTracePoint ${container.eventId} is not found in index")
+            ?: error("ContainerHeaderTracePoint ${container.eventId} is not found in index")
         start != end
     }
 
@@ -264,9 +264,9 @@ class LazyTraceReader private constructor(
      * The returned addresses are logical offsets to be passed to [readTracePointAt];
      * they never leave the reader; external users go through [readChildren].
      */
-    private fun readChildAddresses(container: TRContainerTracePoint): List<Long> = lock.withLock {
+    private fun readChildAddresses(container: ContainerHeaderTracePoint): List<Long> = lock.withLock {
         val (start, end) = callTracepointChildren[container.eventId]
-            ?: error("TRContainerTracePoint ${container.eventId} is not found in index")
+            ?: error("ContainerHeaderTracePoint ${container.eventId} is not found in index")
 
         val addresses = AddressIndex.create()
         data.seek(calculatePhysicalOffset(container.threadId, start))
@@ -280,9 +280,9 @@ class LazyTraceReader private constructor(
         )
         addresses.finishWrite()
 
-        val actualFooterPos = data.position() - 1 // 1 is size of object kind
-        check(actualFooterPos == calculatePhysicalOffset(container.threadId, end)) {
-            "Input contains broken data: expected Tracepoint Footer for event ${container.eventId} at position $end, got $actualFooterPos"
+        val actualEndPos = data.position() - 1 // 1 is size of object kind
+        check(actualEndPos == calculatePhysicalOffset(container.threadId, end)) {
+            "Input contains broken data: expected closing tracepoint of event ${container.eventId} at position $end, got $actualEndPos"
         }
 
         addresses
@@ -292,9 +292,9 @@ class LazyTraceReader private constructor(
      * Reads the single trace point at [address] (a logical offset obtained from [readChildAddresses]) shallowly:
      * its children are not loaded, no parent link is set, and the reader's postprocessor is not applied.
      */
-    private fun readTracePointAt(threadId: Int, address: Long): TRTracePoint? = lock.withLock {
+    private fun readTracePointAt(threadId: Int, address: Long): TracePoint? = lock.withLock {
         data.seek(calculatePhysicalOffset(threadId, address))
-        var tracePoint: TRTracePoint? = null
+        var tracePoint: TracePoint? = null
         loadTracePoints(
             threadId = threadId,
             maxRead = 1,
@@ -304,34 +304,49 @@ class LazyTraceReader private constructor(
         tracePoint
     }
 
+    /**
+     * Reads trace points sequentially from the current position, hopping to the thread's next data block
+     * when the current one ends.
+     *
+     * Reading stops when [maxRead] points are read, when a container's closing tracepoint is reached,
+     * or when the thread's last block ends.
+     * A closing tracepoint is left unconsumed: it belongs to the container whose children are being read,
+     * and the caller checks its position against the index.
+     */
     private fun loadTracePoints(
         threadId: Int,
         maxRead: Int,
-        reader: () -> TRTracePoint?,
+        reader: () -> TracePoint?,
         registrator: TracepointRegistrator
     ) {
         val blocks = dataBlocks[threadId] ?: error("No data blocks for Thread $threadId")
         var idx = 0
+        var containerEnded = false
         while (true) {
             var kind = loadObjects(data, context, restore = false) { _, _ ->
                 val tracePointOffset = data.position() - 1 // account for Kind
+                // Peek the tracepoint kind and rewind: whether the record ends the children
+                // must be known before it is read.
+                containerEnded = data.readTracePointKind().isContainerEnd
+                data.seek(tracePointOffset + 1) // rewind to just after the ObjectKind byte
+                if (containerEnded) {
+                    return@loadObjects false
+                }
                 val tracePoint = reader()
                 if (tracePoint != null) {
                     registrator.register(idx++, tracePoint, tracePointOffset)
                 }
                 idx < maxRead
             }
-            if (idx == maxRead) {
+            if (containerEnded || idx == maxRead) {
                 break
             }
-            if (kind == ObjectKind.TRACEPOINT_FOOTER) {
-                break
-            } else if (kind != ObjectKind.BLOCK_END) {
+            if (kind != ObjectKind.BLOCK_END) {
                 error("Unexpected object kind $kind when reading tracepoints")
             }
 
-            // Find the next block, -2 to take the size of BLOCK_END into account, and that block end is exclusive
-            // point to last data byte of block, as current position points after BLOCK_END byte
+            // Find the block just read: -2 because the position points after the BLOCK_END byte,
+            // so this is the offset of the block's last data byte.
             val physicalOffset = data.position() - 2
             val blockIdx = findBlockByPhysicalOffset(threadId, physicalOffset)
             check(blockIdx != null) { "Thread $threadId doesn't contain physical offset $physicalOffset" }
@@ -406,7 +421,9 @@ class LazyTraceReader private constructor(
                             ObjectKind.CODE_LOCATION -> loadCodeLocation(data, context, restore = true)
                             ObjectKind.BLOCK_START -> {
                                 val list = dataBlocks.computeIfAbsent(id) { mutableListOf() }
-                                list.addNewBlock(start, end)
+                                // The index cell ends where the block's data ends, i.e. at its `BLOCK_END` byte,
+                                // which the block's footprint includes.
+                                list.addNewBlock(start, end + BLOCK_FOOTER_SIZE)
                                 // Read id from data for check
                                 data.readInt()
                             }
@@ -414,8 +431,7 @@ class LazyTraceReader private constructor(
                             ObjectKind.TRACEPOINT,
                             ObjectKind.EOF -> -1
                             // Cannot be in index
-                            ObjectKind.BLOCK_END,
-                            ObjectKind.TRACEPOINT_FOOTER -> error("Object $objNum has unexpected kind $kind")
+                            ObjectKind.BLOCK_END -> error("Object $objNum has unexpected kind $kind")
                         }
                         check(id == dataId) {
                             "Object $objNum of kind $kind: expected $id but datafile has $dataId"
@@ -442,21 +458,32 @@ class LazyTraceReader private constructor(
             input = data,
             context = context,
             tracepointConsumer = object : TracepointConsumer {
-                override fun tracePointRead(
-                    parent: TRContainerTracePoint?,
-                    tracePoint: TRTracePoint
-                ) {
-                    if (tracePoint is TRContainerTracePoint) {
-                        // We are in the last saved block in
-                        val childrenStart = calculateLogicalOffset(tracePoint.threadId, data.position())
-                        callTracepointChildren.addStart(tracePoint.eventId, childrenStart)
-                    }
+                // Start of the record being read: a closing record is fully consumed by the time it is reported,
+                // so its start is captured here.
+                private var recordStart: Long = -1
+
+                override fun tracePointStarted() {
+                    // -1 is here because Kind is already read
+                    recordStart = data.position() - 1
                 }
 
-                override fun footerStarted(tracePoint: TRContainerTracePoint) {
-                    // -1 is here because Kind is already read
-                    val childrenEnd = calculateLogicalOffset(tracePoint.threadId, data.position() - 1)
-                    callTracepointChildren.setEnd(tracePoint.eventId, childrenEnd)
+                override fun tracePointRead(
+                    parent: ContainerHeaderTracePoint?,
+                    tracePoint: TracePoint
+                ) {
+                    when (tracePoint) {
+                        // A container's children start right after its opening record
+                        is ContainerHeaderTracePoint -> {
+                            val childrenStart = calculateLogicalOffset(tracePoint.threadId, data.position())
+                            callTracepointChildren.addStart(tracePoint.eventId, childrenStart)
+                        }
+                        // ... and end where its closing record starts
+                        is ContainerFooterTracePoint -> {
+                            val childrenEnd = calculateLogicalOffset(tracePoint.threadId, recordStart)
+                            callTracepointChildren.setEnd(tracePoint.containerEventId, childrenEnd)
+                        }
+                        else -> {}
+                    }
                 }
             },
             blockConsumer = object : BlockConsumer {
@@ -469,8 +496,8 @@ class LazyTraceReader private constructor(
                 }
 
                 override fun blockEnded(threadId: Int) {
-                    val endPos = data.position() - BLOCK_FOOTER_SIZE // 1 byte for read kind
-                    dataBlocks[threadId]?.fixLastBlock(endPos)
+                    // The `BLOCK_END` byte is read already, so the position is the end of the block's footprint
+                    dataBlocks[threadId]?.fixLastBlock(data.position())
                 }
 
             }
@@ -478,35 +505,43 @@ class LazyTraceReader private constructor(
         callTracepointChildren.finishIndex()
     }
 
-    private fun readTracePointShallow(): TRTracePoint {
+    private fun readTracePointShallow(): TracePoint {
         // Load tracepoint itself
-        val tracePoint = data.readTRTracePoint(context)
-        if (tracePoint !is TRContainerTracePoint) {
+        val tracePoint = data.readTracePointData(context)
+        if (tracePoint !is ContainerHeaderTracePoint) {
             return tracePoint
         }
 
         val (start, end) = callTracepointChildren[tracePoint.eventId]
-            ?: error("TRContainerTracePoint ${tracePoint.eventId} is not found in index")
+            ?: error("ContainerHeaderTracePoint ${tracePoint.eventId} is not found in index")
 
-        val checkFor = calculatePhysicalOffset(tracePoint.threadId, start)
-        check(data.position() == checkFor) {
-            "TRContainerTracePoint ${tracePoint.eventId} has wrong start position in index: $start / $checkFor, expected ${data.position()}"
+        // The children of a container that ends its block start in the next one, so the two positions
+        // are only comparable as logical offsets.
+        val actualStart = calculateLogicalOffset(tracePoint.threadId, data.position())
+        check(actualStart == start) {
+            "ContainerHeaderTracePoint ${tracePoint.eventId} has wrong start position in index: $start, expected $actualStart"
         }
 
         val skipTo = calculatePhysicalOffset(tracePoint.threadId, end)
         data.seek(skipTo)
 
         val kind = data.readKind()
-        if (kind == ObjectKind.TRACEPOINT_FOOTER) {
-            // TODO: loading footer could also be extracted to the DefaultTracePointSerializer (name should change as well)
-            tracePoint.loadFooter(data)
+        if (kind == ObjectKind.TRACEPOINT) {
+            data.readContainerFooterTracePoint(context, tracePoint)
         } else {
-            Logger.error { "TraceRecorder: Unexpected object kind $kind when loading tracepoints" }
+            Logger.error { "TraceRecorder: Unexpected object kind $kind when loading a closing tracepoint" }
         }
 
         return tracePoint
     }
 
+    /**
+     * Physical offset in the trace file of the [logicalOffset] in the given thread's data.
+     *
+     * The writer knows nothing about blocks and numbers its data contiguously, so a logical offset on a block
+     * boundary is a single number with two physical spellings: the end of one block's data and the start of the
+     * next one's. This mapping always returns the latter — the one a reader can read forward from.
+     */
     private fun calculatePhysicalOffset(threadId: Int, logicalOffset: Long): Long {
         val blocks = dataBlocks[threadId] ?: error("ThreadId $threadId is not found in block list")
         val blockIdx = blocks.binarySearch { it.compareWithLogicalOffset(logicalOffset) }
@@ -515,6 +550,12 @@ class LazyTraceReader private constructor(
         return block.physicalDataStart + logicalOffset - block.accDataSize
     }
 
+    /**
+     * Logical offset in the given thread's data of the [physicalOffset] in the trace file.
+     *
+     * Inverse of [calculatePhysicalOffset], and accepts both physical spellings of a boundary offset,
+     * so positions produced by reading the data sequentially can be compared with the writer's logical offsets.
+     */
     private fun calculateLogicalOffset(threadId: Int, physicalOffset: Long): Long {
         val blocks = dataBlocks[threadId] ?: error("ThreadId $threadId is not found in block list")
         val blockIdx = blocks.binarySearch { it.compareWithPhysicalOffset(physicalOffset) }

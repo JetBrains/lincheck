@@ -5,16 +5,20 @@ import org.jetbrains.lincheck.descriptors.AccessPath
 import org.jetbrains.lincheck.descriptors.LocalVariableAccessLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
 import org.jetbrains.lincheck.descriptors.Types
-import org.jetbrains.lincheck.trace.TRContainerTracePoint
-import org.jetbrains.lincheck.trace.TRMethodCallTracePoint
-import org.jetbrains.lincheck.trace.TRNull
-import org.jetbrains.lincheck.trace.TRScalar
-import org.jetbrains.lincheck.trace.TRTracePoint
-import org.jetbrains.lincheck.trace.TRWriteLocalVariableTracePoint
+import org.jetbrains.lincheck.trace.ContainerFooterTracePoint
+import org.jetbrains.lincheck.trace.ContainerHeaderTracePoint
+import org.jetbrains.lincheck.trace.MethodCallTracePoint
+import org.jetbrains.lincheck.trace.TraceNull
+import org.jetbrains.lincheck.trace.TraceScalar
+import org.jetbrains.lincheck.trace.TracePoint
+import org.jetbrains.lincheck.trace.WriteLocalVariableTracePoint
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.attachFooterTracePoint
 import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
 import org.jetbrains.lincheck.trace.printing.printTraceTree
+import org.jetbrains.lincheck.trace.tree.readTraceTrees
+import org.jetbrains.lincheck.trace.tree.structure
 import org.jetbrains.lincheck.util.Logger
 import org.junit.Test
 import java.io.DataInputStream
@@ -34,8 +38,10 @@ import kotlin.concurrent.thread
  * - `testDataDeduplicatedWhenSavedToFile` — once a block is on disk,
  *   a thread that starts afterwards writes only the descriptors that block does not already carry.
  *   The `CountDownLatch` plus a short sleep let the I/O thread reach the disk before the second thread starts.
+ * - `testBlockRolloverInsideClosingTracePoint` — a record that does not fit into the current block
+ *   is rolled back and rewritten into the next one, closing trace points included.
  *
- * Both tests read the file back block-by-block and compare the descriptor ids each block saved.
+ * The first two tests read the file back block-by-block and compare the descriptor ids each block saved.
  */
 class BufferedTraceWriterTest {
 
@@ -62,9 +68,9 @@ class BufferedTraceWriterTest {
             collector.tracePointCreated(parent = tr1, varAssignment1)
 
             collector.tracePointCreated(parent = tr1, sharedCall1)
-            collector.completeContainerTracePoint(Thread.currentThread(), sharedCall1)
+            collector.completeContainerTracePoint(Thread.currentThread(), sharedCall1, sharedCall1.completeTracePoint())
 
-            collector.completeContainerTracePoint(Thread.currentThread(), tr1)
+            collector.completeContainerTracePoint(Thread.currentThread(), tr1, tr1.completeTracePoint())
 
             latch.countDown()
             barrier.await() // wait for the second thread to register a new trace point
@@ -84,9 +90,9 @@ class BufferedTraceWriterTest {
 
             // Add nested shared method call (same method as in thread 1)
             collector.tracePointCreated(parent = tr2, sharedCall2)
-            collector.completeContainerTracePoint(Thread.currentThread(), sharedCall2)
+            collector.completeContainerTracePoint(Thread.currentThread(), sharedCall2, sharedCall2.completeTracePoint())
 
-            collector.completeContainerTracePoint(Thread.currentThread(), tr2)
+            collector.completeContainerTracePoint(Thread.currentThread(), tr2, tr2.completeTracePoint())
 
             barrier.await()
 
@@ -157,9 +163,9 @@ class BufferedTraceWriterTest {
             collector.tracePointCreated(parent = tr1, varAssignment1)
 
             collector.tracePointCreated(parent = tr1, sharedCall1)
-            collector.completeContainerTracePoint(Thread.currentThread(), sharedCall1)
+            collector.completeContainerTracePoint(Thread.currentThread(), sharedCall1, sharedCall1.completeTracePoint())
 
-            collector.completeContainerTracePoint(Thread.currentThread(), tr1)
+            collector.completeContainerTracePoint(Thread.currentThread(), tr1, tr1.completeTracePoint())
             collector.completeThread(Thread.currentThread())
         }
 
@@ -176,9 +182,9 @@ class BufferedTraceWriterTest {
 
             // Add nested shared method call (same method as in thread 1)
             collector.tracePointCreated(parent = tr2, sharedCall2)
-            collector.completeContainerTracePoint(Thread.currentThread(), sharedCall2)
+            collector.completeContainerTracePoint(Thread.currentThread(), sharedCall2, sharedCall2.completeTracePoint())
 
-            collector.completeContainerTracePoint(Thread.currentThread(), tr2)
+            collector.completeContainerTracePoint(Thread.currentThread(), tr2, tr2.completeTracePoint())
             collector.completeThread(Thread.currentThread())
         }
 
@@ -224,6 +230,43 @@ class BufferedTraceWriterTest {
         }
     }
 
+    /**
+     * A record that overflows the per-thread buffer must be rolled back and rewritten into the next block,
+     * whether it opens, fills, or closes a container.
+     *
+     * The buffer size at which the overflow lands inside a *closing* record depends on the exact record
+     * layout, so the whole range of sizes around the trace size is swept;
+     * every resulting trace must read back with the structure it was written with.
+     */
+    @Test
+    fun testBlockRolloverInsideClosingTracePoint() {
+        for (bufferSize in MIN_SWEPT_BUFFER_SIZE..MAX_SWEPT_BUFFER_SIZE) {
+            val context = TraceContext()
+            val root = createBasicMethodCallTracePoint(context, 0, "com.example.SomeClass", "root")
+            val call = createBasicMethodCallTracePoint(context, 0, "com.example.SomeClass", "call")
+            val varAssignment = createVariableWriteTracePoint(context, 0, "someVar")
+
+            val traceFile = File.createTempFile("trace_test", ".trace").apply { deleteOnExit() }
+            File("${traceFile.absolutePath}.$INDEX_FILENAME_EXT").deleteOnExit()
+            val collector = FileStreamingTraceCollecting(traceFile.absolutePath, context, bufferSize)
+
+            val thread = Thread.currentThread()
+            collector.registerCurrentThread(root.threadId)
+            collector.tracePointCreated(parent = null, root)
+            collector.tracePointCreated(parent = root, call)
+            collector.completeContainerTracePoint(thread, call, call.completeTracePoint())
+            collector.tracePointCreated(parent = root, varAssignment)
+            collector.completeContainerTracePoint(thread, root, root.completeTracePoint())
+            collector.completeThread(thread)
+            collector.traceEnded()
+
+            val structure = LazyTraceReader(traceFile.absolutePath).use { it.readTraceTrees().single().structure() }
+            check(structure == "root(call,writeVar(someVar))") {
+                "Trace written with a $bufferSize-byte buffer read back as $structure"
+            }
+        }
+    }
+
     private fun BlockAnalysis.checkStrings(expected: Set<Int>) {
         check(strings == expected) {
             "Thread must have saved the following strings: $expected, got: $strings"
@@ -265,7 +308,7 @@ class BufferedTraceWriterTest {
         threadId: Int,
         className: String,
         methodName: String
-    ): TRMethodCallTracePoint {
+    ): MethodCallTracePoint {
         val methodType = Types.MethodType(Types.OBJECT_TYPE)
         val md = context.createAndRegisterMethodDescriptor(className, methodName, methodType)
         val codeLocationId = context.codeLocationsPool.register(
@@ -275,12 +318,12 @@ class BufferedTraceWriterTest {
                 argumentNames = null
             )
         )
-        val tracepoint = TRMethodCallTracePoint(
+        val tracepoint = MethodCallTracePoint(
             context,
             threadId,
             codeLocationId,
             methodId = md.id,
-            obj = TRNull,
+            obj = TraceNull,
             parameters = listOf()
         )
         return tracepoint
@@ -290,7 +333,7 @@ class BufferedTraceWriterTest {
         context: TraceContext,
         threadId: Int,
         variableName: String
-    ): TRWriteLocalVariableTracePoint {
+    ): WriteLocalVariableTracePoint {
         val vd = context.createAndRegisterVariableDescriptor(variableName, Types.INT_TYPE)
 
         // Create an access path for the variable
@@ -302,12 +345,12 @@ class BufferedTraceWriterTest {
                 accessPath = accessPath
             )
         )
-        return TRWriteLocalVariableTracePoint(
+        return WriteLocalVariableTracePoint(
             context,
             threadId,
             codeLocationId,
             localVariableId = vd.id,
-            value = TRScalar(42)
+            value = TraceScalar(42)
         )
     }
 
@@ -326,7 +369,7 @@ class BufferedTraceWriterTest {
         var currentBlock: BlockAnalysis? = null
 
         dataInput.use { dataInput ->
-            val tracePointsStack = mutableListOf<TRTracePoint>()
+            val tracePointsStack = mutableListOf<TracePoint>()
             while (true) {
                 when (val kind = dataInput.readKind()) {
                     ObjectKind.BLOCK_START -> {
@@ -396,10 +439,13 @@ class BufferedTraceWriterTest {
                     }
 
                     ObjectKind.TRACEPOINT -> {
-                        val tr = dataInput.readTRTracePoint(loadedContext)
+                        val tr = dataInput.readTracePointData(loadedContext)
                         Logger.info { "  Tracepoint: ${tr.toText(verbose = true)}" }
 
-                        if (tr is TRContainerTracePoint) {
+                        if (tr is ContainerFooterTracePoint) {
+                            check(tracePointsStack.isNotEmpty()) { "Closing tracepoint without container trace point" }
+                            (tracePointsStack.removeLast() as ContainerHeaderTracePoint).attachFooterTracePoint(tr)
+                        } else if (tr is ContainerHeaderTracePoint) {
                             tracePointsStack.add(tr)
                         }
                     }
@@ -414,12 +460,6 @@ class BufferedTraceWriterTest {
                         break
                     }
 
-                    ObjectKind.TRACEPOINT_FOOTER -> {
-                        check(tracePointsStack.isNotEmpty()) { "Tracepoint footer without container trace point" }
-                        val back = tracePointsStack.removeLast() as TRContainerTracePoint
-                        back.loadFooter(dataInput)
-                    }
-
                     else -> {
                         // For simplicity, skip other kinds
                         Logger.info { "  $kind (skipping detailed parsing)" }
@@ -429,6 +469,17 @@ class BufferedTraceWriterTest {
         }
 
         return blocks
+    }
+
+    private companion object {
+        /**
+         * The swept per-thread buffer sizes.
+         *
+         * The lower bound must still fit one trace point with all its prerequisite descriptors:
+         * a retry writes into an empty buffer and is not attempted twice.
+         */
+        const val MIN_SWEPT_BUFFER_SIZE = 256
+        const val MAX_SWEPT_BUFFER_SIZE = 640
     }
 
     private data class BlockAnalysis(

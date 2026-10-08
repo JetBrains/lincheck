@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import sun.nio.ch.lincheck.*
 import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Handle
 import org.objectweb.asm.MethodVisitor
@@ -19,9 +20,6 @@ import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
 import org.objectweb.asm.commons.GeneratorAdapter
 import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
-import org.objectweb.asm.commons.Method
-import java.lang.StringBuilder
-import kotlin.reflect.KFunction
 
 /**
  * [ObjectCreationTransformer] tracks creation of new objects,

@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.jvm.agent.analysis.buildControlFlowGraph
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.buildControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.junit.Assert.assertEquals
 import org.objectweb.asm.ClassReader

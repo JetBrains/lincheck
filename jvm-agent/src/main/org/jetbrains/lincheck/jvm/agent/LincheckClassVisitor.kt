@@ -14,6 +14,9 @@ import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.commons.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassInformation
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.FieldsInfo
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LabelsTracker
 import org.jetbrains.lincheck.jvm.agent.transformers.*
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
@@ -74,6 +77,10 @@ internal class LincheckClassVisitor(
         val isSynchronized = (access and ACC_SYNCHRONIZED != 0)
 
         val methodInfo = classInformation.methodInformation(methodName, desc)
+        if (methodInfo == null) {
+            Logger.error { "Skipping transformation of the method $className.$methodName$desc: no method information found" }
+            return mv
+        }
         val config = profile.getMethodConfiguration(className.toCanonicalClassName(), methodName, desc)
 
         if (isNative) {
@@ -226,14 +233,14 @@ internal class LincheckClassVisitor(
                 }
             } else {
                 chain.addTransformer { adapter, mv ->
-                    SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classVisitor.loader)
+                    SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classInformation.enclosingClass, classVisitor.loader)
                 }
             }
         }
 
         // ======== Analyzers ========
         chain.addTypeAnalyzerAdapter(access, className, methodName, desc)
-        chain.addOwnerNameAnalyzerAdapter(access, className, methodName, desc, methodInfo, context)
+        chain.addAccessPathAnalyzerAdapter(access, className, methodName, desc, methodInfo, context)
 
         mv = chain.methodVisitors.last()
 

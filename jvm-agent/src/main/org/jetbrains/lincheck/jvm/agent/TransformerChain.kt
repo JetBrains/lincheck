@@ -10,6 +10,8 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
+import org.jetbrains.lincheck.jvm.agent.analysis.AccessPathAnalyzerAdapter
+import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.commons.AnalyzerAdapter
@@ -48,17 +50,17 @@ internal class TransformerChain(
         }
     }
 
-    fun addOwnerNameAnalyzerAdapter(access: Int, className: String, methodName: String, desc: String, methodInfo: MethodInformation, context: TraceContext) {
-        val requiresOwnerNameAnalyzer = methodVisitors.any {
-            it is LincheckMethodVisitor && it.requiresOwnerNameAnalyzer
+    fun addAccessPathAnalyzerAdapter(access: Int, className: String, methodName: String, desc: String, methodInfo: MethodInformation, context: TraceContext) {
+        val requiresAccessPathAnalyzer = methodVisitors.any {
+            it is LincheckMethodVisitor && it.requiresAccessPathAnalyzer
         }
-        if (requiresOwnerNameAnalyzer) {
+        if (requiresAccessPathAnalyzer) {
             val analyzer = addTransformer { _, mv ->
-                OwnerNameAnalyzerAdapter(className, access, methodName, desc, mv, methodInfo.locals, context)
+                AccessPathAnalyzerAdapter(className, access, methodName, desc, mv, methodInfo.locals, context)
             }
             for (visitor in methodVisitors) {
-                if (visitor is LincheckMethodVisitor && visitor.requiresOwnerNameAnalyzer) {
-                    visitor.ownerNameAnalyzer = analyzer
+                if (visitor is LincheckMethodVisitor && visitor.requiresAccessPathAnalyzer) {
+                    visitor.accessPathAnalyzer = analyzer
                 }
             }
         }

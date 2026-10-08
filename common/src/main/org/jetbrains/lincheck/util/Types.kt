@@ -19,7 +19,7 @@ import kotlin.reflect.KClass
 /**
  * Extension property to determine if an object is of an immutable type.
  */
-internal val Any?.isImmutable get() = when {
+val Any?.isImmutable get() = when {
     this.isPrimitive        -> true
     this.isUnit             -> true
     this is String          -> true
@@ -31,7 +31,7 @@ internal val Any?.isImmutable get() = when {
 /**
  * Extension property to determine if an object is of a primitive type.
  */
-internal val Any?.isPrimitive get() = when (this) {
+val Any?.isPrimitive get() = when (this) {
     is Boolean, is Int, is Short, is Long, is Double, is Float, is Char, is Byte -> true
     else -> false
 }
@@ -43,7 +43,7 @@ internal val Any?.isPrimitive get() = when (this) {
  * the agent payload loads its own `kotlin-stdlib` through an isolated class loader,
  * so the traced application's `kotlin.Unit` is a different class than the javaagent's.
  */
-internal val Any?.isUnit: Boolean get() =
+val Any?.isUnit: Boolean get() =
     this?.javaClass?.name == KOTLIN_UNIT_CLASS_NAME
 
 private const val KOTLIN_UNIT_CLASS_NAME = "kotlin.Unit"
@@ -55,7 +55,7 @@ private const val KOTLIN_UNIT_CLASS_NAME = "kotlin.Unit"
  * the javaagent payload loads its own `kotlin-stdlib` through an isolated class loader,
  * so the traced application's `KClass` implements a different `kotlin.reflect.KClass` than the javaagent's.
  */
-internal val Any?.isKClass: Boolean get() =
+val Any?.isKClass: Boolean get() =
     this != null && KotlinClassSupport.isKClass(javaClass)
 
 /**
@@ -66,7 +66,7 @@ internal val Any?.isKClass: Boolean get() =
  *
  * @throws IllegalArgumentException if the receiver is not a [KClass]; guard with [isKClass].
  */
-internal val Any.kClassReferencedName: String get() {
+val Any.kClassReferencedName: String get() {
     require(isKClass) { "Not a KClass instance: ${javaClass.name}" }
     return (KotlinClassSupport.jClassGetter(javaClass).invoke(this) as Class<*>).name
 }

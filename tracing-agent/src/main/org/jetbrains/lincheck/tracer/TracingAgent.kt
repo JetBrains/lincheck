@@ -47,11 +47,7 @@ abstract class TracingAgent {
     fun premain(agentArgs: String?, inst: Instrumentation) {
         setupMode()
 
-        // Attach first then append `bootstrap.jar` to the bootstrap classloader's search path before
-        // any downstream code (notably `parseArguments` -> live-debugger breakpoint loading)
-        // can reference bootstrap-only classes such as `sun.nio.ch.lincheck.BreakpointStorage`.
         LincheckInstrumentation.attachJavaAgentStatically(inst)
-        LincheckInstrumentation.appendBootstrapJarToClassLoaderSearch()
 
         // parse and validate arguments and system properties
         parseArguments(agentArgs)
@@ -78,9 +74,7 @@ abstract class TracingAgent {
     fun agentmain(agentArgs: String?, inst: Instrumentation) {
         setupMode()
 
-        // See `premain` above for the attach-then-append rationale.
         LincheckInstrumentation.attachJavaAgentDynamically(inst)
-        LincheckInstrumentation.appendBootstrapJarToClassLoaderSearch()
 
         // parse and validate arguments and system properties
         parseArguments(agentArgs)

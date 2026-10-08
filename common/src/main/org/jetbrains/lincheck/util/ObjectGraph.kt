@@ -58,7 +58,7 @@ private typealias ObjectExpansionCallback = (obj: Any) -> List<Any>
  *   Should return boolean indicating whether the object should be traversed recursively.
  *   If not provided, defaults to true, indicating that any reached objects should be traversed recursively.
  */
-internal fun traverseObjectGraph(
+fun traverseObjectGraph(
     root: Any,
     processedObjects: MutableSet<Any>? = null,
     config: ObjectGraphTraversalConfig = ObjectGraphTraversalConfig(),
@@ -239,14 +239,14 @@ internal fun shouldTraverseObject(obj: Any?, config: ObjectGraphTraversalConfig)
  *   That is, instead of `AtomicReference<T>` the `T` object will be traversed,
  *   and instead of `AtomicInteger` the `Integer` object will be traversed.
  */
-internal data class ObjectGraphTraversalConfig(
+data class ObjectGraphTraversalConfig(
     val traverseStaticFields: Boolean = false,
     val traverseImmutableObjects: Boolean = false,
     val traverseEnumObjects: Boolean = true,
     val promoteAtomicObjects: Boolean = false,
 )
 
-internal fun getArraySize(arr: Any): Int {
+fun getArraySize(arr: Any): Int {
     return when {
         arr is Array<*>     -> arr.size
         arr is IntArray     -> arr.size

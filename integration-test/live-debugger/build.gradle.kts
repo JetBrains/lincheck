@@ -25,6 +25,7 @@ sourceSets {
 }
 
 enum class LiveDebuggerIntegrationTestSuite {
+    Basic,
     KotlinxImmutableCollections,
     KotlinxImmutableCollectionsMultipleBreakpointsOnSameLine,
     Ktor,
@@ -37,12 +38,9 @@ tasks {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 
-    registerTraceAgentIntegrationTestsPrerequisites()
-
-    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar")
-
     val integrationTestSuite: String? by project
     val integrationTestSuiteType: LiveDebuggerIntegrationTestSuite? = when (integrationTestSuite?.lowercase()) {
+        "basic" -> LiveDebuggerIntegrationTestSuite.Basic
         "ktor" -> LiveDebuggerIntegrationTestSuite.Ktor
         "kotlinximmutablecollections" -> LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections
         "kotlinximmutablecollectionsmultiplebreakpointsonsameline" ->
@@ -50,6 +48,25 @@ tasks {
         "kotlincompiler" -> LiveDebuggerIntegrationTestSuite.KotlinCompiler
         "all", null -> LiveDebuggerIntegrationTestSuite.All
         else -> null
+    }
+
+    val prerequisites = registerTraceAgentIntegrationTestsPrerequisites(when (integrationTestSuiteType) {
+        LiveDebuggerIntegrationTestSuite.Basic, null -> emptySet()
+        LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollections,
+        LiveDebuggerIntegrationTestSuite.KotlinxImmutableCollectionsMultipleBreakpointsOnSameLine ->
+            setOf("kotlinx.collections.immutable")
+        LiveDebuggerIntegrationTestSuite.Ktor -> setOf("ktor")
+        LiveDebuggerIntegrationTestSuite.KotlinCompiler -> setOf("kotlin")
+        LiveDebuggerIntegrationTestSuite.All -> setOf("kotlinx.collections.immutable", "ktor", "kotlin")
+    })
+    val copyClasspathClashProjects = when (integrationTestSuiteType) {
+        LiveDebuggerIntegrationTestSuite.Basic, LiveDebuggerIntegrationTestSuite.All -> copyClasspathClashTestProjects()
+        else -> emptyList()
+    }
+    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar", prerequisites)
+    val copyAgentExpressionTestProject = register<Copy>("copyAgentExpressionTestProject") {
+        from(rootProject.layout.projectDirectory.dir("integration-test/test-projects/agent-expressions"))
+        into(layout.buildDirectory.dir("integrationTestProjects/agent-expressions"))
     }
 
     register<Test>("liveDebuggerIntegrationTest") {
@@ -67,6 +84,13 @@ tasks {
                 include("**/*KotlinxImmutableCollectionsMultipleBreakpointsOnSameLineLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.KotlinCompiler -> include("**/*KotlinCompilerLiveDebuggerJsonIntegrationTests*")
             LiveDebuggerIntegrationTestSuite.All -> {}
+            // Everything that is not one of the (heavy) external-project suites above.
+            LiveDebuggerIntegrationTestSuite.Basic -> exclude(
+                "**/*KtorLiveDebuggerJsonIntegrationTests*",
+                "**/*KotlinxImmutableCollectionsLiveDebuggerJsonIntegrationTests*",
+                "**/*KotlinxImmutableCollectionsMultipleBreakpointsOnSameLineLiveDebuggerJsonIntegrationTests*",
+                "**/*KotlinCompilerLiveDebuggerJsonIntegrationTests*",
+            )
             // Unrecognized suite (e.g. a value meant for another integration-test module): run nothing.
             null -> {
                 exclude("**/*")
@@ -77,8 +101,14 @@ tasks {
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        outputs.cacheIf { false }
+        dependsOn(prerequisites)
         dependsOn(copyLiveDebuggerFatJar)
+        copyClasspathClashProjects.forEach { dependsOn(it) }
+        if (integrationTestSuiteType == LiveDebuggerIntegrationTestSuite.Basic ||
+            integrationTestSuiteType == LiveDebuggerIntegrationTestSuite.All) {
+            dependsOn(copyAgentExpressionTestProject)
+        }
     }
 
     // Regenerates the `…/impl/generated/*GeneratedTests.kt` files from the `*Tests.json` data.

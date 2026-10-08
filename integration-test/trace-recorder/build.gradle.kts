@@ -33,10 +33,6 @@ tasks {
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
     }
 
-    registerTraceAgentIntegrationTestsPrerequisites()
-
-    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar")
-
     val integrationTestSuite: String? by project
     val integrationTestSuiteType: TraceAgentIntegrationTestSuite? = when (integrationTestSuite?.lowercase()) {
         "basic" -> TraceAgentIntegrationTestSuite.Basic
@@ -46,6 +42,22 @@ tasks {
         "all", null -> TraceAgentIntegrationTestSuite.All
         else -> null
     }
+
+    val prerequisites = registerTraceAgentIntegrationTestsPrerequisites(when (integrationTestSuiteType) {
+        TraceAgentIntegrationTestSuite.Basic -> setOf(
+            "kotlinx.collections.immutable", "TraceDebuggerExamples", "kotlinx.coroutines", "kotlinx-datetime",
+        )
+        TraceAgentIntegrationTestSuite.KotlinCompiler -> setOf("kotlin")
+        TraceAgentIntegrationTestSuite.Ktor -> setOf("ktor")
+        TraceAgentIntegrationTestSuite.IJ -> setOf("intellij-community")
+        TraceAgentIntegrationTestSuite.All -> null
+        null -> emptySet()
+    })
+    val copyClasspathClashProjects = when (integrationTestSuiteType) {
+        TraceAgentIntegrationTestSuite.Basic, TraceAgentIntegrationTestSuite.All -> copyClasspathClashTestProjects()
+        else -> emptyList()
+    }
+    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar", prerequisites)
 
     // Optional deterministic sharding, e.g. `-PintegrationTestShard=2/4`,
     // used to parallelize the (large) suite across separate CI build configurations.
@@ -113,8 +125,10 @@ tasks {
         }
 
         outputs.upToDateWhen { false } // Always run tests when called
-        dependsOn(traceAgentIntegrationTestsPrerequisites)
+        outputs.cacheIf { false }
+        dependsOn(prerequisites)
         dependsOn(copyTraceRecorderFatJar)
+        copyClasspathClashProjects.forEach { dependsOn(it) }
     }
 
     // Regenerates the `…/impl/generated/*GeneratedTests.kt` files from the `*Tests.json` data.
@@ -133,4 +147,3 @@ tasks {
         )
     }
 }
-

@@ -8,6 +8,7 @@ Follows the [agents.md](https://agents.md/) convention; `CLAUDE.md` just imports
 | Module | Purpose |
 |---|---|
 | [`bootstrap/`](bootstrap/) | Java classes loaded into `sun.nio.ch.lincheck` so they're visible from any classloader. JDK 8-compatible. |
+| [`jvm-agent-wrapper/`](jvm-agent-wrapper/) | Dependency-free Java 8 wrapper that loads nested agent payloads through an isolated classloader. |
 | [`common/`](common/) | ASM helpers, `LoggingLevel`, shared utilities. |
 | [`trace/`](trace/) | Binary trace format + reader/writer (eager + lazy). |
 | [`tracing-agent/`](tracing-agent/) | Runtime tracing engine shared by the agents: `premain`/`agentmain` scaffolding, tracing sessions, event tracking ([AGENTS.md](tracing-agent/AGENTS.md)). |
@@ -42,7 +43,12 @@ Follows the [agents.md](https://agents.md/) convention; `CLAUDE.md` just imports
   -PintegrationTestSuite=kotlinCompiler|ktor|ij|all
 ```
 
-`traceRecorderIntegrationTest` downloads the target external projects via `traceAgentIntegrationTestsPrerequisites`.
+`traceRecorderIntegrationTest` downloads the target external projects via `traceAgentIntegrationTestsPrerequisites`
+(so does `liveDebuggerIntegrationTest`): GitHub source archives of the repositories pinned in
+[`integration-test/github-projects.properties`](integration-test/github-projects.properties), the pins' only home.
+Set `LINCHECK_TEST_PROJECT_ARCHIVES` to a directory holding `<name>-<sha>.zip` files to reuse pre-fetched archives
+instead of downloading (the download tasks are skipped, the log says `Reusing pre-fetched archive …`);
+an archive missing from it is downloaded as usual.
 
 ## Testing
 

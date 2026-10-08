@@ -10,9 +10,10 @@
 
 package org.jetbrains.lincheck.livedebugger
 
-import org.jetbrains.lincheck.jvm.agent.LincheckClassFileTransformer
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.SourceFileClassIndex
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
+import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.settings.BlocklistFileParser
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
@@ -22,6 +23,7 @@ import org.jetbrains.lincheck.settings.RedactionFileParser
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
+import org.jetbrains.lincheck.settings.liveDebuggerSettings
 import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
 import org.jetbrains.lincheck.trace.network.TracingNotificationListener
 import org.jetbrains.lincheck.util.Logger
@@ -54,6 +56,7 @@ internal object LiveDebugger {
      * Keyed by `"<uuid>|<className>"`; cleared when all breakpoints are removed.
      */
     private val blockedNotified = ConcurrentHashMap.newKeySet<String>()
+    private val compilationFailedNotified = ConcurrentHashMap.newKeySet<String>()
 
     /**
      * De-duplicates dynamic-extent hit-suppression notifications to once per
@@ -70,7 +73,7 @@ internal object LiveDebugger {
         get() = invalidRequiredRedactionSources.isEmpty()
 
     private fun markRequiredPolicyPendingOrInvalid(owner: PolicyOwner) {
-        val settings = LincheckClassFileTransformer.liveDebuggerSettings
+        val settings = liveDebuggerSettings
         settings.requiredRedactionPolicyValid = false
         invalidRequiredRedactionSources.add(owner)
         removeAllBreakpoints()
@@ -78,7 +81,7 @@ internal object LiveDebugger {
 
     private fun markRequiredPolicyValid(owner: PolicyOwner) {
         invalidRequiredRedactionSources.remove(owner)
-        LincheckClassFileTransformer.liveDebuggerSettings.requiredRedactionPolicyValid =
+        liveDebuggerSettings.requiredRedactionPolicyValid =
             invalidRequiredRedactionSources.isEmpty()
     }
 
@@ -97,7 +100,7 @@ internal object LiveDebugger {
                 }
                 return
             }
-            val settings = LincheckClassFileTransformer.liveDebuggerSettings
+            val settings = liveDebuggerSettings
             val result = settings.addBreakpoints(breakpoints)
             result.rejected.forEach { notifyBreakpointBlocked(it.breakpoint, it.match.reason) }
 
@@ -117,8 +120,8 @@ internal object LiveDebugger {
         }
         Logger.info { "Adding breakpoints: $breakpoints" }
 
-        val result = LincheckClassFileTransformer.liveDebuggerSettings
-            .addBreakpoints(breakpoints)
+        val result = liveDebuggerSettings.addBreakpoints(breakpoints)
+        removeStaleCompiledExpressions()
         result.rejected.forEach { notifyBreakpointBlocked(it.breakpoint, it.match.reason) }
         retransformBreakpointClasses(result.added)
     }
@@ -135,8 +138,8 @@ internal object LiveDebugger {
         }
         try {
             val blocklists = BlocklistFileParser.parseBlocklistsFile(blocklistFilePath)
-            LincheckClassFileTransformer.liveDebuggerSettings.blocklistRegistry.add(blocklists)
-            LincheckClassFileTransformer.dynamicExtentChecker.invalidate()
+            liveDebuggerSettings.blocklistRegistry.add(blocklists)
+            liveDebuggerSettings.dynamicExtentChecker.invalidate()
             Logger.info { "Loaded ${blocklists.size} blocklist(s) from $blocklistFilePath" }
         } catch (e: Exception) {
             Logger.error(e) { "Failed to load blocklists from file: $blocklistFilePath" }
@@ -155,8 +158,7 @@ internal object LiveDebugger {
         markRequiredPolicyPendingOrInvalid(PolicyOwner.STARTUP_FILE)
         try {
             val templates = RedactionFileParser.parseTemplatesFile(redactionFilePath)
-            LincheckClassFileTransformer.liveDebuggerSettings.redactionRegistry
-                .replace(PolicyOwner.STARTUP_FILE, templates)
+            liveDebuggerSettings.redactionRegistry.replace(PolicyOwner.STARTUP_FILE, templates)
             markRequiredPolicyValid(PolicyOwner.STARTUP_FILE)
             Logger.info { "Loaded ${templates.size} redaction template(s) from $redactionFilePath" }
         } catch (e: Exception) {
@@ -180,8 +182,8 @@ internal object LiveDebugger {
             Logger.warn { "No control-plane policy applied (pull failed); breakpoints will register without it" }
             return
         }
-        LincheckClassFileTransformer.liveDebuggerSettings.blocklistRegistry.add(blocklists)
-        LincheckClassFileTransformer.dynamicExtentChecker.invalidate()
+        liveDebuggerSettings.blocklistRegistry.add(blocklists)
+        liveDebuggerSettings.dynamicExtentChecker.invalidate()
         Logger.info { "Applied ${blocklists.size} control-plane blocklist(s)" }
     }
 
@@ -193,17 +195,17 @@ internal object LiveDebugger {
      */
     fun addSensitiveAreaBlocklists(blocklists: List<SensitiveAreaBlocklist>) {
         Logger.info { "Adding ${blocklists.size} blocklist(s)" }
-        LincheckClassFileTransformer.liveDebuggerSettings.blocklistRegistry.add(blocklists)
-        LincheckClassFileTransformer.dynamicExtentChecker.invalidate()
+        liveDebuggerSettings.blocklistRegistry.add(blocklists)
+        liveDebuggerSettings.dynamicExtentChecker.invalidate()
         hitSuppressedNotified.clear()
-        retransformBreakpointClasses(LincheckClassFileTransformer.liveDebuggerSettings.lineBreakpoints.values)
+        retransformBreakpointClasses(liveDebuggerSettings.lineBreakpoints.values)
     }
 
     fun removeBreakpoints(uuids: List<UUID>) {
         Logger.info { "Removing breakpoints: $uuids" }
 
-        val result = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeBreakpoints(uuids)
+        val result = liveDebuggerSettings.removeBreakpoints(uuids)
+        removeStaleCompiledExpressions()
         if (result.notFound.isNotEmpty()) {
             Logger.warn { "No registered breakpoints found for UUIDs: ${result.notFound}" }
         }
@@ -213,9 +215,10 @@ internal object LiveDebugger {
     fun removeAllBreakpoints() {
         Logger.info { "Removing all breakpoints" }
 
-        val result = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeAllBreakpoints()
+        val result = liveDebuggerSettings.removeAllBreakpoints()
+        removeStaleCompiledExpressions()
         blockedNotified.clear()
+        compilationFailedNotified.clear()
         hitSuppressedNotified.clear()
         if (result.removed.isEmpty()) return
         retransformBreakpointClasses(result.removed)
@@ -229,27 +232,41 @@ internal object LiveDebugger {
         // If the user re-added the breakpoint at the same location in the window between
         // the hit-limit callback firing and this executor task running,
         // the re-added breakpoint will have a different id and must not be touched.
-        val removedBreakpoint = LincheckClassFileTransformer.liveDebuggerSettings
-            .removeBreakpoint(id)
+        val removedBreakpoint = liveDebuggerSettings.removeBreakpoint(id)
+        removeStaleCompiledExpressions()
         if (removedBreakpoint != null) {
             retransformBreakpointClasses(listOf(removedBreakpoint))
         }
     }
 
+    private fun removeStaleCompiledExpressions() {
+        ExpressionCompiler.retainCompiledExpressions(
+            liveDebuggerSettings.lineBreakpoints.keys,
+        )
+    }
+
     /**
-     * Retransforms the classes that contain the given breakpoints.
+     * Retransforms the loaded classes compiled from the given breakpoints' source files.
      *
-     * `Class.getName` returns a canonical name, so we use the class-only
-     * [SnapshotBreakpoint.isApplicableTo] overload — at this point we don't have the
-     * source file for each loaded class, and the retransformation pipeline does the
-     * file-aware narrowing in `buildClassInformation` anyway.
+     * The classes are looked up in the agent-side [SourceFileClassIndex] by the breakpoint's
+     * file name — the class name the IDE resolved is not consulted here. The retransformation
+     * pipeline then does the per-breakpoint narrowing in `buildClassInformation`.
      */
     private fun retransformBreakpointClasses(breakpoints: Collection<SnapshotBreakpoint>) {
         val classesToRetransform = LincheckInstrumentation.instrumentation.allLoadedClasses
             .filter { loadedClass ->
-                breakpoints.any { it.isApplicableTo(loadedClass.name) }
+                breakpoints.any { it.isApplicableTo(loadedClass) }
             }
         LincheckInstrumentation.retransformClasses(classesToRetransform)
+    }
+
+    private fun SnapshotBreakpoint.isApplicableTo(clazz: Class<*>): Boolean {
+        // Optimization for the case when `className` was passed along with other breakpoint info ---
+        // in this case we can avoid the source file index lookup and just use the provided class name.
+        if (className.isNotEmpty()) {
+            return this.isApplicableTo(clazz.name)
+        }
+        return SourceFileClassIndex.sourceFileContains(fileName, clazz)
     }
 
     /** Guard ensuring the hit-limit callback is registered exactly once. */
@@ -364,23 +381,20 @@ internal object LiveDebugger {
         }
     }
 
-    /** Guard ensuring the breakpoint-blocked callback is registered exactly once. */
-    private val breakpointBlockedCallbackInstalled = AtomicBoolean(false)
+    /** Guard ensuring the breakpoint failure callbacks are registered exactly once. */
+    private val breakpointFailureCallbacksInstalled = AtomicBoolean(false)
 
-    /**
-     * Registers the callback that fires when instrumentation-time suppression (Stage 2) rejects a
-     * breakpoint because its class or method is a blocked sensitive area.
-     *
-     * Must be called before any class transformation can occur so that no blocked event can fire
-     * before the callback is in place.
-     */
-    fun ensureBreakpointBlockedCallbackInstalled() {
-        if (!breakpointBlockedCallbackInstalled.compareAndSet(false, true)) return
+    /** Registers policy-block and expression-compilation callbacks before class transformation begins. */
+    fun ensureBreakpointFailureCallbacksInstalled() {
+        if (!breakpointFailureCallbacksInstalled.compareAndSet(false, true)) return
 
         BreakpointStorage.setOnBreakpointBlocked { _, userData, reason ->
             onBreakpointBlocked(userData as SnapshotBreakpoint, reason as String)
         }
-        Logger.debug { "Breakpoint blocked callback installed" }
+        BreakpointStorage.setOnBreakpointExpressionCompilationFailed { _, userData, message ->
+            onBreakpointExpressionCompilationFailed(userData as SnapshotBreakpoint, message as String)
+        }
+        Logger.debug { "Breakpoint failure callbacks installed" }
     }
 
     private fun onBreakpointBlocked(breakpoint: SnapshotBreakpoint, reason: String) {
@@ -388,6 +402,25 @@ internal object LiveDebugger {
             with(breakpoint) { "Breakpoint in $className at $fileName:$lineNumber blocked: $reason" }
         }
         notifyBreakpointBlocked(breakpoint, reason)
+    }
+
+    private fun onBreakpointExpressionCompilationFailed(breakpoint: SnapshotBreakpoint, message: String) {
+        if (!compilationFailedNotified.add("${breakpoint.uuid}|${breakpoint.className}")) return
+
+        val timestamp = System.currentTimeMillis()
+        notificationsExecutor.submit {
+            val notification = LiveDebuggerNotification.BreakpointExpressionCompilationFailed(
+                timestamp = timestamp,
+                breakpointData = LiveDebuggerNotification.BreakpointData(
+                    breakpointUuid = breakpoint.uuid,
+                    className = breakpoint.className,
+                    fileName = breakpoint.fileName,
+                    lineNumber = breakpoint.lineNumber,
+                ),
+                compilationFailureMessage = message,
+            )
+            notificationListener.get()?.invoke(notification)
+        }
     }
 
     /** Guard ensuring the dynamic-extent hit-suppressed callback is registered exactly once. */

@@ -102,6 +102,18 @@ data class AgentHelloMessage(
     val supportsRedactionV1: Boolean
         get() = CAPABILITY_REDACTION_V1 in capabilities
 
+    /**
+     * Whether the agent compiles condition/watch expressions itself from the source text of
+     * [org.jetbrains.lincheck.settings.SnapshotBreakpoint.conditionSource] /
+     * [org.jetbrains.lincheck.settings.SnapshotBreakpoint.watchSources],
+     * so clients need not ship precompiled bytecode fragments.
+     */
+    val supportsJavaAgentCompiledExpressions: Boolean
+        get() = CAPABILITY_AGENT_COMPILED_JAVA_EXPRESSIONS_V1 in capabilities
+
+    val supportsKotlinAgentCompiledExpressions: Boolean
+        get() = CAPABILITY_AGENT_COMPILED_KOTLIN_EXPRESSIONS_V1 in capabilities
+
     companion object {
         const val KEY_PROTOCOL: String = "protocol"
         const val KEY_RUNTIME: String = "runtime"
@@ -114,6 +126,14 @@ data class AgentHelloMessage(
 
         /** Capture-time data redaction: the agent understands and enforces redaction policies. */
         const val CAPABILITY_REDACTION_V1: String = "REDACTION_V1"
+
+        /**
+         * Agent-side expression compilation: a breakpoint may carry its condition and watches
+         * as source text, compiled by the agent at instrumentation time in the language of the
+         * breakpoint's source file (Java or Kotlin).
+         */
+        const val CAPABILITY_AGENT_COMPILED_JAVA_EXPRESSIONS_V1: String = "AGENT_COMPILED_JAVA_EXPRESSIONS_V1"
+        const val CAPABILITY_AGENT_COMPILED_KOTLIN_EXPRESSIONS_V1: String = "AGENT_COMPILED_KOTLIN_EXPRESSIONS_V1"
 
         private val RESERVED_KEYS =
             setOf(KEY_PROTOCOL, KEY_RUNTIME, KEY_RUNTIME_VERSION, KEY_AGENT_VERSION, KEY_TRACE_VERSION)
@@ -177,6 +197,18 @@ interface TracingCallbacks : Closeable {
         timestamp: Long
     )
 
+    fun breakpointExpressionCompilationFailed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        compilationFailureMessage: String,
+        timestamp: Long
+    ) {}
+
+    fun invalidBreakpointLocation(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        reason: String,
+        timestamp: Long
+    ) {}
+
     /**
      * A hit was suppressed by dynamic-extent enforcement: the call stack passed through the blocked
      * [blockedFrameClass]. The breakpoint itself stays valid — it still fires on clean call paths.
@@ -195,6 +227,8 @@ interface TracingCallbacks : Closeable {
         internal const val HIT_LIMIT_REACHED = "hitLimitReached"
         internal const val BREAKPOINT_EXPRESSION_UNSAFE = "breakpointExpressionUnsafe"
         internal const val BREAKPOINT_BLOCKED = "breakpointBlocked"
+        internal const val BREAKPOINT_EXPRESSION_COMPILATION_FAILED = "breakpointExpressionCompilationFailed"
+        internal const val INVALID_BREAKPOINT_LOCATION = "invalidBreakpointLocation"
         internal const val BREAKPOINT_HIT_SUPPRESSED = "breakpointHitSuppressed"
     }
 }

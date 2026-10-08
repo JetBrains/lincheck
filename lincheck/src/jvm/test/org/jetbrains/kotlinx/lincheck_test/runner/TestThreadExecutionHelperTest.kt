@@ -17,19 +17,12 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.junit.Assert
-import org.junit.Before
 import org.junit.Test
 import java.util.*
 
 class TestThreadExecutionHelperTest {
-    private var runner: ExecutionScenarioRunner? = null
-
-    // All tests and set-up/tear-down run under `withLincheckTestContext` block
-    // to ensure Lincheck's `Injections` and all related classes are properly loaded,
-    // since `TestThreadExecution` is toughly coupled with the injections' machinery.
-
-    @Before
-    fun setUp() = withLincheckTestContext(InstrumentationMode.STRESS) {
+    // Called inside the test's instrumentation context so setup and execution share one install/uninstall.
+    private fun createRunner(): ExecutionScenarioRunner {
         val strategy: Strategy = object : Strategy() {
             override val runner: Runner get() {
                 throw UnsupportedOperationException()
@@ -39,7 +32,7 @@ class TestThreadExecutionHelperTest {
                 throw UnsupportedOperationException()
             }
         }
-        runner = ExecutionScenarioRunner(
+        return ExecutionScenarioRunner(
             scenario = emptyScenario(),
             testClass = ArrayDeque::class.java,
             validationFunction = null,
@@ -53,6 +46,7 @@ class TestThreadExecutionHelperTest {
     @Test
     @Throws(Exception::class)
     fun testBase() = withLincheckTestContext(InstrumentationMode.STRESS) {
+        val runner = createRunner()
         val ex = TestThreadExecutionGenerator.create(
             runner, 0,
             listOf(
@@ -84,6 +78,7 @@ class TestThreadExecutionHelperTest {
     @Test
     @Throws(Exception::class)
     fun testActorExceptionHandling() = withLincheckTestContext(InstrumentationMode.STRESS) {
+        val runner = createRunner()
         val ex = TestThreadExecutionGenerator.create(
             runner, 0,
             listOf(

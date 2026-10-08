@@ -330,7 +330,7 @@ class AnalysisProfile(val analyzeStdLib: Boolean) {
  * This exception is used by a Lincheck analysis to abort the execution of a thread,
  * for instance, in case when a deadlock is detected.
  */
-internal class LincheckAnalysisAbortedError : Error() {
+class LincheckAnalysisAbortedError : Error() {
     // do not create a stack trace -- it simply can be unsafe
     override fun fillInStackTrace() = this
 

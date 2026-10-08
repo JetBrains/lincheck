@@ -11,8 +11,9 @@
 package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
-import org.jetbrains.lincheck.trace.TRContainerTracePoint
-import org.jetbrains.lincheck.trace.TRTracePoint
+import org.jetbrains.lincheck.trace.ContainerFooterTracePoint
+import org.jetbrains.lincheck.trace.ContainerHeaderTracePoint
+import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.collections.SimpleBitmap
@@ -105,17 +106,17 @@ class MemoryTraceCollecting(
     // each thread grows its own tree, tracking the currently open containers as a stack,
     // and every created point is attached to the container on top of it.
     private class ThreadTreeBuilder {
-        var root: Tree.MutableNode<TRTracePoint>? = null
-        val openContainers: MutableList<Tree.MutableNode<TRTracePoint>> = arrayListOf()
-        var lastCreatedNode: Tree.MutableNode<TRTracePoint>? = null
+        var root: Tree.MutableNode<TracePoint>? = null
+        val openContainers: MutableList<Tree.MutableNode<TracePoint>> = arrayListOf()
+        var lastCreatedNode: Tree.MutableNode<TracePoint>? = null
     }
 
     // `registerCurrentThread` and `tracePointCreated` are called concurrently from worker threads,
     // so structural modifications (new thread registrations) must not race with reads/writes.
     private val treeBuilders = ConcurrentHashMap<Int, ThreadTreeBuilder>()
 
-    private val _flatListsPerThread = ConcurrentHashMap<Int, MutableList<TRTracePoint>>()
-    val flatListsPerThread: Map<Int, List<TRTracePoint>> get() = _flatListsPerThread
+    private val _flatListsPerThread = ConcurrentHashMap<Int, MutableList<TracePoint>>()
+    val flatListsPerThread: Map<Int, List<TracePoint>> get() = _flatListsPerThread
 
     override fun registerCurrentThread(threadId: Int) {
         context.setThreadName(threadId, Thread.currentThread().name)
@@ -129,8 +130,8 @@ class MemoryTraceCollecting(
     override fun completeThread(thread: Thread) {}
 
     override fun tracePointCreated(
-        parent: TRContainerTracePoint?,
-        created: TRTracePoint
+        parent: ContainerHeaderTracePoint?,
+        created: TracePoint
     ) {
         if (collectFlat) {
             _flatListsPerThread[created.threadId]?.add(created) ?: Logger.warn {
@@ -143,7 +144,7 @@ class MemoryTraceCollecting(
             Logger.warn { "Thread #${created.threadId} is not registered at the moment of creation of ${created.toText(verbose = false)} trace point" }
             return
         }
-        val node = mutableNode<TRTracePoint>(created)
+        val node = mutableNode<TracePoint>(created)
         builder.lastCreatedNode = node
         val top = builder.openContainers.lastOrNull()
         if (top != null) {
@@ -156,7 +157,7 @@ class MemoryTraceCollecting(
         }
     }
 
-    override fun openContainerTracePoint(container: TRContainerTracePoint) {
+    override fun openContainerTracePoint(container: ContainerHeaderTracePoint) {
         val builder = treeBuilders[container.threadId] ?: return
         val node = builder.lastCreatedNode
         if (node == null || node.data !== container) {
@@ -166,15 +167,19 @@ class MemoryTraceCollecting(
         builder.openContainers.add(node)
     }
 
-    override fun completeContainerTracePoint(thread: Thread, container: TRContainerTracePoint) {
-        val builder = treeBuilders[container.threadId] ?: return
+    override fun completeContainerTracePoint(
+        thread: Thread,
+        header: ContainerHeaderTracePoint,
+        footer: ContainerFooterTracePoint,
+    ) {
+        val builder = treeBuilders[header.threadId] ?: return
         val stack = builder.openContainers
         // The completed container is normally on top, but the tracker may abandon enclosed
         // frames without completing them (e.g. super constructor calls on exception),
         // so pop everything above the matching container as well to stay in sync.
-        val index = stack.indexOfLast { it.data === container }
+        val index = stack.indexOfLast { it.data === header }
         if (index < 0) {
-            Logger.warn { "Completed container ${container.toText(verbose = false)} trace point is not open" }
+            Logger.warn { "Completed container ${header.toText(verbose = false)} trace point is not open" }
             return
         }
         while (stack.size > index) {
@@ -195,7 +200,7 @@ class MemoryTraceCollecting(
      *
      * Must be called only after the recording has ended.
      */
-    fun getRecordedTrees(): List<Tree<TRTracePoint>> {
+    fun getRecordedTrees(): List<Tree<TracePoint>> {
         if (collectFlat) {
             return _flatListsPerThread.entries
                 .sortedBy { it.key }
@@ -210,7 +215,7 @@ class MemoryTraceCollecting(
                     Logger.error { "Trace Recorder: Thread #${threadId + 1} ($threadName): No root call found" }
                     null
                 } else {
-                    Tree<TRTracePoint>(root)
+                    Tree<TracePoint>(root)
                 }
             }
     }
@@ -220,7 +225,7 @@ class MemoryTraceCollecting(
  * Saves a full-depth recorded trace in one pass,
  * into the data-and-index file pair named after [baseFileName].
  */
-fun saveRecorderTrace(baseFileName: String, context: TraceContext, trees: List<Tree<TRTracePoint>>) {
+fun saveRecorderTrace(baseFileName: String, context: TraceContext, trees: List<Tree<TracePoint>>) {
     val (data, index) = openNewStandardDataAndIndex(baseFileName)
     return saveRecorderTrace(
         data = data,
@@ -232,7 +237,7 @@ fun saveRecorderTrace(baseFileName: String, context: TraceContext, trees: List<T
 
 
 // TODO: check if there are multiple functions like this which could unified with the Tree API
-fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceContext, trees: List<Tree<TRTracePoint>>) {
+fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceContext, trees: List<Tree<TracePoint>>) {
     DirectTraceWriter(data, index, context).use { tw ->
         trees.forEachIndexed { id, tree ->
             val root = tree.root ?: return@forEachIndexed
@@ -244,12 +249,12 @@ fun saveRecorderTrace(data: OutputStream, index: OutputStream, context: TraceCon
     }
 }
 
-private fun saveTraceTree(writer: TraceWriter, node: Tree.Node<TRTracePoint>) {
+private fun saveTraceTree(writer: TraceWriter, node: Tree.Node<TracePoint>) {
     val tracepoint = node.data
     writer.writeTracePoint(tracepoint)
-    if (tracepoint is TRContainerTracePoint) {
+    if (tracepoint is ContainerHeaderTracePoint) {
         node.children.forEach { saveTraceTree(writer, it) }
-        writer.writeTracePointFooter(tracepoint)
+        writer.writeTracePoint(tracepoint.completeTracePoint(node.children.map { it.data }))
     }
 }
 

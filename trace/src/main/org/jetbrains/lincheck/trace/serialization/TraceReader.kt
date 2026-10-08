@@ -19,12 +19,29 @@ import java.io.InputStream
 import java.nio.ByteBuffer
 import kotlin.use
 
-private typealias TraceTree = MutableList<TRContainerTracePoint>
+private typealias TraceTree = MutableList<ContainerHeaderTracePoint>
+/**
+ * Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block.
+ */
 private typealias TracePointReader = (DataInput, TraceContext) -> Boolean
 
 internal interface TracepointConsumer {
-    fun tracePointRead(parent: TRContainerTracePoint?, tracePoint: TRTracePoint)
-    fun footerStarted(tracePoint: TRContainerTracePoint) {}
+    /**
+     * Called for every tracepoint record right after its kind byte is read, before its body.
+     *
+     * This is the only place where a consumer which tracks positions can capture a record's start:
+     * the reader has no position of its own to report, and by the time the record is read it is already consumed.
+     */
+    fun tracePointStarted() {}
+
+    /**
+     * Called for every tracepoint record, once it is read.
+     *
+     * [parent] is the record's container in the trace tree, `null` for a root:
+     * for a [ContainerFooterTracePoint] that is the container it closes,
+     * which is attached to it by the time this is called.
+     */
+    fun tracePointRead(parent: ContainerHeaderTracePoint?, tracePoint: TracePoint)
 }
 
 internal interface BlockConsumer {
@@ -64,7 +81,7 @@ internal fun loadAllObjectsDeep(
     tracepointConsumer: TracepointConsumer,
     blockConsumer: BlockConsumer
 ) {
-    val trees = mutableMapOf<Int, MutableList<TRContainerTracePoint>>()
+    val trees = mutableMapOf<Int, TraceTree>()
     var seenEOF = false
 
     while (input.available() > 0) {
@@ -84,27 +101,17 @@ internal fun loadAllObjectsDeep(
         val threadId = input.readInt()
         blockConsumer.blockStarted(threadId)
 
+        // A thread's tree is built across all of its blocks: a container may span several of them.
         val tree = trees.computeIfAbsent(threadId) { mutableListOf() }
 
-        // Read objects and tracepoints from this block till it ends.
-        // Unwind the stack manually, if needed
-        while (true) {
-            val kind = loadObjects(input, context, restore = true) { input, context ->
-                loadTracePointDeep(input, context, tree, tracepointConsumer)
-            }
-            if (kind == ObjectKind.BLOCK_END) {
-                blockConsumer.blockEnded(threadId)
-                break
-            }
-            check(kind == ObjectKind.TRACEPOINT_FOOTER) {
-                "Unexpected object kind $kind, expected TRACEPOINT_FOOTER, broken file"
-            }
-            check(tree.isNotEmpty()) { "Stack underflow" }
-
-            val tracePoint = tree.removeLast()
-            tracepointConsumer.footerStarted(tracePoint)
-            tracePoint.loadFooter(input)
+        // Read objects and tracepoints from this block till it ends
+        val blockEndKind = loadObjects(input, context, restore = true) { input, context ->
+            loadTracePoint(input, context, tree, tracepointConsumer)
         }
+        check(blockEndKind == ObjectKind.BLOCK_END) {
+            "Unexpected object kind $blockEndKind, expected BLOCK_END, broken file"
+        }
+        blockConsumer.blockEnded(threadId)
     }
 
     if (!seenEOF) {
@@ -118,38 +125,34 @@ internal fun loadAllObjectsDeep(
     }
 }
 
-internal fun loadTracePointDeep(
+/**
+ * Reads one tracepoint record and folds it into [tree], the stack of currently open containers.
+ *
+ * The trace is decodable strictly forward: every container is delimited by its own
+ * [ContainerFooterTracePoint], so no seeking is required.
+ *
+ * @return always `true`: the caller's [loadObjects] loop stops on the block-end record itself.
+ */
+private fun loadTracePoint(
     input: DataInput,
     context: TraceContext,
     tree: TraceTree,
     consumer: TracepointConsumer
 ): Boolean {
-    // Load tracepoint itself
-    val tracePoint = input.readTRTracePoint(context)
-    consumer.tracePointRead(tree.lastOrNull(), tracePoint)
-    if (tracePoint !is TRContainerTracePoint) {
+    consumer.tracePointStarted()
+    val tracePoint = input.readTracePointData(context)
+
+    if (tracePoint is ContainerFooterTracePoint) {
+        val container = tree.removeLastOrNull()
+            ?: error("Closing tracepoint for container #${tracePoint.containerEventId} has no open container")
+        container.attachFooterTracePoint(tracePoint)
+        consumer.tracePointRead(container, tracePoint)
         return true
     }
-    // We need to load all children
-    tree.add(tracePoint)
-    val kind = loadObjects(input, context, restore = true) { input, context ->
-        loadTracePointDeep(input, context, tree, consumer)
-    }
-    when (kind) {
-        ObjectKind.TRACEPOINT_FOOTER -> {
-            check(tracePoint == tree.removeLast()) { "Tracepoint reading stack corruption" }
-            consumer.footerStarted(tracePoint)
-            tracePoint.loadFooter(input)
-        }
 
-        ObjectKind.BLOCK_END -> {
-            return false
-        }
-
-        else -> {
-            Logger.error { "TraceRecorder: Unexpected object kind $kind when loading tracepoints" }
-            return false
-        }
+    consumer.tracePointRead(tree.lastOrNull(), tracePoint)
+    if (tracePoint is ContainerHeaderTracePoint) {
+        tree.add(tracePoint)
     }
     return true
 }
@@ -170,9 +173,7 @@ internal fun loadObjects(
             ObjectKind.STRING -> loadString(input, context, restore)
             ObjectKind.ACCESS_PATH -> loadAccessPath(input, context, restore)
             ObjectKind.CODE_LOCATION -> loadCodeLocation(input, context, restore)
-            // Tracepoint reader returns "true" if a read is complete and "false" if it encountered the end of the block
             ObjectKind.TRACEPOINT -> if (!tracePointReader(input, context)) return ObjectKind.BLOCK_END
-            ObjectKind.TRACEPOINT_FOOTER, // Children read or skipped by recursion into tracePointReader
             ObjectKind.BLOCK_START, // Should not happen, really
             ObjectKind.BLOCK_END, // Block ended
             ObjectKind.EOF // Should not happen, really; BLOCK_END must go first
