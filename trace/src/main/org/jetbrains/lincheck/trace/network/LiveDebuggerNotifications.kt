@@ -74,6 +74,20 @@ open class LiveDebuggerNotification(timestamp: Long) : TracingNotification(times
         override val timestamp: Long = System.currentTimeMillis(),
     ) : LiveDebuggerNotification(timestamp)
 
+    /** Notification that the requested source location cannot host a breakpoint. */
+    data class InvalidBreakpointLocation(
+        val breakpointData: BreakpointData,
+        val reason: String,
+        override val timestamp: Long = System.currentTimeMillis(),
+    ) : LiveDebuggerNotification(timestamp)
+
+    /** Notification that the agent could not compile a breakpoint condition or watch expression. */
+    data class BreakpointExpressionCompilationFailed(
+        val breakpointData: BreakpointData,
+        val compilationFailureMessage: String,
+        override val timestamp: Long = System.currentTimeMillis(),
+    ) : LiveDebuggerNotification(timestamp)
+
     /**
      * Notification that a hit was suppressed by dynamic-extent enforcement: the call stack passed
      * through the blocked [blockedFrameClass]. Unlike [BreakpointBlocked], the breakpoint stays

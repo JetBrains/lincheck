@@ -56,6 +56,7 @@ internal object LiveDebugger {
      * Keyed by `"<uuid>|<className>"`; cleared when all breakpoints are removed.
      */
     private val blockedNotified = ConcurrentHashMap.newKeySet<String>()
+    private val compilationFailedNotified = ConcurrentHashMap.newKeySet<String>()
 
     /**
      * De-duplicates dynamic-extent hit-suppression notifications to once per
@@ -217,6 +218,7 @@ internal object LiveDebugger {
         val result = liveDebuggerSettings.removeAllBreakpoints()
         removeStaleCompiledExpressions()
         blockedNotified.clear()
+        compilationFailedNotified.clear()
         hitSuppressedNotified.clear()
         if (result.removed.isEmpty()) return
         retransformBreakpointClasses(result.removed)
@@ -379,23 +381,20 @@ internal object LiveDebugger {
         }
     }
 
-    /** Guard ensuring the breakpoint-blocked callback is registered exactly once. */
-    private val breakpointBlockedCallbackInstalled = AtomicBoolean(false)
+    /** Guard ensuring the breakpoint failure callbacks are registered exactly once. */
+    private val breakpointFailureCallbacksInstalled = AtomicBoolean(false)
 
-    /**
-     * Registers the callback that fires when instrumentation-time suppression (Stage 2) rejects a
-     * breakpoint because its class or method is a blocked sensitive area.
-     *
-     * Must be called before any class transformation can occur so that no blocked event can fire
-     * before the callback is in place.
-     */
-    fun ensureBreakpointBlockedCallbackInstalled() {
-        if (!breakpointBlockedCallbackInstalled.compareAndSet(false, true)) return
+    /** Registers policy-block and expression-compilation callbacks before class transformation begins. */
+    fun ensureBreakpointFailureCallbacksInstalled() {
+        if (!breakpointFailureCallbacksInstalled.compareAndSet(false, true)) return
 
         BreakpointStorage.setOnBreakpointBlocked { _, userData, reason ->
             onBreakpointBlocked(userData as SnapshotBreakpoint, reason as String)
         }
-        Logger.debug { "Breakpoint blocked callback installed" }
+        BreakpointStorage.setOnBreakpointExpressionCompilationFailed { _, userData, message ->
+            onBreakpointExpressionCompilationFailed(userData as SnapshotBreakpoint, message as String)
+        }
+        Logger.debug { "Breakpoint failure callbacks installed" }
     }
 
     private fun onBreakpointBlocked(breakpoint: SnapshotBreakpoint, reason: String) {
@@ -403,6 +402,25 @@ internal object LiveDebugger {
             with(breakpoint) { "Breakpoint in $className at $fileName:$lineNumber blocked: $reason" }
         }
         notifyBreakpointBlocked(breakpoint, reason)
+    }
+
+    private fun onBreakpointExpressionCompilationFailed(breakpoint: SnapshotBreakpoint, message: String) {
+        if (!compilationFailedNotified.add("${breakpoint.uuid}|${breakpoint.className}")) return
+
+        val timestamp = System.currentTimeMillis()
+        notificationsExecutor.submit {
+            val notification = LiveDebuggerNotification.BreakpointExpressionCompilationFailed(
+                timestamp = timestamp,
+                breakpointData = LiveDebuggerNotification.BreakpointData(
+                    breakpointUuid = breakpoint.uuid,
+                    className = breakpoint.className,
+                    fileName = breakpoint.fileName,
+                    lineNumber = breakpoint.lineNumber,
+                ),
+                compilationFailureMessage = message,
+            )
+            notificationListener.get()?.invoke(notification)
+        }
     }
 
     /** Guard ensuring the dynamic-extent hit-suppressed callback is registered exactly once. */

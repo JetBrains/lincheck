@@ -93,7 +93,7 @@ object ExpressionCompiler {
             }.onFailure { failure ->
                 val message = failure.message ?: "expression compilation failed"
                 Logger.warn { "Breakpoint at ${breakpoint.fileName}:${breakpoint.lineNumber}: $message" }
-                BreakpointStorage.notifyBreakpointBlocked(breakpointId, breakpoint, message)
+                BreakpointStorage.notifyBreakpointExpressionCompilationFailed(breakpointId, breakpoint, message)
             }
         }
         return result.getOrNull()

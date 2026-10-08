@@ -89,6 +89,7 @@ public class BreakpointStorage {
      * opaque reason string.
      */
     private static volatile BreakpointBlockedListener onBreakpointBlocked = null;
+    private static volatile BreakpointExpressionCompilationFailedListener onBreakpointExpressionCompilationFailed = null;
 
     /**
      * Called when a hit is suppressed because its call stack passes through a blocked sensitive
@@ -122,6 +123,12 @@ public class BreakpointStorage {
     @FunctionalInterface
     public interface BreakpointBlockedListener {
         void onBreakpointBlocked(int breakpointId, Object userData, Object reason);
+    }
+
+    /** Listener for an expression that could not be compiled during class transformation. */
+    @FunctionalInterface
+    public interface BreakpointExpressionCompilationFailedListener {
+        void onBreakpointExpressionCompilationFailed(int breakpointId, Object userData, Object message);
     }
 
     /**
@@ -350,6 +357,15 @@ public class BreakpointStorage {
     public static void notifyBreakpointBlocked(int breakpointId, Object userData, Object reason) {
         BreakpointBlockedListener callback = onBreakpointBlocked;
         if (callback != null) callback.onBreakpointBlocked(breakpointId, userData, reason);
+    }
+
+    public static void setOnBreakpointExpressionCompilationFailed(BreakpointExpressionCompilationFailedListener callback) {
+        onBreakpointExpressionCompilationFailed = callback;
+    }
+
+    public static void notifyBreakpointExpressionCompilationFailed(int breakpointId, Object userData, Object message) {
+        BreakpointExpressionCompilationFailedListener callback = onBreakpointExpressionCompilationFailed;
+        if (callback != null) callback.onBreakpointExpressionCompilationFailed(breakpointId, userData, message);
     }
 
     /**

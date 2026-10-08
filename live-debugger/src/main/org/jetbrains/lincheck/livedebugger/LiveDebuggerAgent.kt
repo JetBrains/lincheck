@@ -104,7 +104,7 @@ internal object LiveDebuggerAgent {
 
             LiveDebugger.ensureHitLimitCallbackInstalled()
             LiveDebugger.ensureBreakpointExpressionUnsafetyCallbackInstalled()
-            LiveDebugger.ensureBreakpointBlockedCallbackInstalled()
+            LiveDebugger.ensureBreakpointFailureCallbacksInstalled()
             LiveDebugger.ensureHitSuppressedCallbackInstalled()
         }
 
@@ -275,6 +275,13 @@ internal object LiveDebuggerAgent {
                         server.connection.breakpointBlocked(
                             notification.breakpointData,
                             notification.reason,
+                            notification.timestamp
+                        )
+
+                    is LiveDebuggerNotification.BreakpointExpressionCompilationFailed ->
+                        server.connection.breakpointExpressionCompilationFailed(
+                            notification.breakpointData,
+                            notification.compilationFailureMessage,
                             notification.timestamp
                         )
 

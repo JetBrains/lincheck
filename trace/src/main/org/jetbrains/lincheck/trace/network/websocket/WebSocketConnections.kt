@@ -94,6 +94,24 @@ class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
         webSocket.send("${TracingCallbacks.BREAKPOINT_BLOCKED}:$timestamp:$payload")
     }
 
+    override fun breakpointExpressionCompilationFailed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        compilationFailureMessage: String,
+        timestamp: Long
+    ) {
+        val payload = "$breakpointData;$compilationFailureMessage"
+        webSocket.send("${TracingCallbacks.BREAKPOINT_EXPRESSION_COMPILATION_FAILED}:$timestamp:$payload")
+    }
+
+    override fun invalidBreakpointLocation(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        reason: String,
+        timestamp: Long
+    ) {
+        val payload = "$breakpointData;$reason"
+        webSocket.send("${TracingCallbacks.INVALID_BREAKPOINT_LOCATION}:$timestamp:$payload")
+    }
+
     override fun breakpointHitSuppressed(
         breakpointData: LiveDebuggerNotification.BreakpointData,
         blockedFrameClass: String,
@@ -139,6 +157,20 @@ class ClientSink: Closeable, TracingCallbacks {
         timestamp: Long,
     ) {
         Logger.warn { "breakpointBlocked dropped: no client connected (breakpoint=$breakpointData, reason=$reason)" }
+    }
+    override fun breakpointExpressionCompilationFailed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        compilationFailureMessage: String,
+        timestamp: Long,
+    ) {
+        Logger.warn { "breakpointExpressionCompilationFailed dropped: no client connected (breakpoint=$breakpointData, message=$compilationFailureMessage)" }
+    }
+    override fun invalidBreakpointLocation(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        reason: String,
+        timestamp: Long,
+    ) {
+        Logger.warn { "invalidBreakpointLocation dropped: no client connected (breakpoint=$breakpointData, message=$reason)" }
     }
     override fun breakpointHitSuppressed(
         breakpointData: LiveDebuggerNotification.BreakpointData,

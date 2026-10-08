@@ -197,6 +197,18 @@ interface TracingCallbacks : Closeable {
         timestamp: Long
     )
 
+    fun breakpointExpressionCompilationFailed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        compilationFailureMessage: String,
+        timestamp: Long
+    ) {}
+
+    fun invalidBreakpointLocation(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        reason: String,
+        timestamp: Long
+    ) {}
+
     /**
      * A hit was suppressed by dynamic-extent enforcement: the call stack passed through the blocked
      * [blockedFrameClass]. The breakpoint itself stays valid — it still fires on clean call paths.
@@ -215,6 +227,8 @@ interface TracingCallbacks : Closeable {
         internal const val HIT_LIMIT_REACHED = "hitLimitReached"
         internal const val BREAKPOINT_EXPRESSION_UNSAFE = "breakpointExpressionUnsafe"
         internal const val BREAKPOINT_BLOCKED = "breakpointBlocked"
+        internal const val BREAKPOINT_EXPRESSION_COMPILATION_FAILED = "breakpointExpressionCompilationFailed"
+        internal const val INVALID_BREAKPOINT_LOCATION = "invalidBreakpointLocation"
         internal const val BREAKPOINT_HIT_SUPPRESSED = "breakpointHitSuppressed"
     }
 }

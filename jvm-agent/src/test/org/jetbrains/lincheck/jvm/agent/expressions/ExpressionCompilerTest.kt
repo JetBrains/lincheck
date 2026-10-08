@@ -155,7 +155,9 @@ class ExpressionCompilerTest {
     }
 
     @Test
-    fun `a compilation failure blocks the breakpoint`() {
+    fun `a compilation failure reports through its own callback`() {
+        blockedReasons.clear()
+        compilationFailureMessages.clear()
         val fixture = JavaChainedCallShapeFixture::class.java
         val breakpoint = SnapshotBreakpoint(
             uuid = UUID.randomUUID(),
@@ -169,9 +171,10 @@ class ExpressionCompilerTest {
         transformWithSnapshotBreakpoints(fixture.name.replace('.', '/'), listOf(breakpoint))
 
         assertTrue(
-            "The compile failure must reach the breakpoint-blocked channel, got=$blockedReasons",
-            blockedReasons.any { it.contains("failed to compile", ignoreCase = true) },
+            "The compile failure must reach its callback, got=$compilationFailureMessages",
+            compilationFailureMessages.any { it.contains("failed to compile", ignoreCase = true) },
         )
+        assertTrue("A compilation failure must not be reported as a policy block", blockedReasons.isEmpty())
     }
 
     /**
@@ -243,17 +246,22 @@ class ExpressionCompilerTest {
 
     companion object {
         private val blockedReasons = CopyOnWriteArrayList<String>()
+        private val compilationFailureMessages = CopyOnWriteArrayList<String>()
 
         @JvmStatic
         @BeforeClass
         fun captureBlockedNotifications() {
             BreakpointStorage.setOnBreakpointBlocked { _, _, reason -> blockedReasons += reason.toString() }
+            BreakpointStorage.setOnBreakpointExpressionCompilationFailed { _, _, message ->
+                compilationFailureMessages += message.toString()
+            }
         }
 
         @JvmStatic
         @AfterClass
         fun releaseBlockedNotifications() {
             BreakpointStorage.setOnBreakpointBlocked(null)
+            BreakpointStorage.setOnBreakpointExpressionCompilationFailed(null)
         }
     }
 }

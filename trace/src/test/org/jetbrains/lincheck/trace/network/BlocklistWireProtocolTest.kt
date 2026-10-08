@@ -41,6 +41,9 @@ class BlocklistWireProtocolTest {
     private class RecordingCallbacks : TracingCallbacks {
         var blockedData: LiveDebuggerNotification.BreakpointData? = null
         var reason: String? = null
+        var compilationData: LiveDebuggerNotification.BreakpointData? = null
+        var compilationFailureMessage: String? = null
+        var invalidLocation: LiveDebuggerNotification.InvalidBreakpointLocation? = null
         var suppressedData: LiveDebuggerNotification.BreakpointData? = null
         var suppressedFrameClass: String? = null
         var suppressedReason: String? = null
@@ -58,6 +61,21 @@ class BlocklistWireProtocolTest {
         ) {
             this.blockedData = breakpointData
             this.reason = reason
+        }
+        override fun breakpointExpressionCompilationFailed(
+            breakpointData: LiveDebuggerNotification.BreakpointData,
+            compilationFailureMessage: String,
+            timestamp: Long,
+        ) {
+            compilationData = breakpointData
+            this.compilationFailureMessage = compilationFailureMessage
+        }
+        override fun invalidBreakpointLocation(
+            breakpointData: LiveDebuggerNotification.BreakpointData,
+            reason: String,
+            timestamp: Long,
+        ) {
+            invalidLocation = LiveDebuggerNotification.InvalidBreakpointLocation(breakpointData, reason, timestamp)
         }
         override fun breakpointHitSuppressed(
             breakpointData: LiveDebuggerNotification.BreakpointData,
@@ -120,6 +138,30 @@ class BlocklistWireProtocolTest {
 
         assertEquals(data, recorder.blockedData)
         assertEquals(reason, recorder.reason)
+    }
+
+    @Test
+    fun `compilation failure round-trips through the wire dispatch with separators preserved`() {
+        val data = LiveDebuggerNotification.BreakpointData(UUID.randomUUID(), "com.corp.Auth", "Auth.java", 42)
+        val message = "Expression failed to compile: missing; symbol"
+        val recorder = RecordingCallbacks()
+
+        recorder.handleMessage("${TracingCallbacks.BREAKPOINT_EXPRESSION_COMPILATION_FAILED}:12345:$data;$message")
+
+        assertEquals(data, recorder.compilationData)
+        assertEquals(message, recorder.compilationFailureMessage)
+    }
+
+    @Test
+    fun `invalid location preserves the diagnostic and timestamp without reporting a policy block`() {
+        val data = LiveDebuggerNotification.BreakpointData(UUID.randomUUID(), "", "shop/pricing.py", 3)
+        val reason = "cannot fire; executable lines are: 1, 2, 4"
+        val recorder = RecordingCallbacks()
+
+        recorder.handleMessage("${TracingCallbacks.INVALID_BREAKPOINT_LOCATION}:12345:$data;$reason")
+
+        assertEquals(LiveDebuggerNotification.InvalidBreakpointLocation(data, reason, 12345), recorder.invalidLocation)
+        assertEquals(null, recorder.blockedData)
     }
 
     @Test
