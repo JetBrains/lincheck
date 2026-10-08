@@ -12,7 +12,6 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.descriptors.AccessPath
-import org.jetbrains.lincheck.descriptors.OwnerName
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterMethodDescriptor
@@ -47,7 +46,7 @@ internal class MethodCallTransformer(
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     override val requiresTypeAnalyzer: Boolean = true
-    override val requiresOwnerNameAnalyzer: Boolean = true
+    override val requiresAccessPathAnalyzer: Boolean = true
 
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (!shouldTrackMethodCall(owner, name, desc)) {
@@ -72,10 +71,10 @@ internal class MethodCallTransformer(
         val isUninitThisCall = isConstructorCall && isReceiverUninitializedThis(desc)
         val receiverType = getType("L$owner;")
         val argumentNames = getArgumentNames(desc, opcode)
-        val ownerName = when {
+        val accessPath = when {
             opcode == INVOKESTATIC && name.endsWith($$"$default") &&
                     argumentNames?.firstOrNull()?.locations?.singleOrNull()?.isThisAccess() == true -> argumentNames[0]
-            else -> getOwnerName(desc, opcode)
+            else -> getAccessPath(desc, opcode)
         }
 
         // We assume that constructors return an object even though they don't
@@ -130,7 +129,7 @@ internal class MethodCallTransformer(
             methodId,
             receiverLocal,
             argumentsArrayLocal,
-            ownerName,
+            accessPath,
             argumentNames,
             threadDescriptorLocal,
             resultInterceptorLocal,
@@ -206,7 +205,7 @@ internal class MethodCallTransformer(
         methodId: Int,
         receiverLocal: Int?,
         argumentsArrayLocal: Int,
-        ownerName: OwnerName?,
+        accessPath: AccessPath?,
         argumentNames: List<AccessPath?>?,
         threadDescriptorLocal: Int,
         resultInterceptorLocal: Int,
@@ -215,7 +214,7 @@ internal class MethodCallTransformer(
         // STACK: <empty>
         loadLocal(threadDescriptorLocal)
         // STACK: descriptor
-        loadNewCodeLocationId(createCurrentMethodCallCodeLocation(accessPath = ownerName, argumentNames = argumentNames))
+        loadNewCodeLocationId(createCurrentMethodCallCodeLocation(accessPath = accessPath, argumentNames = argumentNames))
         // STACK: descriptor, codeLocation
         push(methodId)
         pushReceiver(receiverLocal, isUninitThisCall)
@@ -388,15 +387,15 @@ internal class MethodCallTransformer(
         // STACK: result?
     }
 
-    private fun getOwnerName(desc: String, opcode: Int): AccessPath? {
-        val stack = ownerNameAnalyzer?.stack ?: return null
+    private fun getAccessPath(desc: String, opcode: Int): AccessPath? {
+        val stack = accessPathAnalyzer?.stack ?: return null
         if (opcode == INVOKESTATIC) return null
         val position = getArgumentTypes(desc).sumOf { it.size }
         return stack.getStackElementAt(position)
     }
 
     private fun getArgumentNames(desc: String, opcode: Int): List<AccessPath?>? {
-        val stack = ownerNameAnalyzer?.stack ?: return null
+        val stack = accessPathAnalyzer?.stack ?: return null
         var position = 0
         val argumentTypes = getArgumentTypes(desc)
         return argumentTypes.reversed().map { argType ->

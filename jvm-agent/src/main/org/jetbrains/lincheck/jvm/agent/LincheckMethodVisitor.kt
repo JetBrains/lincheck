@@ -16,11 +16,12 @@ import org.jetbrains.lincheck.descriptors.CodeLocation
 import org.jetbrains.lincheck.descriptors.LineCodeLocation
 import org.jetbrains.lincheck.descriptors.LoopHeaderCodeLocation
 import org.jetbrains.lincheck.descriptors.MethodCallCodeLocation
+import org.jetbrains.lincheck.jvm.agent.analysis.AccessPathAnalyzerAdapter
+import org.jetbrains.lincheck.jvm.agent.analysis.TypeAnalyzerAdapter
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.ideaPluginEnabled
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
-import org.objectweb.asm.commons.AnalyzerAdapter
 import org.objectweb.asm.commons.GeneratorAdapter
 
 internal open class LincheckMethodVisitor(
@@ -37,10 +38,10 @@ internal open class LincheckMethodVisitor(
     private var lineNumber = 0
 
     open val requiresTypeAnalyzer: Boolean = false
-    open val requiresOwnerNameAnalyzer: Boolean = false
+    open val requiresAccessPathAnalyzer: Boolean = false
 
-    var typeAnalyzer: AnalyzerAdapter? = null
-    var ownerNameAnalyzer: OwnerNameAnalyzerAdapter? = null
+    var typeAnalyzer: TypeAnalyzerAdapter? = null
+    var accessPathAnalyzer: AccessPathAnalyzerAdapter? = null
 
     /**
      * Injects `beforeEvent` method invocation if IDEA plugin is enabled.

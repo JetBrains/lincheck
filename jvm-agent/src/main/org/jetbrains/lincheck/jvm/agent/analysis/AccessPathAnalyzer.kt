@@ -8,9 +8,15 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.jvm.agent
+package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.descriptors.*
+import org.jetbrains.lincheck.jvm.agent.FieldsInfo
+import org.jetbrains.lincheck.jvm.agent.LocalVariableInfo
+import org.jetbrains.lincheck.jvm.agent.MethodVariables
+import org.jetbrains.lincheck.jvm.agent.getArrayAccessOpcodeType
+import org.jetbrains.lincheck.jvm.agent.getLocalVarAccessOpcodeType
+import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.trace.createAndRegisterFieldDescriptor
 import org.jetbrains.lincheck.trace.createAndRegisterVariableDescriptor
@@ -20,16 +26,16 @@ import org.objectweb.asm.commons.InstructionAdapter.OBJECT_TYPE
 import kotlin.math.max
 
 /**
- * ASM method visitor adapter that tracks owner names (access paths)
+ * ASM method visitor adapter that tracks access paths
  * for values on the operand stack and in local variables during bytecode analysis.
  *
- * This adapter simulates JVM execution to maintain detailed ownership chains for:
+ * This adapter simulates JVM execution to maintain access paths for:
  * - local variable accesses;
  * - field accesses (static and instance);
  * - array operations (element access and length);
  * - stack manipulations.
  *
- * The owner names are used by Lincheck to assign meaningful names to
+ * The access paths are used by Lincheck to assign meaningful names to
  * receiver objects on field and method accesses.
  *
  * The implementation is based on [org.objectweb.asm.commons.AnalyzerAdapter].
@@ -43,7 +49,7 @@ import kotlin.math.max
  *
  * @see org.objectweb.asm.commons.AnalyzerAdapter
  */
-class OwnerNameAnalyzerAdapter protected constructor(
+class AccessPathAnalyzerAdapter protected constructor(
     api: Int,
     // The owner's class name.
     private val owner: String?,
@@ -55,14 +61,14 @@ class OwnerNameAnalyzerAdapter protected constructor(
     private val context: TraceContext
 ) : MethodVisitor(api, methodVisitor) {
     /**
-     * Tracks [OwnerName]-s for objects stored in local variables.
+     * Tracks [AccessPath]-s for objects stored in local variables.
      */
-    var locals: MutableList<OwnerName?>?
+    var locals: MutableList<AccessPath?>?
 
     /**
-     * Tracks [OwnerName]-s for objects stored on the stack.
+     * Tracks [AccessPath]-s for objects stored on the stack.
      */
-    var stack: MutableList<OwnerName?>?
+    var stack: MutableList<AccessPath?>?
 
     /** The maximum stack size of this method.  */
     private var maxStack = 0
@@ -77,7 +83,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         this.locals != null && this.stack != null
 
     /**
-     * Constructs a new [OwnerNameAnalyzerAdapter]. *Subclasses must not use this constructor*.
+     * Constructs a new [AccessPathAnalyzerAdapter]. *Subclasses must not use this constructor*.
      * Instead, they must use the [.AnalyzerAdapter] version.
      *
      * @param owner the owner's class name.
@@ -97,7 +103,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
     ) : this( /* latest api = */Opcodes.ASM9, owner, access, name, descriptor, methodVisitor, methodVariables, context)
 
     /**
-     * Constructs a new [OwnerNameAnalyzerAdapter].
+     * Constructs a new [AccessPathAnalyzerAdapter].
      *
      * @param api the ASM API version implemented by this visitor. Must be one of the `ASM`*x* values in [Opcodes].
      * @param owner the owner's class name.
@@ -111,8 +117,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
         val argumentTypes = Type.getArgumentTypes(descriptor)!!
         val localsTypes = if (isStatic) argumentTypes else arrayOf(OBJECT_TYPE) + argumentTypes
 
-        locals = mutableListOf<OwnerName?>()
-        stack = mutableListOf<OwnerName?>()
+        locals = mutableListOf<AccessPath?>()
+        stack = mutableListOf<AccessPath?>()
 
         @Suppress("UNCHECKED_CAST")
         initializeLocals(localsTypes.size, localsTypes as Array<Any?>)
@@ -132,7 +138,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         stack: Array<Any?>
     ) {
         require(type == Opcodes.F_NEW) {
-            "OwnerNameAnalyzerAdapter only accepts expanded frames (see ClassReader.EXPAND_FRAMES)"
+            "AccessPathAnalyzerAdapter only accepts expanded frames (see ClassReader.EXPAND_FRAMES)"
         }
 
         super.visitFrame(type, numLocal, local, numStack, stack)
@@ -324,22 +330,22 @@ class OwnerNameAnalyzerAdapter protected constructor(
 
     // -----------------------------------------------------------------------------------------------
 
-    private fun get(local: Int): OwnerName? {
+    private fun get(local: Int): AccessPath? {
         maxLocals = max(maxLocals, local + 1)
         return if (local < locals!!.size) locals!![local] else null
     }
 
-    private fun set(local: Int, ownerName: OwnerName?) {
+    private fun set(local: Int, accessPath: AccessPath?) {
         maxLocals = max(maxLocals, local + 1)
         locals!!.expandTo(maxLocals, null)
-        locals!![local] = ownerName
+        locals!![local] = accessPath
     }
 
-    private fun push(ownerName: OwnerName?) {
+    private fun push(accessPath: AccessPath?) {
         if (stack == null) {
             stack = mutableListOf()
         }
-        stack!!.add(ownerName)
+        stack!!.add(accessPath)
         maxStack = max(maxStack, stack!!.size)
     }
 
@@ -353,7 +359,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
         maxStack = max(maxStack, stack!!.size)
     }
 
-    private fun pop(): OwnerName? {
+    private fun pop(): AccessPath? {
         if (stack == null || stack!!.isEmpty()) return null
         return stack!!.removeAt(stack!!.size - 1)
     }
@@ -406,25 +412,25 @@ class OwnerNameAnalyzerAdapter protected constructor(
             /* Local variable access instructions */
 
             Opcodes.ALOAD, Opcodes.ILOAD, Opcodes.FLOAD -> {
-                val ownerName = get(intArg)
-                push(ownerName)
+                val accessPath = get(intArg)
+                push(accessPath)
             }
 
             Opcodes.LLOAD, Opcodes.DLOAD -> {
-                val ownerName = get(intArg)
-                push(ownerName)
+                val accessPath = get(intArg)
+                push(accessPath)
                 push(null)
             }
 
             Opcodes.ASTORE, Opcodes.ISTORE, Opcodes.FSTORE -> {
-                val ownerName = pop()
-                set(intArg, ownerName)
+                val accessPath = pop()
+                set(intArg, accessPath)
             }
 
             Opcodes.LSTORE, Opcodes.DSTORE -> {
                 pop()
-                val ownerName = pop()
-                set(intArg, ownerName)
+                val accessPath = pop()
+                set(intArg, accessPath)
                 set(intArg + 1, null)
             }
 
@@ -440,7 +446,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
                     isVolatile = FieldsInfo.isVolatileField(className, fieldName)
                 )
                 val fieldAccess = StaticFieldAccessLocation(fieldDescriptor)
-                push(OwnerName(fieldAccess))
+                push(AccessPath(fieldAccess))
                 if (Type.getType(descriptor).size == 2) {
                     push(null)
                 }
@@ -451,7 +457,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             }
 
             Opcodes.GETFIELD -> {
-                val ownerName = pop()
+                val accessPath = pop()
                 val fieldDescriptor = context.createAndRegisterFieldDescriptor(
                     className = className!!.toCanonicalClassName(),
                     fieldName = fieldName!!,
@@ -461,8 +467,8 @@ class OwnerNameAnalyzerAdapter protected constructor(
                     isVolatile = FieldsInfo.isVolatileField(className, fieldName)
                 )
                 val fieldAccess = ObjectFieldAccessLocation(fieldDescriptor)
-                if (ownerName != null) {
-                    push(ownerName + fieldAccess)
+                if (accessPath != null) {
+                    push(accessPath + fieldAccess)
                 } else {
                     push(null)
                 }
@@ -789,7 +795,7 @@ class OwnerNameAnalyzerAdapter protected constructor(
             val localVarType = Types.convertAsmTypeName(localVar.type)
             val localVarDescriptor = context.createAndRegisterVariableDescriptor(localVar.name, localVarType)
             val localVarAccess = LocalVariableAccessLocation(localVarDescriptor)
-            set(localVar.index, OwnerName(localVarAccess))
+            set(localVar.index, AccessPath(localVarAccess))
         }
     }
 

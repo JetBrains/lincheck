@@ -42,7 +42,7 @@ internal class SharedMemoryAccessTransformer(
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     override val requiresTypeAnalyzer: Boolean = true
-    override val requiresOwnerNameAnalyzer: Boolean = true
+    override val requiresAccessPathAnalyzer: Boolean = true
 
     override fun visitFieldInsn(opcode: Int, owner: String, fieldName: String, desc: String) = adapter.run {
         if (
@@ -125,7 +125,7 @@ internal class SharedMemoryAccessTransformer(
         ).id
 
         // STACK: obj
-        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(0)
+        val accessPath = accessPathAnalyzer?.stack?.getStackElementAt(0)
         val ownerLocal: Int = if (isUninitThisOwner) {
             // We cannot store uninitializedThis to a typed local and pass it to instrumentation
             // methods (causes VerifyError). Instead, we pop it, substitute UNINITIALIZED_THIS sentinel for
@@ -149,7 +149,7 @@ internal class SharedMemoryAccessTransformer(
         }
 
         loadLocal(threadDescriptorLocal)
-        val codeLocationId = loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
+        val codeLocationId = loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = accessPath))
         loadLocal(ownerLocal)
         push(fieldId)
         loadLocal(resultInterceptorLocal)
@@ -218,14 +218,14 @@ internal class SharedMemoryAccessTransformer(
             isFinal = FieldsInfo.isFinalField(owner, fieldName),
             isVolatile = FieldsInfo.isVolatileField(owner, fieldName)
         ).id
-        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(valueType.size)
+        val accessPath = accessPathAnalyzer?.stack?.getStackElementAt(valueType.size)
         val valueLocal = newLocal(valueType).also { storeLocal(it) }
         // STACK: obj | uninitializedThis
         val ownerLocal: Int = storeOwner(owner, isUninitThisOwner)
         // STACK: <empty>
 
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
+        loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = accessPath))
         loadLocal(ownerLocal)
         loadLocal(valueLocal)
         box(valueType)
@@ -296,7 +296,7 @@ internal class SharedMemoryAccessTransformer(
         val arrayElementType = getArrayElementType(opcode)
         val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
-        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1)
+        val accessPath = accessPathAnalyzer?.stack?.getStackElementAt(1)
 
         val threadDescriptorLocal = newLocal(OBJECT_TYPE).also {
             invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
@@ -309,7 +309,7 @@ internal class SharedMemoryAccessTransformer(
 
         // STACK: <empty>
         loadLocal(threadDescriptorLocal)
-        val codeLocationId = loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
+        val codeLocationId = loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = accessPath))
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         loadLocal(resultInterceptorLocal)
@@ -344,14 +344,14 @@ internal class SharedMemoryAccessTransformer(
         // STACK: array, index, value
         val arrayElementType = getArrayElementType(opcode)
         val valueLocal = newLocal(arrayElementType) // we cannot use DUP as long/double require DUP2
-        val ownerName = ownerNameAnalyzer?.stack?.getStackElementAt(1 + arrayElementType.size)
+        val accessPath = accessPathAnalyzer?.stack?.getStackElementAt(1 + arrayElementType.size)
         storeLocal(valueLocal)
         val indexLocal = newLocal(INT_TYPE).also { storeLocal(it) }
         val arrayLocal = newLocal(getType("[$arrayElementType")).also { storeLocal(it) }
 
         // STACK: <empty>
         invokeStatic(Injections::getCurrentThreadDescriptorIfInAnalyzedCode)
-        loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = ownerName))
+        loadNewCodeLocationId(createCurrentAccessCodeLocation(accessPath = accessPath))
         loadLocal(arrayLocal)
         loadLocal(indexLocal)
         loadLocal(valueLocal)

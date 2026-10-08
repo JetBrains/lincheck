@@ -11,9 +11,9 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.descriptors.LocalKind
-import org.jetbrains.lincheck.jvm.agent.analysis.buildControlFlowGraph
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.buildControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
-import org.jetbrains.lincheck.jvm.agent.analysis.emptyControlFlowGraph
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.emptyControlFlowGraph
 import org.jetbrains.lincheck.settings.BlockMatch
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings

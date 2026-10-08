@@ -12,6 +12,7 @@ package org.jetbrains.lincheck.jvm.agent.analysis
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation.*
+import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.buildControlFlowGraph
 import org.jetbrains.lincheck.util.Logger
 import org.objectweb.asm.*
 import org.objectweb.asm.Opcodes.*

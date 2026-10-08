@@ -8,11 +8,10 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.lincheck.jvm.agent.analysis
+package org.jetbrains.lincheck.jvm.agent.analysis.controlflow
 
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.Types.convertAsmMethodType
-import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.*
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.TryCatchBlockNode
