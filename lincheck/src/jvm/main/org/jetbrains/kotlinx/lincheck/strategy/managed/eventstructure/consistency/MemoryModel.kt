@@ -20,7 +20,7 @@ fun String.toMemoryModel(): MemoryModel? = when (this) {
     "SC" -> MemoryModel.SequentialConsistency
     "SequentialConsistency" -> MemoryModel.SequentialConsistency
     "RA" -> MemoryModel.ReleaseAcquire
-    "ReleaseAcquire" -> MemoryModel.SequentialConsistency
+    "ReleaseAcquire" -> MemoryModel.ReleaseAcquire
     "JAM" -> MemoryModel.JAM21
     "JAM21" -> MemoryModel.JAM21
     "Java" -> MemoryModel.JAM21

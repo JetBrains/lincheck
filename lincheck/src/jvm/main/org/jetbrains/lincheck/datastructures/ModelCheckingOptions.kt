@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.toMemoryModel
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
