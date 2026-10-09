@@ -15,7 +15,6 @@ import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.AtomicApiKind.*
 import org.jetbrains.lincheck.util.AtomicMethodKind.*
 import org.jetbrains.lincheck.util.MemoryOrdering.*
-import sun.misc.Unsafe
 import java.util.concurrent.atomic.*
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
@@ -91,17 +90,15 @@ data class AtomicMethodAccessInfo(
     val arguments: List<Any?>,
 )
 
-// TODO: This is very out of place, mainly because we have to add a new parameter, and weird if check.
-// Maybe just make it seperate?
-fun getAtomicMethodDescriptor(obj: Any?, methodClassName: String, methodName: String): AtomicMethodDescriptor? {
+fun getAtomicMethodDescriptor(obj: Any?, className: String, methodName: String): AtomicMethodDescriptor? {
     return when {
-        isAtomic(obj)               -> atomicMethods[methodName]
-        isAtomicArray(obj)          -> atomicArrayMethods[methodName]
-        isAtomicFieldUpdater(obj)   -> atomicFieldUpdaterMethods[methodName]
-        isVarHandle(obj)            -> varHandleMethods[methodName]
-        isUnsafe(obj)               -> unsafeMethods[methodName]
-        obj == null && methodClassName in varHandleBaseClassNames -> varHandleFenceMethods.get(methodName)
-        else                        -> null
+        isAtomic(obj)                       -> atomicMethods[methodName]
+        isAtomicArray(obj)                  -> atomicArrayMethods[methodName]
+        isAtomicFieldUpdater(obj)           -> atomicFieldUpdaterMethods[methodName]
+        isVarHandle(obj)                    -> varHandleMethods[methodName]
+        isUnsafe(obj)                       -> unsafeMethods[methodName]
+        isFence(obj, className, methodName) -> varHandleFenceMethods[methodName]
+        else                                -> null
     }
 }
 
@@ -711,6 +708,9 @@ internal fun isVarHandleInstanceFieldClass(className: String) =
 
 internal fun isVarHandleMethod(className: String, methodName: String) =
     isVarHandleClass(className) && methodName in varHandleMethods
+
+internal fun isFence(obj: Any?, className: String, methodName: String): Boolean =
+    obj == null && className in varHandleBaseClassNames && methodName in varHandleFenceMethods
 
 fun getVarHandleAccessType(varHandle: Any?): Types.Type? {
     val className = varHandle?.javaClass?.name ?: return null

@@ -77,9 +77,6 @@ interface ThreadEvent : Event {
 
     val happensBeforeClock: VectorClock
 
-    val latestReleaseFence: ThreadEvent?
-    val releaseEvent: ThreadEvent?
-
     /**
      * Returns n-th predecessor of the given event.
      */
@@ -100,6 +97,14 @@ inline fun ThreadEvent.pred(inclusive: Boolean = false, predicate: (ThreadEvent)
     }
     return event
 }
+
+/** The nearest release fence in program order, including this event. */
+val ThreadEvent.latestReleaseFence: ThreadEvent?
+    get() = pred(inclusive = true) { it.label.isReleaseFence() }
+
+/** This event if it releases, otherwise the nearest release fence at or before it. */
+val ThreadEvent.releaseEvent: ThreadEvent?
+    get() = if (label.isRelease()) this else latestReleaseFence
 
 val ThreadEvent.threadRoot: Event
     get() = predNth(threadPosition)!!
@@ -313,39 +318,21 @@ abstract class AbstractThreadEvent(
         }
     }
 
-    final override val latestReleaseFence: ThreadEvent? = run {
-        if (label.isReleaseFence()) return@run this@AbstractThreadEvent
-        parent?.latestReleaseFence
-    }
-
-    final override val releaseEvent: ThreadEvent?
-        get() {
-            if (this.label.isRelease()) return this
-            return this.latestReleaseFence
-        }
-
-
-    // TODO: In the future we need also resolve release-acquire fences
     final override val happensBeforeClock: VectorClock = run {
         dependencies.fold(parent?.happensBeforeClock?.copy() ?: MutableVectorClock()) { clock, event ->
-            // If this is not an acquire read then we do not do anything
-            if (!this.label.isAcquire()) return@fold clock
-            // If this is an acquire event syncing with a release event then we merge
-            val releaseEvent = event.releaseEvent
-            if (releaseEvent != null) return@fold clock + releaseEvent.happensBeforeClock
-            // Otherwise we need to check if there has been an release fence before that event
-            clock
+            val releaseEvent = if (label.isAcquire()) event.releaseEvent else null
+            if (releaseEvent != null) clock + releaseEvent.happensBeforeClock else clock
         }.apply {
             set(threadId, threadPosition)
             // If it is not an acquire fence then we are done
             if (!label.isAcquireFence()) return@apply
             // Acquire fences need to check for any reads reading from a release-shaped event
             var cur: ThreadEvent? = parent
-            while(cur != null) {
+            while (cur != null) {
                 cur.dependencies.forEach { dep ->
                     // If the dependency is release-shaped then we merge the HB-clocks
                     val releaseEvent = dep.releaseEvent
-                    if(releaseEvent != null) merge(releaseEvent.happensBeforeClock)
+                    if (releaseEvent != null) merge(releaseEvent.happensBeforeClock)
                 }
                 cur = cur.parent
             }
