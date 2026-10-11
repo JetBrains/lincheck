@@ -20,14 +20,8 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.lincheck.util.Computable
-import org.jetbrains.lincheck.util.Relation
-import org.jetbrains.lincheck.util.RelationMatrix
 import org.jetbrains.lincheck.util.ensure
-import org.jetbrains.lincheck.util.union
-import kotlin.collections.*
 
 
 abstract class SequentialConsistencyViolation : Inconsistency()
@@ -45,13 +39,13 @@ class MemoryModelConsistencyChecker(
         if (checkCoherence) CoherenceChecker() else null
 
     override fun check(execution: MutableExtendedExecution): Inconsistency? {
-        check(!execution.executionOrderComputable.computed)
+        check(!execution.executionOrder.computed)
         releaseAcquireChecker?.check(execution)
             ?.let { return it }
         coherenceChecker?.check(execution)
             ?.let { return it }
-        check(execution.executionOrderComputable.computed)
-        val executionOrder = execution.executionOrderComputable.value
+        check(execution.executionOrder.computed)
+        val executionOrder = execution.executionOrder
             .ensure { it.isConsistent() }
 
         // TODO: The current coherence checker is just for RA, we need to seperate the SC coherence from RA coherence
@@ -85,20 +79,8 @@ class IncrementalMemoryModelConsistencyChecker(
 
     private val lockConsistencyChecker = LockConsistencyChecker()
 
-    override fun doIncrementalCheck(event: AtomicThreadEvent): ConsistencyState {
-        check(state is ConsistencyState.Consistent || state is ConsistencyState.PartlyConsistent)
-        check(execution.executionOrderComputable.computed)
-        resetRelations()
-        val executionOrder = execution.executionOrderComputable.value
-        if (!executionOrder.isConsistentExtension(event)) {
-            // if we end up in an unknown state, reset the execution order,
-            // so it can be re-computed by the full consistency check
-            execution.executionOrderComputable.reset()
-            return ConsistencyState.Unknown
-        }
-        executionOrder.add(event)
-        return ConsistencyState.PartlyConsistent
-    }
+    override fun doIncrementalCheck(event: AtomicThreadEvent): ConsistencyState =
+        if (execution.executionOrder.computed) ConsistencyState.PartlyConsistent else ConsistencyState.Unknown
 
     override fun doLightweightCheck(): ConsistencyState {
         // TODO: extract into separate checker
@@ -107,9 +89,9 @@ class IncrementalMemoryModelConsistencyChecker(
         }
         // check by trying to replay execution order
         if (state is ConsistencyState.Consistent || state is ConsistencyState.PartlyConsistent) {
-            check(execution.executionOrderComputable.computed)
+            check(execution.executionOrder.computed)
             val replayer = SequentialConsistencyReplayer()
-            val executionOrder = execution.executionOrderComputable.value
+            val executionOrder = execution.executionOrder
             if (replayer.replay(executionOrder.ordering) != null) {
                 // if replay is successful, return "consistent" verdict
                 return ConsistencyState.Consistent
@@ -117,51 +99,12 @@ class IncrementalMemoryModelConsistencyChecker(
         }
         // if we end up in an unknown state, reset the execution order,
         // so it can be re-computed by the full consistency check
-        execution.executionOrderComputable.reset()
+        execution.executionOrder.invalidate()
         return ConsistencyState.Unknown
     }
 
-    override fun doReset(): ConsistencyState {
-        resetRelations()
-        execution.executionOrderComputable.apply {
-            reset()
-            // set state to `computed`,
-            // so we can push the events into the execution order
-            setComputed()
-        }
-        for (event in execution.enumerationOrderSorted()) {
-            val verdict = doIncrementalCheck(event)
-            if (verdict is ConsistencyState.Unknown) {
-                return ConsistencyState.Unknown
-            }
-        }
-        return ConsistencyState.PartlyConsistent
-    }
-
-    private fun ExecutionOrder.isConsistentExtension(event: AtomicThreadEvent): Boolean {
-        val last = ordering.lastOrNull()
-        val label = event.label
-        // TODO: for this check to be more robust,
-        //   can we generalize it to work with the arbitrary aggregation algebra?
-        return when {
-            label is ReadAccessLabel && label.isResponse ->
-                // TODO: also check that read reads-from some consistent write:
-                //   e.g. the globally last write, or the last observed write
-                event.isValidResponse(last!!)
-
-            label is WriteAccessLabel && label.isExclusive ->
-                event.isWritePartOfAtomicUpdate(last!!)
-
-            else -> true
-        }
-    }
-
-    // TODO: move to corresponding individual consistency checkers
-    private fun resetRelations() {
-        execution.writesBeforeOrderComputable.reset()
-        execution.coherenceOrderComputable.reset()
-        execution.extendedCoherenceComputable.reset()
-    }
+    override fun doReset(): ConsistencyState =
+        if (execution.executionOrder.computed) ConsistencyState.PartlyConsistent else ConsistencyState.Unknown
 
 }
 
@@ -171,140 +114,4 @@ class SequentialConsistencyApproximationInconsistency : SequentialConsistencyVio
         // TODO: what information should we display to help identify the cause of inconsistency?
         return "Approximate sequential inconsistency detected"
     }
-}
-
-class MemoryModelConsistencyOrder(
-    val execution: Execution<AtomicThreadEvent>,
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-    val memoryAccessOrder: Relation<AtomicThreadEvent>,
-) : Relation<AtomicThreadEvent>, Computable {
-
-    // TODO: make cached delegate?
-    private var consistent = true
-
-    private var relation: RelationMatrix<AtomicThreadEvent>? = null
-
-    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean =
-        relation?.invoke(x, y) ?: false
-
-    fun isConsistent(): Boolean {
-        return consistent
-    }
-
-    override fun initialize() {
-        // TODO: optimize -- build the relation only for write and read-response events
-        relation = RelationMatrix(execution, execution.buildEnumerator())
-    }
-
-    override fun compute() {
-        val relation = this.relation!!
-        relation.add(memoryAccessOrder)
-        relation.fixpoint {
-            // TODO: maybe we can remove this check without affecting performance?
-            if (!isIrreflexive()) {
-                consistent = false
-                return@fixpoint
-            }
-            coherenceClosure()
-            transitiveClosure()
-        }
-    }
-
-    override fun invalidate() {
-        consistent = true
-    }
-
-    override fun reset() {
-        invalidate()
-        relation = null
-    }
-
-    private fun RelationMatrix<AtomicThreadEvent>.coherenceClosure() {
-        for (location in memoryAccessEventIndex.locations) {
-            coherenceClosure(location)
-        }
-    }
-
-    private fun RelationMatrix<AtomicThreadEvent>.coherenceClosure(location: MemoryLocation) {
-        val relation = this
-        for (read in memoryAccessEventIndex.getReadResponses(location)) {
-            for (write in memoryAccessEventIndex.getWrites(location)) {
-                if (relation(write, read) && write != read.readsFrom) {
-                    relation[write, read.readsFrom] = true
-                }
-                if (relation(read.readsFrom, write)) {
-                    relation[read, write] = true
-                }
-            }
-        }
-    }
-
-}
-
-class ExecutionOrder(
-    val execution: Execution<AtomicThreadEvent>,
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-    val approximation: Relation<AtomicThreadEvent>,
-) : Relation<AtomicThreadEvent>, Computable {
-
-    private var consistent = true
-
-    private val _ordering = mutableListOf<AtomicThreadEvent>()
-
-    val ordering: List<AtomicThreadEvent>
-        get() = _ordering
-
-    private val constraints = Relation<AtomicThreadEvent> { x, y ->
-        when {
-            // put wait-request before notify event
-            x.label.isRequest && x.label is WaitLabel ->
-                (y == execution.getResponse(x)?.notifiedBy)
-
-            else -> false
-        }
-    }
-
-    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
-        TODO("Not yet implemented")
-    }
-
-    fun isConsistent(): Boolean =
-        // TODO: embed failure state into ComputableNode state machine?
-        consistent
-
-    fun add(event: AtomicThreadEvent) {
-        check(consistent)
-        _ordering.add(event)
-    }
-
-    override fun compute() {
-        check(_ordering.isEmpty())
-        val relation = approximation union constraints
-        // construct aggregated execution consisting of atomic events
-        // to incorporate the atomicity constraints during the search for topological sorting
-        val (aggregatedExecution, _) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
-        val aggregatedRelation = relation.existsLifting()
-        // TODO: optimization --- we can build graph only for a subset of events, excluding:
-        //  - non-blocking request events
-        //  - events accessing race-free locations
-        //  - what else?
-        //  and then insert them back into the topologically sorted list
-        val graph = aggregatedExecution.buildGraph(aggregatedRelation)
-        val ordering = topologicalSorting(graph)
-        if (ordering == null) {
-            consistent = false
-            return
-        }
-        this._ordering.addAll(ordering.flatMap { it.events })
-    }
-
-    override fun invalidate() {
-        consistent = true
-    }
-
-    override fun reset() {
-        _ordering.clear()
-        invalidate()
-    }
-
 }

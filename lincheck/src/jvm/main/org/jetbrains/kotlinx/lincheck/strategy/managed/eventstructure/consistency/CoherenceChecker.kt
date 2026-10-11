@@ -25,11 +25,8 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 class CoherenceChecker : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
     override fun check(execution: MutableExtendedExecution): Inconsistency? {
-        execution.coherenceOrderComputable.apply {
-            initialize()
-            compute()
-        }
-        val coherenceOrder = execution.coherenceOrderComputable.value
+        val coherenceOrder = execution.coherenceOrder
+        coherenceOrder.compute()
         return if (!coherenceOrder.isConsistent())
             CoherenceViolation()
         else null

@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.lincheck.util.Computable
+import org.jetbrains.lincheck.util.CachedRelation
 import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.RelationMatrix
 
@@ -31,7 +31,13 @@ class WritesBeforeOrder(
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteOrder,
     val happensBefore: Relation<AtomicThreadEvent>,
-) : Relation<AtomicThreadEvent>, Computable {
+) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
+
+    private var computed = false
+
+    override fun onAdd(event: AtomicThreadEvent) = invalidate()
+
+    override fun onReset(execution: Execution<AtomicThreadEvent>) = invalidate()
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
@@ -47,7 +53,7 @@ class WritesBeforeOrder(
     private fun isIrreflexive(): Boolean =
         relations.values.all { it.isIrreflexive() }
 
-    override fun initialize() {
+    private fun initialize() {
         for (location in memoryAccessEventIndex.locations) {
             if (memoryAccessEventIndex.isWriteWriteRaceFree(location))
                 continue
@@ -61,17 +67,22 @@ class WritesBeforeOrder(
         relations[location] = RelationMatrix(writes, enumerator)
     }
 
-    override fun reset() {
+    override fun invalidate() {
+        computed = false
         relations.clear()
     }
 
     override fun compute() {
+        if (computed) return
+        rmwChainsStorage.compute()
+        initialize()
         for ((location, relation) in relations) {
             relation.apply {
                 compute(location)
                 transitiveClosure()
             }
         }
+        computed = true
     }
 
     private fun RelationMatrix<AtomicThreadEvent>.compute(location: MemoryLocation) {

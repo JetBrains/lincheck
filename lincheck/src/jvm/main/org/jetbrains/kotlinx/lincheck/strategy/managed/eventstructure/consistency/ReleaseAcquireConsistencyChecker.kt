@@ -33,11 +33,8 @@ class ReleaseAcquireInconsistency : Inconsistency() {
 class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
     override fun check(execution: MutableExtendedExecution): Inconsistency? {
-        execution.writesBeforeOrderComputable.apply {
-            initialize()
-            compute()
-        }
-        val writesBeforeOrder = execution.writesBeforeOrderComputable.value
+        val writesBeforeOrder = execution.writesBeforeOrder
+        writesBeforeOrder.compute()
         return if (!writesBeforeOrder.isConsistent())
             ReleaseAcquireInconsistency()
         else null

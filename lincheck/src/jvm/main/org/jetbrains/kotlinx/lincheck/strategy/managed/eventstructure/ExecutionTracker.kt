@@ -39,7 +39,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
  *
  * @param E the type of events of the tracked execution.
  */
-interface ExecutionTracker<E : ThreadEvent, X : Execution<E>> {
+interface ExecutionTracker<E : ThreadEvent, in X : Execution<E>> {
 
     /**
      * This method is called when a new event is added to the execution.

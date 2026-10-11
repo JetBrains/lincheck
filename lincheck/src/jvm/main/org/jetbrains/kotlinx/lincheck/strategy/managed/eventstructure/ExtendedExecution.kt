@@ -22,11 +22,8 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.kotlinx.lincheck.util.*
-import org.jetbrains.lincheck.util.ComputableNode
 import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.collections.SortedList
-import org.jetbrains.lincheck.util.computable
-import org.jetbrains.lincheck.util.dependsOn
 import org.jetbrains.lincheck.util.union
 
 
@@ -103,17 +100,12 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
 
     override val memoryAccessEventIndex: MutableAtomicMemoryAccessEventIndex
 
-    val readModifyWriteOrderComputable: ComputableNode<ReadModifyWriteOrder>
-
-    val writesBeforeOrderComputable: ComputableNode<WritesBeforeOrder>
-
-    val coherenceOrderComputable: ComputableNode<CoherenceOrder>
-
-    val extendedCoherenceComputable: ComputableNode<ExtendedCoherenceOrder>
-
-    val memoryModelConsistencyOrderComputable: ComputableNode<MemoryModelConsistencyOrder>
-
-    val executionOrderComputable: ComputableNode<ExecutionOrder>
+    override val readModifyWriteOrder: ReadModifyWriteOrder
+    override val writesBeforeOrder: WritesBeforeOrder
+    override val coherenceOrder: CoherenceOrder
+    override val extendedCoherence: ExtendedCoherenceOrder
+    override val memoryModelConsistencyOrder: MemoryModelConsistencyOrder
+    override val executionOrder: ExecutionOrder
 
     /**
      * Resets the mutable execution to contain the new set of events
@@ -154,80 +146,28 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     override val memoryAccessEventIndex =
         MutableAtomicMemoryAccessEventIndex().apply { index(execution) }
 
-    override val readModifyWriteOrderComputable = computable { ReadModifyWriteOrder(execution) }
+    override val readModifyWriteOrder = ReadModifyWriteOrder(execution)
 
-    override val readModifyWriteOrder: Relation<AtomicThreadEvent> by readModifyWriteOrderComputable
+    override val writesBeforeOrder = WritesBeforeOrder(
+        execution, memoryAccessEventIndex, readModifyWriteOrder, happensBeforeOrder,
+    )
 
-    override val writesBeforeOrderComputable = computable {
-        WritesBeforeOrder(
-            execution,
-            memoryAccessEventIndex,
-            readModifyWriteOrderComputable.value,
-            happensBeforeOrder,
-        )
-    }
-        .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
+    override val extendedCoherence = ExtendedCoherenceOrder(
+        execution, memoryAccessEventIndex, happensBeforeOrder union writesBeforeOrder,
+    )
 
-    override val writesBeforeOrder: Relation<AtomicThreadEvent> by writesBeforeOrderComputable
+    override val memoryModelConsistencyOrder = MemoryModelConsistencyOrder(
+        execution, memoryAccessEventIndex, happensBeforeOrder union extendedCoherence,
+    )
 
-    override val coherenceOrderComputable = computable {
-        CoherenceOrder(
-            execution,
-            memoryAccessEventIndex,
-            readModifyWriteOrderComputable.value,
-            happensBeforeOrder union writesBeforeOrderComputable.value, // TODO: add eco or sc?
-            coherenceCausalOrder,
-        )
-    }
-        .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
-        .dependsOn(writesBeforeOrderComputable, soft = true, invalidating = true)
+    override val executionOrder = ExecutionOrder(
+        execution, memoryAccessEventIndex, happensBeforeOrder union extendedCoherence,
+    )
 
-    override val coherenceOrder: Relation<AtomicThreadEvent> by coherenceOrderComputable
-
-    override val extendedCoherenceComputable = computable {
-        ExtendedCoherenceOrder(
-            execution,
-            memoryAccessEventIndex,
-            happensBeforeOrder union writesBeforeOrderComputable.value // TODO: add coherence
-        )
-    }
-        .dependsOn(writesBeforeOrderComputable, soft = true, invalidating = true)
-        .apply {
-            // add reference to coherence order, so once it is computed
-            // it can force-set the extended coherence order
-            coherenceOrderComputable.value.extendedCoherenceOrder = this
-        }
-
-    override val extendedCoherence: Relation<AtomicThreadEvent> by extendedCoherenceComputable
-
-    override val memoryModelConsistencyOrderComputable = computable {
-        MemoryModelConsistencyOrder(
-            execution,
-            memoryAccessEventIndex,
-            happensBeforeOrder union extendedCoherenceComputable.value,
-            // TODO: refine eco order after sc order computation (?)
-        )
-    }
-        .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
-
-    override val memoryModelConsistencyOrder: Relation<AtomicThreadEvent> by memoryModelConsistencyOrderComputable
-
-    override val executionOrderComputable = computable {
-        ExecutionOrder(
-            execution,
-            memoryAccessEventIndex,
-            happensBeforeOrder union extendedCoherence, // TODO: add sc order
-        )
-    }
-        .dependsOn(extendedCoherenceComputable, soft = true, invalidating = true)
-        .apply {
-            // add reference to coherence order, so once it is computed
-            // it can force-set the execution order
-            coherenceOrderComputable.value.executionOrder = this
-        }
-
-    //NOTE: This seems to be unused
-    override val executionOrder: Relation<AtomicThreadEvent> by executionOrderComputable
+    override val coherenceOrder = CoherenceOrder(
+        execution, memoryAccessEventIndex, readModifyWriteOrder, writesBeforeOrder,
+        coherenceCausalOrder, extendedCoherence, executionOrder,
+    )
 
     private val consistencyChecker = aggregateConsistencyCheckers(
         execution = this,
@@ -243,8 +183,14 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         listOf(),
     )
 
-    private val trackers = listOf(
+    private val trackers: List<ExtendedExecutionTracker> = listOf(
         memoryAccessEventIndex.incrementalTracker(),
+        readModifyWriteOrder,
+        writesBeforeOrder,
+        coherenceOrder,
+        extendedCoherence,
+        memoryModelConsistencyOrder,
+        executionOrder,
         consistencyChecker.incrementalTracker(),
     )
 
@@ -341,30 +287,3 @@ private fun AtomicEventConsistencyChecker.incrementalTracker(): ExtendedExecutio
         }
     }
 }
-
-// private fun<I> ComputableNode<I>.incrementalTracker(): ExecutionTracker<AtomicThreadEvent>
-//     where I : Computable,
-//           I : Incremental<AtomicThreadEvent>
-// {
-//     return object : ExecutionTracker<AtomicThreadEvent> {
-//         override fun onAdd(event: AtomicThreadEvent) {
-//             if (computed) value.add(event)
-//         }
-//
-//         override fun onReset(execution: Execution<AtomicThreadEvent>) {
-//             reset()
-//         }
-//     }
-// }
-//
-// private fun ComputableNode<*>.resettingTracker(): ExecutionTracker<AtomicThreadEvent> {
-//     return object : ExecutionTracker<AtomicThreadEvent> {
-//         override fun onAdd(event: AtomicThreadEvent) {
-//             reset()
-//         }
-//
-//         override fun onReset(execution: Execution<AtomicThreadEvent>) {
-//             reset()
-//         }
-//     }
-// }

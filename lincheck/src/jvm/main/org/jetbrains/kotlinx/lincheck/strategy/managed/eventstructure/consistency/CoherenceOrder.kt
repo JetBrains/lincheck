@@ -27,17 +27,20 @@ import org.jetbrains.lincheck.util.collections.*
 
 typealias CoherenceList = List<AtomicThreadEvent>
 
+/** Searches for a coherence order compatible with atomic updates and the memory model's causal order. */
 class CoherenceOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteOrder,
-    val writesOrder: Relation<AtomicThreadEvent>,
+    val writesBeforeOrder: WritesBeforeOrder,
     val coherenceCausalOrder: Relation<AtomicThreadEvent>,
-    var extendedCoherenceOrder: ComputableNode<ExtendedCoherenceOrder>? = null,
-    var executionOrder: ComputableNode<ExecutionOrder>? = null,
-) : Relation<AtomicThreadEvent>, Computable {
+    private val extendedCoherenceOrder: ExtendedCoherenceOrder,
+    private val executionOrder: ExecutionOrder,
+) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
 
+    private var computed = false
     private var consistent: Boolean = true
+    private val writesOrder = happensBeforeOrder union writesBeforeOrder
 
     private data class Entry(
         val coherence: CoherenceList,
@@ -47,10 +50,12 @@ class CoherenceOrder(
 
     private val map = mutableMapOf<MemoryLocation, Entry>()
 
-    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
+    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean = relates(map, x, y)
+
+    private fun relates(order: Map<MemoryLocation, Entry>, x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
         val location = getLocationForSameLocationWriteAccesses(x, y)
             ?: return false
-        val (_, positions, enumerator) = map[location]
+        val (_, positions, enumerator) = order[location]
             ?: return writesOrder(x, y)
         return positions[enumerator[x]] < positions[enumerator[y]]
     }
@@ -61,50 +66,51 @@ class CoherenceOrder(
     fun isConsistent(): Boolean =
         consistent
 
-    override fun invalidate() {
-        reset()
-    }
+    override fun onAdd(event: AtomicThreadEvent) = invalidate()
 
-    override fun reset() {
+    override fun onReset(execution: Execution<AtomicThreadEvent>) = invalidate()
+
+    override fun invalidate() {
+        computed = false
         map.clear()
         consistent = true
     }
 
     override fun compute() {
-        check(map.isEmpty())
-        generate(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder, coherenceCausalOrder).forEach { coherence ->
-            // TODO: Also maybe lets keep coherence checker for SC and make a RA coherence checker somewhere else
-            // TODO: there is a probably a better place for these two relations
-
+        if (computed) return
+        rmwChainsStorage.compute()
+        writesBeforeOrder.compute()
+        generate(memoryAccessEventIndex, rmwChainsStorage, writesOrder).forEach { coherence ->
+            val order = Relation<AtomicThreadEvent> { x, y -> relates(coherence, x, y) }
             val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex,
-                writesOrder = coherence union coherenceCausalOrder
+                writesOrder = order union coherenceCausalOrder
             )
-                .apply { initialize(); compute() }
+                .apply { compute() }
 
             val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
                 approximation = extendedCoherence union coherenceCausalOrder
             )
-                .apply { initialize(); compute() }
+                .apply { compute() }
             if (!executionOrder.isConsistent())
                 return@forEach
-            this.map += coherence.map
-            this.extendedCoherenceOrder?.setComputed(extendedCoherence)
-            this.executionOrder?.setComputed(executionOrder)
+            this.map += coherence
+            this.extendedCoherenceOrder.copyFrom(extendedCoherence)
+            this.executionOrder.copyFrom(executionOrder)
+            computed = true
             return
         }
         // if we reached this point, then none of the generated coherence orderings is consistent
         consistent = false
+        computed = true
     }
 
     companion object {
 
         private fun generate(
-            execution: Execution<AtomicThreadEvent>,
             memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
             rmwChainsStorage: ReadModifyWriteOrder,
             writesOrder: Relation<AtomicThreadEvent>,
-            causalOrder: Relation<AtomicThreadEvent>,
-        ): Sequence<CoherenceOrder> {
+        ): Sequence<Map<MemoryLocation, Entry>> {
             val coherenceOrderings = memoryAccessEventIndex.locations.mapNotNull { location ->
                 if (memoryAccessEventIndex.isWriteWriteRaceFree(location))
                     return@mapNotNull null
@@ -116,12 +122,10 @@ class CoherenceOrder(
                 }
             }
             if (coherenceOrderings.isEmpty()) {
-                return sequenceOf(
-                    CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder, causalOrder)
-                )
+                return sequenceOf(emptyMap())
             }
             return coherenceOrderings.cartesianProduct().map { coherenceList ->
-                val coherenceOrder = CoherenceOrder(execution, memoryAccessEventIndex, rmwChainsStorage, writesOrder, causalOrder)
+                val coherenceOrder = mutableMapOf<MemoryLocation, Entry>()
                 for (coherence in coherenceList) {
                     val location = coherence.getLocationForSameLocationWriteAccesses()!!
                     val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
@@ -129,7 +133,7 @@ class CoherenceOrder(
                     coherence.forEachIndexed { i, write ->
                         positions[enumerator[write]] = i
                     }
-                    coherenceOrder.map[location] = Entry(coherence, positions, enumerator)
+                    coherenceOrder[location] = Entry(coherence, positions, enumerator)
                 }
                 return@map coherenceOrder
             }
@@ -142,7 +146,19 @@ class ExtendedCoherenceOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val writesOrder: Relation<AtomicThreadEvent>,
-): Relation<AtomicThreadEvent>, Computable {
+) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
+
+    private var computed = false
+
+    override fun onAdd(event: AtomicThreadEvent) = invalidate()
+
+    override fun onReset(execution: Execution<AtomicThreadEvent>) = invalidate()
+
+    internal fun copyFrom(other: ExtendedCoherenceOrder) {
+        relations.clear()
+        relations.putAll(other.relations)
+        computed = true
+    }
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
 
@@ -161,7 +177,7 @@ class ExtendedCoherenceOrder(
     fun isIrreflexive(): Boolean =
         relations.all { (_, relation) -> relation.isIrreflexive() }
 
-    override fun initialize() {
+    private fun initialize() {
         for (location in memoryAccessEventIndex.locations) {
             val events = mutableListOf<AtomicThreadEvent>().apply {
                 addAll(memoryAccessEventIndex.getWrites(location))
@@ -172,14 +188,18 @@ class ExtendedCoherenceOrder(
     }
 
     override fun compute() {
+        if (computed) return
+        initialize()
         addCoherenceEdges()
         addReadsFromEdges()
         addReadsBeforeEdges()
         addCoherenceReadFromEdges()
         addReadsBeforeReadsFromEdges()
+        computed = true
     }
 
-    override fun reset() {
+    override fun invalidate() {
+        computed = false
         relations.clear()
     }
 

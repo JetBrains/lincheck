@@ -30,7 +30,18 @@ typealias MutableReadModifyWriteChain = MutableList<AtomicThreadEvent>
 
 class ReadModifyWriteOrder(
     val execution: Execution<AtomicThreadEvent>,
-) : Relation<AtomicThreadEvent>, Computable {
+) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
+
+    private var computed = false
+    private var consistent = true
+
+    fun isConsistent(): Boolean = consistent
+
+    override fun onAdd(event: AtomicThreadEvent) {
+        if (computed) add(event)
+    }
+
+    override fun onReset(execution: Execution<AtomicThreadEvent>) = invalidate()
 
     abstract class Entry {
         abstract val event: AtomicThreadEvent
@@ -97,7 +108,7 @@ class ReadModifyWriteOrder(
         return rmwChainsMap[location]
     }
 
-    fun add(event: AtomicThreadEvent): Entry? {
+    private fun add(event: AtomicThreadEvent): Entry? {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
             ?: return null
         val location = writeLabel.location
@@ -123,10 +134,12 @@ class ReadModifyWriteOrder(
         chain.add(event)
         return EntryImpl(event, chain, position = chain.size - 1).also {
             eventMap[event] = it
+            consistent = consistent && it.isConsistent()
         }
     }
 
     override fun compute() {
+        if (computed) return
         /* It is important to add events in some causality-compatible order
          * (such as event enumeration order).
          * This guarantees the following property: a mapping `w -> c`, where
@@ -140,9 +153,12 @@ class ReadModifyWriteOrder(
         for (event in execution.enumerationOrderSorted()) {
             add(event)
         }
+        computed = true
     }
 
-    override fun reset() {
+    override fun invalidate() {
+        computed = false
+        consistent = true
         eventMap.clear()
         rmwChainsMap.clear()
     }
@@ -181,6 +197,3 @@ fun ReadModifyWriteOrder.Entry.isConsistent() = when {
     // (this is enforced by the `isValid` check in the constructor)
     else -> true
 }
-
-fun ReadModifyWriteOrder.isConsistent() =
-    entries.all { it.isConsistent() }
