@@ -38,6 +38,8 @@ class MemoryModelConsistencyChecker(
     checkCoherence: Boolean = true,
 ) : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
+    private val jmmChecker = if (memoryModel == MemoryModel.JAM21) JmmConsistencyChecker() else null
+
     private val releaseAcquireChecker : ReleaseAcquireConsistencyChecker? =
         if (checkReleaseAcquireConsistency) ReleaseAcquireConsistencyChecker() else null
 
@@ -45,6 +47,7 @@ class MemoryModelConsistencyChecker(
         if (checkCoherence) CoherenceChecker() else null
 
     override fun check(execution: MutableExtendedExecution): Inconsistency? {
+        jmmChecker?.let { return it.check(execution) }
         check(!execution.executionOrderComputable.computed)
         releaseAcquireChecker?.check(execution)
             ?.let { return it }
@@ -73,7 +76,7 @@ class CoherenceViolation : SequentialConsistencyViolation() {
 
 class IncrementalMemoryModelConsistencyChecker(
     execution: MutableExtendedExecution,
-    memoryModel: MemoryModel,
+    private val memoryModel: MemoryModel,
     checkReleaseAcquireConsistency: Boolean = true,
 ) : AbstractPartialIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(
     execution = execution,
@@ -87,6 +90,7 @@ class IncrementalMemoryModelConsistencyChecker(
 
     override fun doIncrementalCheck(event: AtomicThreadEvent): ConsistencyVerdict {
         check(state is ConsistencyVerdict.Consistent)
+        if (memoryModel == MemoryModel.JAM21) return ConsistencyVerdict.Unknown
         check(execution.executionOrderComputable.computed)
         resetRelations()
         val executionOrder = execution.executionOrderComputable.value
@@ -105,6 +109,7 @@ class IncrementalMemoryModelConsistencyChecker(
         lockConsistencyChecker.check(execution)?.let { inconsistency ->
             return ConsistencyVerdict.Inconsistent(inconsistency)
         }
+        if (memoryModel == MemoryModel.JAM21) return ConsistencyVerdict.Unknown
         // check by trying to replay execution order
         if (state == ConsistencyVerdict.Consistent) {
             check(execution.executionOrderComputable.computed)
@@ -123,6 +128,7 @@ class IncrementalMemoryModelConsistencyChecker(
 
     override fun doReset(): ConsistencyVerdict {
         resetRelations()
+        if (memoryModel == MemoryModel.JAM21) return ConsistencyVerdict.Unknown
         execution.executionOrderComputable.apply {
             reset()
             // set state to `computed`,

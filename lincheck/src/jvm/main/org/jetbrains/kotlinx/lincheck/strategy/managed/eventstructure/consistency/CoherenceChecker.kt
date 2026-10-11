@@ -113,7 +113,7 @@ class CoherenceOrder(
 
     companion object {
 
-        private fun generate(
+        internal fun generate(
             execution: Execution<AtomicThreadEvent>,
             memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
             rmwChainsStorage: ReadModifyWriteOrder,

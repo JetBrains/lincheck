@@ -147,7 +147,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
             return when (memoryModel) {
                 MemoryModel.SequentialConsistency -> happensBeforeOrder
                 MemoryModel.ReleaseAcquire -> happensBeforeSameLocationOrder
-                MemoryModel.JAM21 -> TODO()
+                MemoryModel.JAM21 -> happensBeforeSameLocationOrder
             }
         }
 
@@ -164,6 +164,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
             memoryAccessEventIndex,
             readModifyWriteOrderComputable.value,
             happensBeforeOrder,
+            includeReadPredecessors = memoryModel == MemoryModel.JAM21,
         )
     }
         .dependsOn(readModifyWriteOrderComputable, soft = true, invalidating = true)
