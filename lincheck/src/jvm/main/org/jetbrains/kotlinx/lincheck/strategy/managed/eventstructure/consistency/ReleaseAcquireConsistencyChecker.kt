@@ -49,11 +49,17 @@ class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, M
 
 }
 
+/**
+ * Approximates coherence using happens-before constraints and indivisible read-modify-write chains.
+ *
+ * @param includeReadPredecessors also orders the source writes of happens-before-related reads.
+ */
 class WritesBeforeOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteOrder,
     val happensBefore: Relation<AtomicThreadEvent>,
+    val includeReadPredecessors: Boolean = false,
 ) : Relation<AtomicThreadEvent>, Computable {
 
     private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
@@ -72,7 +78,7 @@ class WritesBeforeOrder(
 
     override fun initialize() {
         for (location in memoryAccessEventIndex.locations) {
-            if (memoryAccessEventIndex.isWriteWriteRaceFree(location))
+            if (!includeReadPredecessors && memoryAccessEventIndex.isWriteWriteRaceFree(location))
                 continue
             initialize(location)
         }
@@ -100,6 +106,9 @@ class WritesBeforeOrder(
     private fun RelationMatrix<AtomicThreadEvent>.compute(location: MemoryLocation) {
         addHappensBeforeEdges(location)
         addOverwrittenWriteEdges(location)
+        if (includeReadPredecessors) {
+            addReadPredecessorEdges(location)
+        }
         computeReadModifyWriteChainsClosure(location)
     }
 
@@ -107,8 +116,9 @@ class WritesBeforeOrder(
         val relation = this
         for (write1 in memoryAccessEventIndex.getWrites(location)) {
             for (write2 in memoryAccessEventIndex.getWrites(location)) {
-                // TODO: also add `rf^?;hb` edges (it is required for any model where `causalityOrder < happensBefore`)
-                if (happensBefore(write1, write2) && write1 != write2) {
+                // Initialization precedes every write in coherence,
+                // even when an access has no happens-before edge from its allocation.
+                if (write1 != write2 && (write1.label.isInitializingWriteAccess() || happensBefore(write1, write2))) {
                     relation[write1, write2] = true
                 }
             }
@@ -119,7 +129,6 @@ class WritesBeforeOrder(
         val relation = this
         for (read in memoryAccessEventIndex.getReadResponses(location)) {
             for (write in memoryAccessEventIndex.getWrites(location)) {
-                // TODO: change this check from `(w,r) \in hb` to `(w,r) \in rf^?;hb`
                 if (happensBefore(write, read) && write != read.readsFrom) {
                     relation[write, read.readsFrom] = true
                 }
@@ -130,6 +139,27 @@ class WritesBeforeOrder(
     private fun RelationMatrix<AtomicThreadEvent>.computeReadModifyWriteChainsClosure(location: MemoryLocation) {
         this.equivalenceClosure { event ->
             rmwChainsStorage[location, event]?.chain
+        }
+    }
+
+    private fun RelationMatrix<AtomicThreadEvent>.addReadPredecessorEdges(location: MemoryLocation) {
+        // Relaxed reads do not establish hb with their source writes,
+        // so rf;hb constraints must also order the corresponding writes.
+        val reads = memoryAccessEventIndex.getReadResponses(location)
+        val writes = memoryAccessEventIndex.getWrites(location)
+        for (read in reads) {
+            val source = read.readsFrom
+            for (write in writes) {
+                if (source != write && happensBefore(read, write)) {
+                    this[source, write] = true
+                }
+            }
+            for (laterRead in reads) {
+                val laterSource = laterRead.readsFrom
+                if (source != laterSource && happensBefore(read, laterRead)) {
+                    this[source, laterSource] = true
+                }
+            }
         }
     }
 
