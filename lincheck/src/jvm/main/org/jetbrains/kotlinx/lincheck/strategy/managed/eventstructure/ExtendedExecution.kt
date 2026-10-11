@@ -95,6 +95,8 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
  * The mutable extended execution allows adding events to the execution,
  * or resetting the execution to a new set of events,
  * rebuilding the auxiliary data structures accordingly.
+ * Relations track these updates independently of consistency checks;
+ * compute a cached relation before querying its result.
  */
 interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicThreadEvent> {
 
@@ -149,11 +151,11 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     override val readModifyWriteOrder = ReadModifyWriteOrder(execution)
 
     override val writesBeforeOrder = WritesBeforeOrder(
-        execution, memoryAccessEventIndex, readModifyWriteOrder, happensBeforeOrder,
+        memoryAccessEventIndex, readModifyWriteOrder, happensBeforeOrder,
     )
 
     override val extendedCoherence = ExtendedCoherenceOrder(
-        execution, memoryAccessEventIndex, happensBeforeOrder union writesBeforeOrder,
+        memoryAccessEventIndex, happensBeforeOrder union writesBeforeOrder,
     )
 
     override val memoryModelConsistencyOrder = MemoryModelConsistencyOrder(
@@ -161,7 +163,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     )
 
     override val executionOrder = ExecutionOrder(
-        execution, memoryAccessEventIndex, happensBeforeOrder union extendedCoherence,
+        execution, happensBeforeOrder union extendedCoherence,
     )
 
     override val coherenceOrder = CoherenceOrder(

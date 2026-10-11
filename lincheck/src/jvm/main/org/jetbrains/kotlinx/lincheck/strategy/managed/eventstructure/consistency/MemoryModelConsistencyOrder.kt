@@ -27,6 +27,7 @@ import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.RelationMatrix
 
 
+/** Closes memory-access constraints under transitivity and coherence. */
 class MemoryModelConsistencyOrder(
     val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,

@@ -26,8 +26,8 @@ import org.jetbrains.lincheck.util.CachedRelation
 import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.RelationMatrix
 
+/** Caches writes-before constraints, including read-modify-write chain closure. */
 class WritesBeforeOrder(
-    val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val rmwChainsStorage: ReadModifyWriteOrder,
     val happensBefore: Relation<AtomicThreadEvent>,
@@ -48,9 +48,6 @@ class WritesBeforeOrder(
     }
 
     fun isConsistent(): Boolean =
-        isIrreflexive()
-
-    private fun isIrreflexive(): Boolean =
         relations.values.all { it.isIrreflexive() }
 
     private fun initialize() {

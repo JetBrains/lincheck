@@ -82,12 +82,12 @@ class CoherenceOrder(
         writesBeforeOrder.compute()
         generate(memoryAccessEventIndex, rmwChainsStorage, writesOrder).forEach { coherence ->
             val order = Relation<AtomicThreadEvent> { x, y -> relates(coherence, x, y) }
-            val extendedCoherence = ExtendedCoherenceOrder(execution, memoryAccessEventIndex,
+            val extendedCoherence = ExtendedCoherenceOrder(memoryAccessEventIndex,
                 writesOrder = order union coherenceCausalOrder
             )
                 .apply { compute() }
 
-            val executionOrder = ExecutionOrder(execution, memoryAccessEventIndex,
+            val executionOrder = ExecutionOrder(execution,
                 approximation = extendedCoherence union coherenceCausalOrder
             )
                 .apply { compute() }
@@ -142,8 +142,8 @@ class CoherenceOrder(
     }
 }
 
+/** Caches coherence, reads-from, and reads-before edges for each memory location. */
 class ExtendedCoherenceOrder(
-    val execution: Execution<AtomicThreadEvent>,
     val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val writesOrder: Relation<AtomicThreadEvent>,
 ) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {

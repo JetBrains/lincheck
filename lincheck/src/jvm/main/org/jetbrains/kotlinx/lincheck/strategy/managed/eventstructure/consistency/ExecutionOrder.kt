@@ -26,9 +26,12 @@ import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.union
 
 
+/**
+ * Caches a candidate event order.
+ * Consistency checkers validate incrementally extended candidates by replay before accepting the execution.
+ */
 class ExecutionOrder(
     val execution: Execution<AtomicThreadEvent>,
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
     val approximation: Relation<AtomicThreadEvent>,
 ) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
 

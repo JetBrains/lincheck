@@ -98,7 +98,7 @@ sealed class ConsistencyState {
     /** Lightweight checks passed, but a full consistency check is still required. */
     object PartlyConsistent : ConsistencyState()
 
-    /** A full consistency check established that the execution is consistent. */
+    /** The execution is known to be completely consistent. */
     object Consistent : ConsistencyState()
 
     /** A check detected the given [inconsistency]. */

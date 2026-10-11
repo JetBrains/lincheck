@@ -28,6 +28,7 @@ import org.jetbrains.lincheck.util.collections.*
 typealias ReadModifyWriteChain = List<AtomicThreadEvent>
 typealias MutableReadModifyWriteChain = MutableList<AtomicThreadEvent>
 
+/** Tracks chains of exclusive writes linked by their read-from predecessors. */
 class ReadModifyWriteOrder(
     val execution: Execution<AtomicThreadEvent>,
 ) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
@@ -70,9 +71,6 @@ class ReadModifyWriteOrder(
             }
     }
 
-    val entries: Collection<Entry>
-        get() = eventMap.values
-
     private val eventMap = mutableMapOf<AtomicThreadEvent, EntryImpl>()
 
     private val rmwChainsMap = mutableMapOf<MemoryLocation, MutableList<MutableReadModifyWriteChain>>()
@@ -108,9 +106,9 @@ class ReadModifyWriteOrder(
         return rmwChainsMap[location]
     }
 
-    private fun add(event: AtomicThreadEvent): Entry? {
+    private fun add(event: AtomicThreadEvent) {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
-            ?: return null
+            ?: return
         val location = writeLabel.location
         val readFrom = event.exclusiveReadPart.readsFrom
         val chain = get(location, readFrom)?.chain?.ensure { it.isNotEmpty() } ?: arrayListOf()
@@ -132,10 +130,9 @@ class ReadModifyWriteOrder(
             }
         }
         chain.add(event)
-        return EntryImpl(event, chain, position = chain.size - 1).also {
-            eventMap[event] = it
-            consistent = consistent && it.isConsistent()
-        }
+        val entry = EntryImpl(event, chain, position = chain.size - 1)
+        eventMap[event] = entry
+        consistent = consistent && entry.isConsistent()
     }
 
     override fun compute() {
@@ -187,7 +184,7 @@ class ReadModifyWriteOrder(
 
 }
 
-fun ReadModifyWriteOrder.Entry.isConsistent() = when {
+private fun ReadModifyWriteOrder.Entry.isConsistent() = when {
     // write-part of atomic-read-modify write operation should read-from
     // the preceding write event in the chain
     event.label.isExclusiveWriteAccess() ->
