@@ -191,21 +191,26 @@ class ReadModifyWriteOrder(
         val location = events.getLocationForSameLocationWriteAccesses()!!
         val chains = rmwChainsMap[location]?.ensure { it.isNotEmpty() }
             ?: return true
-        /* atomicity violation occurs when a write event is put in the middle of some rmw chain */
-        var i = 0
-        var pos = 0
-        while (pos + chains[i].size <= events.size) {
-            if (events[pos] == chains[i].first()) {
-                if (events.subList(pos, pos + chains[i].size) != chains[i])
-                    return false
-                pos += chains[i].size
-                if (++i == chains.size)
-                    return true
+        // Independent chains may appear in either order,
+        // but no other write may interrupt a chain.
+        var matchedChains = 0
+        var position = 0
+        while (position < events.size) {
+            val entry = get(location, events[position])
+            if (entry == null) {
+                position++
                 continue
             }
-            pos++
+            val chain = entry.chain
+            if (entry.position != 0 || position + chain.size > events.size ||
+                events.subList(position, position + chain.size) != chain
+            ) {
+                return false
+            }
+            matchedChains++
+            position += chain.size
         }
-        return false
+        return matchedChains == chains.size
     }
 
 }
