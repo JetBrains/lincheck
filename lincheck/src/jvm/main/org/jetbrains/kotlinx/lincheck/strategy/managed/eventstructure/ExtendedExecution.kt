@@ -169,19 +169,11 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         coherenceCausalOrder, extendedCoherence, executionOrder,
     )
 
-    private val consistencyChecker = aggregateConsistencyCheckers(
-        execution = this,
-        listOf<AtomicEventConsistencyChecker>(
-            ReadModifyWriteAtomicityChecker(execution = this),
-
-            IncrementalMemoryModelConsistencyChecker(
-                execution = this,
-                memoryModel = memoryModel,
-                checkReleaseAcquireConsistency = true,
-            )
-        ),
-        listOf(),
-    )
+    private val consistencyChecker = when (memoryModel) {
+        MemoryModel.SequentialConsistency -> SequentialConsistencyChecker(this)
+        MemoryModel.ReleaseAcquire -> ReleaseAcquireConsistencyChecker(this)
+        MemoryModel.JAM21 -> TODO()
+    }
 
     private val trackers: List<ExtendedExecutionTracker> = listOf(
         memoryAccessEventIndex.incrementalTracker(),
@@ -191,7 +183,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         extendedCoherence,
         memoryModelConsistencyOrder,
         executionOrder,
-        consistencyChecker.incrementalTracker(),
+        consistencyChecker,
     )
 
     override val inconsistency: Inconsistency?
@@ -269,21 +261,6 @@ private fun MutableEventIndex<AtomicThreadEvent, *, *>.incrementalTracker(): Ext
         override fun onReset(execution: MutableExtendedExecution) {
             reset()
             index(execution)
-        }
-    }
-}
-
-private typealias AtomicEventConsistencyChecker =
-        IncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>
-
-private fun AtomicEventConsistencyChecker.incrementalTracker(): ExtendedExecutionTracker {
-    return object : ExtendedExecutionTracker {
-        override fun onAdd(event: AtomicThreadEvent) {
-            check(event)
-        }
-
-        override fun onReset(execution: MutableExtendedExecution) {
-            reset(execution)
         }
     }
 }

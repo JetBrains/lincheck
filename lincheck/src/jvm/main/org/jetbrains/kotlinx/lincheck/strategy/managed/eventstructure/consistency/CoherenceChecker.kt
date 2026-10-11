@@ -22,6 +22,10 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 
+class CoherenceViolation : SequentialConsistencyViolation() {
+    override fun toString(): String = "Sequential consistency coherence violation detected"
+}
+
 class CoherenceChecker : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
     override fun check(execution: MutableExtendedExecution): Inconsistency? {

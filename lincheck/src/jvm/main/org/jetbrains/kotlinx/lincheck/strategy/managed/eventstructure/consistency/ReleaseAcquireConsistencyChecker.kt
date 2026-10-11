@@ -22,22 +22,54 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 
-// TODO: what information should we display to help identify the cause of inconsistency:
-//   a cycle in writes-before relation?
+// TODO: include the cycle in the writes-before relation.
 class ReleaseAcquireInconsistency : Inconsistency() {
-    override fun toString(): String {
-        return "Release/Acquire inconsistency detected"
-    }
+    override fun toString(): String = "Release/Acquire inconsistency detected"
 }
 
-class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
+/** Checks executions in which all memory accesses have release/acquire semantics. */
+class ReleaseAcquireConsistencyChecker(
+    private var execution: MutableExtendedExecution,
+) : IncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
-    override fun check(execution: MutableExtendedExecution): Inconsistency? {
-        val writesBeforeOrder = execution.writesBeforeOrder
-        writesBeforeOrder.compute()
-        return if (!writesBeforeOrder.isConsistent())
-            ReleaseAcquireInconsistency()
-        else null
+    private val atomicityChecker = ReadModifyWriteAtomicityChecker(execution)
+    private val lockChecker = LockConsistencyChecker()
+    private val coherenceChecker = CoherenceChecker()
+
+    override var state: ConsistencyState = ConsistencyState.Unknown
+        private set
+
+    override fun check(event: AtomicThreadEvent): ConsistencyState {
+        if (state is ConsistencyState.Inconsistent) return state
+        val atomicity = atomicityChecker.check(event)
+        state = if (atomicity is ConsistencyState.Inconsistent) atomicity else ConsistencyState.PartlyConsistent
+        return state
     }
 
+    override fun check(): Inconsistency? {
+        if (state is ConsistencyState.Consistent || state is ConsistencyState.Inconsistent) return state.inconsistency
+        val inconsistency = findInconsistency()
+        state = if (inconsistency == null) ConsistencyState.Consistent else ConsistencyState.Inconsistent(inconsistency)
+        return inconsistency
+    }
+
+    override fun reset(execution: MutableExtendedExecution): ConsistencyState {
+        this.execution = execution
+        atomicityChecker.reset(execution)
+        state = ConsistencyState.Unknown
+        return state
+    }
+
+    private fun findInconsistency(): Inconsistency? {
+        atomicityChecker.check()?.let { return it }
+        lockChecker.check(execution)?.let { return it }
+        val executionOrder = execution.executionOrder
+        if (executionOrder.computed && SequentialConsistencyReplayer().replay(executionOrder.ordering) != null) {
+            return null
+        }
+        execution.writesBeforeOrder.compute()
+        if (!execution.writesBeforeOrder.isConsistent()) return ReleaseAcquireInconsistency()
+        coherenceChecker.check(execution)?.let { return it }
+        return null
+    }
 }

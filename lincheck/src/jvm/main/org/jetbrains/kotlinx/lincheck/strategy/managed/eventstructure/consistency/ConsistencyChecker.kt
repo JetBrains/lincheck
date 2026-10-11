@@ -38,7 +38,15 @@ fun interface ConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
     fun check(execution: X): Inconsistency?
 }
 
-interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
+interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> : ExecutionTracker<E, X> {
+
+    override fun onAdd(event: E) {
+        check(event)
+    }
+
+    override fun onReset(execution: X) {
+        reset(execution)
+    }
 
     /**
      * Represents the current state of the consistency checker.
@@ -50,6 +58,7 @@ interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
     /**
      * Performs incremental consistency check,
      * verifying whether adding the given [event] to the current execution retains execution's consistency.
+     * The event must already belong to the execution, and relation trackers must have processed its addition.
      * The implementation is allowed to approximate the check in the following sense.
      * - The check can be incomplete --- it can miss some inconsistencies.
      * - The check should be sound --- if an inconsistency is reported, the execution should indeed be inconsistent.
@@ -65,6 +74,7 @@ interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
      * Performs full consistency check.
      * The check should be sound and complete:
      * an inconsistency should be reported if and only if the execution is indeed inconsistent.
+     * Updates [state] to [ConsistencyState.Consistent] or [ConsistencyState.Inconsistent].
      *
      * @return `null` if execution remains consistent,
      *   otherwise returns non-null [Inconsistency] object
@@ -100,175 +110,3 @@ val ConsistencyState.inconsistency: Inconsistency?
         is ConsistencyState.Inconsistent -> this.inconsistency
         else -> null
     }
-
-fun ConsistencyState.join(doCheck: () -> ConsistencyState): ConsistencyState {
-    if (this is ConsistencyState.Inconsistent) return this
-    val other = doCheck()
-    return when {
-        other is ConsistencyState.Inconsistent -> other
-        this is ConsistencyState.Unknown || other is ConsistencyState.Unknown -> ConsistencyState.Unknown
-        this is ConsistencyState.PartlyConsistent || other is ConsistencyState.PartlyConsistent ->
-            ConsistencyState.PartlyConsistent
-        else -> ConsistencyState.Consistent
-    }
-}
-
-abstract class AbstractIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(
-    execution: X
-) : IncrementalConsistencyChecker<E, X> {
-
-    protected var execution: X = execution
-        private set
-
-    final override var state: ConsistencyState = ConsistencyState.Unknown
-        private set
-
-    // `true` means a full consistency check was already performed and its result was cached;
-    // `false` means the check was not performed or a new event was added since the last check
-    private var fullCheckCached: Boolean = false
-
-    final override fun check(event: E): ConsistencyState {
-        // reset check cache
-        fullCheckCached = false
-        // do case analysis
-        when (state) {
-            // skip the check if the checker is in unknown state
-            is ConsistencyState.Unknown -> return state
-            // return inconsistency if it was detected earlier
-            is ConsistencyState.Inconsistent -> return state
-            // otherwise, actually perform the incremental check
-            else -> {
-                state = doIncrementalCheck(event)
-                return state
-            }
-        }
-    }
-
-    protected abstract fun doIncrementalCheck(event: E): ConsistencyState
-
-    final override fun check(): Inconsistency? {
-        // if the full consistency check was already performed,
-        // and there were no new events added, return the cached result
-        if (fullCheckCached) {
-            check(state !is ConsistencyState.Unknown)
-            return state.inconsistency
-        }
-        // return inconsistency if it was detected before by the incremental check
-        if (state is ConsistencyState.Inconsistent) {
-            fullCheckCached = true
-            return state.inconsistency!!
-        }
-        // otherwise do the full check
-        state = when (val inconsistency = doCheck()) {
-            is Inconsistency    -> ConsistencyState.Inconsistent(inconsistency)
-            else                -> ConsistencyState.Consistent
-        }
-        // cache the result and return
-        fullCheckCached = true
-        return state.inconsistency
-    }
-
-    protected abstract fun doCheck(): Inconsistency?
-
-    final override fun reset(execution: X): ConsistencyState {
-        this.execution = execution
-        fullCheckCached = false
-        state = ConsistencyState.Consistent
-        state = doReset()
-        if (state is ConsistencyState.Consistent || state is ConsistencyState.Inconsistent) {
-            fullCheckCached = true
-        }
-        return state
-    }
-
-    protected abstract fun doReset(): ConsistencyState
-
-}
-
-abstract class AbstractPartialIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(
-    execution: X,
-    val checker: ConsistencyChecker<E, X>,
-) : AbstractIncrementalConsistencyChecker<E, X>(execution) {
-
-    override fun doCheck(): Inconsistency? {
-        // the parent class should guarantee that at this point the state is
-        // not "inconsistent".
-        check(state !is ConsistencyState.Inconsistent)
-        // do a lightweight check before falling back to full consistency check
-        return when (val verdict = doLightweightCheck()) {
-            // if lightweight check returns verdict "consistent",
-            // then the whole execution is consistent --- return null
-            is ConsistencyState.Consistent -> null
-            // if inconsistency is detected, return it
-            is ConsistencyState.Inconsistent -> verdict.inconsistency
-            // otherwise, do the full consistency check
-            is ConsistencyState.Unknown, is ConsistencyState.PartlyConsistent -> doFullCheck()
-        }
-    }
-
-    protected abstract fun doLightweightCheck(): ConsistencyState
-
-    private fun doFullCheck(): Inconsistency? {
-        return checker.check(execution)
-    }
-
-}
-
-abstract class AbstractFullyIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(
-    execution: X
-) : AbstractIncrementalConsistencyChecker<E, X>(execution) {
-
-    override fun doCheck(): Inconsistency? {
-        // if a checker is fully incremental,
-        // it can detect inconsistencies precisely upon each event addition;
-        // thus we should not reach this point while being in the unknown state
-        check(state != ConsistencyState.Unknown)
-        return state.inconsistency
-    }
-
-}
-
-class AggregatedIncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>>(
-    execution: X,
-    val incrementalConsistencyCheckers: List<IncrementalConsistencyChecker<E, X>>,
-    val consistencyCheckers: List<ConsistencyChecker<E, X>>,
-) : AbstractIncrementalConsistencyChecker<E, X>(execution) {
-
-    override fun doIncrementalCheck(event: E): ConsistencyState {
-        var verdict: ConsistencyState = ConsistencyState.Consistent
-        for (incrementalChecker in incrementalConsistencyCheckers) {
-            verdict = verdict.join { incrementalChecker.check(event) }
-        }
-        return verdict
-    }
-
-    override fun doCheck(): Inconsistency? {
-        for (incrementalChecker in incrementalConsistencyCheckers) {
-            incrementalChecker.check()?.let { return it }
-        }
-        for (checker in consistencyCheckers) {
-            checker.check(execution)?.let { return it }
-        }
-        return null
-    }
-
-    override fun doReset(): ConsistencyState {
-        var result: ConsistencyState = ConsistencyState.Consistent
-        for (incrementalChecker in incrementalConsistencyCheckers) {
-            val verdict = incrementalChecker.reset(execution)
-            result = result.join { verdict }
-        }
-        return result
-    }
-
-}
-
-fun<E : ThreadEvent, X : Execution<E>> aggregateConsistencyCheckers(
-    execution: X,
-    incrementalConsistencyCheckers: List<IncrementalConsistencyChecker<E, X>>,
-    consistencyCheckers: List<ConsistencyChecker<E, X>>,
-) = AggregatedIncrementalConsistencyChecker(
-        execution,
-        incrementalConsistencyCheckers,
-        consistencyCheckers,
-    )

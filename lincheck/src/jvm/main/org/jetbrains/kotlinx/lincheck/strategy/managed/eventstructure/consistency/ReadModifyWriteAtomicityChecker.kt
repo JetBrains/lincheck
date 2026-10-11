@@ -29,13 +29,29 @@ class ReadModifyWriteAtomicityViolation(/*val write1: Event, val write2: Event*/
     }
 }
 
+/** Checks that each write in an atomic-update chain reads from its immediate predecessor. */
 class ReadModifyWriteAtomicityChecker(
-    execution: MutableExtendedExecution
-) : AbstractFullyIncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution>(execution) {
+    private var execution: MutableExtendedExecution,
+) : IncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
-    override fun doIncrementalCheck(event: AtomicThreadEvent): ConsistencyState = checkAtomicity()
+    override var state: ConsistencyState = ConsistencyState.Unknown
+        private set
 
-    override fun doReset(): ConsistencyState = checkAtomicity()
+    override fun check(event: AtomicThreadEvent): ConsistencyState {
+        if (state !is ConsistencyState.Inconsistent) state = checkAtomicity()
+        return state
+    }
+
+    override fun check(): Inconsistency? {
+        if (state is ConsistencyState.Unknown) state = checkAtomicity()
+        return state.inconsistency
+    }
+
+    override fun reset(execution: MutableExtendedExecution): ConsistencyState {
+        this.execution = execution
+        state = ConsistencyState.Unknown
+        return state
+    }
 
     private fun checkAtomicity(): ConsistencyState {
         execution.readModifyWriteOrder.compute()
