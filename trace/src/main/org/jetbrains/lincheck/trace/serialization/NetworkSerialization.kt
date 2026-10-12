@@ -228,10 +228,12 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
  *
  * @param callbacks the [TracingCallbacks] instance to send binary data over
  * @param context the trace context containing descriptors and metadata
+ * @param runtime the producing runtime, preserved when forwarding a foreign trace
  */
 class NetworkTracePointSender(
     private val callbacks: TracingCallbacks,
     context: TraceContext,
+    private val runtime: String = RUNTIME_JVM,
 ) {
     private val lock = ReentrantLock()
     private val byteStream = ByteArrayOutputStream(MESSAGE_BUFFER_SIZE)
@@ -250,7 +252,7 @@ class NetworkTracePointSender(
         // Send header on first write
         if (!headerSent) {
             byteStream.reset()
-            outputStream.writeTraceHeader(RUNTIME_JVM)
+            outputStream.writeTraceHeader(runtime)
             outputStream.flush()
             callbacks.binaryTraceData(byteStream.toByteArray())
             headerSent = true
