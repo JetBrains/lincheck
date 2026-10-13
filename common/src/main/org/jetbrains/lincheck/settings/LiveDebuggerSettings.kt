@@ -25,6 +25,12 @@ import java.util.*
  */
 const val LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR = "LIVE_DEBUGGER_CONTROL_PLANE_URL"
 
+/** The agent takes its blocklist and data-redaction policy from the control plane's heartbeat responses. */
+const val POLICY_SOURCE_CONTROL_PLANE = "controlPlane"
+
+/** The agent takes its blocklist and data-redaction policy from the deployment's startup files. */
+const val POLICY_SOURCE_DEPLOYMENT = "deployment"
+
 /**
  * Name of the environment variable carrying the API token presented to the control plane
  * named by [LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR].

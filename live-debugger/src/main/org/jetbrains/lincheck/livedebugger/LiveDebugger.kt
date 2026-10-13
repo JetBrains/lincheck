@@ -18,7 +18,6 @@ import org.jetbrains.lincheck.settings.BlocklistFileParser
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
-import org.jetbrains.lincheck.settings.PolicyOwner
 import org.jetbrains.lincheck.settings.RedactionFileParser
 import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
@@ -66,23 +65,29 @@ internal object LiveDebugger {
      */
     private val hitSuppressedNotified = ConcurrentHashMap.newKeySet<String>()
 
-    /** Required policy sources that failed validation/loading; debugging stays closed while non-empty. */
-    private val invalidRequiredRedactionSources = ConcurrentHashMap.newKeySet<PolicyOwner>()
+    /** Whether the required policy is in force; `false` while it is pending, failed to load, or was revoked. */
+    @Volatile
+    private var policyInForce = true
+
+    /** Set once for a configuration no policy delivery can fix; keeps debugging closed for good. */
+    @Volatile
+    private var policyMisconfigured = false
 
     val isDebuggingAllowed: Boolean
-        get() = invalidRequiredRedactionSources.isEmpty()
+        get() = policyInForce && !policyMisconfigured
 
-    private fun markRequiredPolicyPendingOrInvalid(owner: PolicyOwner) {
-        val settings = liveDebuggerSettings
-        settings.requiredRedactionPolicyValid = false
-        invalidRequiredRedactionSources.add(owner)
-        removeAllBreakpoints()
-    }
+    /** The control-plane policy version in force, reported on every heartbeat; `null` until one is applied. */
+    @Volatile
+    var controlPlanePolicyVersion: String? = null
+        private set
 
-    private fun markRequiredPolicyValid(owner: PolicyOwner) {
-        invalidRequiredRedactionSources.remove(owner)
-        liveDebuggerSettings.requiredRedactionPolicyValid =
-            invalidRequiredRedactionSources.isEmpty()
+    /** Startup breakpoints parked until a pending control-plane policy arrives. */
+    private val pendingStartupBreakpoints = mutableListOf<SnapshotBreakpoint>()
+
+    private fun setPolicyInForce(inForce: Boolean) {
+        policyInForce = inForce
+        liveDebuggerSettings.requiredRedactionPolicyValid = isDebuggingAllowed
+        if (!inForce) removeAllBreakpoints()
     }
 
     fun loadBreakpointsFromFile(breakpointsFilePath: String?) {
@@ -95,9 +100,8 @@ internal object LiveDebugger {
 
             val breakpoints = BreakpointsFileParser.parseBreakpointsFile(breakpointsFilePath)
             if (!isDebuggingAllowed) {
-                Logger.warn {
-                    "Dropped ${breakpoints.size} startup breakpoint(s): required redaction policy is unavailable"
-                }
+                synchronized(pendingStartupBreakpoints) { pendingStartupBreakpoints.addAll(breakpoints) }
+                Logger.warn { "Queued ${breakpoints.size} startup breakpoint(s) until the required policy is valid" }
                 return
             }
             val settings = liveDebuggerSettings
@@ -152,14 +156,14 @@ internal object LiveDebugger {
      */
     fun loadRedactionTemplatesFromFile(redactionFilePath: String?) {
         if (redactionFilePath == null) {
-            markRequiredPolicyValid(PolicyOwner.STARTUP_FILE)
+            setPolicyInForce(true)
             return
         }
-        markRequiredPolicyPendingOrInvalid(PolicyOwner.STARTUP_FILE)
+        setPolicyInForce(false)
         try {
             val templates = RedactionFileParser.parseTemplatesFile(redactionFilePath)
-            liveDebuggerSettings.redactionRegistry.replace(PolicyOwner.STARTUP_FILE, templates)
-            markRequiredPolicyValid(PolicyOwner.STARTUP_FILE)
+            liveDebuggerSettings.redactionRegistry.replace(templates)
+            setPolicyInForce(true)
             Logger.info { "Loaded ${templates.size} redaction template(s) from $redactionFilePath" }
         } catch (e: Exception) {
             Logger.error(e) {
@@ -169,22 +173,66 @@ internal object LiveDebugger {
     }
 
     /**
-     * Pulls the sensitive-area policy from the control plane (`policyBootstrap=controlPlane`)
-     * and adds it to the active policy. Must run before any breakpoint source
-     * is processed so that Stage-1 registration rejection sees the control-plane policy.
-     *
-     * Combines by union with any policy from `blocklistFile=`. If the pull
-     * fails, no control-plane policy is applied (any file-sourced policy still stands).
+     * Keeps debugging closed until the control plane's policy arrives over the heartbeat (`policySource=controlPlane`).
+     * Deployment policy files conflict with that source and, like a missing heartbeat, keep debugging closed for good.
      */
-    fun bootstrapPolicyFromControlPlane() {
-        val blocklists = ControlPlane.fetchPolicyBlocklists()
-        if (blocklists == null) {
-            Logger.warn { "No control-plane policy applied (pull failed); breakpoints will register without it" }
+    fun awaitControlPlanePolicy(deploymentFilesConfigured: Boolean, heartbeatEnabled: Boolean) {
+        policyMisconfigured = deploymentFilesConfigured
+        setPolicyInForce(false)
+        if (deploymentFilesConfigured) {
+            Logger.error {
+                "blocklistFile= and redactionFile= need policySource=deployment; " +
+                    "the control-plane policy source ignores them and debugging is disabled"
+            }
+        }
+        if (!heartbeatEnabled) {
+            Logger.error { "policySource=controlPlane needs liveDebuggerHeartbeat=on; debugging is disabled" }
+        }
+    }
+
+    /**
+     * Installs the control plane's [policy] in place of the previous one, opening debugging if nothing else keeps
+     * it closed. Unlike other blocklist sources this one may loosen: the control plane owns it outright.
+     * A policy that does not parse keeps debugging closed until a valid one arrives.
+     */
+    fun applyControlPlanePolicy(policy: ControlPlanePolicy) {
+        val settings = liveDebuggerSettings
+        try {
+            val templates = RedactionFileParser.parseTemplates(policy.redactionIni)
+            val blocklists = BlocklistFileParser.parseBlocklists(policy.blocklistsIni)
+            settings.redactionRegistry.replace(templates)
+            settings.blocklistRegistry.replacePolicy(blocklists)
+            Logger.info {
+                "Applied control-plane policy ${policy.version}: " +
+                    "${templates.size} redaction template(s), ${blocklists.size} blocklist(s)"
+            }
+        } catch (e: Exception) {
+            Logger.error(e) { "Rejected control-plane policy ${policy.version}; debugging is disabled" }
+            controlPlanePolicyVersion = null
+            setPolicyInForce(false)
             return
         }
-        liveDebuggerSettings.blocklistRegistry.add(blocklists)
-        liveDebuggerSettings.dynamicExtentChecker.invalidate()
-        Logger.info { "Applied ${blocklists.size} control-plane blocklist(s)" }
+        settings.dynamicExtentChecker.invalidate()
+        hitSuppressedNotified.clear()
+        controlPlanePolicyVersion = policy.version
+        setPolicyInForce(true)
+        settings.lineBreakpoints.values.takeIf { it.isNotEmpty() }?.let(::retransformBreakpointClasses)
+        releasePendingStartupBreakpoints()
+    }
+
+    /** Closes debugging after the control plane stopped answering: its policy may have changed meanwhile. */
+    fun revokeControlPlanePolicy() {
+        Logger.warn { "The control plane stopped answering heartbeats; debugging is disabled until it answers again" }
+        controlPlanePolicyVersion = null
+        setPolicyInForce(false)
+    }
+
+    private fun releasePendingStartupBreakpoints() {
+        if (!isDebuggingAllowed) return
+        val pending = synchronized(pendingStartupBreakpoints) {
+            pendingStartupBreakpoints.toList().also { pendingStartupBreakpoints.clear() }
+        }
+        if (pending.isNotEmpty()) addBreakpoints(pending)
     }
 
     /**

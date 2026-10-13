@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.settings.CompiledRedactionPolicy
-import org.jetbrains.lincheck.settings.PolicyOwner
 import org.jetbrains.lincheck.settings.RedactionRule
 import org.jetbrains.lincheck.settings.RedactionTemplate
 import org.jetbrains.lincheck.settings.RedactionTemplateRegistry
@@ -470,7 +469,7 @@ class SnapshotCapturerTest {
     private fun capturer(context: TraceContext, vararg rules: RedactionRule): SnapshotCapturer {
         val template = RedactionTemplate.of("test policy", rules.toList())
         val policy = RedactionTemplateRegistry().apply {
-            replace(PolicyOwner.STARTUP_FILE, listOf(template))
+            replace(listOf(template))
         }.snapshot()
         return SnapshotCapturer(context, policy)
     }

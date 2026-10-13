@@ -278,6 +278,8 @@ data class BlockMatch(val blocklistName: String, val rule: BlocklistRule) {
  */
 class SensitiveAreaBlocklistRegistry {
     private val byUuid = ConcurrentHashMap<UUID, SensitiveAreaBlocklist>()
+    @Volatile
+    private var policy: List<SensitiveAreaBlocklist> = emptyList()
 
     /** Adds the given blocklists; already-present ones (same content-identity uuid) are skipped. */
     fun add(blocklists: List<SensitiveAreaBlocklist>) {
@@ -295,14 +297,22 @@ class SensitiveAreaBlocklistRegistry {
         }
     }
 
+    /**
+     * Replaces the blocklists of the control plane's policy. Unlike [add] this can loosen the policy,
+     * so it is for the source that owns the policy outright.
+     */
+    fun replacePolicy(blocklists: List<SensitiveAreaBlocklist>) {
+        policy = blocklists.toList()
+    }
+
     /** All active blocklists. */
-    fun all(): List<SensitiveAreaBlocklist> = byUuid.values.toList()
+    fun all(): List<SensitiveAreaBlocklist> = (byUuid.values + policy).distinctBy { it.uuid }
 
     /** The union of all active rules. */
-    fun allRules(): List<BlocklistRule> = byUuid.values.flatMap { it.rules }
+    fun allRules(): List<BlocklistRule> = all().flatMap { it.rules }
 
     /** True when no active blocklist has any rule. */
-    fun isEmpty(): Boolean = byUuid.values.all { it.rules.isEmpty() }
+    fun isEmpty(): Boolean = all().all { it.rules.isEmpty() }
 
     /**
      * Whole-class check: the first rule that blocks [canonicalClassName], or `null` if none does.

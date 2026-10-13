@@ -76,6 +76,25 @@ object BlocklistFileParser {
         }
     }
 
+    /** Renders blocklists as deterministic INI content that [parseBlocklists] reads back unchanged. */
+    fun renderBlocklists(blocklists: List<SensitiveAreaBlocklist>): String =
+        blocklists.mapIndexed { index, blocklist ->
+            buildString {
+                appendLine("[Blocklist ${index + 1}]")
+                appendLine("$KEY_NAME = ${blocklist.name}")
+                for (rule in blocklist.rules) {
+                    when (rule) {
+                        is BlocklistRule.Package -> appendLine("$KEY_PACKAGE = ${rule.packageName}")
+                        is BlocklistRule.Class -> appendLine("$KEY_CLASS = ${rule.className}")
+                        is BlocklistRule.Method -> appendLine(
+                            "$KEY_METHOD = ${rule.className}$METHOD_CLASS_SEPARATOR${rule.methodName}" +
+                                rule.descriptor?.let { "$METHOD_DESCRIPTOR_SEPARATOR$it" }.orEmpty()
+                        )
+                    }
+                }
+            }.trimEnd()
+        }.joinToString("\n\n", postfix = if (blocklists.isEmpty()) "" else "\n")
+
     /** Parses INI content into (section name, ordered key-value entries) pairs, preserving repeated keys. */
     private fun parseIniSections(content: String): List<Pair<String, List<Pair<String, String>>>> {
         val sections = mutableListOf<Pair<String, MutableList<Pair<String, String>>>>()

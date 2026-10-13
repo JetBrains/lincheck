@@ -11,6 +11,8 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.annotations.TestOnly
+import org.jetbrains.lincheck.settings.POLICY_SOURCE_CONTROL_PLANE
+import org.jetbrains.lincheck.settings.POLICY_SOURCE_DEPLOYMENT
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.isInLiveDebuggerMode
 import org.jetbrains.lincheck.util.isInTraceRecorderMode
@@ -67,12 +69,11 @@ import java.lang.reflect.Modifier
  *       See `RedactionFileParser` for the file format.
  *       Example: `redactionFile="/tmp/redaction.ini"`
  *
- * - policyBootstrap — where the agent loads its blocklist and data-redaction policy from at startup
- *       (optional, liveDebugger mode only). `controlPlane` makes the agent pull the policy from the
- *       control plane (`GET /api/policy` against `LIVE_DEBUGGER_CONTROL_PLANE_URL`) before any
- *       breakpoint source is processed; `none` (default) loads no policy over the network.
- *       Combines by union with `blocklistFile=` and `redactionFile=`.
- *       Example: `policyBootstrap=controlPlane`
+ * - policySource — where the blocklist and data-redaction policy comes from (optional, liveDebugger mode only):
+ *       `controlPlane` takes it from heartbeat responses and keeps debugging closed until it arrives;
+ *       `deployment` takes it from `blocklistFile=` and `redactionFile=`. The two never combine.
+ *       Defaults to `controlPlane` with `liveDebuggerHeartbeat=on`, to `deployment` otherwise.
+ *       Example: `policySource=deployment`
  *
  * - liveDebuggerHeartbeat — boolean that enables heartbeat messages when used in kubernetes setup.
  *       Example: `liveDebuggerHeartbeat=on` or `liveDebuggerHeartbeat=off`, it is off by default.
@@ -146,11 +147,8 @@ object TraceAgentParameters {
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
     const val ARGUMENT_BLOCKLIST_FILE = "blocklistFile"
     const val ARGUMENT_REDACTION_FILE = "redactionFile"
-    const val ARGUMENT_POLICY_BOOTSTRAP = "policyBootstrap"
+    const val ARGUMENT_POLICY_SOURCE = "policySource"
     const val ARGUMENT_HEARTBEAT = "liveDebuggerHeartbeat"
-
-    /** Value of [ARGUMENT_POLICY_BOOTSTRAP] that pulls the policy from the control plane at startup. */
-    const val POLICY_BOOTSTRAP_CONTROL_PLANE = "controlPlane"
     const val ARGUMENT_START_SERVER = "tracingServer"
     const val ARGUMENT_SERVER_PORT = "serverPort"
 
@@ -184,10 +182,16 @@ object TraceAgentParameters {
     val redactionFilePath: String?
         get() = getArg(ARGUMENT_REDACTION_FILE)
 
-    /** `true` when the agent should pull its policy bundle from the control plane at startup. */
+    /**
+     * `true` when the policy comes from the control plane rather than the deployment's files.
+     * An unrecognized [ARGUMENT_POLICY_SOURCE] counts as the control plane: it fails closed when there is none.
+     * The values are [POLICY_SOURCE_CONTROL_PLANE] and [POLICY_SOURCE_DEPLOYMENT].
+     */
     @JvmStatic
-    val policyBootstrapFromControlPlane: Boolean
-        get() = getArg(ARGUMENT_POLICY_BOOTSTRAP)?.equals(POLICY_BOOTSTRAP_CONTROL_PLANE, ignoreCase = true) == true
+    val policyFromControlPlane: Boolean
+        get() = getArg(ARGUMENT_POLICY_SOURCE)
+            ?.let { !it.equals(POLICY_SOURCE_DEPLOYMENT, ignoreCase = true) }
+            ?: heartBeatEnabled
 
     @JvmStatic
     val heartBeatEnabled: Boolean

@@ -92,13 +92,6 @@ sealed class RedactionRule {
 /** The safe policy metadata associated with a redaction decision. */
 data class RedactionMatch(val templateUuid: UUID, val templateName: String)
 
-/**
- * Identifies one independently replaceable policy contribution.
- *
- * Startup-file and control-plane policies combine by union and are replaced independently.
- */
-enum class PolicyOwner { STARTUP_FILE, CONTROL_PLANE }
-
 /** Immutable, precompiled redaction policy used for one capture operation. */
 class CompiledRedactionPolicy internal constructor(
     private val compiledTemplates: List<CompiledTemplate>,
@@ -141,34 +134,24 @@ class CompiledRedactionPolicy internal constructor(
     }
 }
 
-/** Thread-safe, owner-partitioned registry of immutable redaction policies. */
+/** Thread-safe holder of the agent's redaction policy, from whichever source the agent takes it. */
 class RedactionTemplateRegistry {
-    private val byOwner = linkedMapOf<PolicyOwner, List<RedactionTemplate>>()
+    private var templates: List<RedactionTemplate> = emptyList()
     @Volatile
     private var effectivePolicy: CompiledRedactionPolicy = CompiledRedactionPolicy.EMPTY
 
-    /** Atomically replaces all templates belonging to [owner]. */
+    /** Atomically replaces the policy; a template that does not compile leaves the previous one in place. */
     @Synchronized
-    fun replace(owner: PolicyOwner, templates: List<RedactionTemplate>) {
-        val prospective = LinkedHashMap(byOwner)
-        if (templates.isEmpty()) prospective.remove(owner) else prospective[owner] = templates.toList()
-        val compiled = CompiledRedactionPolicy.compile(orderedTemplates(prospective))
-        byOwner.clear()
-        byOwner.putAll(prospective)
-        effectivePolicy = compiled
+    fun replace(templates: List<RedactionTemplate>) {
+        effectivePolicy = CompiledRedactionPolicy.compile(templates)
+        this.templates = templates.toList()
     }
 
     /** Returns the cached immutable policy in one lock-free volatile read. */
     fun snapshot(): CompiledRedactionPolicy = effectivePolicy
 
     @Synchronized
-    fun all(): List<RedactionTemplate> = orderedTemplates(byOwner)
-
-    private fun orderedTemplates(
-        owners: Map<PolicyOwner, List<RedactionTemplate>>,
-    ): List<RedactionTemplate> = owners.entries
-        .sortedBy { it.key.ordinal }
-        .flatMap { it.value }
+    fun all(): List<RedactionTemplate> = templates
 }
 
 /**

@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.settings.CompiledRedactionPolicy
-import org.jetbrains.lincheck.settings.PolicyOwner
 import org.jetbrains.lincheck.settings.RedactionFileParser
 import org.jetbrains.lincheck.settings.RedactionRule
 import org.jetbrains.lincheck.settings.RedactionTemplate
@@ -141,10 +140,7 @@ class RedactionTemplateTest {
     @Test
     fun `value matching uses find semantics over the supplied bounded representation`() {
         val policy = RedactionTemplateRegistry().apply {
-            replace(
-                PolicyOwner.STARTUP_FILE,
-                listOf(RedactionTemplate.of("values", listOf(RedactionRule.ByValue("""secret-\d+""")))),
-            )
+            replace(listOf(RedactionTemplate.of("values", listOf(RedactionRule.ByValue("""secret-\d+""")))))
         }.snapshot()
 
         assertNotNull(policy.matchValue("prefix secret-42 suffix"))
@@ -160,7 +156,7 @@ class RedactionTemplateTest {
         val second = RedactionTemplate.of("second", listOf(RedactionRule.ByValue("secret")))
         val registry = RedactionTemplateRegistry()
 
-        registry.replace(PolicyOwner.STARTUP_FILE, listOf(second, first))
+        registry.replace(listOf(second, first))
 
         assertEquals("second", registry.snapshot().matchValue("secret")?.templateName)
         assertEquals(listOf(second, first), RedactionFileParser.parseTemplates(
@@ -172,14 +168,14 @@ class RedactionTemplateTest {
     }
 
     @Test
-    fun `failed replacement retains the previously compiled owner policy`() {
+    fun `failed replacement retains the previously compiled policy`() {
         val registry = RedactionTemplateRegistry()
         val previous = RedactionTemplate.of("previous", listOf(RedactionRule.ByValue("old-secret")))
         val invalid = RedactionTemplate.of("invalid", listOf(RedactionRule.ByValue("""(secret)\1""")))
-        registry.replace(PolicyOwner.STARTUP_FILE, listOf(previous))
+        registry.replace(listOf(previous))
 
         assertThrows(IllegalArgumentException::class.java) {
-            registry.replace(PolicyOwner.STARTUP_FILE, listOf(invalid))
+            registry.replace(listOf(invalid))
         }
 
         assertEquals("previous", registry.snapshot().matchValue("old-secret")?.templateName)
@@ -193,7 +189,7 @@ class RedactionTemplateTest {
         val emptyTemplate = RedactionTemplate.of("empty", emptyList())
 
         assertEquals(emptyList<RedactionTemplate>(), RedactionFileParser.parseTemplates(""))
-        registry.replace(PolicyOwner.STARTUP_FILE, listOf(emptyTemplate))
+        registry.replace(listOf(emptyTemplate))
 
         assertSame(CompiledRedactionPolicy.EMPTY, registry.snapshot())
         assertTrue(registry.snapshot().isEmpty)
@@ -211,7 +207,7 @@ class RedactionTemplateTest {
             ),
         )
         val policy = RedactionTemplateRegistry().apply {
-            replace(PolicyOwner.STARTUP_FILE, listOf(template))
+            replace(listOf(template))
         }.snapshot()
 
         assertNotNull(policy.matchName("dbPasswordHash", "example.Unrelated"))
@@ -224,29 +220,6 @@ class RedactionTemplateTest {
         assertNull(policy.matchName("token", "com.shop.Authenticator"))
         assertNotNull(policy.matchName("email", "com.shop.customers.internal.User"))
         assertNull(policy.matchName("email", "com.shop.customersx.User"))
-    }
-
-    @Test
-    fun `startup and control-plane policies combine by union and replace independently`() {
-        val startup = RedactionTemplate.of("startup", listOf(RedactionRule.ByName("password")))
-        val first = RedactionTemplate.of("first control plane", listOf(RedactionRule.ByValue("first-secret")))
-        val second = RedactionTemplate.of("second control plane", listOf(RedactionRule.ByValue("second-secret")))
-        val registry = RedactionTemplateRegistry()
-
-        registry.replace(PolicyOwner.STARTUP_FILE, listOf(startup))
-        registry.replace(PolicyOwner.CONTROL_PLANE, listOf(first))
-        assertNotNull(registry.snapshot().matchValue("first-secret"))
-
-        registry.replace(PolicyOwner.CONTROL_PLANE, listOf(second))
-
-        val policy = registry.snapshot()
-        assertNotNull(policy.matchName("password", "example.User"))
-        assertNull(policy.matchValue("first-secret"))
-        assertEquals("second control plane", policy.matchValue("second-secret")?.templateName)
-
-        registry.replace(PolicyOwner.CONTROL_PLANE, emptyList())
-        assertNotNull(registry.snapshot().matchName("password", "example.User"))
-        assertNull(registry.snapshot().matchValue("second-secret"))
     }
 
     @Test

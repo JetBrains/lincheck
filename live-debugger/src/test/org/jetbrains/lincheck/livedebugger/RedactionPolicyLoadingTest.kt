@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.livedebugger
 
-import org.jetbrains.lincheck.settings.PolicyOwner
 import org.jetbrains.lincheck.settings.liveDebuggerSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -75,7 +74,7 @@ class RedactionPolicyLoadingTest {
             assertFalse(settings.redactionRegistry.snapshot().isEmpty)
         } finally {
             file.delete()
-            liveDebuggerSettings.redactionRegistry.replace(PolicyOwner.STARTUP_FILE, emptyList())
+            liveDebuggerSettings.redactionRegistry.replace(emptyList())
             LiveDebugger.loadRedactionTemplatesFromFile(null)
         }
     }

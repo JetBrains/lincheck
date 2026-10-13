@@ -61,6 +61,13 @@ and opens a *reversed* WebSocket connection to `/api/agent/{agentId}` when the c
 Required environment variables: `NAME`, `LIVE_DEBUGGER_CONTROL_PLANE_URL`; optional: `NAMESPACE`
 (see `PhoneHomeHeartbeat.kt`).
 
+With `policySource=controlPlane` (the default in heartbeat mode) the heartbeat also carries the data policy:
+each request reports the version in force, the response carries the environment's policy as INI when it differs,
+and the agent applies it before acting on a `connect`.
+Debugging stays closed until the first policy arrives, when one does not parse,
+and after `CONTROL_PLANE_LOSS_TIMEOUT_MS` (30 s) without an answered heartbeat, which also closes the connection.
+`blocklistFile=` / `redactionFile=` belong to `policySource=deployment`; the two sources never combine.
+
 `enableSsl=on` routes both legs over TLS: `ControlPlane` rewrites the configured `http://` URL to
 `https://` (the `^http` → `ws` rewrite then yields `wss://`), installs the truststore's socket factory
 on every `HttpsURLConnection`, and hands the same factory to `makeReversedConnection`.
@@ -102,6 +109,8 @@ Arguments are comma-separated `key=value` pairs (parsed by `TraceAgentParameters
 | `enableSsl` | `on`/`off` — TLS for the control-plane connections (default `off`) |
 | `sslTruststorePath`, `sslTruststorePassword` | CA truststore verifying the control plane's certificate (default: JVM truststore) |
 | `breakpointsFile` | path to an INI file with breakpoints, loaded at startup (`BreakpointsFileParser`) |
+| `policySource` | `controlPlane`/`deployment` — data policy from heartbeats or from the two files below (default `controlPlane` with `liveDebuggerHeartbeat=on`, `deployment` otherwise) |
+| `blocklistFile`, `redactionFile` | sensitive-area blocklist and data-redaction INI files (`policySource=deployment` only) |
 | `output`, `format`, `formatOption` | trace output for whole-application tracing without a server |
 
 The agent sets `lincheck.liveDebuggerMode=true` itself at attach.

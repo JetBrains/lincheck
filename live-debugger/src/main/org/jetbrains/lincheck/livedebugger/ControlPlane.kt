@@ -11,22 +11,14 @@
 package org.jetbrains.lincheck.livedebugger
 
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
-import org.jetbrains.lincheck.settings.LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR
-import org.jetbrains.lincheck.settings.PolicyBundle
-import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
-import org.jetbrains.lincheck.settings.parsePolicyBundleJson
 import org.jetbrains.lincheck.util.Logger
 import org.jetbrains.lincheck.util.TlsTrust
 import java.net.HttpURLConnection
-import java.net.URI
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLSocketFactory
 
-private const val POLICY_PATH = "/api/policy"
-
-private const val HTTP_TIMEOUT_MS = 5_000
-private const val MAX_ATTEMPTS = 3
-private const val RETRY_DELAY_MS = 1_000L
+/** The control plane's blocklist and data-redaction policy for this agent's environment, in the startup-file formats. */
+internal data class ControlPlanePolicy(val version: String, val redactionIni: String, val blocklistsIni: String)
 
 /** Env var carrying an optional shared secret to authenticate this agent to the control plane. */
 internal const val ENV_AGENT_SECRET = "LIVE_DEBUGGER_AGENT_SECRET"
@@ -36,7 +28,7 @@ internal const val AGENT_SECRET_HEADER = "X-AppGlass-Agent-Secret"
 
 /**
  * The agent's side of its connections to the control plane: where the control plane is, how to talk to
- * it securely and authenticate to it, and the policy it hands out at startup.
+ * it securely and authenticate to it.
  *
  * TLS comes from the `enableSsl`, `sslTruststorePath` and `sslTruststorePassword` agent arguments and
  * the agent credential from [ENV_AGENT_SECRET]; both cover every leg — the HTTP calls made here and by
@@ -76,8 +68,8 @@ internal object ControlPlane {
      * Headers authenticating this agent to the control plane: the shared secret when [ENV_AGENT_SECRET]
      * is set, nothing otherwise (an unprotected control plane expects no credential).
      *
-     * The same headers go on every leg — the policy pull, the heartbeats, and the reversed WebSocket
-     * handshake — because one control-plane provider guards all of the agent-facing routes.
+     * The same headers go on every leg — the heartbeats and the reversed WebSocket handshake —
+     * because one control-plane provider guards all of the agent-facing routes.
      */
     fun agentAuthHeaders(): Map<String, String> {
         val secret = System.getenv(ENV_AGENT_SECRET)
@@ -93,69 +85,5 @@ internal object ControlPlane {
             sslSocketFactory()?.let { connection.sslSocketFactory = it }
         }
         authHeaders.forEach { (name, value) -> connection.setRequestProperty(name, value) }
-    }
-
-    /**
-     * Pulls the sensitive-area policy from the control plane at agent startup
-     * (`policyBootstrap=controlPlane`), retrying briefly ([MAX_ATTEMPTS] attempts, [RETRY_DELAY_MS] apart).
-     *
-     * A `GET` against [POLICY_PATH] on the control-plane base URL, performed in `premain` before any
-     * breakpoint source is processed. The control plane is the policy custody point; the agent remains
-     * the authoritative enforcer.
-     *
-     * @return the pulled blocklists, or `null` if [LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR] is unset
-     *   or the control plane could not be reached / responded with an error within the retry budget.
-     */
-    fun fetchPolicyBlocklists(): List<SensitiveAreaBlocklist>? {
-        val baseUrl = System.getenv(LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR)
-        if (baseUrl.isNullOrBlank()) {
-            Logger.error {
-                "policyBootstrap=controlPlane requires " +
-                    "the $LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR environment variable"
-            }
-            return null
-        }
-        return pullPolicyBlocklists("${normalizeBaseUrl(baseUrl)}$POLICY_PATH", agentAuthHeaders())
-    }
-
-    /**
-     * The retry loop behind [fetchPolicyBlocklists], taking [url] and [headers] explicitly so the pull
-     * is testable without process environment.
-     */
-    internal fun pullPolicyBlocklists(url: String, headers: Map<String, String>): List<SensitiveAreaBlocklist>? {
-        repeat(MAX_ATTEMPTS) { attempt ->
-            try {
-                val bundle = fetchPolicy(url, headers)
-                Logger.info {
-                    "Pulled policy v${bundle.version} (${bundle.blocklists.size} blocklist(s)) from $url"
-                }
-                return bundle.blocklists
-            } catch (e: Exception) {
-                Logger.warn { "Policy pull attempt ${attempt + 1}/$MAX_ATTEMPTS from $url failed: ${e.message}" }
-                if (attempt < MAX_ATTEMPTS - 1) Thread.sleep(RETRY_DELAY_MS)
-            }
-        }
-        Logger.error { "Failed to pull policy from $url after $MAX_ATTEMPTS attempts" }
-        return null
-    }
-
-    /**
-     * Uses [HttpURLConnection] and a manual JSON parse to avoid pulling an HTTP/JSON library onto the
-     * agent classpath, mirroring [PhoneHomeHeartbeat].
-     */
-    private fun fetchPolicy(url: String, headers: Map<String, String>): PolicyBundle {
-        val connection = URI(url).toURL().openConnection() as HttpURLConnection
-        try {
-            configureConnection(connection, headers)
-            connection.requestMethod = "GET"
-            connection.connectTimeout = HTTP_TIMEOUT_MS
-            connection.readTimeout = HTTP_TIMEOUT_MS
-            val code = connection.responseCode
-            check(code in 200..299) { "GET $url returned HTTP $code" }
-            val body = connection.inputStream.bufferedReader().use { it.readText() }
-            return parsePolicyBundleJson(body)
-        } finally {
-            connection.disconnect()
-        }
     }
 }

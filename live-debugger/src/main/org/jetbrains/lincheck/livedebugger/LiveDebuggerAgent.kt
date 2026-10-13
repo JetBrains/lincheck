@@ -16,7 +16,7 @@ import org.jetbrains.lincheck.jvm.agent.JavaAgentAttachType
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BLOCKLIST_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_BREAKPOINTS_FILE
-import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_POLICY_BOOTSTRAP
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_POLICY_SOURCE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_REDACTION_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
@@ -65,7 +65,7 @@ internal object LiveDebuggerAgent {
         ARGUMENT_BREAKPOINTS_FILE,
         ARGUMENT_BLOCKLIST_FILE,
         ARGUMENT_REDACTION_FILE,
-        ARGUMENT_POLICY_BOOTSTRAP,
+        ARGUMENT_POLICY_SOURCE,
         ARGUMENT_HEARTBEAT,
         ARGUMENT_START_SERVER,
         ARGUMENT_SERVER_PORT,
@@ -82,11 +82,17 @@ internal object LiveDebuggerAgent {
             TraceAgentParameters.parseArgs(agentArgs, ADDITIONAL_ARGS)
             // Policy first: blocklists and redaction templates must be active before any
             // breakpoint source is processed, so Stage-1 registration rejection and capture-time
-            // redaction see them. Startup files and the control-plane pull combine by union.
-            LiveDebugger.loadBlocklistsFromFile(TraceAgentParameters.blocklistFilePath)
-            LiveDebugger.loadRedactionTemplatesFromFile(TraceAgentParameters.redactionFilePath)
-            if (TraceAgentParameters.policyBootstrapFromControlPlane) {
-                LiveDebugger.bootstrapPolicyFromControlPlane()
+            // redaction see them.
+            val blocklistFile = TraceAgentParameters.blocklistFilePath
+            val redactionFile = TraceAgentParameters.redactionFilePath
+            if (TraceAgentParameters.policyFromControlPlane) {
+                LiveDebugger.awaitControlPlanePolicy(
+                    deploymentFilesConfigured = blocklistFile != null || redactionFile != null,
+                    heartbeatEnabled = TraceAgentParameters.heartBeatEnabled,
+                )
+            } else {
+                LiveDebugger.loadBlocklistsFromFile(blocklistFile)
+                LiveDebugger.loadRedactionTemplatesFromFile(redactionFile)
             }
             LiveDebugger.loadBreakpointsFromFile(TraceAgentParameters.breakpointsFilePath)
         }
@@ -136,7 +142,9 @@ internal object LiveDebuggerAgent {
                 Runtime.getRuntime().addShutdownHook(Thread { wsServer.close() })
             }
             if (TraceAgentParameters.heartBeatEnabled) {
-                PhoneHomeHeartbeat.start(::connectToControlPlane)
+                PhoneHomeHeartbeat.start(::connectToControlPlane) {
+                    (server as? TracingWebSocketServer)?.connection?.close()
+                }
             }
         }
 

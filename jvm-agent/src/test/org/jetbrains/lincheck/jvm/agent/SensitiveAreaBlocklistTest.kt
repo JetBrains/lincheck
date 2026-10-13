@@ -161,6 +161,25 @@ class SensitiveAreaBlocklistTest {
         BlocklistFileParser.parseBlocklists("[NotABlocklist]\npackage = com.a")
     }
 
+    @Test
+    fun `rendered INI parses back to the same blocklists`() {
+        val blocklists = BlocklistFileParser.parseBlocklists(
+            """
+            [Blocklist Crypto]
+            name = Crypto & key handling
+            package = com.corp.crypto
+            class = com.corp.KeyStore
+            method = com.corp.Auth#verify:(Ljava/lang/String;)V
+
+            [Blocklist Payments]
+            method = com.corp.Pay#charge
+            """.trimIndent()
+        )
+        val rendered = BlocklistFileParser.renderBlocklists(blocklists)
+        assertEquals(blocklists.map { it.uuid }, BlocklistFileParser.parseBlocklists(rendered).map { it.uuid })
+        assertEquals(rendered, BlocklistFileParser.renderBlocklists(BlocklistFileParser.parseBlocklists(rendered)))
+    }
+
     // ---- Registry: add-only union, idempotent re-add, static match ----
 
     @Test

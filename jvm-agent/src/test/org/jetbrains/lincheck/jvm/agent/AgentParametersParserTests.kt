@@ -233,18 +233,22 @@ class AgentParametersParserTests {
     }
 
     @Test
-    fun testPolicyBootstrapControlPlane() {
-        TraceAgentParameters.parseArgs(
-            "class=org.C,method=m,policyBootstrap=controlPlane",
-            listOf(TraceAgentParameters.ARGUMENT_POLICY_BOOTSTRAP)
-        )
-        assertEquals(true, TraceAgentParameters.policyBootstrapFromControlPlane)
+    fun testPolicySourceDefaultsToControlPlaneOnlyWithHeartbeat() {
+        TraceAgentParameters.parseArgs("class=org.C,method=m,liveDebuggerHeartbeat=on", listOf(TraceAgentParameters.ARGUMENT_HEARTBEAT))
+        assertEquals(true, TraceAgentParameters.policyFromControlPlane)
+        TraceAgentParameters.parseArgs("class=org.C,method=m", emptyList())
+        assertEquals(false, TraceAgentParameters.policyFromControlPlane)
     }
 
     @Test
-    fun testPolicyBootstrapAbsentDefaultsToFalse() {
-        TraceAgentParameters.parseArgs("class=org.C,method=m", emptyList())
-        assertEquals(false, TraceAgentParameters.policyBootstrapFromControlPlane)
+    fun testPolicySourceExplicitValues() {
+        val allowed = listOf(TraceAgentParameters.ARGUMENT_HEARTBEAT, TraceAgentParameters.ARGUMENT_POLICY_SOURCE)
+        TraceAgentParameters.parseArgs("class=org.C,method=m,liveDebuggerHeartbeat=on,policySource=deployment", allowed)
+        assertEquals(false, TraceAgentParameters.policyFromControlPlane)
+        TraceAgentParameters.parseArgs("class=org.C,method=m,policySource=controlPlane", allowed)
+        assertEquals(true, TraceAgentParameters.policyFromControlPlane)
+        TraceAgentParameters.parseArgs("class=org.C,method=m,policySource=bogus", allowed)
+        assertEquals("an unknown source fails closed", true, TraceAgentParameters.policyFromControlPlane)
     }
 
     @Test
