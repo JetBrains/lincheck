@@ -197,7 +197,14 @@ object SourceFileClassIndex {
      * answers `false` too.
      */
     fun sourceFileContains(fileName: String, clazz: Class<*>): Boolean =
-        clazz.name in classNamesFromSourceFile(fileName, clazz.classLoader)
+        sourceFileContains(fileName, clazz.name, clazz.classLoader)
+
+    /**
+     * Returns whether the class [className] defined by [classLoader] (`null` meaning the bootstrap loader)
+     * was compiled from [fileName]; see the [Class]-based overload for what `false` means.
+     */
+    fun sourceFileContains(fileName: String, className: String, classLoader: ClassLoader?): Boolean =
+        className in classNamesFromSourceFile(fileName, classLoader)
 
     /**
      * Whether the index still holds an entry for [fileName].

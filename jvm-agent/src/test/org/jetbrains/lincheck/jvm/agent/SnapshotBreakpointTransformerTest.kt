@@ -639,9 +639,27 @@ class SnapshotBreakpointTransformerTest {
             )
         )
 
-        assertTrue(profile.shouldTransform(fixture.outerCanonicalName))
-        assertTrue(profile.shouldTransform(fixture.lambdaCanonicalName))
-        assertFalse(profile.shouldTransform("java.util.ArrayList"))
+        assertTrue(profile.shouldTransform(fixture.outerCanonicalName, loader = null))
+        assertTrue(profile.shouldTransform(fixture.lambdaCanonicalName, loader = null))
+        assertFalse(profile.shouldTransform("java.util.ArrayList", loader = null))
+    }
+
+    @Test
+    fun liveDebuggerProfileMatchesBreakpointWithoutClassNameBySourceFile() {
+        // An empty `className` makes the class-only prefix pre-filter match every class,
+        // so the profile must consult the source file index instead.
+        val fileName = "EmptyClassNameProfile.example.java"
+        val ownerName = "org.example.profiletest.EmptyClassNameOwner"
+        val loader = object : ClassLoader() {}
+        SourceFileClassIndex.registerClass(loader, ownerName, fileName)
+        val profile = LiveDebuggerTransformationProfile(
+            LiveDebuggerSettings(listOf(snapshotBreakpoint(className = "", fileName = fileName, line = 1)))
+        )
+
+        assertTrue(profile.shouldTransform(ownerName, loader))
+        assertFalse(profile.shouldTransform("org.example.profiletest.UnrelatedClass", loader))
+        // The same class name defined by another loader is a different definition.
+        assertFalse(profile.shouldTransform(ownerName, object : ClassLoader() {}))
     }
 
     @Test

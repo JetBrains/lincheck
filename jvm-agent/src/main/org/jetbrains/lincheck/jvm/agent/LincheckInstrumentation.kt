@@ -603,7 +603,7 @@ object LincheckInstrumentation {
         // Under lazy strategy instrument eagerly instrumented classes early-on.
         if (instrumentationStrategy == InstrumentationStrategy.LAZY && isEagerlyInstrumentedClass(className)) return true
 
-        return transformationProfile.shouldTransform(className)
+        return transformationProfile.shouldTransform(className, loader)
     }
 
     private fun shouldTransform(clazz: Class<*>, instrumentationMode: InstrumentationMode): Boolean =

@@ -13,12 +13,13 @@ package org.jetbrains.lincheck.jvm.agent
 import org.jetbrains.lincheck.jvm.agent.transformers.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.settings.LiveDebuggerSettings
+import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
 import org.jetbrains.lincheck.settings.liveDebuggerSettings
 import org.jetbrains.lincheck.util.*
 
 interface TransformationProfile {
-    fun shouldTransform(className: String): Boolean
+    fun shouldTransform(className: String, loader: ClassLoader?): Boolean
 
     fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration
 }
@@ -225,13 +226,13 @@ class FilteredTransformationProfile(
     private val includeRegexes: List<Regex> = includeClasses.map { it.toGlobRegex() }
     private val excludeRegexes: List<Regex> = excludeClasses.map { it.toGlobRegex() }
 
-    override fun shouldTransform(className: String): Boolean {
+    override fun shouldTransform(className: String, loader: ClassLoader?): Boolean {
         // Check the base profile first, because it sorts out
         // some standard library classes, like `java/util/regex/Matcher` which is used
         // in the excludeRegexes/includeRegexes lists.
         // An attempt to transform it leads to the ClassCircularityError
         // TODO: JBRes-9165 this problem might not be fully fixed for Lincheck though
-        if (!baseProfile.shouldTransform(className)) {
+        if (!baseProfile.shouldTransform(className, loader)) {
             return false
         }
 
@@ -265,7 +266,7 @@ class FilteredTransformationProfile(
 
 object StressDefaultTransformationProfile : TransformationProfile {
 
-    override fun shouldTransform(className: String): Boolean {
+    override fun shouldTransform(className: String, loader: ClassLoader?): Boolean {
         // In the stress testing mode, we can simply skip the standard
         // Java and Kotlin classes -- they do not have coroutine suspension points.
         if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
@@ -290,7 +291,7 @@ object StressDefaultTransformationProfile : TransformationProfile {
 
 object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
-    override fun shouldTransform(className: String): Boolean {
+    override fun shouldTransform(className: String, loader: ClassLoader?): Boolean {
         // Instrument thread-related classes to intercept `Thread.run` beginning/end.
         if (className == "java.lang.Thread") return true
         if (className.startsWith("kotlin.concurrent.ThreadsKt")) return true
@@ -344,7 +345,7 @@ object TraceRecorderDefaultTransformationProfile : TransformationProfile {
 
 object ModelCheckingDefaultTransformationProfile : TransformationProfile {
 
-    override fun shouldTransform(className: String): Boolean {
+    override fun shouldTransform(className: String, loader: ClassLoader?): Boolean {
         // We do not need to instrument most standard Java classes.
         // It is fine to inject the Lincheck analysis only into the
         // `java.util.*` ones, ignored the known atomic constructs.
@@ -458,7 +459,7 @@ object ModelCheckingDefaultTransformationProfile : TransformationProfile {
 //TODO: There is some pretty epic code duplication
 object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
 
-    override fun shouldTransform(className: String): Boolean {
+    override fun shouldTransform(className: String, loader: ClassLoader?): Boolean {
         // We do not need to instrument most standard Java classes.
         // It is fine to inject the Lincheck analysis only into the
         // `java.util.*` ones, ignored the known atomic constructs.
@@ -585,16 +586,24 @@ class LiveDebuggerTransformationProfile(
     val settings: LiveDebuggerSettings,
 ) : TransformationProfile {
 
-    override fun shouldTransform(className: String): Boolean {
+    override fun shouldTransform(className: String, loader: ClassLoader?): Boolean {
         // In the live debugging mode, we do not instrument Java/Kotlin stdlib classes
         // to avoid potential `ClassCircularityError` issues
         if (isRecognizedUninstrumentedStandardLibraryClass(className)) return false
 
         // Check if there are any applicable line breakpoints for the given class
         // (`className` is already in canonical form, see `LincheckClassFileTransformer.transform`).
-        // The source file is not yet known here, so we use the class-only `applicableTo` pre-filter;
-        // the file-aware overload narrows the match in `buildClassInformation`.
-        return settings.lineBreakpoints.values.any { it.isApplicableTo(className) }
+        // The file-aware overload narrows the match further in `buildClassInformation`.
+        return settings.lineBreakpoints.values.any { it.isApplicableTo(className, loader) }
+    }
+
+    private fun SnapshotBreakpoint.isApplicableTo(className: String, loader: ClassLoader?): Boolean {
+        // With a known owner class, the class-only prefix pre-filter suffices.
+        if (this.className.isNotEmpty()) return isApplicableTo(className)
+        // Without it, the prefix pre-filter matches every class, so match by source file instead.
+        // The transformer indexes a loading class before asking whether to transform it,
+        // so the index already knows the class here.
+        return SourceFileClassIndex.sourceFileContains(fileName, className, loader)
     }
 
     override fun getMethodConfiguration(

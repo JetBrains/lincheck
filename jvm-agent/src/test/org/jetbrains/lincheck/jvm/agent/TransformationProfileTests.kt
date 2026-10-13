@@ -15,7 +15,7 @@ import org.junit.Test
 
 class TransformationProfileTests {
     private object TestBaseProfile : TransformationProfile {
-        override fun shouldTransform(className: String): Boolean = true
+        override fun shouldTransform(className: String, loader: ClassLoader?): Boolean = true
 
         override fun getMethodConfiguration(className: String, methodName: String, descriptor: String): TransformationConfiguration {
             return TransformationConfiguration()
@@ -26,7 +26,7 @@ class TransformationProfileTests {
         FilteredTransformationProfile(include, exclude, TestBaseProfile)
 
     private fun isInstrumented(profile: TransformationProfile, className: String): Boolean =
-        profile.shouldTransform(className)
+        profile.shouldTransform(className, loader = null)
 
     private fun assertInstrumented(profile: TransformationProfile, className: String) =
         assertTrue("Expected $className to be instrumented", isInstrumented(profile, className))
