@@ -69,10 +69,22 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
 
     /**
      * Creates a new gradle connection to the project from [projectPath].
+     *
+     * A project with a wrapper builds with the wrapper's distribution, as the Tooling API does by default.
+     * A project without one -- the hand-written ones under `integration-test/test-projects` -- builds with the
+     * installation running the enclosing build, which the test task passes in as `lincheck.hostGradleHome`,
+     * instead of the Tooling API downloading the distribution matching its own version on every run.
+     * The Tooling API runs builds on the next Gradle major, so its version may lag behind the host's.
      */
     protected fun createGradleConnection(): ProjectConnection = GradleConnector
         .newConnector()
         .forProjectDirectory(File(projectPath))
+        .apply {
+            val hostGradleHome = System.getProperty("lincheck.hostGradleHome") ?: return@apply
+            if (!File(projectPath, "gradle/wrapper/gradle-wrapper.properties").isFile) {
+                useInstallation(File(hostGradleHome))
+            }
+        }
         .connect()
 
     protected fun createInitScriptAsTempFile(content: String): File {

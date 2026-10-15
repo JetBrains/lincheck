@@ -50,6 +50,12 @@ Set `LINCHECK_TEST_PROJECT_ARCHIVES` to a directory holding `<name>-<sha>.zip` f
 instead of downloading (the download tasks are skipped, the log says `Reusing pre-fetched archive …`);
 an archive missing from it is downloaded as usual.
 
+The tests drive each target project through the Gradle Tooling API.
+The external projects build with their own wrapper's Gradle;
+the wrapper-less projects under [`integration-test/test-projects/`](integration-test/test-projects/) build with
+the Gradle installation running the enclosing build, which the test tasks pass in as `lincheck.hostGradleHome`,
+so no Gradle distribution is downloaded at test time (and the test JVM must satisfy that Gradle's JVM floor).
+
 ## Testing
 
 - `test` is single-fork (`maxParallelForks = 1`, 6 GB heap) — concurrency tests need JVM isolation.

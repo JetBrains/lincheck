@@ -14,6 +14,7 @@ import org.gradle.api.Task
 import org.gradle.api.file.RelativePath
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.TaskProvider
+import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.register
 import java.io.File
 import java.util.Properties
@@ -119,6 +120,17 @@ fun Project.copyClasspathClashTestProjects(): List<TaskProvider<Copy>> =
             into(layout.buildDirectory.dir("integrationTestProjects/$projectName"))
         }
     }
+
+/**
+ * Tells the integration tests which Gradle installation runs this build, as `lincheck.hostGradleHome`.
+ *
+ * The projects under `integration-test/test-projects` ship no wrapper, so the Tooling API would otherwise
+ * download the distribution matching its own version on every run of an ephemeral CI agent;
+ * a failed download then fails every test built on such a project.
+ */
+fun Test.exposeHostGradleInstallation() {
+    project.gradle.gradleHomeDir?.let { systemProperty("lincheck.hostGradleHome", it.absolutePath) }
+}
 
 /**
  * This function is required to copy `trace-recorder-fat.jar` file from

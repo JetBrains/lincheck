@@ -68,6 +68,7 @@ tasks {
     register<Test>("traceRecorderIntegrationTest") {
         useJUnitPlatform()
         configureJvmTestCommon(project)
+        exposeHostGradleInstallation()
         group = "verification"
 
         // We cannot put integration tests in the 'test' source set because they will

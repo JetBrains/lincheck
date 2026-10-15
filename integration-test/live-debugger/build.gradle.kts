@@ -72,6 +72,7 @@ tasks {
     register<Test>("liveDebuggerIntegrationTest") {
         useJUnitPlatform()
         configureJvmTestCommon(project)
+        exposeHostGradleInstallation()
         group = "verification"
 
         testClassesDirs = sourceSets["main"].output.classesDirs
