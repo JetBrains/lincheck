@@ -59,6 +59,7 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
                             commands, agentClassName, agentMethodName, outputFile, extraJvmArgs, extraAgentArgs
                         )
                     ).absolutePath,
+                    *extraGradleArguments.toTypedArray(),
                 ).forTasks(
                     *commands.toTypedArray(),
                     "--tests",
@@ -66,6 +67,14 @@ abstract class AbstractGradleTraceIntegrationTest: AbstractTraceIntegrationTest(
                 ).run()
         }
     }
+
+    /**
+     * Extra arguments for the build of the project under test, whitespace-separated in
+     * `LINCHECK_INTEGRATION_TEST_GRADLE_ARGS`: what only that project's own build understands, such as the
+     * properties that point it at a CI's remote build cache. Unset, the build runs exactly as before.
+     */
+    private val extraGradleArguments: List<String> =
+        System.getenv("LINCHECK_INTEGRATION_TEST_GRADLE_ARGS").orEmpty().split(Regex("\\s+")).filter { it.isNotEmpty() }
 
     /**
      * Creates a new gradle connection to the project from [projectPath].
