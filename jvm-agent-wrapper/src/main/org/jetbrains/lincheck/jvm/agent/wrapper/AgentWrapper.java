@@ -139,8 +139,8 @@ public final class AgentWrapper {
     }
 
     private static JarFile openWrapperJar() throws IOException {
-        CodeSource codeSource = AgentWrapper.class.getProtectionDomain().getCodeSource();
-        URL location = codeSource == null ? null : codeSource.getLocation();
+        URL location = codeSourceLocation();
+        if (location == null) location = ownClassFileJarLocation();
         if (location == null) throw new IOException("Cannot locate the agent jar of " + AgentWrapper.class.getName());
         File agentJarFile;
         try {
@@ -149,6 +149,20 @@ public final class AgentWrapper {
             throw new IOException("Cannot resolve the agent jar location " + location, exception);
         }
         return new JarFile(agentJarFile);
+    }
+
+    private static URL codeSourceLocation() {
+        CodeSource codeSource = AgentWrapper.class.getProtectionDomain().getCodeSource();
+        return codeSource == null ? null : codeSource.getLocation();
+    }
+
+    private static URL ownClassFileJarLocation() throws IOException {
+        URL resource = AgentWrapper.class.getResource(AgentWrapper.class.getSimpleName() + ".class");
+        if (resource == null || !"jar".equals(resource.getProtocol())) return null;
+        String spec = resource.getPath();
+        int separator = spec.indexOf("!/");
+        if (separator < 0) return null;
+        return new URL(spec.substring(0, separator));
     }
 
     private static void invoke(Method method, String agentArgs, Instrumentation instrumentation) throws Exception {
