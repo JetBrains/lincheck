@@ -243,6 +243,9 @@ abstract class TracingWebSocketClient(
  */
 abstract class TracingWebSocketServer(address: InetSocketAddress?) : TracingServer {
     private var _client: TracingCallbacks = ClientSink()
+
+    override val connectedClient: TracingCallbacks?
+        get() = synchronized(this) { _client.takeUnless { it is ClientSink } }
     
     private val webSocketServer = if (address != null) {
         object: WebSocketServer(address) {

@@ -31,6 +31,8 @@ import kotlin.reflect.KClass
  * Recorded trace points are first written into a bounded queue
  * and then polled and served to the subscriber by a background thread.
  * As a simple backpressure defense mechanism, when the queue is full, the oldest trace points are dropped.
+ * While no client is connected, the queue is kept, not drained, so tracing can start before the client connects.
+ * Trace points still queued when the trace ends go to [undeliveredHitsFilePath], or are dropped when it is `null`.
  *
  * Limitations:
  * - supports only [SnapshotLineBreakpointTracePoint] trace points;
@@ -38,11 +40,14 @@ import kotlin.reflect.KClass
  *
  * @param context the trace context containing descriptors and metadata
  * @param queueCapacity the maximum number of trace points to buffer before the oldest ones are dropped.
+ * @param undeliveredHitsFilePath where the trace points still queued when the trace ends without a client
+ *   are written; `null` drops them.
  */
 class NetworkStreamingTraceCollecting(
     val context: TraceContext,
     val tracingServer: TracingServer,
     private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
+    private val undeliveredHitsFilePath: String? = null,
 ) : TraceCollectingStrategy, Closeable {
     private val tracePointQueue = ArrayBlockingQueue<SnapshotLineBreakpointTracePoint>(queueCapacity)
 
@@ -51,10 +56,13 @@ class NetworkStreamingTraceCollecting(
 
     private val lock = ReentrantLock()
 
-    private var sender = NetworkTracePointSender(tracingServer.connection, context)
+    // Created by resetSender for the first client, and again for each new one.
+    private lateinit var sender: NetworkTracePointSender
 
     // Tracks the last client reference we wrote to, so we can detect reconnects.
     private var lastClient: TracingCallbacks? = null
+
+    private var lostClient: TracingCallbacks? = null
 
     @Volatile
     private var running = true
@@ -151,58 +159,134 @@ class NetworkStreamingTraceCollecting(
     }
 
     private fun writerThreadLoop() {
-        while (/* volatile read */ running || tracePointQueue.isNotEmpty()) {
-            try {
-                val tracePoint = tracePointQueue.poll(100, TimeUnit.MILLISECONDS) ?: continue
-                writeTracePointToSubscriber(tracePoint)
-            } catch (_: InterruptedException) {
-                Logger.info { "Trace writer thread interrupted" }
-                break
-            } catch (t: Throwable) {
-                Logger.error(t) { "Error in trace writer thread" }
+        // A hit leaves the queue before it is written, so it waits here until a client has taken it:
+        // when the send fails because the client left mid-write, the next client gets it, or the file does.
+        var pending: SnapshotLineBreakpointTracePoint? = null
+        try {
+            while (true) {
+                val client = clientReadyToReceiveTracePoints()
+                if (client == null) {
+                    // Nobody to write to: hold the queue for the client while the trace runs.
+                    if (!running) break
+                    Thread.sleep(CLIENT_POLL_MILLIS)
+                    continue
+                }
+                val tracePoint = pending ?: tracePointQueue.poll(100, TimeUnit.MILLISECONDS)
+                if (tracePoint == null) {
+                    if (!running && tracePointQueue.isEmpty()) break
+                    continue
+                }
+                pending = if (writeTracePointToSubscriber(client, tracePoint)) null else tracePoint
             }
+        } catch (_: InterruptedException) {
+            Logger.info { "Trace writer thread interrupted" }
         }
+        saveUndelivered(pending)
+    }
 
-        // Drain remaining items
-        while (tracePointQueue.isNotEmpty()) {
-            try {
-                val tracePoint = tracePointQueue.poll() ?: break
-                writeTracePointToSubscriber(tracePoint)
-            } catch (t: Throwable) {
-                Logger.error(t) { "Error in trace writer thread" }
-            }
+    private fun clientReadyToReceiveTracePoints(): TracingCallbacks? =
+        tracingServer.connectedClient?.takeUnless { it === lostClient }
+
+    private fun saveUndelivered(pending: SnapshotLineBreakpointTracePoint?) {
+        val left = listOfNotNull(pending) + tracePointQueue
+        if (left.isEmpty()) return
+        val path = undeliveredHitsFilePath
+        if (path == null) {
+            Logger.warn { "Dropped ${left.size} trace points: no client connected before the trace writer stopped" }
+            return
+        }
+        try {
+            writeUndeliveredHitsFile(File(path), context, left)
+            tracePointQueue.clear()
+        } catch (t: Throwable) {
+            Logger.error(t) { "Cannot write ${left.size} undelivered trace points to $path" }
         }
     }
 
     /**
-     * Resets the sender when a client change is detected, because the new client's reader
-     * does not have any of the previously sent context (descriptors, strings, etc.).
+     * Starts a new sender for [client], whose reader has none of the context (descriptors, strings, etc.)
+     * sent so far. The sink turns a transport failure into [ClientLostException], which
+     * [writeTracePointToSubscriber] tells apart from a trace point that cannot be serialized.
      */
-    private fun resetSender() {
+    private fun resetSender(client: TracingCallbacks) {
         sender = NetworkTracePointSender(
-            callbacks = tracingServer.connection,
+            sink = { frame ->
+                try {
+                    client.binaryTraceData(frame)
+                } catch (e: Exception) {
+                    throw ClientLostException(e)
+                }
+            },
             context = context,
         )
         Logger.info { "Network trace writer reset for new client" }
     }
 
-    private fun writeTracePointToSubscriber(tracePoint: SnapshotLineBreakpointTracePoint) {
-        try {
-            // Detect client change and reset sender if needed
-            val currentClient = tracingServer.connection
-            if (currentClient !== lastClient) {
-                resetSender()
-                lastClient = currentClient
-            }
+    /**
+     * Writes [tracePoint] to [client], starting a fresh stream (header first) when [client] is a new one.
+     *
+     * @return whether the writer is done with [tracePoint]: `false` when [client] went away before taking it,
+     *   so the point waits for the next client; `true` when it was sent, or cannot be written at all and is dropped.
+     */
+    private fun writeTracePointToSubscriber(
+        client: TracingCallbacks,
+        tracePoint: SnapshotLineBreakpointTracePoint,
+    ): Boolean {
+        if (client !== lastClient) {
+            resetSender(client)
+            lastClient = client
+        }
+        return try {
             sender.send(tracePoint)
-        } catch (e: Exception) {
-            Logger.error(e) { "Error writing trace point to client" }
+            true
+        } catch (_: ClientLostException) {
+            lostClient = client
+            Logger.warn { "Client left before it took a trace point; keeping it for the next client" }
+            false
+        } catch (t: Throwable) {
+            Logger.error(t) { "Error writing trace point to client" }
+            true
         }
     }
 
     companion object {
         private const val DEFAULT_QUEUE_CAPACITY = 1024
+        private const val CLIENT_POLL_MILLIS = 20L
     }
+}
+
+/** The client a frame was handed to is gone; the trace point it belongs to was not delivered. */
+private class ClientLostException(cause: Throwable) : RuntimeException(cause)
+
+/**
+ * Writes [tracePoints] to [file] as the frames of a trace stream, for a client that connects
+ * only after the producing process is gone.
+ */
+fun writeUndeliveredHitsFile(
+    file: File,
+    context: TraceContext,
+    tracePoints: Iterable<SnapshotLineBreakpointTracePoint>,
+) {
+    DataOutputStream(BufferedOutputStream(FileOutputStream(file))).use { out ->
+        val sender = NetworkTracePointSender({ frame -> out.writeInt(frame.size); out.write(frame) }, context)
+        tracePoints.forEach(sender::send)
+    }
+}
+
+/** Reads the trace points a [writeUndeliveredHitsFile] call left in [file], in the order they were queued. */
+fun readUndeliveredHitsFile(file: File): List<SnapshotLineBreakpointTracePoint> {
+    val hits = mutableListOf<SnapshotLineBreakpointTracePoint>()
+    NetworkTraceReader().use { reader ->
+        reader.addTracePointListener { hits += it }
+        reader.start()
+        DataInputStream(BufferedInputStream(FileInputStream(file))).use { input ->
+            while (true) {
+                val size = try { input.readInt() } catch (_: EOFException) { break }
+                reader.processMessage(ByteArray(size).also(input::readFully))
+            }
+        }
+    }
+    return hits
 }
 
 /**
@@ -220,21 +304,25 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
 
 
 /**
- * Sends [SnapshotLineBreakpointTracePoint] objects over a [TracingCallbacks] websocket.
+ * Serializes [SnapshotLineBreakpointTracePoint] objects into the frames of the trace stream
+ * and hands each frame to [sink] — a [TracingCallbacks] websocket, or any other frame consumer.
  *
  * This class encapsulates the header and per-trace-point serialization logic so that
  * both the lincheck tracing infrastructure and the control-plane can send trace points
  * without duplicating low-level protocol details.
  *
- * @param callbacks the [TracingCallbacks] instance to send binary data over
+ * @param sink receives each frame, in order
  * @param context the trace context containing descriptors and metadata
  * @param runtime the producing runtime, preserved when forwarding a foreign trace
  */
 class NetworkTracePointSender(
-    private val callbacks: TracingCallbacks,
+    private val sink: (ByteArray) -> Unit,
     context: TraceContext,
     private val runtime: String = RUNTIME_JVM,
 ) {
+    constructor(callbacks: TracingCallbacks, context: TraceContext, runtime: String = RUNTIME_JVM) :
+        this(callbacks::binaryTraceData, context, runtime)
+
     private val lock = ReentrantLock()
     private val byteStream = ByteArrayOutputStream(MESSAGE_BUFFER_SIZE)
     private val outputStream = DataOutputStream(byteStream)
@@ -254,7 +342,7 @@ class NetworkTracePointSender(
             byteStream.reset()
             outputStream.writeTraceHeader(runtime)
             outputStream.flush()
-            callbacks.binaryTraceData(byteStream.toByteArray())
+            sink(byteStream.toByteArray())
             headerSent = true
         }
 
@@ -280,7 +368,7 @@ class NetworkTracePointSender(
         outputStream.writeKind(ObjectKind.BLOCK_END)
         outputStream.flush()
 
-        callbacks.binaryTraceData(byteStream.toByteArray())
+        sink(byteStream.toByteArray())
     }
 }
 
@@ -327,6 +415,9 @@ class NetworkTraceReader : Closeable {
     private val threadTracePoints = mutableMapOf<Int, MutableList<SnapshotLineBreakpointTracePoint>>()
 
     private val tracePointListeners = mutableListOf<SnapshotLineBreakpointListener>()
+
+    // Trace points decoded while paused; delivered in order on [start]. Guarded by [tracePointListeners].
+    private val pendingTracePoints = mutableListOf<SnapshotLineBreakpointTracePoint>()
 
     sealed class State {
         data object Running : State()
@@ -388,9 +479,27 @@ class NetworkTraceReader : Closeable {
         }
     }
 
+    private fun deliver(tracePoint: SnapshotLineBreakpointTracePoint) {
+        synchronized(tracePointListeners) {
+            if (state is State.Running) notifyListeners(tracePoint) else pendingTracePoints.add(tracePoint)
+        }
+    }
+
+    /**
+     * Starts delivering trace points to the listeners, beginning with those decoded while paused.
+     * A reader starts paused, so frames that arrive before its consumer subscribes are kept, not lost —
+     * also when the source has already disconnected by then: a process that streams its hits and exits
+     * right away still gets them delivered. Only an explicit [stop] discards them.
+     */
     fun start() {
-        _state.getAndUpdate { currentState ->
-            if (currentState is State.Paused) State.Running else currentState
+        synchronized(tracePointListeners) {
+            _state.getAndUpdate { currentState ->
+                if (currentState is State.Paused) State.Running else currentState
+            }
+            if (state !is State.Stopped) {
+                pendingTracePoints.forEach(::notifyListeners)
+                pendingTracePoints.clear()
+            }
         }
     }
 
@@ -421,8 +530,9 @@ class NetworkTraceReader : Closeable {
             return
         }
 
-        // Skip messages when paused or stopped
-        if (state !is State.Running) return
+        // A stopped reader ignores the rest of the stream; a paused one keeps decoding (the context
+        // objects must be applied in order) and holds the trace points for [start].
+        if (isTerminated) return
 
         // Process the binary message containing trace point data
         try {
@@ -488,9 +598,8 @@ class NetworkTraceReader : Closeable {
                                 .add(tracePoint)
                         }
 
-                        // Notify callback about the new trace point
                         try {
-                            notifyListeners(tracePoint)
+                            deliver(tracePoint)
                         } catch (e: Exception) {
                             Logger.error { "Error in trace point listener callback: ${e.message}" }
                         }

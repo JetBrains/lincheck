@@ -124,17 +124,15 @@ class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
         webSocket.send("${TracingCallbacks.BREAKPOINT_HIT_SUPPRESSED}:$timestamp:$payload")
     }
 
-    override fun binaryTraceData(data: ByteArray) {
-        if (webSocket.isOpen) {
-            webSocket.send(data)
-        }
-    }
+    // No isOpen guard: a closed socket must raise (Java-WebSocket does) rather than swallow the frame,
+    // so the trace writer keeps the hit for the next client or the undelivered-hits file.
+    override fun binaryTraceData(data: ByteArray) = webSocket.send(data)
 
     override fun close() = webSocket.close()
 }
 
 /**
- * No-op [TracingCallbacks] used as a placeholder when no client is connected.
+ * Placeholder [TracingCallbacks] while no client is connected: everything handed to it is dropped with a warning.
  */
 class ClientSink: Closeable, TracingCallbacks {
     override fun hello(hello: AgentHelloMessage) {

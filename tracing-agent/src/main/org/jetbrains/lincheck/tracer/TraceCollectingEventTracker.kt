@@ -199,7 +199,11 @@ class TraceCollectingEventTracker(
                 )
             }
             is TraceOutputMode.BinaryNetworkStream -> {
-                strategy = NetworkStreamingTraceCollecting(context, mode.tracingServer)
+                strategy = NetworkStreamingTraceCollecting(
+                    context,
+                    mode.tracingServer,
+                    undeliveredHitsFilePath = mode.undeliveredHitsFilePath,
+                )
             }
             is TraceOutputMode.Null -> {
                 strategy = NullTraceCollecting(context)

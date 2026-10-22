@@ -22,6 +22,7 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FOPTION
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_FORMAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
+import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_UNDELIVERED_HITS_FILE
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_HEARTBEAT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_ENABLE_SSL
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SSL_TRUSTSTORE_PASSWORD
@@ -63,6 +64,7 @@ internal object LiveDebuggerAgent {
         ARGUMENT_FORMAT,
         ARGUMENT_FOPTION,
         ARGUMENT_BREAKPOINTS_FILE,
+        ARGUMENT_UNDELIVERED_HITS_FILE,
         ARGUMENT_BLOCKLIST_FILE,
         ARGUMENT_REDACTION_FILE,
         ARGUMENT_POLICY_SOURCE,
@@ -73,6 +75,7 @@ internal object LiveDebuggerAgent {
         ARGUMENT_SSL_TRUSTSTORE_PATH,
         ARGUMENT_SSL_TRUSTSTORE_PASSWORD,
     )
+
     private val agent = object : TracingAgent() {
         override val modeSystemPropertyName: String = LIVE_DEBUGGER_MODE_PROPERTY
 
@@ -115,11 +118,20 @@ internal object LiveDebuggerAgent {
         }
 
         override fun setupTracingFromApplicationStartIfRequested() {
-            // When a server or heartbeat is enabled, the session lifecycle is driven externally
-            // (start/stop via WebSocket commands), so don't auto-start anything here.
-            // Otherwise (plain static attach with `output=`), start whole-application file-dump
-            // tracing just like the base agent does.
-            if (TraceAgentParameters.serverEnabled || TraceAgentParameters.heartBeatEnabled) return
+            // Heartbeat mode: the control plane drives the session lifecycle over its own connection.
+            if (TraceAgentParameters.heartBeatEnabled) return
+            if (TraceAgentParameters.serverEnabled) {
+                // A server without startup breakpoints leaves starting and stopping tracing to its client;
+                // with them, tracing runs from the first line of `main` and streams to the server.
+                if (TraceAgentParameters.breakpointsFilePath == null || !LiveDebugger.isDebuggingAllowed) return
+                val server = server ?: return
+                Tracer.launchTracingSession(
+                    TracingSession.StartMode.ApplicationStart,
+                    TraceOutputMode.BinaryNetworkStream(server, TraceAgentParameters.undeliveredHitsFilePath),
+                )
+                return
+            }
+            // Plain static attach with `output=`: whole-application file-dump tracing like the base agent.
             super.setupTracingFromApplicationStartIfRequested()
         }
 
@@ -215,6 +227,7 @@ internal object LiveDebuggerAgent {
                         Logger.warn { "Ignoring startNetworkTracing: required redaction policy is unavailable" }
                         return
                     }
+                    // A launch with startup tracepoints is already tracing; the Tracer returns that session.
                     Tracer.launchTracingSession(
                         TracingSession.StartMode.ExternalRequest,
                         TraceOutputMode.BinaryNetworkStream(this),

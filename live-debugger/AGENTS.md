@@ -108,7 +108,8 @@ Arguments are comma-separated `key=value` pairs (parsed by `TraceAgentParameters
 | `liveDebuggerHeartbeat` | `on`/`off` — heartbeat mode for orchestrated environments (default `off`) |
 | `enableSsl` | `on`/`off` — TLS for the control-plane connections (default `off`) |
 | `sslTruststorePath`, `sslTruststorePassword` | CA truststore verifying the control plane's certificate (default: JVM truststore) |
-| `breakpointsFile` | path to an INI file with breakpoints, loaded at startup (`BreakpointsFileParser`) |
+| `breakpointsFile` | path to an INI file with breakpoints, installed in `premain` (`BreakpointsFileParser`); together with `tracingServer=on` the agent traces from the first line of `main` and streams to the first client — hits recorded before it connects are held in a bounded queue |
+| `undeliveredHitsFile` | where the network writer leaves the hits no client received by JVM exit (`writeUndeliveredHitsFile` in `trace`: the stream's frames, length-prefixed), so a process that exits before its client connected still delivers them; without it they are dropped. The writer never holds the JVM's exit to wait for a client |
 | `policySource` | `controlPlane`/`deployment` — data policy from heartbeats or from the two files below (default `controlPlane` with `liveDebuggerHeartbeat=on`, `deployment` otherwise) |
 | `blocklistFile`, `redactionFile` | sensitive-area blocklist and data-redaction INI files (`policySource=deployment` only) |
 | `output`, `format`, `formatOption` | trace output for whole-application tracing without a server |

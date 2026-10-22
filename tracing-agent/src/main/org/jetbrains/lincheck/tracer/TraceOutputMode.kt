@@ -43,8 +43,14 @@ sealed class TraceOutputMode {
      * The trace producer acts as a server,
      * listening for incoming reader connections on an assigned port.
      * Multiple readers can connect and receive the trace data simultaneously.
+     *
+     * @param undeliveredHitsFilePath where trace points no reader received before the trace ended are
+     *   written as a file (see `writeUndeliveredHitsFile`); `null` drops them.
      */
-    class BinaryNetworkStream(val tracingServer: TracingServer) : TraceOutputMode()
+    class BinaryNetworkStream(
+        val tracingServer: TracingServer,
+        val undeliveredHitsFilePath: String? = null,
+    ) : TraceOutputMode()
 
     /**
      * Throws away all recorded trace data.

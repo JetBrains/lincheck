@@ -286,4 +286,7 @@ interface TracingClient: TracingCallbacks, ConnectedAware {
 // Control Plane -> Agent
 interface TracingServer: TracingCommands, ConnectedAware, Closeable {
     val connection: TracingCallbacks
+
+    /** The attached client, or `null` while there is none and [connection] is a sink that drops everything. */
+    val connectedClient: TracingCallbacks?
 }

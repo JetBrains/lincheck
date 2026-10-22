@@ -156,6 +156,9 @@ object Tracer {
         return session
     }
 
+    /** Whether a tracing session is running right now. */
+    fun isTracingActive(): Boolean = lock.withLock { session?.let { it.hasStarted() && !it.isFinished() } == true }
+
     /**
      * Stops the currently running tracing session, if any. Returns the finished session.
      * If there is no running session or a current session was already finished earlier, returns `null`.

@@ -145,6 +145,7 @@ object TraceAgentParameters {
     const val ARGUMENT_FOPTION = "formatOption"
     const val ARGUMENT_PACK = "pack"
     const val ARGUMENT_BREAKPOINTS_FILE = "breakpointsFile"
+    const val ARGUMENT_UNDELIVERED_HITS_FILE = "undeliveredHitsFile"
     const val ARGUMENT_BLOCKLIST_FILE = "blocklistFile"
     const val ARGUMENT_REDACTION_FILE = "redactionFile"
     const val ARGUMENT_POLICY_SOURCE = "policySource"
@@ -173,6 +174,11 @@ object TraceAgentParameters {
     @JvmStatic
     val breakpointsFilePath: String?
         get() = getArg(ARGUMENT_BREAKPOINTS_FILE)
+
+    /** Where the network writer leaves hits no client received before the JVM exited; `null` drops them. */
+    @JvmStatic
+    val undeliveredHitsFilePath: String?
+        get() = getArg(ARGUMENT_UNDELIVERED_HITS_FILE)
 
     @JvmStatic
     val blocklistFilePath: String?
