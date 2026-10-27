@@ -153,15 +153,12 @@ internal class EventStructureStrategy(
 
         private var relAcqInconsistenciesCount: Int = 0
 
-        private var seqCstApproximationInconsistencyCount: Int = 0
-
         private var seqCstCoherenceViolationCount: Int = 0
 
         private var seqCstReplayViolationCount: Int = 0
 
         private val sequentialConsistencyViolationsCount: Int
             get() =
-                seqCstApproximationInconsistencyCount +
                 seqCstCoherenceViolationCount +
                 seqCstReplayViolationCount
 
@@ -187,8 +184,6 @@ internal class EventStructureStrategy(
                     atomicityInconsistenciesCount++
                 is ReleaseAcquireInconsistency ->
                     relAcqInconsistenciesCount++
-                is SequentialConsistencyApproximationInconsistency ->
-                    seqCstApproximationInconsistencyCount++
                 is CoherenceViolation ->
                     seqCstCoherenceViolationCount++
                 is SequentialConsistencyReplayViolation ->
@@ -205,7 +200,6 @@ internal class EventStructureStrategy(
             #Atom.  violations   = $atomicityInconsistenciesCount
             #RelAcq violations   = $relAcqInconsistenciesCount
             #SeqCst violations   = $sequentialConsistencyViolationsCount
-                #approx. phase   = $seqCstApproximationInconsistencyCount
                 #coher.  phase   = $seqCstCoherenceViolationCount
                 #replay  phase   = $seqCstReplayViolationCount
         """.trimIndent()

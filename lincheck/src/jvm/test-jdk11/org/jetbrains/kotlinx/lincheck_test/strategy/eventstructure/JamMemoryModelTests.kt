@@ -1196,8 +1196,10 @@ class JamMemoryModelTests {
 
     @Test
     fun testMpFencesNotTransitive() {
-        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1, 1, 0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.ReleaseAcquire) {
+        // under release-acquire, plain accesses are interpreted as release/acquire,
+        // making the synchronization transitive
+        val forbiddenOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1, 1, 0))
+        litmusTest(assertNever(forbiddenOutcomes), MemoryModel.ReleaseAcquire) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val z = AtomicInteger(0)
@@ -1233,9 +1235,10 @@ class JamMemoryModelTests {
 
     @Test
     fun testMpReleaseWriteAcquireFence() {
+        // under release-acquire, plain accesses are interpreted as release/acquire,
+        // so reading the flag synchronizes with both preceding writes
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(
             Triple(1, 1, 1),
-            Triple(1, 0, 1),
             Triple(0, 1, 1),
             Triple(0, 1, 0),
             Triple(0, 0, 1),
@@ -1272,9 +1275,10 @@ class JamMemoryModelTests {
 
     @Test
     fun testMpReleaseFenceAcquireWrite() {
+        // under release-acquire, plain accesses are interpreted as release/acquire,
+        // so reading the flag synchronizes with both preceding writes
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(
             Triple(1, 1, 1),
-            Triple(1, 1, 0),
             Triple(0, 1, 1),
             Triple(0, 1, 0),
             Triple(0, 0, 1),

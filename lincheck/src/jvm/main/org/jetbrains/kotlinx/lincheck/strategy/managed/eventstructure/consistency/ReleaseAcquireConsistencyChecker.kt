@@ -21,116 +21,111 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.lincheck.util.Computable
-import org.jetbrains.lincheck.util.Relation
-import org.jetbrains.lincheck.util.RelationMatrix
 
-// TODO: what information should we display to help identify the cause of inconsistency:
-//   a cycle in writes-before relation?
+// TODO: include the cycle in the writes-before relation.
 class ReleaseAcquireInconsistency : Inconsistency() {
-    override fun toString(): String {
-        return "Release/Acquire inconsistency detected"
-    }
+    override fun toString(): String = "Release/Acquire inconsistency detected"
 }
 
-class ReleaseAcquireConsistencyChecker : ConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
+/**
+ * Release-Acquire consistency checker.
+ *
+ * Assumes that all memory accesses in [execution] have release/acquire semantics.
+ *
+ * The check is optimistically incremental: once a full check computes the coherence order,
+ * it is extended with the newly added events (see [CoherenceOrder]),
+ * so the following full checks reuse it instead of recomputing the writes-before order.
+ */
+class ReleaseAcquireConsistencyChecker(
+    private var execution: MutableExtendedExecution,
+) : IncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
-    override fun check(execution: MutableExtendedExecution): Inconsistency? {
-        execution.writesBeforeOrderComputable.apply {
-            initialize()
-            compute()
+    private val atomicityChecker = ReadModifyWriteAtomicityChecker(execution)
+    private val lockChecker = LockConsistencyChecker()
+
+    override var state: ConsistencyState = ConsistencyState.Unknown
+        private set
+
+    override fun check(event: AtomicThreadEvent): ConsistencyState {
+        if (state is ConsistencyState.Inconsistent) return state
+
+        // check for atomicity violations first
+        val atomicityState = atomicityChecker.check(event)
+        if (atomicityState is ConsistencyState.Inconsistent) {
+            state = atomicityState
+            return state
         }
-        val writesBeforeOrder = execution.writesBeforeOrderComputable.value
-        return if (!writesBeforeOrder.isConsistent())
-            ReleaseAcquireInconsistency()
-        else null
-    }
 
-}
-
-class WritesBeforeOrder(
-    val execution: Execution<AtomicThreadEvent>,
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-    val rmwChainsStorage: ReadModifyWriteOrder,
-    val happensBefore: Relation<AtomicThreadEvent>,
-) : Relation<AtomicThreadEvent>, Computable {
-
-    private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
-
-    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
-        val location = getLocationForSameLocationWriteAccesses(x, y)
-            ?: return false
-        return relations[location]?.get(x, y) ?: happensBefore(x, y)
-    }
-
-    fun isConsistent(): Boolean =
-        isIrreflexive()
-
-    private fun isIrreflexive(): Boolean =
-        relations.values.all { it.isIrreflexive() }
-
-    override fun initialize() {
-        for (location in memoryAccessEventIndex.locations) {
-            if (memoryAccessEventIndex.isWriteWriteRaceFree(location))
-                continue
-            initialize(location)
+        // check if the new event is a consistent extension of the existing execution;
+        // since this check requires the coherence order, check its availability first
+        val coherenceOrder = execution.coherenceOrder
+        if (!coherenceOrder.computed || !coherenceOrder.consistent) {
+            state = ConsistencyState.Unknown
+            return state
         }
-    }
-
-    private fun initialize(location: MemoryLocation) {
-        val writes = memoryAccessEventIndex.getWrites(location)
-        val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
-        relations[location] = RelationMatrix(writes, enumerator)
-    }
-
-    override fun reset() {
-        relations.clear()
-    }
-
-    override fun compute() {
-        for ((location, relation) in relations) {
-            relation.apply {
-                compute(location)
-                transitiveClosure()
-            }
+        if (!isConsistentExtension(event)) {
+            coherenceOrder.invalidate()
+            state = ConsistencyState.Unknown
+            return state
         }
+
+        state = ConsistencyState.PartlyConsistent
+        return state
     }
 
-    private fun RelationMatrix<AtomicThreadEvent>.compute(location: MemoryLocation) {
-        addHappensBeforeEdges(location)
-        addOverwrittenWriteEdges(location)
-        computeReadModifyWriteChainsClosure(location)
+    /**
+     * Check whether the given [event] is a consistent extension of the existing execution.
+     * Particularly, the check verifies that a new read must read-from the coherence-latest write.
+     */
+    private fun isConsistentExtension(event: AtomicThreadEvent): Boolean {
+        val label = event.label
+        if (label !is ReadAccessLabel || !label.isResponse) return true
+        return execution.coherenceOrder.readsFromLatestWrite(event)
     }
 
-    private fun RelationMatrix<AtomicThreadEvent>.addHappensBeforeEdges(location: MemoryLocation) {
-        val relation = this
-        for (write1 in memoryAccessEventIndex.getWrites(location)) {
-            for (write2 in memoryAccessEventIndex.getWrites(location)) {
-                // TODO: also add `rf^?;hb` edges (it is required for any model where `causalityOrder < happensBefore`)
-                if (happensBefore(write1, write2) && write1 != write2) {
-                    relation[write1, write2] = true
-                }
-            }
+    override fun check(): Inconsistency? {
+        if (state is ConsistencyState.Consistent) return null
+        if (state is ConsistencyState.Inconsistent) return state.inconsistency
+        val inconsistency = findInconsistency()
+        if (inconsistency == null) {
+            state = ConsistencyState.Consistent
+        } else {
+            state = ConsistencyState.Inconsistent(inconsistency)
         }
+        return inconsistency
     }
 
-    private fun RelationMatrix<AtomicThreadEvent>.addOverwrittenWriteEdges(location: MemoryLocation) {
-        val relation = this
-        for (read in memoryAccessEventIndex.getReadResponses(location)) {
-            for (write in memoryAccessEventIndex.getWrites(location)) {
-                // TODO: change this check from `(w,r) \in hb` to `(w,r) \in rf^?;hb`
-                if (happensBefore(write, read) && write != read.readsFrom) {
-                    relation[write, read.readsFrom] = true
-                }
-            }
+    override fun reset(execution: MutableExtendedExecution): ConsistencyState {
+        this.execution = execution
+        atomicityChecker.reset(execution)
+        state = ConsistencyState.Unknown
+        return state
+    }
+
+    private fun findInconsistency(): Inconsistency? {
+        // First, check atomicity and locks.
+        atomicityChecker.check()?.let { return it }
+        lockChecker.check(execution)?.let { return it }
+
+        // A coherence order that is still valid after the incremental extensions witnesses consistency.
+        val coherenceOrder = execution.coherenceOrder
+        if (coherenceOrder.computed && coherenceOrder.consistent) {
+            return null
         }
-    }
 
-    private fun RelationMatrix<AtomicThreadEvent>.computeReadModifyWriteChainsClosure(location: MemoryLocation) {
-        this.equivalenceClosure { event ->
-            rmwChainsStorage[location, event]?.chain
+        // The execution is release-acquire consistent iff the writes-before relation is acyclic:
+        // any linearization of it, keeping read-modify-write chains contiguous, is a valid coherence order.
+        // Unlike sequential consistency, there is no total execution order to replay,
+        // since release-acquire does not guarantee a single total order with "read-last-write" semantics.
+        execution.writesBeforeOrder.compute()
+        if (!execution.writesBeforeOrder.consistent) {
+            return ReleaseAcquireInconsistency()
         }
-    }
 
+        // Compute the coherence order, to be extended incrementally with the newly added events.
+        coherenceOrder.compute()
+        check(coherenceOrder.consistent)
+
+        return null
+    }
 }

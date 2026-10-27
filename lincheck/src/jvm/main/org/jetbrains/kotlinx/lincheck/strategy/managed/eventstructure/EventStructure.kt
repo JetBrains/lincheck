@@ -248,7 +248,6 @@ internal class EventStructure(
         _execution.checkConsistency()
 
         // set the replayer state
-        // TODO: hack, probably need to change this to a computable
         // We replay the events in the order that we added them
         val replayOrdering = _execution.sortedBy { it.id }
         replayer = Replayer(replayOrdering)
@@ -1067,12 +1066,14 @@ internal class EventStructure(
 
     fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, value: ValueID,
                       readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null): AtomicThreadEvent {
+        val labelType =
+            if (readModifyWriteDescriptor != null) LabelType.ReadModifyWriteAccess else LabelType.WriteAccess
         val label = WriteAccessLabel(
             location = location,
             writeValue = value, // TODO: change API of other methods to also take ValueID
             readModifyWriteDescriptor = readModifyWriteDescriptor,
             codeLocation = codeLocation,
-            memoryOrdering = memoryOrderOverride(memoryOrder)
+            memoryOrdering = memoryOrderOverride(memoryOrder, labelType)
         )
         return addSendEvent(iThread, label)
     }
@@ -1081,13 +1082,15 @@ internal class EventStructure(
                        readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null): AtomicThreadEvent {
         // we create a read-request event with an unknown (null) value,
         // value will be filled later in the read-response event
+        val labelType =
+            if (readModifyWriteDescriptor != null) LabelType.ReadModifyWriteAccess else LabelType.ReadAccess
         val label = ReadAccessLabel(
             kind = LabelKind.Request,
             location = location,
             readValue = NULL_OBJECT_NUMBER.toLong(),
             readModifyWriteDescriptor = readModifyWriteDescriptor,
             codeLocation = codeLocation,
-            memoryOrdering = memoryOrderOverride(memoryOrder)
+            memoryOrdering = memoryOrderOverride(memoryOrder, labelType)
         )
         return addRequestEvent(iThread, label)
     }
@@ -1311,13 +1314,23 @@ internal class EventStructure(
 
     // NOTE: In the case of sequential consistency, to make sure that
     // happensBeforeOrder === causalityOrder, we change the memory ordering of
-    // reads to VOLATILE, effectively treating every read/write as sequentially-consistent (aka `volatile`)
-    private fun memoryOrderOverride(memoryOrder: MemoryOrdering) : MemoryOrdering {
-        if (memoryModel == MemoryModel.SequentialConsistency) {
-            return MemoryOrdering.VOLATILE
+    // reads to VOLATILE, effectively treating every read/write as sequentially-consistent (aka `volatile`).
+    // In the case of release-acquire, we change the memory ordering of reads to ACQUIRE and writes to RELEASE,
+    // treating every read/write as release-acquire, as `ReleaseAcquireConsistencyChecker` assumes.
+    // Both parts of a read-modify-write must have the same memory ordering (see `ReadModifyWriteAccessLabel`),
+    // so these become VOLATILE, the only memory ordering that is both acquire and release;
+    // the read and write parts of a read-modify-write are passed with the `ReadModifyWriteAccess` label type.
+    private fun memoryOrderOverride(memoryOrder: MemoryOrdering, labelType: LabelType): MemoryOrdering =
+        when (memoryModel) {
+            MemoryModel.SequentialConsistency -> MemoryOrdering.VOLATILE
+            MemoryModel.ReleaseAcquire -> when (labelType) {
+                LabelType.ReadAccess -> MemoryOrdering.ACQUIRE
+                LabelType.WriteAccess -> MemoryOrdering.RELEASE
+                LabelType.ReadModifyWriteAccess -> MemoryOrdering.VOLATILE
+                else -> unreachable("Unexpected memory access label type: $labelType")
+            }
+            MemoryModel.JAM21 -> memoryOrder
         }
-        return memoryOrder
-    }
 
     fun addFenceEvent(iThread: Int, memoryOrder: MemoryOrdering) {
         val label = FenceLabel(memoryOrder)

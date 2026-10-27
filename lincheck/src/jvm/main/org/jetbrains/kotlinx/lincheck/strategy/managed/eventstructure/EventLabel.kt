@@ -703,7 +703,7 @@ fun EventLabel.isInitializingWriteAccess(): Boolean =
 
 fun EventLabel.isRelease(): Boolean =
     (this is WriteAccessLabel && (
-            this.memoryOrdering == MemoryOrdering.RELEASE || this.memoryOrdering == MemoryOrdering.VOLATILE
+        this.memoryOrdering == MemoryOrdering.RELEASE || this.memoryOrdering == MemoryOrdering.VOLATILE
     )) ||
     (this is ThreadForkLabel) ||
     (this is ThreadFinishLabel) ||
@@ -713,7 +713,7 @@ fun EventLabel.isRelease(): Boolean =
 
 fun EventLabel.isAcquire(): Boolean =
     (this is ReadAccessLabel && (
-            this.memoryOrdering == MemoryOrdering.ACQUIRE || this.memoryOrdering == MemoryOrdering.VOLATILE
+        this.memoryOrdering == MemoryOrdering.ACQUIRE || this.memoryOrdering == MemoryOrdering.VOLATILE
     )) ||
     (this is ThreadJoinLabel) ||
     (this is ThreadStartLabel) ||
