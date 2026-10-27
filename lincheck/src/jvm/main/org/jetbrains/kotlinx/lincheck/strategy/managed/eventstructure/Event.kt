@@ -472,8 +472,6 @@ val programOrder = Relation<ThreadEvent> { x, y ->
     else (x == y.predNth(y.threadPosition - x.threadPosition))
 }
 
-val initRelation = Relation<AtomicThreadEvent> { x, _ -> x.label is InitializationLabel }
-
 val sameLocation = Relation<AtomicThreadEvent> { x, y -> getLocationForSameLocationAccesses(x,y) != null }
 
 
@@ -485,7 +483,7 @@ val happensBeforeOrder = Relation<ThreadEvent> { x, y ->
     (x != y) && y.happensBeforeClock.observes(x.threadId, x.threadPosition)
 }
 
-val happensBeforeSameLocationOrder = (happensBeforeOrder intersection sameLocation) union initRelation
+val happensBeforeSameLocationOrder = happensBeforeOrder intersection sameLocation
 
 val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }
 

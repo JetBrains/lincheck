@@ -705,6 +705,7 @@ fun EventLabel.isRelease(): Boolean =
     (this is WriteAccessLabel && (
         this.memoryOrdering == MemoryOrdering.RELEASE || this.memoryOrdering == MemoryOrdering.VOLATILE
     )) ||
+    (this is InitializationLabel) ||
     (this is ThreadForkLabel) ||
     (this is ThreadFinishLabel) ||
     (this is UnlockLabel) ||

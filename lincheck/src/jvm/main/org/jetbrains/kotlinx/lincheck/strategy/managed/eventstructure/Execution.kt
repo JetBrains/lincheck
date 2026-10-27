@@ -146,6 +146,12 @@ fun<E : ThreadEvent> Execution<E>.nextEvent(event: E): E? =
         events.getOrNull(event.threadPosition + 1)
     }
 
+fun <E : ThreadEvent> Execution<E>.previousEvent(event: E): E? =
+    get(event.threadId)?.let { events ->
+        require(events[event.threadPosition] == event)
+        events.getOrNull(event.threadPosition - 1)
+    }
+
 fun<E: ThreadEvent> Execution<E>.getExclusiveWriteForReadResponse(exclusiveReadResponse: E): ThreadEvent? {
     val label = exclusiveReadResponse.label
     check(label is ReadAccessLabel)

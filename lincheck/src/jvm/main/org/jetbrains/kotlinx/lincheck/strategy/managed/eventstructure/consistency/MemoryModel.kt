@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 enum class MemoryModel {
     SequentialConsistency,
     ReleaseAcquire,
-    JAM21,
+    RelaxedJava,
 }
 
 fun String.toMemoryModel(): MemoryModel? = when (this) {
@@ -21,8 +21,8 @@ fun String.toMemoryModel(): MemoryModel? = when (this) {
     "SequentialConsistency" -> MemoryModel.SequentialConsistency
     "RA" -> MemoryModel.ReleaseAcquire
     "ReleaseAcquire" -> MemoryModel.ReleaseAcquire
-    "JAM" -> MemoryModel.JAM21
-    "JAM21" -> MemoryModel.JAM21
-    "Java" -> MemoryModel.JAM21
+    "JMM" -> MemoryModel.RelaxedJava
+    "Java" -> MemoryModel.RelaxedJava
+    "RelaxedJava" -> MemoryModel.RelaxedJava
     else -> null
 }

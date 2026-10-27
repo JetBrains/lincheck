@@ -39,9 +39,10 @@ typealias CoherenceList = List<AtomicThreadEvent>
  *
  * Once computed, the coherence order is extended incrementally with the newly added writes:
  * since a new write is maximal in happens-before, it is put at the end of the coherence order.
- * The write-part of a read-modify-write is thus put right after the write it reads-from.
- * The consumers of the coherence order might check that the newly added reads
- * read-from the coherence-latest write (see [readsFromLatestWrite]), and invalidate it otherwise.
+ * The write-part of a read-modify-write is thus put right after the write it reads-from,
+ * provided that this write is coherence-latest.
+ * The consumers of the coherence order might check that its extension with the newly added events
+ * is consistent (see [isConsistentExtension]), and invalidate it otherwise.
  *
  * @param execution the execution whose writes are ordered;
  *   under sequential consistency, each candidate coherence order is checked by building an [ExecutionOrder] over it,
@@ -128,6 +129,9 @@ class CoherenceOrder(
                 // satisfies sequential consistency constraints:
                 // if so, save it and exit the loop, if not, try the next one
                 if (!checkSequentialConsistency(coherence)) continue
+            } else if (memoryModel == MemoryModel.RelaxedJava) {
+                // under the JMM, check that generated coherence order satisfies the volatile PSC constraint:
+                if (!checkVolatileAccessesOrder(coherence)) continue
             }
             this.map += coherence
             computed = true
@@ -151,7 +155,6 @@ class CoherenceOrder(
 
         val executionOrder = ExecutionOrder(execution,
             approximation = extendedCoherence union coherenceCausalOrder,
-            coherenceOrder = this,
         )
             .apply { compute() }
         if (!executionOrder.consistent)
@@ -159,6 +162,23 @@ class CoherenceOrder(
         this.execution.extendedCoherence.copyFrom(extendedCoherence)
         this.execution.executionOrder.copyFrom(executionOrder)
         return true
+    }
+
+    /**
+     * Checks the volatile PSC order for a candidate JMM coherence order.
+     */
+    private fun checkVolatileAccessesOrder(coherence: Map<MemoryLocation, Entry>): Boolean {
+        val volatileEvents = execution.filter { it.isVolatileAccess() }
+        if (volatileEvents.isEmpty()) return true
+        val enumerator = buildEnumerator(volatileEvents)
+        val scRelation = SequentialConsistencyMixedAccessRelation(
+            execution,
+            coherenceOrder = { x, y -> relates(coherence, x, y) },
+        )
+        // The relation is not transitively closed, but this is not required:
+        // a topological sorting of the relation also respects its transitive closure,
+        // and it does not exist (`topologicalSorting` returns null) iff the relation has a cycle.
+        return topologicalSorting(scRelation.toGraph(volatileEvents, enumerator)) != null
     }
 
     /**
@@ -171,14 +191,30 @@ class CoherenceOrder(
         map[location]?.coherence?.last() ?: memoryAccessEventIndex.getLastWrite(location)
 
     /**
-     * Checks that the [read] response reads-from the coherence-latest write to its location.
-     * Requires the coherence order to be computed and consistent.
+     * Checks whether the extension of the coherence order with the newly added [event] is consistent.
+     *
+     * For a read response, checks that it reads-from the coherence-latest write to its location.
+     * For the write-part of a read-modify-write (RMW), already appended to the coherence order,
+     * checks that the read-part of RMW reads-from the write preceding it.
+     * The read-part itself might not have been checked against this coherence order,
+     * since the order might have been computed after the read-part was added.
+     * For other events, returns true.
+     *
+     * Requires the coherence order to be computed and consistent,
+     * and the [event] to be the last added one.
      */
-    fun readsFromLatestWrite(read: AtomicThreadEvent): Boolean {
+    fun isConsistentExtension(event: AtomicThreadEvent): Boolean {
         check(computed && consistent)
-        val label = read.label
-        require(label is ReadAccessLabel && label.isResponse)
-        return read.readsFrom == getLatestWrite(label.location)
+        val label = event.label
+        return when {
+            label is ReadAccessLabel && label.isResponse ->
+                event.readsFrom == getLatestWrite(label.location)
+            label is WriteAccessLabel && label.isExclusive -> {
+                val coherence = this[label.location]
+                event.exclusiveReadPart.readsFrom == coherence[coherence.lastIndex - 1]
+            }
+            else -> true
+        }
     }
 
     private fun addWrite(write: AtomicThreadEvent, location: MemoryLocation) {

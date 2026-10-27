@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.lincheck.util.Logger
 
 // TODO: include the cycle in the writes-before relation.
 class ReleaseAcquireInconsistency : Inconsistency() {
@@ -42,6 +43,7 @@ class ReleaseAcquireConsistencyChecker(
 
     private val atomicityChecker = ReadModifyWriteAtomicityChecker(execution)
     private val lockChecker = LockConsistencyChecker()
+    private val coherenceChecker = CoherenceChecker()
 
     override var state: ConsistencyState = ConsistencyState.Unknown
         private set
@@ -63,7 +65,7 @@ class ReleaseAcquireConsistencyChecker(
             state = ConsistencyState.Unknown
             return state
         }
-        if (!isConsistentExtension(event)) {
+        if (!coherenceOrder.isConsistentExtension(event)) {
             coherenceOrder.invalidate()
             state = ConsistencyState.Unknown
             return state
@@ -71,16 +73,6 @@ class ReleaseAcquireConsistencyChecker(
 
         state = ConsistencyState.PartlyConsistent
         return state
-    }
-
-    /**
-     * Check whether the given [event] is a consistent extension of the existing execution.
-     * Particularly, the check verifies that a new read must read-from the coherence-latest write.
-     */
-    private fun isConsistentExtension(event: AtomicThreadEvent): Boolean {
-        val label = event.label
-        if (label !is ReadAccessLabel || !label.isResponse) return true
-        return execution.coherenceOrder.readsFromLatestWrite(event)
     }
 
     override fun check(): Inconsistency? {
@@ -123,8 +115,13 @@ class ReleaseAcquireConsistencyChecker(
         }
 
         // Compute the coherence order, to be extended incrementally with the newly added events.
-        coherenceOrder.compute()
-        check(coherenceOrder.consistent)
+        coherenceOrder.invalidate() // to trigger a new coherence order search
+        coherenceChecker.check(execution)?.let { inconsistency ->
+            // Under release-acquire, the search always succeeds once the writes-before order is consistent,
+            // so a failure indicates a bug; withdraw the execution as inconsistent instead of failing the test.
+            Logger.error { "Release-acquire coherence order search failed despite consistent writes-before order" }
+            return inconsistency
+        }
 
         return null
     }

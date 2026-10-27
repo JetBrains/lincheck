@@ -20,10 +20,10 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.lincheck.util.CachedRelation
 import org.jetbrains.lincheck.util.Relation
-import org.jetbrains.lincheck.util.implies
 import org.jetbrains.lincheck.util.union
 
 
@@ -44,21 +44,20 @@ import org.jetbrains.lincheck.util.union
  * When added to the end of the execution order list, the event is checked to be
  * consistent with the previous events, it must be:
  * - for a response event - a valid response to the previous event;
- * - for a read-response event, additionally, the reads-from should be from the coherence-latest write to its location
- *   (if the coherence order is computed);
+ * - for a read-response event, additionally, the reads-from should be from the latest write to its location
+ *   in this order;
  * - for an exclusive write event - a write-part of an atomic update.
+ * To check the reads, the order maintains its own view of the memory store, mapping each location to its latest write.
  *
- * Consistency checkers re-validate incrementally extended candidates by replay before accepting the execution.
+ * Consistency checkers re-validate incrementally extended candidates by replay before accepting the execution,
+ * since the replay additionally checks the monitor operations.
  *
  * If the event is not a consistent extension, the order is marked inconsistent,
  * and the consistency checker is responsible for invalidating it.
- *
- * @param coherenceOrder the coherence order induced by this order, extended along with it.
  */
 class ExecutionOrder(
     val execution: Execution<AtomicThreadEvent>,
     val approximation: Relation<AtomicThreadEvent>,
-    val coherenceOrder: CoherenceOrder,
 ) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
 
     var computed = false
@@ -71,6 +70,8 @@ class ExecutionOrder(
 
     val ordering: List<AtomicThreadEvent>
         get() = _ordering
+
+    private val latestWrites = mutableMapOf<MemoryLocation, AtomicThreadEvent>()
 
     private val constraints = Relation<AtomicThreadEvent> { x, y ->
         when {
@@ -90,11 +91,19 @@ class ExecutionOrder(
 
     override fun onAdd(event: AtomicThreadEvent) {
         if (!computed || !consistent) return
+        add(event)
+    }
+
+    private fun add(event: AtomicThreadEvent) {
         if (!isConsistentExtension(event)) {
             consistent = false
             return
         }
         _ordering.add(event)
+        val label = event.label
+        if (label is WriteAccessLabel) {
+            latestWrites[label.location] = event
+        }
     }
 
     override fun onReset(execution: Execution<AtomicThreadEvent>) {
@@ -112,8 +121,7 @@ class ExecutionOrder(
         val label = event.label
         return when {
             label is ReadAccessLabel && label.isResponse ->
-                last != null && event.isValidResponse(last) &&
-                coherenceOrder.let { (it.computed && it.consistent) implies { it.readsFromLatestWrite(event) }}
+                last != null && event.isValidResponse(last) && readsFromLatestWrite(event)
 
             label is WriteAccessLabel && label.isExclusive ->
                 last != null && event.isWritePartOfAtomicUpdate(last)
@@ -122,9 +130,18 @@ class ExecutionOrder(
         }
     }
 
+    private fun readsFromLatestWrite(read: AtomicThreadEvent): Boolean {
+        val location = (read.label as ReadAccessLabel).location
+        // before any write, the latest write is the initializing one:
+        // the object allocation or the global initialization event
+        return read.readsFrom == (latestWrites[location] ?: read.allocation)
+    }
+
     internal fun copyFrom(other: ExecutionOrder) {
         _ordering.clear()
         _ordering.addAll(other.ordering)
+        latestWrites.clear()
+        latestWrites.putAll(other.latestWrites)
         consistent = other.consistent
         computed = true
     }
@@ -148,13 +165,18 @@ class ExecutionOrder(
             consistent = false
             return
         }
-        this._ordering.addAll(ordering.flatMap { it.events })
+        // the extension checks also build the memory view of the order
+        for (event in ordering.flatMap { it.events }) {
+            add(event)
+            if (!consistent) break
+        }
     }
 
     override fun invalidate() {
         computed = false
         consistent = true
         _ordering.clear()
+        latestWrites.clear()
     }
 
 }

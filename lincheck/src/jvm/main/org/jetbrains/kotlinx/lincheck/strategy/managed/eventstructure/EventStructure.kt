@@ -720,7 +720,7 @@ internal class EventStructure(
             }
             MemoryModel.ReleaseAcquire ->
                 candidates
-            MemoryModel.JAM21 ->
+            MemoryModel.RelaxedJava ->
                 candidates
         }
     }
@@ -1329,7 +1329,7 @@ internal class EventStructure(
                 LabelType.ReadModifyWriteAccess -> MemoryOrdering.VOLATILE
                 else -> unreachable("Unexpected memory access label type: $labelType")
             }
-            MemoryModel.JAM21 -> memoryOrder
+            MemoryModel.RelaxedJava -> memoryOrder
         }
 
     fun addFenceEvent(iThread: Int, memoryOrder: MemoryOrdering) {

@@ -942,7 +942,7 @@ class JamMemoryModelTests {
         }
     }
 
-    // NOTE: this test is interesting because C11 forbids this behavior but JAM allows it
+    // NOTE: this test is interesting because C11 forbids this behavior but JMM allows it
     @Ignore
     @Test
     fun testMpRelacqRs() {

@@ -141,7 +141,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
             return when (memoryModel) {
                 MemoryModel.SequentialConsistency -> happensBeforeOrder
                 MemoryModel.ReleaseAcquire -> happensBeforeSameLocationOrder
-                MemoryModel.JAM21 -> TODO()
+                MemoryModel.RelaxedJava -> happensBeforeSameLocationOrder
             }
         }
 
@@ -152,6 +152,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
 
     override val writesBeforeOrder = WritesBeforeOrder(
         memoryAccessEventIndex, readModifyWriteOrder, happensBeforeOrder,
+        memoryModel,
     )
 
     override val extendedCoherence = ExtendedCoherenceOrder(
@@ -174,21 +175,20 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     override val executionOrder = ExecutionOrder(
         execution,
         happensBeforeOrder union extendedCoherence,
-        coherenceOrder,
     )
 
     private val consistencyChecker = when (memoryModel) {
         MemoryModel.SequentialConsistency -> SequentialConsistencyChecker(this)
         MemoryModel.ReleaseAcquire -> ReleaseAcquireConsistencyChecker(this)
-        MemoryModel.JAM21 -> TODO()
+        MemoryModel.RelaxedJava -> JmmConsistencyChecker(this)
     }
 
     private val trackers: List<ExtendedExecutionTracker> = listOfNotNull(
         memoryAccessEventIndex.incrementalTracker(),
         readModifyWriteOrder,
         writesBeforeOrder,
-        coherenceOrder, // should be updated before the execution order and the consistency checker,
-                        // which check the reads against the coherence order
+        coherenceOrder, // should be updated before the consistency checker,
+                        // which checks the new events against the coherence order
         extendedCoherence,
         sequentialConsistencyApproximationOrder,
         executionOrder
