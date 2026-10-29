@@ -140,6 +140,26 @@ fun TracingCallbacks.handleMessage(message: String?) {
                 }
                 breakpointBlocked(breakpointData, dataParts[1], timestamp)
             }
+            TracingCallbacks.BREAKPOINT_EXPRESSION_EVALUATION_FAILED -> {
+                // Layout: slot ; breakpointData ; disabled ; failureKind ; message
+                val dataParts = data.split(";", limit = 5)
+                if (dataParts.size < 5) {
+                    Logger.warn { "Malformed breakpointExpressionEvaluationFailed notification: $data" }
+                    return
+                }
+                val slot = runCatching { BreakpointExpressionSlot.valueOf(dataParts[0]) }.getOrNull()
+                val breakpointData = LiveDebuggerNotification.BreakpointData.parseFromString(dataParts[1])
+                val disabled = when (dataParts[2]) {
+                    "true" -> true
+                    "false" -> false
+                    else -> null
+                }
+                if (slot == null || breakpointData == null || disabled == null) {
+                    Logger.warn { "Failed to parse breakpointExpressionEvaluationFailed notification: $data" }
+                    return
+                }
+                breakpointExpressionEvaluationFailed(breakpointData, slot, dataParts[3], dataParts[4], disabled, timestamp)
+            }
             TracingCallbacks.BREAKPOINT_EXPRESSION_COMPILATION_FAILED -> {
                 val dataParts = data.split(";", limit = 2)
                 if (dataParts.size < 2) {

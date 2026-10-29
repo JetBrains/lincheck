@@ -429,6 +429,67 @@ internal object LiveDebugger {
         }
     }
 
+    /** Guard ensuring the breakpoint-expression-failure callback is registered exactly once. */
+    private val breakpointExpressionFailureCallbackInstalled = AtomicBoolean(false)
+
+    /**
+     * Registers the callback that fires when a breakpoint's condition or watch throws on a hit.
+     * [BreakpointStorage] already de-duplicates the events per (breakpoint, slot, failure kind).
+     *
+     * Must be called before tracing starts so no failure event can fire unobserved.
+     */
+    fun ensureBreakpointExpressionFailureCallbackInstalled() {
+        if (!breakpointExpressionFailureCallbackInstalled.compareAndSet(false, true)) return
+
+        BreakpointStorage.setOnBreakpointExpressionEvaluationFailed { id, userData, slot, failureKind, disabled ->
+            val expressionSlot =
+                if (slot == BreakpointStorage.EXPRESSION_SLOT_CONDITION) BreakpointExpressionSlot.Condition
+                else BreakpointExpressionSlot.Watch
+            onBreakpointExpressionEvaluationFailed(id, userData as SnapshotBreakpoint, expressionSlot, failureKind, disabled)
+        }
+        Logger.debug { "Breakpoint expression failure callback installed" }
+    }
+
+    /**
+     * Called on the hitting thread when a breakpoint's condition or watch threw.
+     * Sends a notification; when [disabled], first removes the breakpoint and retransforms the class.
+     */
+    private fun onBreakpointExpressionEvaluationFailed(
+        id: BreakpointId,
+        breakpoint: SnapshotBreakpoint,
+        slot: BreakpointExpressionSlot,
+        failureKind: String,
+        disabled: Boolean,
+    ) {
+        val timestamp = System.currentTimeMillis()
+        Logger.info {
+            with (breakpoint) {
+                "$slot expression of breakpoint in $className at $fileName:$lineNumber threw $failureKind" +
+                    if (disabled) "; disabling the breakpoint" else ""
+            }
+        }
+
+        notificationsExecutor.submit {
+            if (disabled) disableBreakpoint(id)
+
+            val notification = LiveDebuggerNotification.BreakpointExpressionEvaluationFailed(
+                timestamp = timestamp,
+                breakpointData = LiveDebuggerNotification.BreakpointData(
+                    breakpointUuid = breakpoint.uuid,
+                    className = breakpoint.className,
+                    fileName = breakpoint.fileName,
+                    lineNumber = breakpoint.lineNumber,
+                ),
+                slot = slot,
+                failureKind = failureKind,
+                // Never rendered from the thrown object: its getMessage() and toString() are application code.
+                message = "",
+                disabled = disabled,
+            )
+            notificationListener.get()?.invoke(notification)
+        }
+    }
+
     /** Guard ensuring the breakpoint failure callbacks are registered exactly once. */
     private val breakpointFailureCallbacksInstalled = AtomicBoolean(false)
 

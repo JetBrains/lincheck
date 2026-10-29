@@ -298,7 +298,7 @@ internal class SnapshotBreakpointTransformer(
 
     /**
      * Wraps the condition call in a try-catch block.
-     * If the condition evaluation throws an exception, it returns `false`.
+     * If the condition evaluation throws an exception, it reports the failure and returns `false`.
      * This ensures that breakpoint conditions don't crash the application.
      */
     private fun GeneratorAdapter.injectConditionCallWithTryCatch(breakpointId: BreakpointId, breakpoint: SnapshotBreakpoint) {
@@ -313,11 +313,13 @@ internal class SnapshotBreakpointTransformer(
             tryBlock = {
                 injectConditionCall(breakpointId, breakpoint)
                 storeLocal(resultLocal)
+                push(breakpointId)
+                invokeStatic(Injections::onBreakpointConditionSucceeded)
             },
             exceptionType = Type.getType(Throwable::class.java),
             catchBlock = {
-                // Exception is on the stack, just pop it and leave resultLocal as false
-                pop()
+                // Exception is on the stack: report it and leave resultLocal as false
+                injectExpressionFailureReport(breakpointId, BreakpointStorage.EXPRESSION_SLOT_CONDITION)
             }
         )
 
@@ -329,7 +331,7 @@ internal class SnapshotBreakpointTransformer(
     /**
      * Evaluates watches under the breakpoint-condition guard and leaves
      * an Object[] with expression values on the stack. On evaluation failure,
-     * leaves an empty Object[] so the application keeps running.
+     * reports it and leaves an empty Object[] so the application keeps running.
      */
     private fun GeneratorAdapter.injectWatchValuesWithTryCatch(
         threadDescriptorLocal: Int,
@@ -355,12 +357,22 @@ internal class SnapshotBreakpointTransformer(
             },
             exceptionType = Type.getType(Throwable::class.java),
             catchBlock = {
-                pop()
+                // Report while still inside the condition guard, so the reporting code cannot hit a breakpoint.
+                injectExpressionFailureReport(breakpointId, BreakpointStorage.EXPRESSION_SLOT_WATCH)
                 leaveBreakpointCondition(threadDescriptorLocal)
             }
         )
 
         loadLocal(resultLocal)
+    }
+
+    /** Consumes the throwable on top of the stack, passing it to [Injections.onBreakpointExpressionEvaluationFailed]. */
+    private fun GeneratorAdapter.injectExpressionFailureReport(breakpointId: BreakpointId, slot: Int) {
+        // STACK: throwable
+        push(breakpointId)
+        push(slot)
+        invokeStatic(Injections::onBreakpointExpressionEvaluationFailed)
+        // STACK: <empty>
     }
 
     private fun GeneratorAdapter.pushEmptyObjectArray() {

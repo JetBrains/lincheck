@@ -89,6 +89,21 @@ open class LiveDebuggerNotification(timestamp: Long) : TracingNotification(times
     ) : LiveDebuggerNotification(timestamp)
 
     /**
+     * Notification that a breakpoint expression ([slot]) threw while being evaluated on a hit.
+     * [failureKind] names the exception type; [message] is an optional detail, empty when not rendered safely.
+     * [disabled] is `true` when the agent disabled the breakpoint because its condition never succeeded;
+     * see [TracingCallbacks.breakpointExpressionEvaluationFailed].
+     */
+    data class BreakpointExpressionEvaluationFailed(
+        val breakpointData: BreakpointData,
+        val slot: BreakpointExpressionSlot,
+        val failureKind: String,
+        val message: String,
+        val disabled: Boolean,
+        override val timestamp: Long = System.currentTimeMillis(),
+    ) : LiveDebuggerNotification(timestamp)
+
+    /**
      * Notification that a hit was suppressed by dynamic-extent enforcement: the call stack passed
      * through the blocked [blockedFrameClass]. Unlike [BreakpointBlocked], the breakpoint stays
      * valid — it still fires on call paths that avoid blocked areas.

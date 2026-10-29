@@ -352,6 +352,34 @@ public class Injections {
     }
 
     /**
+     * Records that the condition of the given breakpoint evaluated without throwing.
+     * Delegates to {@link BreakpointStorage#markConditionSucceeded}; never throws into the application.
+     *
+     * @param breakpointId the unique integer id of the breakpoint
+     */
+    public static void onBreakpointConditionSucceeded(int breakpointId) {
+        try {
+            BreakpointStorage.markConditionSucceeded(breakpointId);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
+     * Reports that a breakpoint condition or watch threw on a hit.
+     * Delegates to {@link BreakpointStorage#notifyBreakpointExpressionEvaluationFailed}; never throws into the application.
+     *
+     * @param failure      the throwable raised by the expression
+     * @param breakpointId the unique integer id of the breakpoint
+     * @param slot         {@link BreakpointStorage#EXPRESSION_SLOT_CONDITION} or {@link BreakpointStorage#EXPRESSION_SLOT_WATCH}
+     */
+    public static void onBreakpointExpressionEvaluationFailed(Throwable failure, int breakpointId, int slot) {
+        try {
+            BreakpointStorage.notifyBreakpointExpressionEvaluationFailed(breakpointId, slot, failure);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /**
      * Registers a thread for event tracking, creating a new thread descriptor if one does not already exist.
      *
      * @param eventTracker the event tracker to associate with the thread.

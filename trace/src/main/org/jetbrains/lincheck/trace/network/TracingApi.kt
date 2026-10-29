@@ -210,6 +210,27 @@ interface TracingCallbacks : Closeable {
     ) {}
 
     /**
+     * A condition or watch expression threw while being evaluated on a hit.
+     *
+     * Sent once per (breakpoint, [slot], [failureKind]); a failed condition counts as `false` for that hit
+     * and the breakpoint stays armed.
+     * [disabled] is `true` when the circuit breaker tripped:
+     * the condition failed on every hit up to the agent's limit without ever succeeding,
+     * so the agent removed the breakpoint.
+     * [failureKind] is the exception type name; [message] is an optional human-readable detail,
+     * empty when the agent cannot render one safely.
+     * Default no-op so peers that neither send nor consume it keep working unchanged.
+     */
+    fun breakpointExpressionEvaluationFailed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        slot: BreakpointExpressionSlot,
+        failureKind: String,
+        message: String,
+        disabled: Boolean,
+        timestamp: Long
+    ) {}
+
+    /**
      * A hit was suppressed by dynamic-extent enforcement: the call stack passed through the blocked
      * [blockedFrameClass]. The breakpoint itself stays valid — it still fires on clean call paths.
      */
@@ -227,6 +248,7 @@ interface TracingCallbacks : Closeable {
         internal const val HIT_LIMIT_REACHED = "hitLimitReached"
         internal const val BREAKPOINT_EXPRESSION_UNSAFE = "breakpointExpressionUnsafe"
         internal const val BREAKPOINT_BLOCKED = "breakpointBlocked"
+        internal const val BREAKPOINT_EXPRESSION_EVALUATION_FAILED = "breakpointExpressionEvaluationFailed"
         internal const val BREAKPOINT_EXPRESSION_COMPILATION_FAILED = "breakpointExpressionCompilationFailed"
         internal const val INVALID_BREAKPOINT_LOCATION = "invalidBreakpointLocation"
         internal const val BREAKPOINT_HIT_SUPPRESSED = "breakpointHitSuppressed"

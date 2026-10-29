@@ -94,6 +94,20 @@ class WebSocketTracingNotifier(val webSocket: WebSocket) : TracingCallbacks {
         webSocket.send("${TracingCallbacks.BREAKPOINT_BLOCKED}:$timestamp:$payload")
     }
 
+    override fun breakpointExpressionEvaluationFailed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        slot: BreakpointExpressionSlot,
+        failureKind: String,
+        message: String,
+        disabled: Boolean,
+        timestamp: Long
+    ) {
+        // Layout: slot ; breakpointData ; disabled ; failureKind ; message.
+        // Only the trailing message may contain ';'.
+        val payload = "${slot.name};$breakpointData;$disabled;${failureKind.replace(';', '_')};$message"
+        webSocket.send("${TracingCallbacks.BREAKPOINT_EXPRESSION_EVALUATION_FAILED}:$timestamp:$payload")
+    }
+
     override fun breakpointExpressionCompilationFailed(
         breakpointData: LiveDebuggerNotification.BreakpointData,
         compilationFailureMessage: String,
@@ -155,6 +169,16 @@ class ClientSink: Closeable, TracingCallbacks {
         timestamp: Long,
     ) {
         Logger.warn { "breakpointBlocked dropped: no client connected (breakpoint=$breakpointData, reason=$reason)" }
+    }
+    override fun breakpointExpressionEvaluationFailed(
+        breakpointData: LiveDebuggerNotification.BreakpointData,
+        slot: BreakpointExpressionSlot,
+        failureKind: String,
+        message: String,
+        disabled: Boolean,
+        timestamp: Long,
+    ) {
+        Logger.warn { "breakpointExpressionEvaluationFailed dropped: no client connected (breakpoint=$breakpointData, kind=$slot, failure=$failureKind, disabled=$disabled)" }
     }
     override fun breakpointExpressionCompilationFailed(
         breakpointData: LiveDebuggerNotification.BreakpointData,

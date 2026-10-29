@@ -10,6 +10,7 @@
 
 package sun.nio.ch.lincheck;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -28,6 +29,20 @@ import java.util.function.Supplier;
 public class BreakpointStorage {
 
     private BreakpointStorage() {}
+
+    /** Slot token for a breakpoint condition in {@link #notifyBreakpointExpressionEvaluationFailed}. */
+    public static final int EXPRESSION_SLOT_CONDITION = 0;
+    /** Slot token for breakpoint watches in {@link #notifyBreakpointExpressionEvaluationFailed}. */
+    public static final int EXPRESSION_SLOT_WATCH = 1;
+
+    /**
+     * Number of failed condition evaluations, with no successful one ever, after which
+     * the breakpoint is reported as disabled: such a condition is almost certainly broken.
+     */
+    public static final int CONDITION_FAILURE_LIMIT = 1000;
+
+    /** Value of {@link BreakpointState#conditionFailures} once the condition has evaluated without throwing. */
+    private static final int CONDITION_SUCCEEDED = -1;
 
     // -------------------------------------------------------------------------
     // Per-breakpoint state
@@ -58,6 +73,15 @@ public class BreakpointStorage {
          * Written once (at transformation time) and then read-only.
          */
         public volatile Function<Object[], Supplier> watchFactory = null;
+        /**
+         * Number of failed condition evaluations, capped at {@link #CONDITION_FAILURE_LIMIT},
+         * or {@link #CONDITION_SUCCEEDED} once the condition has evaluated without throwing.
+         * One field, so the success marker and the failure limit decision are a single atomic transition:
+         * a recorded success can never be followed by a trip, and a trip is never undone by a later success.
+         */
+        public final AtomicInteger conditionFailures = new AtomicInteger(0);
+        /** {@code slot:failureKind} pairs already reported, so each failure kind is reported once. */
+        public final Set<String> reportedFailures = ConcurrentHashMap.newKeySet();
 
         public BreakpointState(int hitLimit, Object userData) {
             this.hitLimit = hitLimit;
@@ -97,6 +121,12 @@ public class BreakpointStorage {
      * the blocked frame's class name, and an opaque reason string.
      */
     private static volatile HitSuppressedListener onHitSuppressed = null;
+
+    /**
+     * Called when a breakpoint condition or watch throws on a hit,
+     * once per failure kind and once more when the condition failure limit disables the breakpoint.
+     */
+    private static volatile BreakpointExpressionEvaluationFailedListener onBreakpointExpressionEvaluationFailed = null;
 
     /**
      * Listener for hit-limit events.
@@ -139,6 +169,17 @@ public class BreakpointStorage {
     @FunctionalInterface
     public interface HitSuppressedListener {
         void onHitSuppressed(int breakpointId, Object userData, String blockedFrameClass, Object reason);
+    }
+
+    /**
+     * Listener for expression failures on a hit.
+     * {@code slot} is {@link #EXPRESSION_SLOT_CONDITION} or {@link #EXPRESSION_SLOT_WATCH};
+     * {@code failureKind} is the class name of the thrown object;
+     * {@code disabled} is {@code true} when the condition failure limit was reached.
+     */
+    @FunctionalInterface
+    public interface BreakpointExpressionEvaluationFailedListener {
+        void onBreakpointExpressionEvaluationFailed(int breakpointId, Object userData, int slot, String failureKind, boolean disabled);
     }
 
     // -------------------------------------------------------------------------
@@ -390,6 +431,72 @@ public class BreakpointStorage {
     public static void notifyHitSuppressed(int breakpointId, Object userData, String blockedFrameClass, Object reason) {
         HitSuppressedListener callback = onHitSuppressed;
         if (callback != null) callback.onHitSuppressed(breakpointId, userData, blockedFrameClass, reason);
+    }
+
+    /**
+     * Registers the callback that fires when a breakpoint condition or watch throws on a hit.
+     * Should be installed before tracing starts, so no failure can go unobserved.
+     *
+     * @param callback invoked (on the hitting thread) with the breakpoint id, {@code userData},
+     *                 slot, failure kind, and whether the breakpoint must be disabled
+     */
+    public static void setOnBreakpointExpressionEvaluationFailed(BreakpointExpressionEvaluationFailedListener callback) {
+        onBreakpointExpressionEvaluationFailed = callback;
+    }
+
+    /**
+     * Records that the condition of the given breakpoint evaluated without throwing,
+     * which permanently exempts the breakpoint from the condition failure limit,
+     * unless the limit has already disabled it.
+     *
+     * @param breakpointId the breakpoint id
+     */
+    public static void markConditionSucceeded(int breakpointId) {
+        BreakpointState state = states.get(breakpointId);
+        if (state == null) return;
+        int failures;
+        do {
+            failures = state.conditionFailures.get();
+            if (failures == CONDITION_SUCCEEDED || failures >= CONDITION_FAILURE_LIMIT) return;
+        } while (!state.conditionFailures.compareAndSet(failures, CONDITION_SUCCEEDED));
+    }
+
+    /**
+     * Counts a condition failure unless the condition has succeeded or the limit is already reached.
+     *
+     * @return {@code true} for exactly the failure that reaches {@link #CONDITION_FAILURE_LIMIT}
+     */
+    private static boolean recordConditionFailure(BreakpointState state) {
+        int failures;
+        do {
+            failures = state.conditionFailures.get();
+            if (failures == CONDITION_SUCCEEDED || failures >= CONDITION_FAILURE_LIMIT) return false;
+        } while (!state.conditionFailures.compareAndSet(failures, failures + 1));
+        return failures + 1 == CONDITION_FAILURE_LIMIT;
+    }
+
+    /**
+     * Records a condition or watch failure on a hit and fires the failure callback
+     * the first time a {@code (slot, failure kind)} pair is seen for the breakpoint,
+     * and exactly once more, with {@code disabled = true}, when the condition fails for
+     * the {@link #CONDITION_FAILURE_LIMIT}-th time without ever having succeeded.
+     * <p>
+     * Only the class name of {@code failure} is read: its {@code getMessage()} and {@code toString()}
+     * are application code and may have side effects.
+     *
+     * @param breakpointId the breakpoint id
+     * @param slot {@link #EXPRESSION_SLOT_CONDITION} or {@link #EXPRESSION_SLOT_WATCH}
+     * @param failure the throwable raised by the expression
+     */
+    public static void notifyBreakpointExpressionEvaluationFailed(int breakpointId, int slot, Throwable failure) {
+        BreakpointState state = states.get(breakpointId);
+        if (state == null) return;
+        String failureKind = failure.getClass().getName();
+        boolean disabled = slot == EXPRESSION_SLOT_CONDITION && recordConditionFailure(state);
+        boolean firstOfKind = state.reportedFailures.add(slot + ":" + failureKind);
+        if (!firstOfKind && !disabled) return;
+        BreakpointExpressionEvaluationFailedListener callback = onBreakpointExpressionEvaluationFailed;
+        if (callback != null) callback.onBreakpointExpressionEvaluationFailed(breakpointId, state.userData, slot, failureKind, disabled);
     }
 
     /**

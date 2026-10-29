@@ -113,6 +113,7 @@ internal object LiveDebuggerAgent {
 
             LiveDebugger.ensureHitLimitCallbackInstalled()
             LiveDebugger.ensureBreakpointExpressionUnsafetyCallbackInstalled()
+            LiveDebugger.ensureBreakpointExpressionFailureCallbackInstalled()
             LiveDebugger.ensureBreakpointFailureCallbacksInstalled()
             LiveDebugger.ensureHitSuppressedCallbackInstalled()
         }
@@ -289,6 +290,16 @@ internal object LiveDebuggerAgent {
                             notification.breakpointData,
                             notification.slot,
                             notification.safetyViolationMessage,
+                            notification.timestamp
+                        )
+
+                    is LiveDebuggerNotification.BreakpointExpressionEvaluationFailed ->
+                        server.connection.breakpointExpressionEvaluationFailed(
+                            notification.breakpointData,
+                            notification.slot,
+                            notification.failureKind,
+                            notification.message,
+                            notification.disabled,
                             notification.timestamp
                         )
 
