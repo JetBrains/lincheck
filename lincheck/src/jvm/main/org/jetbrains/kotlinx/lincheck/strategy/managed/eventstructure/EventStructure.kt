@@ -35,6 +35,7 @@ internal class EventStructure(
     // TODO: refactor --- avoid using callbacks!
     private val reportInconsistencyCallback: ReportInconsistencyCallback,
     private val currentThreadIdCallback: CurrentThreadIdCallback,
+    private val onThreadReplayFinished: (ThreadId) -> Unit,
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = 0
@@ -103,8 +104,7 @@ internal class EventStructure(
 
     /**
      * The frontier encoding the subset of pinned events of the execution currently being explored.
-     * Pinned events cannot be revisited and thus do not participate in the synchronization
-     * with newly added events.
+     * Backtracking must retain these events.
      */
     private var pinnedEvents = ExecutionFrontier<AtomicThreadEvent>()
 
@@ -114,7 +114,7 @@ internal class EventStructure(
      * The thread may become blocked when it issues a request-event
      * denoting some blocking operation (e.g., mutex lock),
      * such that the corresponding response-event cannot be created immediately
-     * (for example, because the mutex is already acquired by another thread).
+     * (for example, because no matching notification has been issued).
      *
      * Therefore, a blocked event is a composite event that may consist of either:
      *  - a blocked request event alone;
@@ -157,12 +157,11 @@ internal class EventStructure(
     /* ************************************************************************* */
 
     fun startNextExploration(): Boolean {
-        loop@while (true) {
+        while (true) {
             val backtrackingPoint = rollbackTo { !it.visited }
                 ?: return false
             backtrackingPoint.visit()
-            resetExploration(backtrackingPoint)
-            return true
+            if (resetExploration(backtrackingPoint)) return true
         }
     }
 
@@ -213,44 +212,60 @@ internal class EventStructure(
         return backtrackingPoint
     }
 
-    private fun resetExploration(backtrackingPoint: BacktrackingPoint) {
+    /**
+     * Resets the exploration to the given [backtrackingPoint].
+     *
+     * @return true if the exploration was successfully reset,
+     *   false if the exploration rooted in [backtrackingPoint] should be skipped.
+     */
+    private fun resetExploration(backtrackingPoint: BacktrackingPoint): Boolean {
         // get the event to backtrack to
         val event = backtrackingPoint.event.ensure {
             it.label is InitializationLabel || it.label.isResponse
         }
+        val maximalityChecker = backtrackingPoint.maximalityChecker
+        if (maximalityChecker != null) {
+            // First reset to the frontier retained by maximality check:
+            // it does not include the send and response events of the revisit,
+            // as adding those events to execution may change the order relations used by maximality check
+            _execution.reset(maximalityChecker.retainedFrontier)
+            // If the retained frontier is inconsistent or not maximal, skip the revisit;
+            // maximality check ensures each "backward" revisit will only be explored once.
+            if (_execution.checkConsistency() != null || !maximalityChecker.isMaximal(execution)) return false
+        }
+
+        val frontier = backtrackingPoint.frontier.copy().apply {
+            update(event)
+            for (blockedRequest in backtrackingPoint.blockedRequests) update(blockedRequest)
+        }
+        // If the retained frontier is a prefix of the full frontier,
+        // then simply add missing events, otherwise reset the execution completely.
+        // Cutting dangling requests might have made the two prefixes differ by more than an extension.
+        if (maximalityChecker != null && _execution.toFrontier().isPrefixOf(frontier)) {
+            _execution.extend(frontier)
+        } else {
+            _execution.reset(frontier)
+        }
+
         // reset blocked events
         blockedEvents.clear()
         // set current exploration root
         currentExplorationRoot = event
-        // reset current execution
-        _execution.reset(backtrackingPoint.frontier)
-        // copy pinned events and pin current re-exploration root event
-        val pinnedEvents = backtrackingPoint.pinnedEvents.copy()
-            .apply { set(event.threadId, event) }
-        // add new event to current execution
-        _execution.add(event)
-        // do the same for blocked requests
-
         for (blockedRequest in backtrackingPoint.blockedRequests) {
-            _execution.add(blockedRequest)
-            // additionally, pin blocked requests if all their predecessors are also blocked ...
-            if (blockedRequest.parent == pinnedEvents[blockedRequest.threadId]) {
-                pinnedEvents[blockedRequest.threadId] = blockedRequest
-            }
-            // ... and also block them
             blockRequest(blockedRequest)
         }
         // set pinned events
-        this.pinnedEvents = pinnedEvents.ensure {
+        this.pinnedEvents = backtrackingPoint.pinnedEvents.ensure {
             execution.containsAll(it.events)
         }
-        // check consistency of the whole execution
+        // Reuse incrementally extended witnesses, or recompute if their extension failed.
         _execution.checkConsistency()
 
         // set the replayer state
         // We replay the events in the order that we added them
         val replayOrdering = _execution.sortedBy { it.id }
         replayer = Replayer(replayOrdering)
+        return true
     }
 
     fun checkConsistency(): Inconsistency? {
@@ -267,9 +282,9 @@ internal class EventStructure(
      *
      * @property event The event at which to start a new exploration.
      * @property frontier The execution frontier at the point when the event was created.
-     * @property pinnedEvents The frontier of pinned events that should not be
-     *   considered for exploration branching.
+     * @property pinnedEvents The frontier of pinned events that must survive subsequent revisits.
      * @property blockedRequests The list of blocked request events.
+     * @property maximalityChecker The pending maximality check for a backward revisit, if required.
      * @property visited Flag to indicate if this backtracking point has been visited.
      */
     private class BacktrackingPoint(
@@ -277,6 +292,7 @@ internal class EventStructure(
         val frontier: ExecutionFrontier<AtomicThreadEvent>,
         val pinnedEvents: ExecutionFrontier<AtomicThreadEvent>,
         val blockedRequests: List<AtomicThreadEvent>,
+        val maximalityChecker: MaximalRevisitChecker?,
     ) : Comparable<BacktrackingPoint> {
 
         var visited: Boolean = false
@@ -286,80 +302,165 @@ internal class EventStructure(
             visited = true
         }
 
-        override fun compareTo(other: BacktrackingPoint): Int {
-            return event.id.compareTo(other.event.id)
-        }
+        override fun compareTo(other: BacktrackingPoint): Int = event.id.compareTo(other.event.id)
+
     }
 
-    private fun createBacktrackingPoint(event: AtomicThreadEvent, conflicts: List<AtomicThreadEvent>) {
+    /**
+     * Creates a backtracking point to explore the given not yet visited [event] later.
+     *
+     * The point is not created if exploring it would remove an event pinned in the current exploration,
+     * i.e., a pinned event that is neither in the point's frontier nor among its blocked requests.
+     * In this case, the caller should discard [event]:
+     * every event created without being visited immediately must have a backtracking point,
+     * since it is later looked up to choose or unblock the event in the current exploration.
+     *
+     * @param event The event to start a new exploration from.
+     * @param conflicts The events conflicting with [event], to be removed in the new exploration.
+     * @param maximalityChecker The pending maximality check for a backward revisit, if required.
+     * @return true if the backtracking point was created,
+     *   false if it was skipped because it would remove a pinned event.
+     */
+    private fun createBacktrackingPoint(
+        event: AtomicThreadEvent,
+        conflicts: List<AtomicThreadEvent>,
+        maximalityChecker: MaximalRevisitChecker?,
+    ): Boolean {
         // This check is guaranteed to hold for now, since this is called only by the
         // [addBinarySynchronizedEvents] and [addBarrierSynchronizedEvents] methods
-        // which always pass in a parent
-        check((event.label !is InitializationLabel) implies (event.parent != null)) { "Backtracked event must have a parent: $event" }
-
-        // We need to skip creating a backtracking point if any of the conflicts are pinned
-        // as they will be removed.
-        if (conflicts.any { it in pinnedEvents}) return
-
-        val causalityFrontier = execution.calculateFrontier(event.causalityClock)
-        val newPinnedEvents = pinnedEvents.copy().apply {
-            merge(causalityFrontier)
-            cut(conflicts)
-            cut(getDanglingRequests())
-            cut(event)
+        // which always pass in a parent.
+        check((event.label !is InitializationLabel) implies (event.parent != null)) {
+            "Backtracked event must have a parent: $event"
         }
 
+        val request = event.parent
+        val pendingCompletion = isPendingLockCompletion(request, conflicts)
         val frontier = execution.toMutableFrontier().apply {
-            // We need to keep events in the frontier that are either have: id <= (parent.id)
-            // or are observed by the event, a la GenMC
             cut(conflicts)
-            cut { cutEvent ->
-                val shouldCut = (
-                    // Deleted events are with id greater than the parent request event and
-                    // events which are not in the causality frontier of the event we are backtracking.
-                    // The null check is safe because of the check at the beginning of the function
-                    cutEvent.id > event.parent!!.id &&
-                    !causalityFrontier.contains(cutEvent)
-                )
-                // Bail out of the entire backtracking point function
-                // if one of the events we want to delete is pinned
-                if (shouldCut && pinnedEvents.contains(cutEvent)) return
-                shouldCut
-            }
-            // NOTE: this can break some tests when locks and monitors are introduced again.
             addUnblockingResponses(conflicts)
+            if (request != null && event.senders.any { it.id > request.id } && !pendingCompletion) {
+                cutForBackwardRevisit(request, event)
+            }
+        }
+
+        // If the new event takes a lock away from another thread, cutting the conflicts removes
+        // that thread's lock acquisition, and possibly also its lock request.
+        // Keep the lock request (and any currently blocked lock request), so the thread waits
+        // for the lock in the new exploration and can acquire it after a later unlock.
+        // Re-add such a request only if its thread prefix and dependencies are all still in the frontier:
+        // restoring missing earlier events could bring back the cut lock acquisition.
+        val pendingLocks =
+            conflicts.filter { it.label.isNonReentrantLockResponse }.mapNotNull { it.parent } +
+            blockedEvents.values.map { it.request }.filter { it.label is LockLabel }
+        for (pending in pendingLocks.distinct()) {
+            if (pending == request || pending in frontier) continue
+            if (frontier[pending.threadId] == pending.parent && pending.dependencies.all { it in frontier }) {
+                frontier.update(pending)
+            }
         }
 
         val danglingRequests = frontier.getDanglingRequests()
-
         val blockedRequests = danglingRequests
             .filter {
-                blockedEvents.values.any { blockedDesc -> blockedDesc.request == it }
+                it != request && (it.label.satisfies<LockLabel> { !isReentry } ||
+                blockedEvents.values.any { blockedDesc -> blockedDesc.request == it })
             }
 
         frontier.apply {
             cut(danglingRequests)
             set(event.threadId, event.parent)
         }
+        if (pinnedEvents.events.any { it !in frontier && it !in blockedRequests }) return false
+
         val backtrackingPoint = BacktrackingPoint(
             event = event,
             frontier = frontier,
-            pinnedEvents = newPinnedEvents,
+            pinnedEvents = computePinnedEvents(event, conflicts, frontier, blockedRequests),
             blockedRequests = blockedRequests,
+            maximalityChecker = maximalityChecker,
         )
         backtrackingPoints.add(backtrackingPoint)
+        return true
     }
 
+    private fun computePinnedEvents(
+        event: AtomicThreadEvent,
+        conflicts: List<AtomicThreadEvent>,
+        frontier: ExecutionFrontier<AtomicThreadEvent>,
+        blockedRequests: List<AtomicThreadEvent>,
+    ): ExecutionFrontier<AtomicThreadEvent> {
+        val newPinnedEvents = pinnedEvents.copy()
+        val pinRoot = getPinnedCausalityRoot(event, conflicts) ?: return newPinnedEvents
+        // Use the retained branch, since the old response can occupy the new response's position.
+        val causalityFrontier = frontier.copy().apply {
+            cut { !causalityOrder.orEqual(it, pinRoot) }
+            for (request in blockedRequests) {
+                if (causalityOrder.orEqual(request, pinRoot)) set(request.threadId, request)
+            }
+            if (pinRoot == event) set(event.threadId, event)
+        }
+        newPinnedEvents.merge(causalityFrontier)
+        return newPinnedEvents
+    }
+
+    private fun getPinnedCausalityRoot(event: AtomicThreadEvent, conflicts: List<AtomicThreadEvent>): AtomicThreadEvent? {
+        if (!event.label.isMaximalityCheckedResponse) return null
+        val request = event.parent!!
+        val sender = event.senders.single()
+        if (sender.id > request.id) return sender
+        // Eviction acts as an implicit acquisition write that makes the previous owner block.
+        return event.takeIf {
+            event.label.isNonReentrantLockResponse &&
+            conflicts.any { it.label.isNonReentrantLockResponse && it.parent != request }
+        }
+    }
+
+    /**
+     * Creates a new event and adds it to the event structure, unless the event must be skipped.
+     *
+     * The event is not added to the current execution: the caller does this
+     * if the event is visited immediately or appended in place.
+     *
+     * @param iThread The thread of the new event.
+     * @param label The label of the new event.
+     * @param parent The program-order predecessor of the new event, or null for the initialization event.
+     * @param dependencies The events the new event synchronizes with, e.g., the write a read-response reads from.
+     * @param visit If true, the caller visits the new event in the current exploration;
+     *   otherwise, a backtracking point is created to explore it later (see [createBacktrackingPoint]).
+     * @param appendInPlace If true, the new event must be appendable to the current execution as-is:
+     *   it must have no conflicts, depend only on the already played events, and keep the execution consistent.
+     * @return The new event, or null if it was skipped:
+     *   - because exploring it would remove a pinned event or its own causes,
+     *   - because a backward revisit to it is redundant (see [prepareMaximalRevisitCheck]),
+     *   - or because it cannot be appended in place when [appendInPlace] is set.
+     */
     private fun createEvent(
         iThread: Int,
         label: EventLabel,
         parent: AtomicThreadEvent?,
         dependencies: List<AtomicThreadEvent>,
         visit: Boolean = true,
+        appendInPlace: Boolean = false,
     ): AtomicThreadEvent? {
         val conflicts = getConflictingEvents(iThread, label, parent, dependencies)
-        if (isCausalityViolated(parent, dependencies, conflicts))
-            return null
+
+        // Exploring the event would remove its conflicts.
+        // Skip it if any of them is pinned, since pinned events must survive all subsequent revisits.
+        // An event appended in place is added to the current execution as-is, so it cannot have conflicts at all.
+        if (conflicts.any { it in pinnedEvents } || (appendInPlace && conflicts.isNotEmpty())) return null
+        // Skip the event if its parent or dependencies causally depend on its conflicts:
+        // removing the conflicts would remove the event's own causes.
+        if (isCausalityViolated(parent, dependencies, conflicts)) return null
+
+        var maximalityChecker: MaximalRevisitChecker? = null
+        if (label.isMaximalityCheckedResponse) {
+            val request = parent!!
+            val sender = dependencies.single()
+            if (sender.id > request.id && !isPendingLockCompletion(request, conflicts)) {
+                maximalityChecker = prepareMaximalRevisitCheck(execution, request, sender, conflicts) ?: return null
+            }
+        }
+
         val allocation = eventStructureObjectTracker.getAllocation(label.objectID)
         val source = (label as? WriteAccessLabel)?.writeValue?.let {
             eventStructureObjectTracker.getAllocation(it.toInt())
@@ -372,12 +473,21 @@ internal class EventStructure(
             source = source,
             dependencies = listOfNotNull(allocation, source) + dependencies,
         )
-        _events.add(event)
-        // if the event is not visited immediately,
+
+        // An event appended in place must extend the prefix executed so far in the current exploration:
+        // all its dependencies must already be played,
+        // and appending it must keep the execution consistent (see [canAppendLockResponse]).
+        if (appendInPlace && (
+                event.dependencies.any { it !in playedFrontier } ||
+                !canAppendLockResponse(event)
+        )) return null
+
+        // If the event is not visited immediately,
         // then we create a backtracking point to visit it later
         if (!visit) {
-            createBacktrackingPoint(event, conflicts)
+            if (!createBacktrackingPoint(event, conflicts, maximalityChecker)) return null
         }
+        _events.add(event)
         return event
     }
 
@@ -394,21 +504,32 @@ internal class EventStructure(
         // handle label specific cases
         // TODO: unify this logic for various kinds of labels?
         when {
-            // lock-response synchronizing with our unlock is conflict
-            label is LockLabel && label.isResponse && !label.isReentry -> run {
-                val unlock = dependencies.first { it.label.asUnlockLabel(label.mutexID) != null }
-                execution.forEach { event ->
-                    if (event.label.satisfies<LockLabel> { isResponse && mutexID == label.mutexID }
-                        && event.locksFrom == unlock) {
+            label is LockLabel && label.isResponse && !label.isReentry -> {
+                val unlock = dependencies.single()
+                val grantedResponses = blockedEvents.values.mapNotNull { it.response }
+                for (event in execution + grantedResponses) {
+                    if (event.label.isNonReentrantLockResponse &&
+                        (event.label as LockLabel).mutexID == label.mutexID &&
+                        event.locksFrom == unlock
+                    ) {
                         conflicts.add(event)
                     }
                 }
             }
+
             label is ReadAccessLabel && label.isResponse && label.isExclusive -> run {
                 // NOTE: we assume that the first write dependency is the write that this read reads from.
                 // So this should work just like the [AtomicThreadEvent.readsFrom] method.
                 // As we do not have an event, but just a label and a list of dependencies, we do it manually.
                 val write = dependencies.find { it.label.isWriteAccess() }!! as AtomicThreadEvent
+
+                // If the read reads from a write that existed before its request (a "forward" choice),
+                // do not treat the other RMWs reading from the same write as conflicts: keep them in the execution.
+                // If such an RMW exists, adding the write part of this RMW will make the execution inconsistent
+                // (two RMWs read from the same write), but only after the backtracking points for this write
+                // were created, including the ones that let this RMW go before the other RMWs.
+                if (write.id < parent!!.id) return@run
+
                 val writeLabel = write.label
                 val location = label.location
                 check(writeLabel.isWriteAccess())
@@ -425,6 +546,7 @@ internal class EventStructure(
                     conflicts.add(readEvent)
                 }
             }
+
             // wait-response synchronizing with our notify is conflict
             label is WaitLabel && label.isResponse -> run {
                 val notify = dependencies.first { it.label is NotifyLabel }
@@ -439,7 +561,8 @@ internal class EventStructure(
             }
             // TODO: add similar rule for read-exclusive-response?
         }
-        return conflicts
+
+        return conflicts.distinct()
     }
 
     private fun isCausalityViolated(
@@ -483,6 +606,10 @@ internal class EventStructure(
             _execution.add(event)
         }
         playedFrontier.update(event)
+        // Fresh exploration gets its own loop budget, independently for each replaying thread.
+        if (isReplayedEvent && !inReplayPhase(event.threadId)) {
+            onThreadReplayFinished(event.threadId)
+        }
         // Unblock the thread if the unblocking response was added.
         if (event.label.isResponse && event.label.isBlocking && isBlockedRequest(event.request!!)) {
             unblockRequest(event.request!!)
@@ -505,6 +632,7 @@ internal class EventStructure(
                 }
             }
             delayedConsistencyCheckBuffer.clear()
+            resumeRestoredLockRequests()
             return
         }
         // If we are not in the replay phase and the newly added event is not replayed, then proceed as usual.
@@ -608,24 +736,19 @@ internal class EventStructure(
             label is ReadAccessLabel && label.isResponse ->
                 sequenceOf()
 
-            // Non-re-entrant lock-request synchronizes only with non-reentrant unlock event or allocation event that are not pinned
+            // non-reentry lock-request can synchronize with the mutex allocation (initial unlock) or unlock events,
+            // except those already taken by a pinned lock-response
+            // (synchronizing with them would conflict with the pinned lock-response, which cannot be removed)
             (label is LockLabel && !label.isReentry) -> {
-                // We can either sync with the allocation event of the mutex or with one of the unlock events
-                val unlockEventCandidates = sequenceOf(allocationEvent(label.mutexID)!!) +
-                        execution.filter { it.label.refine<UnlockLabel> { !isReentry && mutexID == label.mutexID } != null }
-
-                // But we cannot synch with unlock events that are already being read by a pinned lock response
-                val unlockEventsWithPinnedResponses = execution.mapNotNull {
-                    val nonReentryLockResponseLabel = it.label.refine<LockLabel> { isResponse && !isReentry && mutexID == label.mutexID }
-                    if (nonReentryLockResponseLabel == null) return@mapNotNull null
-                    // Make sure that the corresponding event is pinned
-                    if (!pinnedEvents.contains(it)) return@mapNotNull null
-                    // Get the unlock event this response reads from
-                    it.syncFrom
-                }.toSet()
-
-                // So we need to filter them out
-                unlockEventCandidates.filter { it !in unlockEventsWithPinnedResponses }
+                val pinnedUnlocks = pinnedEvents.toExecution().asSequence()
+                    .filter { it.label.isNonReentrantLockResponse && (it.label as LockLabel).mutexID == label.mutexID }
+                    .map { it.locksFrom }
+                    .toSet()
+                val allocationEvent = allocationEvent(label.mutexID)!!
+                val unlockEvents = execution.filter {
+                    it.label.isNonReentrantUnlock && (it.label as UnlockLabel).mutexID == label.mutexID
+                }
+                (sequenceOf(allocationEvent) + unlockEvents).filter { it !in pinnedUnlocks }
             }
 
             // re-entry lock-request synchronizes only with initializing unlock
@@ -650,16 +773,11 @@ internal class EventStructure(
         val candidates = synchronizationCandidates(label)
             // take only the events from the current execution
             .filter { it in execution }
-            // for a send event we additionally filter out ...
+            // for a send event we additionally filter out all of its causal predecessors,
+            // because an attempt to synchronize with these predecessors
+            // will result in a causality cycle
             .runIf(event.label.isSend) {
-                filter {
-                    // (1) all of its causal predecessors, because an attempt to synchronize with
-                    //     these predecessors will result in a causality cycle
-                    !causalityOrder(it, event) &&
-                    // (2) pinned events, because their response part is pinned,
-                    //     unless the pinned event is blocked event
-                    (!pinnedEvents.contains(it) || isBlockedRequest(it))
-                }
+                filter { !causalityOrder(it, event) }
             }
         return when {
             /* For read-request events, we search for the last write to
@@ -693,7 +811,10 @@ internal class EventStructure(
         }
     }
 
-    private fun filterReadSynchronizationCandidates(event: ThreadEvent, candidates: Sequence<AtomicThreadEvent>) : Sequence<AtomicThreadEvent> {
+    private fun filterReadSynchronizationCandidates(
+        event: ThreadEvent,
+        candidates: Sequence<AtomicThreadEvent>
+    ): Sequence<AtomicThreadEvent> {
         val label: ReadAccessLabel = event.label as ReadAccessLabel
         return when (memoryModel) {
             MemoryModel.SequentialConsistency -> {
@@ -726,15 +847,16 @@ internal class EventStructure(
     }
 
 
-    private fun filterWriteSynchronizationCandidates(event: ThreadEvent, candidates : Sequence<AtomicThreadEvent>) : Sequence<AtomicThreadEvent> {
+    private fun filterWriteSynchronizationCandidates(
+        event: ThreadEvent,
+        candidates : Sequence<AtomicThreadEvent>
+    ): Sequence<AtomicThreadEvent> {
         val label: WriteAccessLabel = event.label as WriteAccessLabel
-        if (
-            memoryModel == MemoryModel.SequentialConsistency &&
+        if (memoryModel == MemoryModel.SequentialConsistency &&
             execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)
         ) {
             return sequenceOf()
         }
-
         return candidates
     }
 
@@ -747,8 +869,10 @@ internal class EventStructure(
      *
      * @return list of added events
      */
-    private fun addSynchronizedEvents(event: AtomicThreadEvent): List<AtomicThreadEvent> {
-        val candidates = synchronizationCandidates(event)
+    private fun addSynchronizedEvents(
+        event: AtomicThreadEvent,
+        candidates: Sequence<AtomicThreadEvent> = synchronizationCandidates(event),
+    ): List<AtomicThreadEvent> {
         val syncEvents = when (event.label.syncType) {
             SynchronizationType.Binary -> addBinarySynchronizedEvents(event, candidates)
             SynchronizationType.Barrier -> addBarrierSynchronizedEvents(event, candidates)
@@ -759,11 +883,8 @@ internal class EventStructure(
             val blockedRequest = syncEvent.parent?.takeIf { isBlockedRequest(it) }
                 ?: continue
             if (!hasUnblockingResponse(blockedRequest)) {
-                setUnblockingResponse(syncEvent)
-                // mark corresponding backtracking point as visited;
-                // search from the end, because the search event was added recently,
-                // and thus should be located near the end of the list
-                backtrackingPoints.last { it.event == syncEvent }.apply { visit() }
+                if (syncEvent.label.isNonReentrantLockResponse && !canAppendLockResponse(syncEvent)) continue
+                takeUnblockingResponse(syncEvent)
                 break
             }
         }
@@ -775,8 +896,8 @@ internal class EventStructure(
         candidates: Sequence<AtomicThreadEvent>
     ): List<AtomicThreadEvent> {
         require(event.label.syncType == SynchronizationType.Binary)
-        // TODO: sort resulting events according to some strategy?
         return candidates
+            .distinct()
             .asIterable()
             .mapNotNull { other ->
                 val syncLab = event.label.synchronize(other.label)
@@ -787,19 +908,51 @@ internal class EventStructure(
                     else -> unreachable()
                 }
                 check(parent.label.isRequest && dependency.label.isSend && syncLab.isResponse)
-                Triple(syncLab, parent, dependency)
-            }.sortedBy { (_, _, dependency) ->
-                dependency
-            }.mapNotNull { (syncLab, parent, dependency) ->
+                SynchronizationCandidate(syncLab, parent, dependency)
+            }
+            .sortedByCreationOrder(event)
+            .mapNotNull { candidate ->
                 createEvent(
-                    iThread = parent.threadId,
-                    label = syncLab,
-                    parent = parent,
-                    dependencies = listOf(dependency),
+                    iThread = candidate.request.threadId,
+                    label = candidate.responseLabel,
+                    parent = candidate.request,
+                    dependencies = listOf(candidate.send),
                     visit = false,
                 )
             }
     }
+
+    /**
+     * A possible binary synchronization of a [request] with a [send], producing a response with [responseLabel].
+     */
+    private data class SynchronizationCandidate(
+        val responseLabel: EventLabel,
+        val request: AtomicThreadEvent,
+        val send: AtomicThreadEvent,
+    )
+
+    /**
+     * Sorts the synchronization candidates of [event] in the order in which their responses should be created.
+     *
+     * For a send event, the candidates are sorted by their requests' order.
+     * For a request event, they are sorted by their sends' order (e.g., coherence order for writes),
+     * so that the last created response is the one chosen in the current exploration.
+     */
+    private fun List<SynchronizationCandidate>.sortedByCreationOrder(
+        event: AtomicThreadEvent,
+    ): List<SynchronizationCandidate> =
+        sortedBy { candidate ->
+            when {
+                event.label.isSend ->
+                    candidate.request.id
+                event.label is ReadAccessLabel ->
+                    execution.coherenceOrder.position(candidate.send)
+                event.label is LockLabel && !(event.label as LockLabel).isReentry ->
+                    execution.lockOrder.position(candidate.send)
+                else ->
+                    candidate.send.id
+            }
+        }
 
     private fun addBarrierSynchronizedEvents(
         event: AtomicThreadEvent,
@@ -842,10 +995,10 @@ internal class EventStructure(
         }
         return createEvent(initThreadId, label, parent = null, dependencies = emptyList(), visit = false)!!
             .also { event ->
-                val id = STATIC_OBJECT_NUMBER
                 // TODO: Figure out how to load the static object
-//                val entry = RegistryObjectEntry(id, StaticObject.opaque(), event)
-//                objectRegistry.register(entry)
+                // val id = STATIC_OBJECT_NUMBER
+                // val entry = RegistryObjectEntry(id, StaticObject.opaque(), event)
+                // objectRegistry.register(entry)
                 addEventToCurrentExecution(event)
             }
     }
@@ -874,6 +1027,14 @@ internal class EventStructure(
 
     private fun addResponseEvents(requestEvent: AtomicThreadEvent): Pair<AtomicThreadEvent?, List<AtomicThreadEvent>> {
         require(requestEvent.label.isRequest)
+        // A restored marker has no replay response and must never regenerate forward choices.
+        if (isBlockedRequest(requestEvent)) {
+            val event = getUnblockingResponse(requestEvent)
+                ?: return (null to listOf())
+            if (event.dependencies.any { it !in playedFrontier }) return (null to listOf())
+            addEventToCurrentExecution(event)
+            return event to listOf(event)
+        }
         tryReplayEvent(requestEvent.threadId)?.let { event ->
             val resyncLabel = event.resynchronize(syncAlgebra)
             check(event.label.isResponse)
@@ -882,28 +1043,30 @@ internal class EventStructure(
             addEventToCurrentExecution(event)
             return event to listOf(event)
         }
-        if (isBlockedRequest(requestEvent)) {
-            val event = getUnblockingResponse(requestEvent)
-                ?: return (null to listOf())
-            check(event.label.isResponse)
-            check(event.request == requestEvent)
-            addEventToCurrentExecution(event)
-            return event to listOf(event)
-        }
         val responseEvents = addSynchronizedEvents(requestEvent)
-        if (responseEvents.isEmpty()) {
+        val chosenEvent = responseEvents.chooseResponse(requestEvent)
+        if (chosenEvent == null) {
             blockRequest(requestEvent)
-            return (null to listOf())
+            return (null to responseEvents)
         }
-        // TODO: use some other strategy to select the next event in the current exploration?
-        // TODO: check consistency of chosen event!
-        val chosenEvent = responseEvents.last().also { event ->
-            check(event == backtrackingPoints.last().event)
-            backtrackingPoints.last().visit()
-            addEventToCurrentExecution(event)
-        }
+        backtrackingPoints.last { it.event == chosenEvent }.visit()
+        addEventToCurrentExecution(chosenEvent)
         return (chosenEvent to responseEvents)
     }
+
+    /**
+     * Chooses the response to [requestEvent] to visit in the current exploration.
+     * The responses are expected in their creation order (see [sortedByCreationOrder]),
+     *
+     * @return The chosen response, or null if there is none and the request should block.
+     */
+    private fun List<AtomicThreadEvent>.chooseResponse(requestEvent: AtomicThreadEvent): AtomicThreadEvent? =
+        if (requestEvent.label.satisfies<LockLabel> { !isReentry }) {
+            // A non-reentrant lock response is chosen only if it can be appended to the current execution.
+            lastOrNull { canAppendLockResponse(it) }
+        } else {
+            lastOrNull()
+        }
 
     /* ************************************************************************* */
     /*      Blocking events handling                                             */
@@ -985,8 +1148,119 @@ internal class EventStructure(
         val descriptor = blockedEvents[request.threadId]
         if (descriptor != null) {
             check(request == descriptor.request)
-            return (descriptor.response != null)
+            return descriptor.response?.dependencies?.all { it in playedFrontier } == true
         }
+        return true
+    }
+
+    /**
+     * Checks if the [request] event is a pending lock that can be completed in-place in current exploration.
+     * Completing this [request] appends to the current execution without replacing an existing response.
+     */
+    private fun isPendingLockCompletion(request: AtomicThreadEvent?, conflicts: List<AtomicThreadEvent>): Boolean =
+        request != null &&
+        request.label.isNonReentrantLockRequest &&
+        isBlockedRequest(request) &&
+        conflicts.isEmpty()
+
+    /**
+     * Grants the [response] to its blocked request in the current exploration,
+     * and marks the response's backtracking point as visited.
+     */
+    private fun takeUnblockingResponse(response: AtomicThreadEvent) {
+        val point = backtrackingPoints.last { it.event == response }
+        setUnblockingResponse(response)
+        // An inline grant keeps the current prefix; pinning it would exclude later contenders.
+        point.visit()
+    }
+
+    /**
+     * Creates lock responses for the blocked lock requests from the unlocks of the replayed prefix
+     * that are not taken by any lock response.
+     * Called when the replay phase finishes, since replayed unlocks do not create synchronizations themselves.
+     */
+    private fun resumeRestoredLockRequests() {
+        // Replayed releases do not generate synchronizations again.
+        // A surviving marker may nevertheless be enabled by one of them after its old consumer was cut.
+        val sources = execution.filter { it.label.isNonReentrantUnlock && it.id < currentExplorationRoot.id }
+        for (source in sources.sortedBy { it.id }) {
+            val consumers = execution.asSequence() + blockedEvents.values.mapNotNull { it.response }.asSequence()
+            if (consumers.any { it.label.isNonReentrantLockResponse && it.locksFrom == source }) continue
+            val requests = blockedEvents.values.asSequence()
+                .filter { it.response == null }
+                .map { it.request }
+                .filter { it.label.satisfies<LockLabel> { !isReentry } && it.id < source.id }
+            // Generate every waiter's alternative before reserving the free source for one of them.
+            addSynchronizedEvents(source, requests)
+        }
+    }
+
+    /**
+     * Checks if the lock [response] can be appended to the current execution,
+     * taking into account the responses already granted to the blocked requests.
+     * This requires its request to be the last event of its thread, its dependencies to be present,
+     * and the extended execution to remain consistent.
+     */
+    private fun canAppendLockResponse(response: AtomicThreadEvent): Boolean {
+        val frontier = execution.toMutableFrontier()
+        // A queued grant reserves its source even before the waiting thread is scheduled.
+        for (descriptor in blockedEvents.values) {
+            val granted = descriptor.response ?: continue
+            if (frontier[granted.threadId] == granted.parent) frontier.update(granted)
+        }
+        if (frontier[response.threadId] != response.parent || response.dependencies.any { it !in frontier }) return false
+        frontier.update(response)
+        return MutableExtendedExecution(memoryModel).apply { reset(frontier) }.checkConsistency() == null
+    }
+
+    /**
+     * Grants a response to one of the blocked lock requests in the current exploration,
+     * using an unlock that is not taken by any lock response.
+     * The other possible lock responses get backtracking points to be explored later.
+     *
+     * Called when all threads that can be switched to are live-locked.
+     *
+     * @return true if one of the blocked lock requests was granted a response.
+     */
+    internal fun completePendingLockRequests(): Boolean {
+        if (inReplayPhase()) return false
+        val requests = blockedEvents.values.asSequence()
+            .filter { it.response == null }
+            .map { it.request }
+            .filter { it.label.isNonReentrantLockRequest && playedFrontier[it.threadId] == it }
+            .sortedBy { it.id }
+            .toList()
+        val completions = mutableListOf<AtomicThreadEvent>()
+        for (request in requests) {
+            val label = request.label as LockLabel
+            val sources = synchronizationCandidates(request)
+                .filter { it in playedFrontier }
+                .filter { source ->
+                    val consumers = execution.asSequence() + blockedEvents.values.mapNotNull { it.response }.asSequence()
+                    consumers.none {
+                        it.label.isNonReentrantLockResponse &&
+                        (it.label as LockLabel).mutexID == label.mutexID &&
+                        it.locksFrom == source
+                    }
+                }
+                .sortedByDescending { execution.lockOrder.position(it) }
+                .toList()
+            for (source in sources) {
+                val responseLabel = label.synchronize(source.label) ?: continue
+                val response = createEvent(
+                    iThread = request.threadId,
+                    label = responseLabel,
+                    parent = request,
+                    dependencies = listOf(source),
+                    visit = false,
+                    appendInPlace = true,
+                ) ?: continue
+                completions.add(response)
+            }
+        }
+        // Every contender's alternative observes the same unreserved prefix.
+        val chosen = completions.firstOrNull() ?: return false
+        takeUnblockingResponse(chosen)
         return true
     }
 
@@ -1037,7 +1311,7 @@ internal class EventStructure(
         tryReplayEvent(iThread)?.let { event ->
             check(event.label is ObjectAllocationLabel)
             check((event.label as ObjectAllocationLabel).className == value.unwrap().javaClass.simpleName)
-            //NOTE: Currently the objectID value represents the "suggested" objectID from the object tracker.
+            // NOTE: Currently, the objectID value represents the "suggested" objectID from the object tracker.
             //  The objectID is incremented each time a new object is added to the object tracker and this value is not
             //  reset between invocations.
             //  When replaying events, we need to keep the old objectID, which needs to be at least smaller or equal
@@ -1057,9 +1331,9 @@ internal class EventStructure(
         val parent = playedFrontier[iThread]
         val dependencies = listOf<AtomicThreadEvent>()
         return createEvent(iThread, label, parent, dependencies)!!.also { event ->
-//            TODO: assumes object is already allocated
-//            val entry = RegistryObjectEntry(id, value, event)
-//            objectRegistry.register(entry)
+            // TODO: assumes object is already allocated
+            // val entry = RegistryObjectEntry(id, value, event)
+            // objectRegistry.register(entry)
             addEventToCurrentExecution(event)
         }
     }
@@ -1105,6 +1379,11 @@ internal class EventStructure(
         //  What about initialization-related issues?
         checkNotNull(responseEvent)
         return responseEvent
+    }
+
+    fun addFenceEvent(iThread: Int, memoryOrder: MemoryOrdering) {
+        val label = FenceLabel(memoryOrder)
+        addSendEvent(iThread, label)
     }
 
     fun addLockRequestEvent(iThread: Int, mutex: Any,
@@ -1331,9 +1610,4 @@ internal class EventStructure(
             }
             MemoryModel.RelaxedJava -> memoryOrder
         }
-
-    fun addFenceEvent(iThread: Int, memoryOrder: MemoryOrdering) {
-        val label = FenceLabel(memoryOrder)
-        addSendEvent(iThread, label)
-    }
 }

@@ -11,12 +11,55 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 class AtomicsTests {
+
+    @Test
+    fun testRmwBeforeRetainedWrite() {
+        for (memoryModel in MemoryModel.entries) {
+            litmusTest(assertSame(setOf(2 to 3, 0 to 2)), memoryModel, requireExhaustion = true) {
+                val x = AtomicInteger(0)
+                var result = 0
+                val writer = thread { x.set(2) }
+                val incrementer = thread { result = x.getAndIncrement() }
+                writer.join()
+                incrementer.join()
+                result to x.get()
+            }
+        }
+    }
+
+    @Test(timeout = 30_000)
+    fun testRmwRevisitReordersRetainedWrites() {
+        val outcomes = setOf(
+            Triple(1, 0, 1), Triple(1, 1, 11), Triple(1, 2, 1),
+            Triple(2, 0, 1), Triple(2, 0, 2), Triple(2, 1, 2),
+            Triple(2, 1, 11), Triple(2, 2, 1), Triple(2, 2, 11),
+            Triple(11, 1, 11), Triple(11, 2, 1), Triple(11, 2, 11),
+        )
+        for (memoryModel in MemoryModel.entries) {
+            litmusTest(assertSame(outcomes), memoryModel, requireExhaustion = true) {
+                val x = AtomicInteger(0)
+                var read = 0
+                var exchanged = 0
+                val writer = thread { x.set(1) }
+                val reader = thread {
+                    x.set(2)
+                    read = x.get()
+                }
+                val exchanger = thread { exchanged = x.getAndSet(11) }
+                writer.join()
+                reader.join()
+                exchanger.join()
+                Triple(read, exchanged, x.get())
+            }
+        }
+    }
 
     @Test
     fun testThreeFAA() {

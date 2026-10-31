@@ -949,6 +949,16 @@ data class UnlockLabel(
         super.toString()
 }
 
+val EventLabel.isNonReentrantLockRequest: Boolean
+    get() = this is LockLabel && isRequest && !isReentry
+
+val EventLabel.isNonReentrantLockResponse: Boolean
+    get() = this is LockLabel && isResponse && !isReentry
+
+val EventLabel.isNonReentrantUnlock: Boolean
+    get() = this is UnlockLabel && !isReentry
+
+
 /**
  * Label denoting wait on a mutex.
  *

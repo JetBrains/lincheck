@@ -53,7 +53,10 @@ internal class EventStructureStrategy(
     }
 
     private val eventStructure: EventStructure =
-        EventStructure( memoryModel, memoryInitializer, ::onInconsistency, ::getCurrentThreadId) { iThread, reason ->
+        EventStructure(
+            memoryModel, memoryInitializer, ::onInconsistency, ::getCurrentThreadId,
+            loopDetector::resetLoopIterations,
+        ) { iThread, reason ->
             switchCurrentThread(iThread, reason)
         }
 
@@ -95,7 +98,10 @@ internal class EventStructureStrategy(
     override fun runInvocationImpl(): InvocationResult {
         val (result, inconsistency) = runNextExploration()
         if (inconsistency != null) {
-            return InconsistentInvocationResult(inconsistency)
+            val filteredResult = InconsistentInvocationResult(inconsistency)
+            // ManagedStrategy returns a sudden result in preference to this method's result.
+            if (suddenInvocationResult != null) suddenInvocationResult = filteredResult
+            return filteredResult
         }
         check(result != null)
         // TODO: re-verify that it is safe to omit the memory dump at the end;
@@ -119,13 +125,11 @@ internal class EventStructureStrategy(
             if (result.isAbortedInvocation()) {
                 eventStructure.abortExploration()
             }
-            if (result is CompletedInvocationResult) {
+            inconsistency = eventStructure.checkConsistency()
+                ?: (result as? InconsistentInvocationResult)?.inconsistency
+            if (inconsistency == null && result is CompletedInvocationResult) {
                 val patchedResult = patchResultsClock(eventStructure.execution, result.results)
                 result = CompletedInvocationResult(patchedResult)
-            }
-            inconsistency = when (result) {
-                is InconsistentInvocationResult -> result.inconsistency
-                else -> eventStructure.checkConsistency()
             }
         }
 
@@ -292,7 +296,25 @@ internal class EventStructureStrategy(
         // see comment in `shouldSwitch` method
         // TODO: make scheduling strategy configurable
         return if (currentExecutionPart == ExecutionPart.PARALLEL) {
-            val threads = switchableThreads(iThread)
+            var threads = switchableThreads(iThread)
+            // Spinning threads must not prevent a pending lock acquisition from making progress.
+            if (threads.all { threadScheduler.isLiveLocked(it) } && !eventStructure.inReplayPhase()) {
+                eventStructure.completePendingLockRequests()
+                val completed = threadScheduler.getRegisteredThreadIds().filter { threadId ->
+                    val request = eventStructure.getPendingBlockingRequest(threadId)
+                    request != null && request.label.satisfies<LockLabel> { isRequest && !isReentry } &&
+                        eventStructure.isPendingUnblockedRequest(request)
+                }
+                for (threadId in completed) {
+                    val reason = threadScheduler.getBlockingReason(threadId)
+                    if (reason == BlockingReason.Locked || reason == BlockingReason.Waiting) {
+                        threadScheduler.unblockThread(threadId)
+                    }
+                }
+                threads = switchableThreads(iThread)
+                // The current acquisition has not entered the scheduler's blocked state yet.
+                if (threads.all { threadScheduler.isLiveLocked(it) } && iThread in completed) return iThread
+            }
             // We prefer to switch to a non-livelocked thread
             val preferredChoice = threads.firstOrNull { !threadScheduler.isLiveLocked(it) }
             // If there is no such option, we choose the first livelocked thread instead
@@ -533,8 +555,8 @@ internal class EventStructureStrategy(
             return
         }
 
-        // NOTE: May need to just have the STUCK decision in this check
-        if (decision == LoopDetector.Decision.STUCK || decision == LoopDetector.Decision.SWITCH_THREAD) {
+        // A scheduling hint does not invalidate the saved execution; replay enforces its own event order.
+        if (decision == LoopDetector.Decision.STUCK) {
             onInconsistency(LoopStuckViolation()) // We stop this backtracking part with an inconsistency.
         }
     }
@@ -767,16 +789,6 @@ private class EventStructureMonitorTracker(
     // stores the lock stack of the current thread for the awaited mutex
     private val waitLockStack = mutableThreadMapOf<LockWaitData?>()
 
-    private fun canAcquireMonitor(iThread: Int, mutexID: ObjectNumber): Boolean {
-        val lockStack = lockStacks[mutexID]
-        return (lockStack == null) || (lockStack.last().threadId == iThread)
-    }
-
-    private fun canAcquireMonitor(iThread: Int, monitor: Any): Boolean {
-        val mutexID = eventStructureObjectTracker.getObjectNumber(monitor)
-        return canAcquireMonitor(iThread, mutexID)
-    }
-
     // Not sure how to proceed with these (I need to look into it)
     override fun registerThread(threadId: Int) {}
 
@@ -793,11 +805,6 @@ private class EventStructureMonitorTracker(
         val mutexID = eventStructureObjectTracker.getObjectNumber(monitor)
         // issue lock-request event
         val lockRequest = issueLockRequest(threadId, monitor)
-        // if lock is acquired by another thread then postpone addition of lock-response event
-        if (!canAcquireMonitor(threadId, monitor)) {
-            waitLockStack[threadId] = LockWaitData(mutexID, mutableListOf())
-            return false
-        }
         // try to add lock-response event
         val lockResponse = tryCompleteLockResponse(lockRequest)
         // return true if the lock-response event was created successfully
@@ -837,7 +844,8 @@ private class EventStructureMonitorTracker(
 
     private fun tryCompleteLockResponse(lockRequest: AtomicThreadEvent): AtomicThreadEvent? {
         val mutexID = (lockRequest.label as LockLabel).mutexID
-        // try to add lock-response event
+        // Generate alternatives and register pending requests even while another thread owns the monitor.
+        // Check runtime ownership only when taking a response.
         return eventStructure.addLockResponseEvent(lockRequest)?.also { lockResponse ->
             // if lock-response was added successfully, then push it to the lock stack
             lockStacks.updateInplace(mutexID, default = mutableListOf()) {
@@ -865,16 +873,14 @@ private class EventStructureMonitorTracker(
         if (lockStack.isEmpty()) {
             lockStacks.remove(mutexID)
         }
-        return lockStacks.isEmpty()
+        return lockStack.isEmpty()
     }
 
     override fun isWaiting(threadId: Int): Boolean {
         val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
             ?.takeIf { (it.label is LockLabel || it.label is WaitLabel) }
             ?: return false
-        val mutexID = (blockingRequest.label as MutexLabel).mutexID
-        return !(eventStructure.isPendingUnblockedRequest(blockingRequest) &&
-                canAcquireMonitor(threadId, mutexID))
+        return !eventStructure.isPendingUnblockedRequest(blockingRequest)
     }
 
     override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
@@ -898,11 +904,8 @@ private class EventStructureMonitorTracker(
                 ?: return true
             lockRequest = _lockRequest
         }
-        // finally, check that the thread can acquire the lock back,
-        // and try to complete the lock-request by lock-response
+        // finally, try to complete the lock-request by lock-response
         check(lockRequest != null)
-        if (!canAcquireMonitor(threadId, mutexID))
-            return true
         val lockResponse = tryCompleteWaitLockResponse(lockRequest)
         // exit waiting if the lock response was added successfully
         return (lockResponse == null)
@@ -1022,4 +1025,3 @@ private class EventStructureParkingTracker(
 }
 
 class LoopStuckViolation : Inconsistency() {}
-

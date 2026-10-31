@@ -12,10 +12,12 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
+import org.jetbrains.kotlinx.lincheck.strategy.ManagedLivelockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.kotlinx.lincheck_test.datastructures.MSQueueBlocking
 import org.jetbrains.lincheck.datastructures.scenario
-import org.junit.Ignore
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
@@ -922,34 +924,32 @@ class RegressionTests {
         }
     }
 
-    @Ignore("We do not properly catch the deadlock error! But it does get raised!")
-    @Test
+    @Test(timeout = TIMEOUT)
     fun testSimpleDeadLock() {
-        val outcomes = setOf<List<Int>>()
-
-        litmusTest(assertSame(outcomes)) {
+        litmusTest(assertSame(emptySet<Int>()), expectedFailure = ManagedLivelockFailure::class) {
             val t1 = thread {
-                while(true) {}
+                while (true) {}
             }
             val t2 = thread {
-                while(true) {}
+                while (true) {}
             }
 
             t1.join()
             t2.join()
 
-            1 // Should be unreachable as we are in a deadlock
+            1 // Unreachable: both workers spin forever.
         }
     }
 
-    @Ignore("We do not properly catch the deadlock error!")
-    @Test
+    @Test(timeout = TIMEOUT)
     fun testDiningPhilosophers() {
-        val outcomes = setOf(
-            listOf(1), listOf(2)
-        )
+        val outcomes = setOf(1, 2)
+        // Exploration stops at the first deadlock, so only validate completed outcomes.
+        val outcomeVerifier = OutcomeVerifier<Int> { actualOutcomes ->
+            assertTrue("Unexpected outcomes: $actualOutcomes", actualOutcomes.all { it in outcomes })
+        }
 
-        litmusTest(assertSame(outcomes, UNKNOWN)) {
+        litmusTest(outcomeVerifier, expectedFailure = ManagedDeadlockFailure::class) {
             val l1 = Object()
             val l2 = Object()
             var x = -1

@@ -41,12 +41,13 @@ import org.jetbrains.lincheck.util.union
  * This order can be maintained incrementally during the execution construction:
  * a new event is always added to the end of the execution order list
  * (as the execution order is a total order, it can be represented as a list of events).
+ * A pending read request can be moved next to its response:
+ * it has no memory effect or successors in the existing order.
  * When added to the end of the execution order list, the event is checked to be
  * consistent with the previous events, it must be:
- * - for a response event - a valid response to the previous event;
- * - for a read-response event, additionally, the reads-from should be from the latest write to its location
- *   in this order;
- * - for an exclusive write event - a write-part of an atomic update.
+ * - for a read-response event - a valid response reading from the latest write to its location in this order;
+ * - for an exclusive write event - the write-part of the immediately preceding atomic read;
+ * - for a wait-response event - preceded by its request and the matching notification, in that order.
  * To check the reads, the order maintains its own view of the memory store, mapping each location to its latest write.
  *
  * Consistency checkers re-validate incrementally extended candidates by replay before accepting the execution,
@@ -119,14 +120,33 @@ class ExecutionOrder(
     private fun isConsistentExtension(event: AtomicThreadEvent): Boolean {
         val last = _ordering.lastOrNull()
         val label = event.label
-        return when {
-            label is ReadAccessLabel && label.isResponse ->
-                last != null && event.isValidResponse(last) && readsFromLatestWrite(event)
+        when {
+            label is ReadAccessLabel && label.isResponse -> {
+                val request = event.request!!
+                if (!(event.isValidResponse(request) && readsFromLatestWrite(event))) return false
+                // Normally, the request is the last event in the order, right before its response.
+                // However, in some cases other events are added in between:
+                // e.g., when the order is rebuilt in the enumeration order after a backward revisit,
+                // the read-response is created after the write event it reads-from, and thus comes after it,
+                // while the request comes before this write.
+                // In such cases, it is still safe to move the request to the end of the order:
+                // the read request has no memory effect, and none of the events already in the order depend on it
+                // (its only successor is this response, which is not added yet).
+                if (last != request) {
+                    val requestWasAbsent = !_ordering.remove(request)
+                    if (requestWasAbsent) return false
+                    _ordering.add(request)
+                }
+                return true
+            }
 
             label is WriteAccessLabel && label.isExclusive ->
-                last != null && event.isWritePartOfAtomicUpdate(last)
+                return last != null && event.isWritePartOfAtomicUpdate(last)
 
-            else -> true
+            label is WaitLabel && label.isResponse ->
+                return this(event.request!!, event.notifiedBy)
+
+            else -> return true
         }
     }
 

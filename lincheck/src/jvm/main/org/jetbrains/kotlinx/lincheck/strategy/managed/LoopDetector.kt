@@ -57,6 +57,8 @@ interface LoopDetector {
     fun getCurrentLoopIteration(threadId: Int, loopId: Int, codeLocation: Int) : Int
     fun getCurrentMethodId(threadId: Int): Int
 
+    fun resetLoopIterations(threadId: Int)
+
     fun resetAll()                  // between iterations
     fun resetThread(threadId: Int)  // when a thread finishes
 }
@@ -143,6 +145,12 @@ class BoundedLoopDetector(
 
     override fun getCurrentMethodId(threadId: Int): Int =
         currentFrame(threadId)?.methodId ?: -1
+
+    override fun resetLoopIterations(threadId: Int) {
+        threadStates[threadId]?.callStack?.forEach { frame ->
+            frame.loops.forEach { it.iterationCount = 0 }
+        }
+    }
 
     private fun findLoopInCurrentFrame(
         threadId: Int,

@@ -85,6 +85,27 @@ fun <E : ThreadEvent> ExecutionFrontier<E>.getDanglingRequests(): List<E>  {
     }
 }
 
+/**
+ * Checks whether this frontier's execution is a prefix of [other]'s execution.
+ */
+fun <E : ThreadEvent> ExecutionFrontier<E>.isPrefixOf(other: ExecutionFrontier<E>): Boolean =
+    events.all { it in other }
+
+/**
+ * Returns the events of this frontier's execution that are not in [other]'s execution.
+ *
+ * If [other] is a prefix of this frontier (see [isPrefixOf]), these are exactly the events extending it.
+ * Otherwise, the two executions diverge, and the result also contains the events
+ * conflicting with [other]'s events, i.e., occupying the same thread positions.
+ *
+ * The events order in the returned sequence is unspecified.
+ */
+fun <E : ThreadEvent> ExecutionFrontier<E>.eventsDifference(other: ExecutionFrontier<E>): Sequence<E> =
+    threadIDs.asSequence().flatMap { tid ->
+        @Suppress("UNCHECKED_CAST")
+        generateSequence(get(tid)) { it.parent as E? }.takeWhile { it !in other }
+    }
+
 inline fun <reified E : ThreadEvent> MutableExecutionFrontier<E>.cut(event: E) {
     // TODO: optimize for a case of a single event
     cut(listOf(event))

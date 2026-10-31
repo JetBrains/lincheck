@@ -22,6 +22,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
+import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
@@ -35,6 +36,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTr
 import org.junit.Assert
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import kotlin.reflect.KClass
 
 internal const val UNIQUE = -1
 internal const val UNKNOWN = -2
@@ -110,10 +112,11 @@ internal fun<Outcome> litmusTest(
         true
     }
     withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
-        val strategy = createStrategy(testClass, memoryModel, testScenario)
-        val failure = strategy.runIteration(invocations, verifier)
-        assert(failure == null) { failure.toString() }
-        outcomeVerifier.verify(outcomes)
+        createStrategy(testClass, memoryModel, testScenario).use { strategy ->
+            val failure = strategy.runIteration(invocations, verifier)
+            assert(failure == null) { failure.toString() }
+            outcomeVerifier.verify(outcomes)
+        }
     }
 }
 
@@ -176,20 +179,21 @@ internal fun <T> createStrategy(
 /**
  * Alternate litmus testing function for [EventStructureStrategy] that uses [LambdaRunner].
  *
- * @param expectedOutcomes the set of expected outcomes from running the test scenario. It has to match exactly as
- * the set of outcomes gathered from the execution.
- * @param executionCount the number of consistent invocations that should be found after running the testScenario
- *  If it is set to UNIQUE, then this number is equal to the size of [expectedOutcomes].
- *  If it is set to UNKNOWN, then we do not check the consistent invocations count.
+ * @param outcomeVerifier checks outcomes collected before exploration ends or a failure is reported.
+ * @param requireExhaustion checks that no unexplored invocation remains after the invocation budget.
+ * @param options execution settings, including loop bounds.
+ * @param expectedFailure requires this failure type instead of successful exploration.
  * @param block the block of code that is going to be tested
  */
 internal inline fun<reified Outcome> litmusTest(
     outcomeVerifier: OutcomeVerifier<Outcome>,
     memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
     invocations: Int = INVOCATIONS,
+    requireExhaustion: Boolean = false,
+    options: ModelCheckingOptions = ModelCheckingOptions().analyzeStdLib(true),
+    expectedFailure: KClass<out LincheckFailure>? = null,
     noinline block: () -> Outcome,
 ) {
-    val options = ModelCheckingOptions().analyzeStdLib(true)
     val testCfg = options.createTestConfigurations(block::class.java)
     val outcomes: MutableList<Outcome> = mutableListOf()
     val verifier = getResultsVerifier { result ->
@@ -201,7 +205,10 @@ internal inline fun<reified Outcome> litmusTest(
         ensureObjectIsTransformed(block)
         createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, memoryModel, block).use { strategy ->
             val failure = strategy.runIteration(invocations, verifier)
-            assert(failure == null) { failure.toString() }
+            Assert.assertEquals("Unexpected exploration failure: $failure", expectedFailure, failure?.let { it::class })
+            if (requireExhaustion) {
+                Assert.assertFalse("Exploration did not exhaust within $invocations invocations", strategy.nextInvocation())
+            }
             // NOTE: Nice to see stats even if the test is passing, to see how many redudndant executions we are exploring
             println("Stats: ${strategy.stats}")
             outcomeVerifier.verify(outcomes)

@@ -97,7 +97,8 @@ class SequentialConsistencyChecker(
         // The execution order is a candidate for sequential consistency order:
         // check it by replaying the events in the order they were added.
         val executionOrder = execution.executionOrder
-        if (executionOrder.computed && executionOrder.consistent &&
+        if (execution.coherenceOrder.computed && execution.coherenceOrder.consistent &&
+            executionOrder.computed && executionOrder.consistent &&
             SequentialConsistencyReplayer().replay(executionOrder.ordering) != null) {
             return null
         }

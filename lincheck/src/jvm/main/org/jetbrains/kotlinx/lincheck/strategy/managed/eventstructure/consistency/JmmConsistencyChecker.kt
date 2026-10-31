@@ -37,15 +37,11 @@ class JmmConsistencyChecker(
             return state
         }
 
-        // check if the new event is a consistent extension of the existing execution;
-        // since this check requires the coherence order, check its availability first
+        // check if the new event is a consistent extension of the coherence order;
+        // note coherence consistence has already been checked in `CoherenceOrder::onAdd`,
+        // so we only need to check the flag
         val coherenceOrder = execution.coherenceOrder
         if (!coherenceOrder.computed || !coherenceOrder.consistent) {
-            state = ConsistencyState.Unknown
-            return state
-        }
-        if (!coherenceOrder.isConsistentExtension(event)) {
-            coherenceOrder.invalidate()
             state = ConsistencyState.Unknown
             return state
         }

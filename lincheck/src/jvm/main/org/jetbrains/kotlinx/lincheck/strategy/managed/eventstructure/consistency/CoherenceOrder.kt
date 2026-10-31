@@ -41,8 +41,8 @@ typealias CoherenceList = List<AtomicThreadEvent>
  * since a new write is maximal in happens-before, it is put at the end of the coherence order.
  * The write-part of a read-modify-write is thus put right after the write it reads-from,
  * provided that this write is coherence-latest.
- * The consumers of the coherence order might check that its extension with the newly added events
- * is consistent (see [isConsistentExtension]), and invalidate it otherwise.
+ * A read response or RMW write that does not consistently extend the cached order invalidates it,
+ * so the consistency checker must recompute it.
  *
  * @param execution the execution whose writes are ordered;
  *   under sequential consistency, each candidate coherence order is checked by building an [ExecutionOrder] over it,
@@ -68,7 +68,8 @@ class CoherenceOrder(
     val memoryModel: MemoryModel,
 ) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
 
-    var computed = false
+    // The empty execution has a valid witness, which fresh writes can extend immediately.
+    var computed = execution.isEmpty()
         private set
 
     var consistent: Boolean = true
@@ -106,8 +107,13 @@ class CoherenceOrder(
 
     override fun onAdd(event: AtomicThreadEvent) {
         if (!computed || !consistent) return
-        val label = event.label as? WriteAccessLabel ?: return
-        addWrite(event, label.location)
+        val label = event.label
+        if (!isConsistentExtension(event)) {
+            invalidate()
+        }
+        if (label is WriteAccessLabel) {
+            addWrite(event, label.location)
+        }
     }
 
     override fun onReset(execution: Execution<AtomicThreadEvent>) {
@@ -182,36 +188,47 @@ class CoherenceOrder(
     }
 
     /**
+     * Returns a write event position in the current witness, with initialization at position zero.
+     */
+    fun position(write: AtomicThreadEvent): Int {
+        check(computed && consistent) { "No coherence witness for the current exploration" }
+        if (write.label.isInitializingWriteAccess()) return 0
+        val location = (write.label as WriteAccessLabel).location
+        return map.getValue(location).position(write)
+    }
+
+    /**
      * Retrieves the coherence-latest write event to the specified memory location.
+     *
+     * Requires a computed, consistent order.
+     * For a newly accessed location, falls back to its allocation/initialization event.
      *
      * @param location the memory location for which the latest write event is to be retrieved
      * @return the latest write event to the specified location, or null if no such event exists
      */
     fun getLatestWrite(location: MemoryLocation): AtomicThreadEvent? =
-        map[location]?.coherence?.last() ?: memoryAccessEventIndex.getLastWrite(location)
+        map[location]?.coherence?.last() ?: memoryAccessEventIndex.getWrites(location).firstOrNull()
 
     /**
      * Checks whether the extension of the coherence order with the newly added [event] is consistent.
      *
      * For a read response, checks that it reads-from the coherence-latest write to its location.
-     * For the write-part of a read-modify-write (RMW), already appended to the coherence order,
-     * checks that the read-part of RMW reads-from the write preceding it.
+     * For the write-part of a read-modify-write (RMW), checks that its read-part reads-from
+     * the coherence-latest write before appending the write-part.
      * The read-part itself might not have been checked against this coherence order,
      * since the order might have been computed after the read-part was added.
      * For other events, returns true.
      *
      * Requires the coherence order to be computed and consistent,
-     * and the [event] to be the last added one.
+     * and the [event] to be the last added one in the execution, but not yet appended to the coherence order.
      */
     fun isConsistentExtension(event: AtomicThreadEvent): Boolean {
-        check(computed && consistent)
         val label = event.label
         return when {
             label is ReadAccessLabel && label.isResponse ->
                 event.readsFrom == getLatestWrite(label.location)
             label is WriteAccessLabel && label.isExclusive -> {
-                val coherence = this[label.location]
-                event.exclusiveReadPart.readsFrom == coherence[coherence.lastIndex - 1]
+                event.exclusiveReadPart.readsFrom == getLatestWrite(label.location)
             }
             else -> true
         }
@@ -233,8 +250,13 @@ class CoherenceOrder(
             rmwChainsStorage: ReadModifyWriteOrder,
             writesOrder: Relation<AtomicThreadEvent>,
         ): Sequence<Map<MemoryLocation, Entry>> {
-            val coherenceOrderings = memoryAccessEventIndex.locations.map { location ->
-                val writes = memoryAccessEventIndex.getWrites(location)
+            // Recreated events have different IDs, but the same logical execution must choose the same witness.
+            val writesByLocation = memoryAccessEventIndex.locations.map { location ->
+                location to memoryAccessEventIndex.getWrites(location).sortedWith(eventPositionComparator)
+            }.sortedWith(compareBy(eventPositionComparator) { (_, writes) ->
+                writes.firstOrNull { !it.label.isInitializingWriteAccess() } ?: writes.first()
+            })
+            val coherenceOrderings = writesByLocation.map { (location, writes) ->
                 val orderings = if (writes.size == 1) sequenceOf(writes) else {
                     val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
                     topologicalSortings(writesOrder.toGraph(writes, enumerator)).filter {

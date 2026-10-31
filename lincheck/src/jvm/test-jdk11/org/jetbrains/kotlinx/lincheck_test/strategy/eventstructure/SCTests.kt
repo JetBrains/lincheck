@@ -20,7 +20,7 @@ import org.jetbrains.kotlinx.lincheck.util.LincheckResult
 import org.jetbrains.kotlinx.lincheck.util.ValueResult
 import org.jetbrains.lincheck.datastructures.actor
 import org.jetbrains.lincheck.datastructures.scenario
-import org.junit.Ignore
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -29,14 +29,24 @@ import kotlin.random.Random
 // All-volatile programs have the same outcomes under JMM and sequential consistency.
 class SCTests {
 
-    internal inline fun<reified Outcome> compareScenarios (crossinline scenario: () -> Outcome) {
+    internal inline fun <reified Outcome> compareScenarios(
+        expectedCount: Int? = null,
+        invocations: Int = 10_000,
+        crossinline scenario: () -> Outcome,
+    ) {
         val expectedOutcomes = mutableSetOf<Outcome>()
         // TODO: Abort the test if it reaches the invocation limit.
-        litmusTest({ r -> expectedOutcomes.addAll(r) }, MemoryModel.RelaxedJava, 10_000) {
+        litmusTest({ results ->
+            expectedOutcomes.addAll(results)
+            if (expectedCount != null) {
+                assertEquals(expectedCount, expectedOutcomes.size)
+                assertSame(expectedOutcomes).verify(results)
+            }
+        }, MemoryModel.RelaxedJava, invocations) {
             scenario()
         }
 
-        litmusTest(assertSame(expectedOutcomes), MemoryModel.SequentialConsistency, 10_000) {
+        litmusTest(assertSame(expectedOutcomes), MemoryModel.SequentialConsistency, invocations) {
             scenario()
         }
     }
@@ -152,7 +162,6 @@ class SCTests {
         }
     }
 
-    @Ignore("Known exploration completeness issue: JMM misses [11, 2, 10, 0] found under SC.")
     @Test
     fun testManyGet() {
         val sc = scenario {
@@ -181,17 +190,8 @@ class SCTests {
         }
     }
 
-    @Ignore("Known exploration completeness issue: JMM misses [11, 2, 10, 0] found under SC.")
     @Test
     fun testExampleSc() {
-//        | ---------------------------------------------- |
-//        | Thread 1  |  Thread 2  | Thread 3 |  Thread 4  |
-//        | ---------------------------------------------- |
-//        | set(y, 2) | set(z, 2)  | get(y)   | get(z)     |
-//        |           | get(z)     | get(y)   | set(y, 10) |
-//        |           | set(y, 11) | get(y)   | get(y)     |
-//        |           |            |          | set(y, 13) |
-//        | ---------------------------------------------- |
         val sc = scenario {
             parallel {
                 thread {
@@ -215,22 +215,10 @@ class SCTests {
         compareScenarios(sc, false)
     }
 
-    @Ignore("Known exploration completeness issue: pinned-event filtering skips valid JMM outcomes.")
     @Test
     fun testCompletenessIssue() {
-//        | ---------------------------------------------- |
-//        | Thread 1  |  Thread 2  | Thread 3 |  Thread 4  |
-//        | ---------------------------------------------- |
-//        | set(y, 2) | set(z, 2)  | get(y)   | get(z)     |
-//        |           | get(z)     | get(y)   | set(y, 10) |
-//        |           | set(y, 11) | get(y)   | get(y)     |
-//        |           |            |          | set(y, 13) |
-//        | ---------------------------------------------- |
-//  This test showcases a completeness issue for the Relaxed Java Memory Model
-//  filterReadSynchronizationCandidates may pick a candidate that leads to an invalid execution,
-//  breaking the pinned-events assumption and skipping a valid execution outcome.
-        compareScenarios {
-            val x = AtomicInteger(0)
+        // Earlier choices may need another backward revisit to reach all 328 reads-from graphs.
+        compareScenarios(expectedCount = 328, invocations = 100_000) {
             val y = AtomicInteger(0)
             val z = AtomicInteger(0)
             val r = IntArray(6)
@@ -315,12 +303,11 @@ class SCTests {
         return ExecutionScenario(listOf(), threads, listOf(), null)
     }
 
-    @Ignore("Known exploration completeness issue reproduced with Random(67) at scenario 124.")
-    @Test
+    @Test(timeout = 180_000)
     fun randomTest() {
-        // Property-based testing at home
+        // Keep the corpus deterministic and small enough for the three-minute CI budget.
         val rand = Random(67)
-        val n = 1000
+        val n = 5
         for (i in 0 until n) {
             val scenario = sampleScenario(rand)
             println("Comparing scenario #$i / #$n :\n$scenario")

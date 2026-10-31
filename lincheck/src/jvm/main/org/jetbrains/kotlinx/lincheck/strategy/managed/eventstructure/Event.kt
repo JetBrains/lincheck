@@ -487,6 +487,14 @@ val happensBeforeSameLocationOrder = happensBeforeOrder intersection sameLocatio
 
 val causalityCovering: Covering<ThreadEvent> = Covering { it.dependencies }
 
+/**
+ * Orders events by their thread and position in the thread.
+ *
+ * Unlike event IDs, the positions are stable across explorations:
+ * an event re-created in a later exploration receives a fresh id but keeps its position.
+ */
+val eventPositionComparator: Comparator<ThreadEvent> = compareBy({ it.threadId }, { it.threadPosition })
+
 fun getLocationForSameLocationAccesses(x: Event, y: Event): MemoryLocation? {
     val xloc = (x.label as? MemoryAccessLabel)?.location
     val yloc = (y.label as? MemoryAccessLabel)?.location

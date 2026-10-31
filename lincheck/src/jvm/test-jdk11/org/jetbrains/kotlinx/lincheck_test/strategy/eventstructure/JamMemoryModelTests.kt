@@ -30,12 +30,10 @@ import kotlin.concurrent.thread
 
 class JamMemoryModelTests {
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testSBOpaque() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((0 to 0), (0 to 1), (1 to 1), (1 to 0))
-        litmusTest(assertSame(expectedOutcomes)) {
+        litmusTest(assertSame(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -54,12 +52,10 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun test4SB() {
         val forbiddenOutcomes: Set<List<Int>> = setOf(listOf(0,0,0,0))
-        litmusTest(assertSometimes(forbiddenOutcomes)) {
+        litmusTest(assertSometimes(forbiddenOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val z = AtomicInteger(0)
@@ -93,12 +89,10 @@ class JamMemoryModelTests {
     }
 
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun test6SB() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(0,0,0,0,0,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val z = AtomicInteger(0)
@@ -419,8 +413,6 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testIriwInternal() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
@@ -480,12 +472,10 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testMpRelaxed() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -505,13 +495,11 @@ class JamMemoryModelTests {
     }
 
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testPodrw001() {
         // NOTE: this is just Store Buffering with 3 reads
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(0,0,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             val z = AtomicInteger(0)
@@ -588,12 +576,10 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testX001() {
         val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(0,1,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;
@@ -775,12 +761,10 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testIRIWPoaasLL() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -809,12 +793,10 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: actual failing test, that can be fixed with improvements to do the model checker
-    @Ignore
     @Test
     fun testIRIWPoapsLL() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r1 = 0;
@@ -943,11 +925,10 @@ class JamMemoryModelTests {
     }
 
     // NOTE: this test is interesting because C11 forbids this behavior but JMM allows it
-    @Ignore
     @Test
     fun testMpRelacqRs() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf((2 to 0))
-        litmusTest(assertSometimes(expectedOutcomes)) {
+        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var r0 = 0;

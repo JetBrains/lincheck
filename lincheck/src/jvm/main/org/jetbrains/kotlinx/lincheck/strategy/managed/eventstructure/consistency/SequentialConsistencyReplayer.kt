@@ -70,7 +70,7 @@ class SequentialConsistencyReplayViolation : SequentialConsistencyViolation() {
 internal data class SequentialConsistencyReplayer(
     val memoryView: MutableMap<MemoryLocation, Event> = mutableMapOf(),
     val monitorTracker: ModelCheckingMonitorTracker = ModelCheckingMonitorTracker(),
-    val monitorMapping: MutableMap<ObjectNumber, Any> = mutableMapOf()
+    val monitorMapping: MutableMap<ObjectNumber, Any> = mutableMapOf(),
 ) {
 
     fun replay(event: AtomicThreadEvent): SequentialConsistencyReplayer? {
@@ -104,24 +104,23 @@ internal data class SequentialConsistencyReplayer(
             label is UnlockLabel && !label.isSynthetic ->
                 this.copy().apply { monitorTracker.releaseMonitor(event.threadId, getMonitor(label.mutexID)) }
 
-            label is WaitLabel && label.isRequest ->
-                this.copy().apply { monitorTracker.waitOnMonitor(event.threadId, getMonitor(label.mutexID)).ensureTrue() }
-
-            label is WaitLabel && label.isResponse -> {
-                val monitor = getMonitor(label.mutexID)
-                if (this.monitorTracker.canAcquireMonitor(event.threadId, monitor)) {
-                    this.copy().takeIf { !it.monitorTracker.waitOnMonitor(event.threadId, monitor) }
-                } else null
-            }
+            label is WaitLabel ->
+                // Notification delivery and monitor reacquisition are separate events,
+                // so we don't need to replay monitor re-acquiring here.
+                this
 
             label is NotifyLabel ->
                 this.copy().apply { monitorTracker.notify(event.threadId, getMonitor(label.mutexID), label.isBroadcast) }
 
             // auxiliary unlock/lock events inserted before/after wait events
-            label is LockLabel && label.isSynthetic ->
-                this
+            label is LockLabel && label.isSynthetic -> {
+                val monitor = getMonitor(label.mutexID)
+                if (this.monitorTracker.canAcquireMonitor(event.threadId, monitor)) {
+                    this.copy().takeIf { !it.monitorTracker.waitOnMonitor(event.threadId, monitor) }
+                } else null
+            }
             label is UnlockLabel && label.isSynthetic ->
-                this
+                this.copy().apply { monitorTracker.waitOnMonitor(event.threadId, getMonitor(label.mutexID)).ensureTrue() }
 
             label is InitializationLabel -> this
             label is ObjectAllocationLabel -> this

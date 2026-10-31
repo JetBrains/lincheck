@@ -62,7 +62,14 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
      *
      * @see CoherenceOrder
      */
-    val coherenceOrder: Relation<AtomicThreadEvent>
+    val coherenceOrder: CoherenceOrder
+
+    /**
+     * The exploration order of lock responses and unlocks.
+     *
+     * @see LockOrder
+     */
+    val lockOrder: LockOrder
 
     /**
      * The extended coherence (eco) relation of the execution
@@ -85,7 +92,11 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
      */
     val executionOrder: Relation<AtomicThreadEvent>
 
+    /**
+     * Cached inconsistency of the execution (if any).
+     */
     val inconsistency: Inconsistency?
+
 }
 
 /**
@@ -104,10 +115,19 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
 
     override val readModifyWriteOrder: ReadModifyWriteOrder
     override val writesBeforeOrder: WritesBeforeOrder
-    override val coherenceOrder: CoherenceOrder
     override val extendedCoherence: ExtendedCoherenceOrder
     override val sequentialConsistencyApproximationOrder: SequentialConsistencyApproximationOrder
     override val executionOrder: ExecutionOrder
+
+    /**
+     * Appends the missing events of [frontier], to current execution,
+     * updating the relations where possible.
+     *
+     * Full consistency checks are deferred until the caller invokes [checkConsistency].
+     *
+     * Requires the current execution to be a prefix of [frontier] (see [isPrefixOf]).
+     */
+    fun extend(frontier: ExecutionFrontier<AtomicThreadEvent>)
 
     /**
      * Resets the mutable execution to contain the new set of events
@@ -121,6 +141,9 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
      */
     fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>)
 
+    /**
+     * Checks the consistency of the extended execution.
+     */
     fun checkConsistency(): Inconsistency?
 }
 
@@ -172,6 +195,8 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         memoryModel,
     )
 
+    override val lockOrder = LockOrder().apply { onReset(execution) }
+
     override val executionOrder = ExecutionOrder(
         execution,
         happensBeforeOrder union extendedCoherence,
@@ -188,7 +213,8 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         readModifyWriteOrder,
         writesBeforeOrder,
         coherenceOrder, // should be updated before the consistency checker,
-                        // which checks the new events against the coherence order
+                        // which checks its consistency flag
+        lockOrder,
         extendedCoherence,
         sequentialConsistencyApproximationOrder,
         executionOrder
@@ -205,9 +231,32 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     }
 
     override fun add(event: AtomicThreadEvent) {
+        doAdd(event)
+        // A restored RMW may read from an earlier write in the coherence order.
+        // Rebuild its witness after all trackers have seen the write-part.
+        if (event.label.isExclusiveWriteAccess() && !coherenceOrder.computed) {
+            checkConsistency()
+        }
+    }
+
+    private fun doAdd(event: AtomicThreadEvent) {
         execution.add(event)
-        for (tracker in trackers)
+        for (tracker in trackers) {
             tracker.onAdd(event)
+        }
+    }
+
+    override fun extend(frontier: ExecutionFrontier<AtomicThreadEvent>) {
+        val executionFrontier = execution.toFrontier()
+        require(executionFrontier.isPrefixOf(frontier))
+
+        val events = frontier.eventsDifference(executionFrontier).sortedBy { it.id }
+        for (tid in frontier.threadIDs) {
+            execution.registerThread(tid)
+        }
+        for (event in events) {
+            doAdd(event)
+        }
     }
 
     override fun reset(frontier: ExecutionFrontier<AtomicThreadEvent>) {

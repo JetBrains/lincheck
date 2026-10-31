@@ -11,7 +11,9 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.lincheck.datastructures.scenario
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -24,7 +26,7 @@ class LocksTest {
             Triple(0,1,2),
             Triple(1,0,2),
         )
-        litmusTest(assertSame(expectedOutcomes)) {
+        litmusTest(assertSame(expectedOutcomes), requireExhaustion = true) {
             var x = 0
             val monitor = Any()
             var r1 = -1;
@@ -58,7 +60,7 @@ class LocksTest {
             listOf(1,2,0,3),
             listOf(2,1,0,3),
         )
-        litmusTest(assertSame(expectedOutcomes)) {
+        litmusTest(assertSame(expectedOutcomes), requireExhaustion = true) {
             var x = 0
             val monitor = Any()
             var r1 = -1;
@@ -166,7 +168,7 @@ class LocksTest {
             Triple(0,1,2),
             Triple(1,0,2),
         )
-        litmusTest(assertSame(expectedOutcomes)) {
+        litmusTest(assertSame(expectedOutcomes), requireExhaustion = true) {
             var x = 0
             val monitor = Any()
             var r1 = -1;
@@ -191,6 +193,146 @@ class LocksTest {
             t2.join()
 
             Triple(r1, r2, x)
+        }
+    }
+
+    @Test
+    fun testRepeatedReentrantAcquisitions() {
+        val outcomes = setOf(Triple(0, 1, 2), Triple(0, 2, 1), Triple(1, 2, 0))
+        litmusTest(assertSame(outcomes), requireExhaustion = true) {
+            val monitor = Any()
+            var counter = 0
+            var first = -1
+            var second = -1
+            var contender = -1
+            val repeated = thread {
+                synchronized(monitor) {
+                    synchronized(monitor) { first = counter++ }
+                }
+                synchronized(monitor) {
+                    synchronized(monitor) { second = counter++ }
+                }
+            }
+            val other = thread {
+                synchronized(monitor) { contender = counter++ }
+            }
+            repeated.join()
+            other.join()
+            Triple(first, second, contender)
+        }
+    }
+
+    @Test
+    fun testReentrantWaitRestoresMonitorDepth() {
+        litmusTest(assertSame(setOf(false to 2, true to 2)), requireExhaustion = true) {
+            val monitor = Object()
+            var ready = false
+            var waited = false
+            var counter = 0
+            val waiter = thread {
+                synchronized(monitor) {
+                    synchronized(monitor) {
+                        while (!ready) {
+                            waited = true
+                            monitor.wait()
+                        }
+                        counter++
+                    }
+                }
+            }
+            val notifier = thread {
+                synchronized(monitor) {
+                    counter++
+                    ready = true
+                    monitor.notifyAll()
+                }
+            }
+            waiter.join()
+            notifier.join()
+            waited to counter
+        }
+    }
+
+    @Test
+    fun testNestedLocksRepairedByLaterUnlock() {
+        val outcomes = setOf(Triple(0, 1, 2), Triple(1, 0, 2), Triple(1, 0, 1))
+        litmusTest(assertSame(outcomes), requireExhaustion = true) {
+            val outer = Any()
+            val inner = Any()
+            var counter = 0
+            var nested = -1
+            var independent = -1
+            var observed = -1
+            val first = thread {
+                synchronized(outer) {
+                    synchronized(inner) { nested = counter++ }
+                }
+            }
+            val second = thread {
+                synchronized(inner) { independent = counter++ }
+                synchronized(outer) { observed = counter }
+            }
+            first.join()
+            second.join()
+            Triple(nested, independent, observed)
+        }
+    }
+
+    @Test
+    fun testPendingReentrantContenders() {
+        for (memoryModel in listOf(MemoryModel.SequentialConsistency, MemoryModel.RelaxedJava)) {
+            litmusTest(assertSame(permutations(listOf(0, 1, 2))), memoryModel, requireExhaustion = true) {
+                val monitor = Any()
+                val helper = thread(start = false) {}
+                var counter = 0
+                val order = IntArray(3) { -1 }
+                val contenders = List(3) { index ->
+                    thread(start = false) {
+                        synchronized(monitor) {
+                            synchronized(monitor) {
+                                // Make the other requests pending before either owner releases the monitor.
+                                if (index < 2) helper.join()
+                                order[index] = counter++
+                            }
+                        }
+                    }
+                }
+                contenders.forEach { it.start() }
+                helper.start()
+                contenders.forEach { it.join() }
+                helper.join()
+                order.toList()
+            }
+        }
+    }
+
+    @Test
+    fun testMemoryRevisitReordersCriticalSections() {
+        for (memoryModel in listOf(MemoryModel.SequentialConsistency, MemoryModel.RelaxedJava)) {
+            // The first thread's section can be before, between, or after the other two sections.
+            // Only the first order forces the outside read to observe x = 1.
+            val outcomes = setOf(0 to 1, 1 to 0, 1 to 1, 2 to 0, 2 to 1)
+            litmusTest(assertSame(outcomes), memoryModel, requireExhaustion = true) {
+                val monitor = Any()
+                var x = 0
+                var y = 0
+                var a = -1
+                var b = -1
+                val first = thread(start = false) {
+                    x = 1
+                    synchronized(monitor) { a = y }
+                }
+                val second = thread(start = false) {
+                    synchronized(monitor) { y = 1 }
+                    b = x
+                    synchronized(monitor) { y = 2 }
+                }
+                first.start()
+                second.start()
+                first.join()
+                second.join()
+                a to b
+            }
         }
     }
 
@@ -309,10 +451,33 @@ class LocksTest {
             listOf(1,1,1,0),
             listOf(1,1,1,1),
         )
-        litmusTest(assertSame(expectedOutcomes, UNKNOWN)) {
+        // All six sections share one mutex; only each reader's two sections have a fixed order.
+        // Recording their ordinals distinguishes all 180 ownership chains, including equal-valued reads.
+        val expectedExecutions = permutations((0..5).toList())
+            .filter { order -> order[2] < order[3] && order[4] < order[5] }
+            .map { order ->
+                order to listOf(
+                    if (order[0] < order[2]) 1 else 0,
+                    if (order[1] < order[3]) 1 else 0,
+                    if (order[1] < order[4]) 1 else 0,
+                    if (order[0] < order[5]) 1 else 0,
+                )
+            }
+            .toSet()
+        val verifier = OutcomeVerifier<Pair<List<Int>, List<Int>>> { actualExecutions ->
+            assertSame(expectedExecutions, UNKNOWN).verify(actualExecutions)
+            assertSame(expectedOutcomes, UNKNOWN).verify(actualExecutions.map { it.second })
+            assertTrue(
+                "Expected at most 360 accepted executions, got ${actualExecutions.size}",
+                actualExecutions.size <= 360,
+            )
+        }
+        litmusTest(verifier, invocations = 100_000, requireExhaustion = true) {
             val lock = Object()
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
+            val order = IntArray(6) { -1 }
+            var nextOrdinal = 0
             var r1 = -1;
             var r2 = -1;
             var r3 = -1;
@@ -320,35 +485,45 @@ class LocksTest {
             val t1 = thread {
                 synchronized(lock) {
                     x.set(1)
+                    order[0] = nextOrdinal++
                 }
             }
             val t2 = thread {
                 synchronized(lock) {
                     y.set(1)
+                    order[1] = nextOrdinal++
                 }
             }
             val t3 = thread {
                 synchronized(lock) {
                     r1 = x.get()
+                    order[2] = nextOrdinal++
                 }
                 synchronized(lock) {
                     r2 = y.get()
+                    order[3] = nextOrdinal++
                 }
             }
             val t4 = thread {
                 synchronized(lock) {
                     r3 = y.get()
+                    order[4] = nextOrdinal++
                 }
                 synchronized(lock) {
                     r4 = x.get()
+                    order[5] = nextOrdinal++
                 }
             }
             t1.join()
             t2.join()
             t3.join()
             t4.join()
-            listOf(r1,r2,r3,r4)
+            order.toList() to listOf(r1,r2,r3,r4)
         }
     }
+
+    private fun permutations(values: List<Int>): Set<List<Int>> =
+        if (values.isEmpty()) setOf(emptyList())
+        else values.flatMap { value -> permutations(values - value).map { listOf(value) + it } }.toSet()
 
 }
