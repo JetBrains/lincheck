@@ -35,6 +35,7 @@ typealias ValueMapper = (Types.Type, ValueID) -> OpaqueValue?
 interface MemoryLocation {
     val objID: ObjectNumber
     val type: Types.Type
+    val isFinal: Boolean get() = false
 
     fun read(valueMapper: ValueMapper): Any?
     fun write(value: Any?, valueMapper: ValueMapper)
@@ -52,12 +53,14 @@ fun ObjectTracker.getFieldAccessMemoryLocation(
     isFinal: Boolean,
 ): MemoryLocation {
     if (isStatic) {
-        return StaticFieldMemoryLocation(className, fieldName, type)
+        val field = resolveField(resolveClass(className = className), className, fieldName)
+        return StaticFieldMemoryLocation(className, fieldName, type, field, isFinal)
     }
     val clazz = obj!!.javaClass
     // TODO: If this is null then we are in a phantom static object, which is probably not what we expect
     val id = get(obj)!!.objectNumber
-    return ObjectFieldMemoryLocation(clazz, id, clazz.name, fieldName, type)
+    val field = resolveField(resolveClass(clazz, className), className, fieldName)
+    return ObjectFieldMemoryLocation(clazz, id, field.declaringClass.name, fieldName, type, field, isFinal)
 }
 
 fun ObjectTracker.getArrayAccessMemoryLocation(array: Any, index: Int, type: Types.Type): MemoryLocation {
@@ -108,7 +111,7 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
                 fieldName = accessLocation.fieldName,
                 type = type,
                 isStatic = (accessLocation is StaticFieldAccessLocation),
-                isFinal = false, // TODO: fixme?
+                isFinal = false,
             )
         }
         AtomicApiKind.VAR_HANDLE -> when (accessLocation) {
@@ -119,7 +122,10 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
                     fieldName = accessLocation.fieldName,
                     type = getVarHandleAccessType(receiver)!!,
                     isStatic = (accessLocation is StaticFieldAccessLocation),
-                    isFinal = false, // TODO: fixme?
+                    isFinal =
+                        accessLocation.fieldDescriptor.isFinal &&
+                        atomicMethodDescriptor.kind == AtomicMethodKind.GET &&
+                        atomicMethodDescriptor.ordering == MemoryOrdering.PLAIN,
                 )
             }
             is ArrayElementByIndexAccessLocation -> {
@@ -139,7 +145,10 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
                     fieldName = accessLocation.fieldName,
                     type = parseUnsafeMethodAccessType(methodName)!!,
                     isStatic = (accessLocation is StaticFieldAccessLocation),
-                    isFinal = false, // TODO: fixme?
+                    isFinal =
+                        accessLocation.fieldDescriptor.isFinal &&
+                        atomicMethodDescriptor.kind == AtomicMethodKind.GET &&
+                        atomicMethodDescriptor.ordering == MemoryOrdering.PLAIN,
                 )
             }
             is ArrayElementByIndexAccessLocation -> {
@@ -158,15 +167,12 @@ class StaticFieldMemoryLocation(
     val className: String,
     val fieldName: String,
     override val type: Types.Type,
+    private val field: Field,
+    // not derived from `field`: atomic (VarHandle, Unsafe) non-plain reads of a final field lack final-field semantics
+    override val isFinal: Boolean,
 ) : MemoryLocation {
 
     override val objID: ObjectNumber = STATIC_OBJECT_NUMBER
-
-    private val field: Field by lazy {
-        val resolvedClass = resolveClass(className = className)
-        resolveField(resolvedClass, className, fieldName)
-            // .apply { isAccessible = true }
-    }
 
     override fun read(valueMapper: ValueMapper): Any? {
         // return field.get(null)
@@ -203,6 +209,9 @@ class ObjectFieldMemoryLocation(
     val className: String,
     val fieldName: String,
     override val type: Types.Type,
+    private val field: Field,
+    // not derived from `field`: atomic (VarHandle, Unsafe) non-plain reads of a final field lack final-field semantics
+    override val isFinal: Boolean,
 ) : MemoryLocation {
 
     init {
@@ -210,12 +219,6 @@ class ObjectFieldMemoryLocation(
     }
 
     val simpleClassName: String = clazz.simpleName
-
-    private val field: Field by lazy {
-        val resolvedClass = resolveClass(clazz, className = className)
-        resolveField(resolvedClass, className, fieldName)
-            // .apply { isAccessible = true }
-    }
 
     override fun read(valueMapper: ValueMapper): Any? {
         // return field.get(valueMapper(OBJECT_TYPE, objID)?.unwrap())
@@ -381,37 +384,4 @@ internal fun objRepr(className: String, objID: ObjectNumber): String {
         NULL_OBJECT_NUMBER -> "null"
         else -> "$className@$objID"
     }
-}
-
-private fun matchClassName(clazz: Class<*>, className: String) =
-    clazz.name.endsWith(className) || (clazz.canonicalName?.endsWith(className) ?: false)
-
-private fun resolveClass(clazz: Class<*>? = null, className: String? = null): Class<*> {
-    if (className == null) {
-        check(clazz != null)
-        return clazz
-    }
-    if (clazz == null) {
-        return Class.forName(className)
-    }
-    if (matchClassName(clazz, className)) {
-        return clazz
-    }
-    var superClass = clazz.superclass
-    while (superClass != null) {
-        if (matchClassName(superClass, className))
-            return superClass
-        superClass = superClass.superclass
-    }
-    throw IllegalStateException("Cannot find class $className for object of class ${clazz.name}!")
-}
-
-private fun resolveField(clazz: Class<*>, className: String, fieldName: String): Field {
-    var currentClass: Class<*>? = clazz
-    do {
-        currentClass?.fields?.firstOrNull { it.name == fieldName }?.let { return it }
-        currentClass?.declaredFields?.firstOrNull { it.name == fieldName }?.let { return it }
-        currentClass = currentClass?.superclass
-    } while (currentClass != null)
-    throw IllegalStateException("Cannot find field $className::$fieldName for class $clazz!")
 }

@@ -30,13 +30,13 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistenc
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.getArrayElementType
-import org.jetbrains.lincheck.descriptors.getType
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.collections.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.MemoryOrdering
 import sun.nio.ch.lincheck.ThreadDescriptor
+import org.objectweb.asm.Type as AsmType
 
 internal class EventStructureStrategy(
     runner: Runner,
@@ -76,6 +76,30 @@ internal class EventStructureStrategy(
         EventStructureParkingTracker(eventStructure)
 
     override val trackFinalFields = true
+
+    override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String) {
+        super.afterObjectConstructor(threadDescriptor, obj, className)
+        if (memoryModel != MemoryModel.RelaxedJava) return
+        threadDescriptor.runInsideIgnoredSection {
+            val objectID = objectTracker[obj]?.objectNumber ?: return
+            val declaringClass = generateSequence(obj.javaClass) { it.superclass }
+                .firstOrNull { it.name == className } ?: return
+            val locations = declaringClass.declaredFinalInstanceFields
+                .map { field ->
+                    ObjectFieldMemoryLocation(
+                        obj.javaClass,
+                        objectID,
+                        declaringClass.name,
+                        field.name,
+                        Types.convertAsmTypeName(AsmType.getDescriptor(field.type)),
+                        field,
+                        isFinal = true,
+                    )
+                }
+                .toSet()
+            eventStructure.addFreezeEvent(getCurrentThreadId(), objectID, locations)
+        }
+    }
 
     val stats = Stats()
 
@@ -157,6 +181,8 @@ internal class EventStructureStrategy(
 
         private var relAcqInconsistenciesCount: Int = 0
 
+        private var finalFieldsViolationsCount: Int = 0
+
         private var seqCstCoherenceViolationCount: Int = 0
 
         private var seqCstReplayViolationCount: Int = 0
@@ -171,6 +197,7 @@ internal class EventStructureStrategy(
                 lockConsistencyViolationCount +
                 atomicityInconsistenciesCount +
                 relAcqInconsistenciesCount +
+                finalFieldsViolationsCount +
                 sequentialConsistencyViolationsCount
 
         val totalInvocations: Int
@@ -188,6 +215,8 @@ internal class EventStructureStrategy(
                     atomicityInconsistenciesCount++
                 is ReleaseAcquireInconsistency ->
                     relAcqInconsistenciesCount++
+                is FinalFieldsViolation ->
+                    finalFieldsViolationsCount++
                 is CoherenceViolation ->
                     seqCstCoherenceViolationCount++
                 is SequentialConsistencyReplayViolation ->
@@ -203,6 +232,7 @@ internal class EventStructureStrategy(
             #Lock   violations   = $lockConsistencyViolationCount                
             #Atom.  violations   = $atomicityInconsistenciesCount
             #RelAcq violations   = $relAcqInconsistenciesCount
+            #Final  violations   = $finalFieldsViolationsCount
             #SeqCst violations   = $sequentialConsistencyViolationsCount
                 #coher.  phase   = $seqCstCoherenceViolationCount
                 #replay  phase   = $seqCstReplayViolationCount
@@ -591,7 +621,7 @@ private class EventStructureMemoryTracker(
     }
 
     private fun addReadRequest(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering,
-                               readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null, ) {
+                               readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null) {
         eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder, readModifyWriteDescriptor)
     }
 

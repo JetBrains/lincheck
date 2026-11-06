@@ -1,0 +1,22 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |
+| ---------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                |
+|   number.get(): 42 at VarHandleFinalFieldRepresentationTest.operation(VarHandleRepresentationTests.kt:360) |
+|   result: void                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- |

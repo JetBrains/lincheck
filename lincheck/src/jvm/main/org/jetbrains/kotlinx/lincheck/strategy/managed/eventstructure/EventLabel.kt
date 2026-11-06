@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.util.implies
 import org.jetbrains.lincheck.util.MemoryOrdering
 
@@ -148,6 +149,7 @@ fun SpanLabelKind.toLabelKind(): LabelKind = when (this) {
 enum class LabelType {
     Initialization,
     ObjectAllocation,
+    Freeze,
     ThreadStart,
     ThreadFinish,
     ThreadFork,
@@ -176,6 +178,7 @@ enum class LabelType {
 val EventLabel.type: LabelType get() = when (this) {
     is InitializationLabel          -> LabelType.Initialization
     is ObjectAllocationLabel        -> LabelType.ObjectAllocation
+    is FreezeLabel                  -> LabelType.Freeze
     is ThreadStartLabel             -> LabelType.ThreadStart
     is ThreadFinishLabel            -> LabelType.ThreadFinish
     is ThreadForkLabel              -> LabelType.ThreadFork
@@ -275,6 +278,19 @@ data class ObjectAllocationLabel(
     override fun toString(): String =
         "Alloc(${objRepr(className, objectID)})"
 
+}
+
+/** Freezes the final instance fields initialized by a constructor of [objectID]. */
+data class FreezeLabel(
+    override val objectID: ObjectNumber,
+    val locations: Set<MemoryLocation>,
+) : EventLabel(kind = LabelKind.Send) {
+    init {
+        require(objectID != NULL_OBJECT_NUMBER)
+        require(locations.all { it.objID == objectID })
+    }
+
+    override fun toString(): String = "Freeze(${locations.joinToString()})"
 }
 
 
@@ -536,6 +552,41 @@ sealed class ReadModifyWriteDescriptor {
 }
 
 /**
+ * Checks whether [memoryOrdering] is valid for a read.
+ */
+fun isValidReadMemoryOrder(memoryOrdering: MemoryOrdering): Boolean = when (memoryOrdering) {
+    MemoryOrdering.PLAIN,
+    MemoryOrdering.OPAQUE,
+    MemoryOrdering.ACQUIRE,
+    MemoryOrdering.VOLATILE
+         -> true
+    else -> false
+}
+
+/**
+ * Checks whether [memoryOrdering] is valid for a write.
+ */
+fun isValidWriteMemoryOrder(memoryOrdering: MemoryOrdering): Boolean = when (memoryOrdering) {
+    MemoryOrdering.PLAIN,
+    MemoryOrdering.OPAQUE,
+    MemoryOrdering.RELEASE,
+    MemoryOrdering.VOLATILE
+         -> true
+    else -> false
+}
+
+/**
+ * Checks whether [memoryOrdering] is valid for a fence.
+ */
+fun isValidFenceMemoryOrder(memoryOrdering: MemoryOrdering): Boolean = when (memoryOrdering) {
+    MemoryOrdering.RELEASE,
+    MemoryOrdering.ACQUIRE,
+    MemoryOrdering.VOLATILE
+         -> true
+    else -> false
+}
+
+/**
  * Label denoting a read access to shared memory.
  *
  * @param kind The kind of this label: [LabelKind.Request], [LabelKind.Response], or [LabelKind.Receive].
@@ -557,6 +608,8 @@ data class ReadAccessLabel(
     init {
         require(isRequest || isResponse || isReceive)
         require(isRequest implies (value == NULL_OBJECT_NUMBER.toLong()))
+        // RMW parts carry the whole operation's mode, so a read part may carry RELEASE.
+        require(isExclusive || isValidReadMemoryOrder(memoryOrdering))
     }
 
     val value: ValueID
@@ -584,6 +637,10 @@ data class WriteAccessLabel(
     override val codeLocation: Int = UNKNOWN_CODE_LOCATION,
     override val memoryOrdering: MemoryOrdering,
 ): MemoryAccessLabel(LabelKind.Send, location, readModifyWriteDescriptor, codeLocation, memoryOrdering) {
+
+    init {
+        require(isExclusive || isValidWriteMemoryOrder(memoryOrdering))
+    }
 
     val value: ValueID
         get() = writeValue
@@ -835,6 +892,50 @@ fun EventLabel.asMemoryAccessLabel(location: MemoryLocation): MemoryAccessLabel?
     else -> null
 }
 
+/**
+ * Provides the corresponding value of the object referenced by this label, if applicable.
+ *
+ * The referenced object is either:
+ * - an object allocated by allocation label, or
+ * - an object read by read access label.
+ */
+internal val EventLabel.referencedObject: ValueID? get() = when (val label = this) {
+    is ObjectAllocationLabel -> label.objectID.toLong()
+    is ReadAccessLabel if (label.isResponse) -> referencedObject(label.location.type, label.readValue)
+    else -> null
+}
+
+/**
+ * Returns the given value id if it represents a valid object reference identity for the specified type.
+ */
+internal fun referencedObject(type: Types.Type, value: ValueID): ValueID? =
+    value.takeIf {
+        storesReferenceIdentity(type) &&
+        value != NULL_OBJECT_NUMBER.toLong() &&
+        value != STATIC_OBJECT_NUMBER.toLong()
+    }
+
+/**
+ * Whether values of this type carry object IDs in the event structure.
+ *
+ * The object tracker encodes some boxed primitives as numeric payloads;
+ * those payloads must not be mistaken for identities of unrelated objects.
+ */
+private fun storesReferenceIdentity(type: Types.Type): Boolean = when (type) {
+    Types.LONG_TYPE_BOXED,
+    Types.INT_TYPE_BOXED,
+    Types.BYTE_TYPE_BOXED,
+    Types.SHORT_TYPE_BOXED,
+    Types.CHAR_TYPE_BOXED,
+    Types.BOOLEAN_TYPE_BOXED
+        -> false
+
+    is Types.ObjectType,
+    is Types.ArrayType
+        -> true
+
+    else -> false
+}
 
 /* ************************************************************************* */
 /*      Mutex events labels                                                  */
@@ -1260,6 +1361,10 @@ data class FenceLabel(
 ): EventLabel(
     kind = LabelKind.Send
 ) {
+    init {
+        require(isValidFenceMemoryOrder(memoryOrdering))
+    }
+
     override fun toString(): String {
         return "Fence($memoryOrdering)"
     }

@@ -15,6 +15,7 @@ import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
 import org.jetbrains.lincheck.trace.TraceContext
 import org.objectweb.asm.Handle
+import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes.*
 import org.objectweb.asm.Type
@@ -79,6 +80,11 @@ internal class ObjectCreationTransformer(
      */
     private var uninitializedObjects = 0
 
+    private val constructorTryStart = Label()
+    private val constructorTryEnd = Label()
+    private val constructorCatch = Label()
+    private var constructorTryStarted = false
+
     override fun visitMethodInsn(opcode: Int, owner: String, name: String, desc: String, itf: Boolean) = adapter.run {
         if (name != "<init>") {
             super.visitMethodInsn(opcode, owner, name, desc, itf)
@@ -87,6 +93,12 @@ internal class ObjectCreationTransformer(
 
         if (isReceiverUninitializedThis(desc)) {
             invokeAfterConstructorForCurrentThis(opcode, owner, name, desc, itf)
+            if (!constructorTryStarted) {
+                // The handler must start after super()/this(): before that call the receiver is
+                // UNINITIALIZED_THIS and cannot be used from an exception handler frame.
+                visitLabel(constructorTryStart)
+                constructorTryStarted = true
+            }
             return
         }
 
@@ -97,6 +109,48 @@ internal class ObjectCreationTransformer(
         }
 
         super.visitMethodInsn(opcode, owner, name, desc, itf)
+    }
+
+    /* Normal constructor exits are reported at the call site, after `<init>` returns:
+     * by `invokeAfterConstructorForNewObject` for `NEW` and
+     * by `invokeAfterConstructorForCurrentThis` for `super()`/`this()`.
+     * The call-site code is not reached when the constructor throws,
+     * so the constructor itself reports its exceptional exits from a constructor-wide handler.
+     *
+     * Known limitation: an instrumented constructor called from uninstrumented code
+     * (for example, `Constructor.newInstance`, or a `Foo::new` reference whose `NEW`
+     * lives in a JVM-spun lambda class) has no call site hook, so its normal exit is not reported.
+     * Reporting every exit from the constructor itself would cover this case,
+     * but would require call-site hooks to fire only for uninstrumented constructors.
+     */
+    override fun visitMaxs(maxStack: Int, maxLocals: Int) = adapter.run {
+        if (constructorTryStarted) {
+            // Register late so handlers emitted by outer transformers
+            // (for example method-call cleanup handlers) retain precedence over
+            // this constructor-wide fallback handler.
+            visitTryCatchBlock(constructorTryStart, constructorTryEnd, constructorCatch, null)
+            visitLabel(constructorTryEnd)
+
+            visitLabel(constructorCatch)
+            // The caught throwable remains on the operand stack.
+            // Preserve it after reporting the constructor exit
+            // so the original exceptional control flow is unchanged.
+            invokeAfterConstructorExceptionalExit()
+            visitInsn(ATHROW)
+        }
+        super.visitMaxs(maxStack, maxLocals)
+    }
+
+    private fun GeneratorAdapter.invokeAfterConstructorExceptionalExit() {
+        invokeIfInAnalyzedCode(
+            original = {},
+            instrumented = {
+                invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
+                loadThis()
+                push(className.toCanonicalClassName())
+                invokeStatic(Injections::afterObjectConstructor)
+            },
+        )
     }
 
     private fun GeneratorAdapter.invokeAfterConstructorForNewObject(

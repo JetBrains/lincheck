@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
+import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.util.collections.*
 
@@ -128,6 +129,7 @@ enum class AtomicMemoryAccessCategory {
     ReadRequest,
     ReadResponse,
     Write,
+    Freeze,
 }
 
 interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation> {
@@ -140,16 +142,50 @@ interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMem
 
     val locationInfo: Map<MemoryLocation, LocationInfo>
 
-    fun getWriteReadResponses(write: AtomicThreadEvent, location: MemoryLocation): SortedList<AtomicThreadEvent>
+    /**
+     * Latest allocation or reference read response supplying [value]
+     * at or before [position] in the given thread, or null if there is none.
+     */
+    fun getLatestReferencingEvent(value: ValueID, threadId: Int, position: Int): AtomicThreadEvent?
 
+    /**
+     * Read requests to [location].
+     */
     fun getReadRequests(location: MemoryLocation) : SortedList<AtomicThreadEvent> =
         get(AtomicMemoryAccessCategory.ReadRequest, location)
 
+    /**
+     * Read responses to [location].
+     */
     fun getReadResponses(location: MemoryLocation): SortedList<AtomicThreadEvent> =
         get(AtomicMemoryAccessCategory.ReadResponse, location)
 
+    /**
+     * Writes to [location], including synthetic initializing writes.
+     */
     fun getWrites(location: MemoryLocation): SortedList<AtomicThreadEvent> =
         get(AtomicMemoryAccessCategory.Write, location)
+
+    /**
+     * Latest write to [location] in each thread's prefix specified by [clock], including initializing writes.
+     */
+    fun getLatestWrites(location: MemoryLocation, clock: VectorClock): Sequence<AtomicThreadEvent>
+
+    /**
+     * Read responses to [location] that read from [write].
+     */
+    fun getWriteReadResponses(write: AtomicThreadEvent, location: MemoryLocation): SortedList<AtomicThreadEvent>
+
+    /**
+     * Freeze events whose frozen locations include [location].
+     */
+    fun getFreezes(location: MemoryLocation): SortedList<AtomicThreadEvent> =
+        get(AtomicMemoryAccessCategory.Freeze, location)
+
+    /**
+     * Latest freeze at or before [position] in the given thread, or null if there is none.
+     */
+    fun getLatestFreeze(threadId: Int, position: Int): AtomicThreadEvent?
 
 }
 
@@ -217,9 +253,23 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
         }
     }
 
+    private val index = MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>(classifier)
+
+    private val referencedObjectsIndex = mutableMapOf<ValueID, ThreadEventIndex<AtomicThreadEvent>>()
+    private val writesByLocationIndex = mutableMapOf<MemoryLocation, ThreadEventIndex<AtomicThreadEvent>>()
+    private val freezeIndex = ThreadEventIndex<AtomicThreadEvent> { it.label is FreezeLabel }
+
     // We need to have memory location as a kay, to handle writes with InitLabel and ObjectAllocationLabel
     private val readsFromIndex = mutableMapOf<Pair<AtomicThreadEvent, MemoryLocation>, SortedMutableList<AtomicThreadEvent>>()
-    private val index = MutableEventIndex<AtomicThreadEvent, AtomicMemoryAccessCategory, MemoryLocation>(classifier)
+
+    override fun get(category: AtomicMemoryAccessCategory, key: MemoryLocation): SortedList<AtomicThreadEvent> =
+        index[category, key]
+
+    override fun getLatestReferencingEvent(value: ValueID, threadId: Int, position: Int): AtomicThreadEvent? =
+        referencedObjectsIndex[value]?.latestAt(threadId, position)
+
+    override fun getLatestWrites(location: MemoryLocation, clock: VectorClock): Sequence<AtomicThreadEvent> =
+        writesByLocationIndex[location]?.latestAt(clock) ?: emptySequence()
 
     override fun getWriteReadResponses(
         write: AtomicThreadEvent,
@@ -228,26 +278,54 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
         return readsFromIndex[write to location] ?: sortedListOf()
     }
 
-    override fun get(category: AtomicMemoryAccessCategory, key: MemoryLocation): SortedList<AtomicThreadEvent> =
-        index[category, key]
+    override fun getLatestFreeze(threadId: Int, position: Int): AtomicThreadEvent? =
+        freezeIndex.latestAt(threadId, position)
 
-    override fun index(category: AtomicMemoryAccessCategory, key: MemoryLocation, event: AtomicThreadEvent) =
+    override fun index(category: AtomicMemoryAccessCategory, key: MemoryLocation, event: AtomicThreadEvent) {
         index.index(category, key, event)
+        if (category == AtomicMemoryAccessCategory.Write) {
+            writesByLocationIndex
+                .getOrPut(key) { ThreadEventIndex { it.label.isWriteAccess() } }
+                .index(event)
+        }
+    }
 
     override fun index(event: AtomicThreadEvent) {
-        val label = (event.label as? MemoryAccessLabel) ?: return
-        if (label.location !in locations) {
+        freezeIndex.index(event)
+        val label = event.label
+
+        updateReferencedObjectsIndex(event)
+        updateFreezeIndex(event)
+
+        val memAccessLabel = (label as? MemoryAccessLabel) ?: return
+        if (memAccessLabel.location !in locations) {
             /* If the indexed event is the first memory access to a given location,
              * then we also need to add the object allocation event
              * to the index for this memory location.
              */
-            index.index(AtomicMemoryAccessCategory.Write, label.location, event.allocation!!)
+            index(AtomicMemoryAccessCategory.Write, memAccessLabel.location, event.allocation!!)
             /* Also initialize the race status data */
-            _locationInfo[label.location] = LocationInfoData()
+            _locationInfo[memAccessLabel.location] = LocationInfoData()
         }
-        updateRaceStatus(label.location, event)
+        updateRaceStatus(memAccessLabel.location, event)
         updateReadsFromIndex(event)
-        index.index(event)
+
+        val (category, key) = classifier(event) ?: return
+        index(category, key, event)
+    }
+
+    private fun updateReferencedObjectsIndex(event: AtomicThreadEvent) {
+        val value = event.label.referencedObject ?: return
+        referencedObjectsIndex
+            .getOrPut(value) { ThreadEventIndex { it.label.referencedObject == value } }
+            .index(event)
+    }
+
+    private fun updateFreezeIndex(event: AtomicThreadEvent) {
+        val freezeLabel = event.label as? FreezeLabel ?: return
+        for (location in freezeLabel.locations) {
+            index(AtomicMemoryAccessCategory.Freeze, location, event)
+        }
     }
 
     private fun updateReadsFromIndex(event: AtomicThreadEvent) {
@@ -265,8 +343,8 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
 
     private fun updateRaceStatus(location: MemoryLocation, event: AtomicThreadEvent) {
         val info = _locationInfo[location]!!
-        if (!info.isWriteWriteRaceFree && !info.isReadWriteRaceFree)
-            return
+        if (!info.isWriteWriteRaceFree && !info.isReadWriteRaceFree) return
+
         when {
             event.label is WriteAccessLabel -> {
                 if (info.isWriteWriteRaceFree) {
@@ -288,8 +366,7 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
             // it is sufficient to check only against the latest write event
             event.label is ReadAccessLabel && info.isRaceFree -> {
                 val lastWrite = getLastWrite(location)!!
-                if (happensBeforeOrder(lastWrite, event))
-                    return
+                if (happensBeforeOrder(lastWrite, event)) return
                 check(happensBeforeOrder.unordered(lastWrite, event))
                 info.isReadWriteRaceFree = false
             }
@@ -310,6 +387,9 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
     override fun reset() {
         _locationInfo.clear()
         index.reset()
+        referencedObjectsIndex.clear()
+        writesByLocationIndex.clear()
+        freezeIndex.reset()
         readsFromIndex.clear()
     }
 

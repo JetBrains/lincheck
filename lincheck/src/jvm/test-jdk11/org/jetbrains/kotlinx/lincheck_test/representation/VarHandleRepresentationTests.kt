@@ -351,3 +351,17 @@ class VarHandleDoubleRepresentationTest : BaseTraceRepresentationTest("var_handl
         val arrayHandle: VarHandle = MethodHandles.arrayElementVarHandle(DoubleArray::class.java)
     }
 }
+
+class VarHandleFinalFieldRepresentationTest : BaseTraceRepresentationTest("var_handle/varhandle_final_field_representation") {
+    @JvmField
+    val number = 42
+
+    override fun operation() {
+        check(numberHandle.get(this) as Int == 42)
+    }
+
+    companion object {
+        private val numberHandle = MethodHandles.lookup()
+            .findVarHandle(VarHandleFinalFieldRepresentationTest::class.java, "number", Int::class.javaPrimitiveType)
+    }
+}

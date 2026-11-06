@@ -20,7 +20,9 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.lincheck.util.*
 
 abstract class SequentialConsistencyViolation : Inconsistency()
 
@@ -87,6 +89,58 @@ class SequentialConsistencyChecker(
         atomicityChecker.reset(execution)
         state = ConsistencyState.Unknown
         return state
+    }
+
+    override fun filterInconsistent(
+        event: AtomicThreadEvent,
+        candidates: Sequence<AtomicThreadEvent>
+    ): Sequence<AtomicThreadEvent> = when (val label = event.label) {
+        is ReadAccessLabel if label.isRequest ->
+            filterReadSynchronizationCandidates(event, candidates)
+
+        is WriteAccessLabel if execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location) ->
+            sequenceOf()
+
+        else -> candidates
+    }
+
+    private fun filterReadSynchronizationCandidates(
+        event: AtomicThreadEvent,
+        candidates: Sequence<AtomicThreadEvent>
+    ): Sequence<AtomicThreadEvent> {
+        val label = event.label as ReadAccessLabel
+        if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
+            val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
+            return sequenceOf(lastWrite)
+        }
+        val threadReads = execution[event.threadId]!!.filter {
+            it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
+        }
+        val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
+        val staleWrites = threadReads
+            .map { it.readsFrom }
+            .filter { it != lastSeenWrite }
+            .distinct()
+        val eventFrontier = execution.calculateFrontier(event.causalityClock)
+        val racyWrites = calculateRacyWrites(label.location, eventFrontier)
+        return candidates.filter {
+            !racyWrites.any { write -> causalityOrder(it, write) } &&
+            !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
+        }
+    }
+
+    private fun calculateRacyWrites(
+        location: MemoryLocation,
+        observation: ExecutionFrontier<AtomicThreadEvent>
+    ): List<ThreadEvent> {
+        val writes = observation.events.mapNotNull { event ->
+            event.ensure { it in execution }.pred(inclusive = true) {
+                it.label.asMemoryAccessLabel(location)?.takeIf { label -> label.isWrite } != null
+            } as? AtomicThreadEvent
+        }
+        return writes.filter { write ->
+            !writes.any { other -> happensBeforeOrder(write, other) }
+        }
     }
 
     private fun findInconsistency(): Inconsistency? {

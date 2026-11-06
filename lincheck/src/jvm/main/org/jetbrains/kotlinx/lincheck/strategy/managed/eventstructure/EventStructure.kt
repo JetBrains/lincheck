@@ -759,8 +759,8 @@ internal class EventStructure(
             (label is UnlockLabel && label.isReentry) ->
                 sequenceOf()
 
-            // random labels do not synchronize
-            label is RandomLabel -> sequenceOf()
+            // Random choices and constructor freezes do not synchronize.
+            label is RandomLabel || label is FreezeLabel -> sequenceOf()
 
             // otherwise we pessimistically assume that any event can potentially synchronize
             else -> execution.asSequence()
@@ -780,20 +780,6 @@ internal class EventStructure(
                 filter { !causalityOrder(it, event) }
             }
         return when {
-            /* For read-request events, we search for the last write to
-             * the same memory location in the same thread.
-             * We then filter out all causal predecessors of this last write,
-             * because these events are "obsolete" ---
-             * reading from them will result in coherence cycle and will violate consistency
-             */
-            label is ReadAccessLabel && label.isRequest -> {
-                filterReadSynchronizationCandidates(event, candidates)
-            }
-
-            label is WriteAccessLabel -> {
-                filterWriteSynchronizationCandidates(event, candidates)
-            }
-
             // an allocation event, at the point when it is added to the execution,
             // cannot synchronize with anything, because there are no events yet
             // that access the allocated object
@@ -807,57 +793,8 @@ internal class EventStructure(
                 candidates.filter { it.label !is InitializationLabel }
             }
 
-            else -> candidates
+            else -> _execution.filterInconsistent(event, candidates)
         }
-    }
-
-    private fun filterReadSynchronizationCandidates(
-        event: ThreadEvent,
-        candidates: Sequence<AtomicThreadEvent>
-    ): Sequence<AtomicThreadEvent> {
-        val label: ReadAccessLabel = event.label as ReadAccessLabel
-        return when (memoryModel) {
-            MemoryModel.SequentialConsistency -> {
-                // We can optimize and remove some synchronized events if we are checking for sequential consistency
-                if (execution.memoryAccessEventIndex.isRaceFree(label.location)) {
-                    val lastWrite = execution.memoryAccessEventIndex.getLastWrite(label.location)!!
-                    return sequenceOf(lastWrite)
-                }
-                val threadReads = execution[event.threadId]!!.filter {
-                    it.label.isResponse && (it.label as? ReadAccessLabel)?.location == label.location
-                }
-                val lastSeenWrite = threadReads.lastOrNull()?.readsFrom
-                val staleWrites = threadReads
-                    .map { it.readsFrom }
-                    .filter { it != lastSeenWrite }
-                    .distinct()
-                val eventFrontier = execution.calculateFrontier(event.causalityClock)
-                val racyWrites = calculateRacyWrites(label.location, eventFrontier)
-                candidates.filter {
-                    // !causalityOrder.lessThan(it, threadLastWrite) &&
-                    !racyWrites.any { write -> causalityOrder(it, write) } &&
-                            !staleWrites.any { write -> causalityOrder.orEqual(it, write) }
-                }
-            }
-            MemoryModel.ReleaseAcquire ->
-                candidates
-            MemoryModel.RelaxedJava ->
-                candidates
-        }
-    }
-
-
-    private fun filterWriteSynchronizationCandidates(
-        event: ThreadEvent,
-        candidates : Sequence<AtomicThreadEvent>
-    ): Sequence<AtomicThreadEvent> {
-        val label: WriteAccessLabel = event.label as WriteAccessLabel
-        if (memoryModel == MemoryModel.SequentialConsistency &&
-            execution.memoryAccessEventIndex.isReadWriteRaceFree(label.location)
-        ) {
-            return sequenceOf()
-        }
-        return candidates
     }
 
     /**
@@ -1386,6 +1323,22 @@ internal class EventStructure(
         addSendEvent(iThread, label)
     }
 
+    fun addFreezeEvent(iThread: Int, objectID: ObjectNumber, locations: Set<MemoryLocation>) {
+        if (locations.isEmpty()) return
+        val unfrozen = locations.toMutableSet()
+        var predecessor = playedFrontier[iThread]
+        while (predecessor != null) {
+            val label = predecessor.label
+            if (label is ObjectAllocationLabel && label.objectID == objectID) break
+            if (label is FreezeLabel && label.objectID == objectID) unfrozen.removeAll(label.locations)
+            predecessor = predecessor.parent
+        }
+        // Delegating constructors and caller-side allocation callbacks must not refreeze fields.
+        if (unfrozen.isNotEmpty()) {
+            addSendEvent(iThread, FreezeLabel(objectID, unfrozen))
+        }
+    }
+
     fun addLockRequestEvent(iThread: Int, mutex: Any,
                             isReentry: Boolean = false, reentrancyDepth: Int = 1,
                             isSynthetic: Boolean = false): AtomicThreadEvent {
@@ -1535,56 +1488,6 @@ internal class EventStructure(
     /* ************************************************************************* */
     /*      Miscellaneous                                                        */
     /* ************************************************************************* */
-
-    /**
-     * Calculates the view for specific memory location observed at the given point of execution
-     * given by [observation] vector clock. Memory location view is a vector clock itself
-     * that maps each thread id to the last write access event to the given memory location at the given thread.
-     *
-     * @param location the memory location.
-     * @param observation the vector clock specifying the point of execution for the view calculation.
-     * @return the view (i.e. vector clock) for the given memory location.
-     *
-     * TODO: move to Execution?
-     */
-    fun calculateMemoryLocationView(
-        location: MemoryLocation,
-        observation: ExecutionFrontier<AtomicThreadEvent>
-    ): ExecutionFrontier<AtomicThreadEvent> =
-        observation.threadMap.map { (tid, event) ->
-            val lastWrite = event
-                ?.ensure { it in execution }
-                ?.pred(inclusive = true) {
-                    it.label.asMemoryAccessLabel(location)?.takeIf { label -> label.isWrite } != null
-                }
-            (tid to lastWrite as? AtomicThreadEvent?)
-        }.let {
-            executionFrontierOf(*it.toTypedArray())
-        }
-
-    /**
-     * Calculates a list of all racy writes to specific memory location observed at the given point of execution
-     * given by [observation] vector clock. In other words, the resulting list contains all program-order maximal
-     * racy writes observed at the given point.
-     *
-     * @param location the memory location.
-     * @param observation the vector clock specifying the point of execution for the view calculation.
-     * @return list of program-order maximal racy write events.
-     *
-     * TODO: move to Execution?
-     */
-    fun calculateRacyWrites(
-        location: MemoryLocation,
-        observation: ExecutionFrontier<AtomicThreadEvent>
-    ): List<ThreadEvent> {
-        val writes = calculateMemoryLocationView(location, observation).events
-        return writes.filter { write ->
-            !writes.any { other ->
-                happensBeforeOrder(write, other)
-            }
-        }
-    }
-
 
     private fun resetReadCodeLocationsCounter(iThread: Int) {
         // reset all code-locations counters of the given thread

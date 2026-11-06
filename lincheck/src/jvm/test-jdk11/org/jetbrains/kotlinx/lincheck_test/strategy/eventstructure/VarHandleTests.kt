@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import java.util.concurrent.atomic.*
 import java.lang.invoke.MethodHandles
 import org.jetbrains.lincheck.datastructures.scenario
@@ -28,12 +29,108 @@ import org.junit.Test
 import org.junit.Rule
 import org.junit.rules.TestName
 import org.jetbrains.lincheck.util.UnsafeHolder
+import org.jetbrains.lincheck.util.MemoryOrdering
 import java.lang.invoke.VarHandle
+import kotlin.concurrent.thread
 
 class VarHandleTests {
 
     @get:Rule
     val testName = TestName()
+
+    class FinalIntVariable(value: Int, publish: (FinalIntVariable) -> Unit) {
+        @JvmField
+        val value: Int
+
+        init {
+            publish(this)
+            this.value = value
+        }
+
+        companion object {
+            private val handle = MethodHandles.lookup()
+                .findVarHandle(FinalIntVariable::class.java, "value", Int::class.javaPrimitiveType)
+        }
+
+        fun read(mode: MemoryOrdering): Int = when (mode) {
+            MemoryOrdering.PLAIN -> handle.get(this) as Int
+            MemoryOrdering.OPAQUE -> handle.getOpaque(this) as Int
+            MemoryOrdering.ACQUIRE -> handle.getAcquire(this) as Int
+            MemoryOrdering.VOLATILE -> handle.getVolatile(this) as Int
+            else -> error("Unsupported read mode: $mode")
+        }
+    }
+
+    @Test
+    fun finalFieldGet() = finalFieldRead(MemoryOrdering.PLAIN)
+
+    @Test
+    fun finalFieldGetWithLeak() = finalFieldRead(MemoryOrdering.PLAIN, leaksThis = true)
+
+    @Test
+    fun finalFieldGetInAllMemoryModels() {
+        for (memoryModel in MemoryModel.entries) {
+            finalFieldRead(MemoryOrdering.PLAIN, memoryModel = memoryModel)
+            finalFieldRead(MemoryOrdering.PLAIN, leaksThis = true, memoryModel = memoryModel)
+        }
+    }
+
+    @Test
+    fun finalFieldGetOpaque() = finalFieldRead(MemoryOrdering.OPAQUE)
+
+    @Test
+    fun finalFieldGetAcquire() = finalFieldRead(MemoryOrdering.ACQUIRE)
+
+    @Test
+    fun finalFieldGetVolatile() = finalFieldRead(MemoryOrdering.VOLATILE)
+
+    private fun finalFieldRead(
+        mode: MemoryOrdering,
+        leaksThis: Boolean = false,
+        memoryModel: MemoryModel = MemoryModel.RelaxedJava,
+    ) {
+        val outcomes = if (leaksThis || mode != MemoryOrdering.PLAIN) setOf(-1, 0, 42) else setOf(-1, 42)
+        litmusTest(assertSame(outcomes, UNKNOWN), memoryModel, requireExhaustion = true) {
+            var published: FinalIntVariable? = null
+            var result = -1
+            val writer = thread {
+                published = FinalIntVariable(42) { if (leaksThis) published = it }
+            }
+            val reader = thread {
+                result = published?.read(mode) ?: -1
+            }
+            writer.join()
+            reader.join()
+            result
+        }
+    }
+
+    class Cell(var value: Int)
+
+    class FinalCellReference(@JvmField val cell: Cell?) {
+        companion object {
+            private val handle = MethodHandles.lookup()
+                .findVarHandle(FinalCellReference::class.java, "cell", Cell::class.java)
+        }
+
+        fun read(): Cell? = handle.get(this) as Cell?
+    }
+
+    @Test
+    fun finalReferenceGetProtectsMutableField() {
+        litmusTest(assertSame(setOf(-1, 42), UNKNOWN), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            var published: FinalCellReference? = null
+            var result = -1
+            val writer = thread { published = FinalCellReference(Cell(42)) }
+            val reader = thread {
+                val observed = published
+                result = if (observed == null) -1 else observed.read()?.value ?: -2
+            }
+            writer.join()
+            reader.join()
+            result
+        }
+    }
 
     class VolatileReferenceVariable {
         @Volatile

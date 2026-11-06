@@ -35,10 +35,28 @@ abstract class Inconsistency
 class InconsistentExecutionException(val inconsistency: Inconsistency) : Exception(inconsistency.toString())
 
 fun interface ConsistencyChecker<E : ThreadEvent, X : Execution<E>> {
+    /**
+     * Performs the full consistency check of the provided execution and identifies any potential inconsistency.
+     *
+     * @param execution the execution object to be checked for consistency issues.
+     * @return an instance of [Inconsistency] if an inconsistency is detected; otherwise, null.
+     */
     fun check(execution: X): Inconsistency?
+
+    /**
+     * Removes synchronization candidates known to produce inconsistent extensions.
+     * Retained candidates may still require a full consistency check.
+     */
+    fun filterInconsistent(event: E, candidates: Sequence<E>): Sequence<E> = candidates
 }
 
-interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> : ExecutionTracker<E, X> {
+interface IncrementalConsistencyChecker<E : ThreadEvent, X : Execution<E>> :
+    ConsistencyChecker<E, X>, ExecutionTracker<E, X> {
+
+    override fun check(execution: X): Inconsistency? {
+        reset(execution)
+        return check()
+    }
 
     override fun onAdd(event: E) {
         check(event)

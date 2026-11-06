@@ -92,6 +92,9 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
      */
     val executionOrder: Relation<AtomicThreadEvent>
 
+    /** Final-field observations and dependency views used by the Relaxed Java model. */
+    val finalFieldsViewfront: FinalFieldsVisibilityRelation
+
     /**
      * Cached inconsistency of the execution (if any).
      */
@@ -145,6 +148,11 @@ interface MutableExtendedExecution : ExtendedExecution, MutableExecution<AtomicT
      * Checks the consistency of the extended execution.
      */
     fun checkConsistency(): Inconsistency?
+
+    fun filterInconsistent(
+        event: AtomicThreadEvent,
+        candidates: Sequence<AtomicThreadEvent>
+    ): Sequence<AtomicThreadEvent>
 }
 
 fun ExtendedExecution(memoryModel: MemoryModel): ExtendedExecution =
@@ -202,6 +210,8 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         happensBeforeOrder union extendedCoherence,
     )
 
+    override val finalFieldsViewfront = FinalFieldsVisibilityRelation(execution, memoryAccessEventIndex)
+
     private val consistencyChecker = when (memoryModel) {
         MemoryModel.SequentialConsistency -> SequentialConsistencyChecker(this)
         MemoryModel.ReleaseAcquire -> ReleaseAcquireConsistencyChecker(this)
@@ -220,6 +230,7 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         executionOrder
             // the execution order is used only for sequential consistency
             .takeIf { memoryModel == MemoryModel.SequentialConsistency },
+        finalFieldsViewfront.takeIf { memoryModel == MemoryModel.RelaxedJava },
         consistencyChecker,
     )
 
@@ -229,6 +240,11 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
     override fun checkConsistency(): Inconsistency? {
         return consistencyChecker.check()
     }
+
+    override fun filterInconsistent(
+        event: AtomicThreadEvent,
+        candidates: Sequence<AtomicThreadEvent>
+    ): Sequence<AtomicThreadEvent> = consistencyChecker.filterInconsistent(event, candidates)
 
     override fun add(event: AtomicThreadEvent) {
         doAdd(event)

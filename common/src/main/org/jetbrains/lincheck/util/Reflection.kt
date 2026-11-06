@@ -67,6 +67,82 @@ val Class<*>.allDeclaredStaticFields get(): List<Field> =
     ClassReflectionCache[this].allDeclaredStaticFields
 
 /**
+ * Returns final instance fields declared by this class, excluding inherited and static fields.
+ *
+ * These are exactly the final fields that only the constructors (and instance initializers) of this class may assign,
+ * so the result describes the state a constructor of this class is responsible for initializing.
+ * Final fields of superclasses belong to the superclasses' constructors
+ * and are returned by their own `declaredFinalInstanceFields`.
+ *
+ * Unlike `allDeclared*Fields`, only one class is scanned, so each field appears exactly once.
+ * Ф superclass field with the same name is hidden, not replaced,
+ * and remains a separate memory location of the object; it is not included in the result.
+ */
+val Class<*>.declaredFinalInstanceFields get(): List<Field> =
+    ClassReflectionCache[this].declaredFinalInstanceFields
+
+/**
+ * Resolves [className] against [clazz] and its superclass chain, choosing the nearest match.
+ *
+ * With no name, returns [clazz]; with no class, loads and initializes the fully qualified name.
+ * Otherwise, searches the class hierarchy for a class with the given name.
+ * Only super-classes are considered, interfaces are not searched.
+ *
+ * Names match a suffix of the binary or canonical class name.
+ *
+ * @throws IllegalStateException if both arguments are null or no class in the hierarchy matches.
+ * @throws ClassNotFoundException if loading by name fails.
+ */
+fun resolveClass(clazz: Class<*>? = null, className: String? = null): Class<*> {
+    if (className == null) {
+        check(clazz != null)
+        return clazz
+    }
+    if (clazz == null) {
+        return ClassCache.forName(className)
+    }
+    if (matchClassName(clazz, className)) {
+        return clazz
+    }
+    return ClassReflectionCache[clazz].resolvedClasses.getOrPut(className) {
+        var superClass = clazz.superclass
+        while (superClass != null) {
+            if (matchClassName(superClass, className)) return@getOrPut superClass
+            superClass = superClass.superclass
+        }
+        throw IllegalStateException("Cannot find class $className for object of class ${clazz.name}!")
+    }
+}
+
+/**
+ * Resolves a field by name, searching each class from [clazz] up its superclass chain.
+ *
+ * Resolved field is the field accessed by a field instruction (`getfield`, `putfield`, `getstatic`, `putstatic`)
+ * whose symbolic owner class is [clazz] and whose field name is [fieldName].
+ * The accessed field is determined by the instruction's owner class,
+ * not by the runtime class of the accessed object.
+ * Hence, [clazz] must be the instruction's owner class (or the class resolved from it):
+ * if the object's runtime class declares a same-named field, that field hides the resolved one,
+ * yet the instruction still accesses the resolved field.
+ *
+ * During resolve, declared fields of any visibility precede inherited fields, including hidden public fields.
+ * If the superclass chain has no match, searches public fields, including inherited interface fields.
+ *
+ * This resolution procedure mirrors the JVM field resolution (JVMS §5.4.3.2):
+ * the nearest field declared by [clazz] or its superclasses wins, regardless of visibility;
+ * public interface fields are considered only if the superclass chain has no match.
+ * The JVM instead checks the superinterfaces of each class before its superclass;
+ * the two orders differ only if an interface field and a superclass field share the name,
+ * which `javac` rejects as an ambiguous reference.
+ *
+ * @throws IllegalStateException if no field matches [fieldName].
+ */
+fun resolveField(clazz: Class<*>, className: String, fieldName: String): Field {
+    return ClassReflectionCache[clazz].resolvedFields[fieldName]
+        ?: throw IllegalStateException("Cannot find field $className::$fieldName for class $clazz!")
+}
+
+/**
  * Finds the field name of [this] object that directly references the given object [obj].
  *
  * @param this the object which fields are look-up.
@@ -92,7 +168,10 @@ private object ClassReflectionCache {
         val allDeclaredFields: List<Field>,
         val allDeclaredInstanceFields: List<Field>,
         val allDeclaredStaticFields: List<Field>,
+        val declaredFinalInstanceFields: List<Field>,
         val companionClass: Class<*>?,
+        val resolvedFields: Map<String, Field>,
+        val resolvedClasses: ConcurrentHashMap<String, Class<*>> = ConcurrentHashMap(),
     )
 
     private val cache = object : ClassValue<ReflectionData>() {
@@ -105,9 +184,24 @@ private object ClassReflectionCache {
                 allDeclaredFields = allDeclaredFields,
                 allDeclaredInstanceFields = instanceFields,
                 allDeclaredStaticFields = staticFields,
+                declaredFinalInstanceFields = instanceFields.filter {
+                    it.declaringClass == type && Modifier.isFinal(it.modifiers)
+                },
                 companionClass = companionClass,
+                resolvedFields = computeFieldsByName(type),
             )
         }
+    }
+
+    private fun computeFieldsByName(clazz: Class<*>): Map<String, Field> {
+        val fields = mutableMapOf<String, Field>()
+        var currentClass: Class<*>? = clazz
+        while (currentClass != null) {
+            for (field in currentClass.declaredFields) fields.putIfAbsent(field.name, field)
+            currentClass = currentClass.superclass
+        }
+        for (field in clazz.fields) fields.putIfAbsent(field.name, field)
+        return fields
     }
 
     private fun computeAllDeclaredFields(clazz: Class<*>): List<Field> {
@@ -131,3 +225,6 @@ private object ClassReflectionCache {
 
     operator fun get(clazz: Class<*>): ReflectionData = cache.get(clazz)
 }
+
+private fun matchClassName(clazz: Class<*>, className: String) =
+    clazz.name.endsWith(className) || (clazz.canonicalName?.endsWith(className) ?: false)

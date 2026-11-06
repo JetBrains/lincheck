@@ -23,6 +23,7 @@ class JmmConsistencyChecker(
     private val atomicityChecker = ReadModifyWriteAtomicityChecker(execution)
     private val lockChecker = LockConsistencyChecker()
     private val coherenceChecker = CoherenceChecker()
+    private val finalFieldsChecker = FinalFieldsChecker(execution)
 
     override var state: ConsistencyState = ConsistencyState.Unknown
         private set
@@ -34,6 +35,13 @@ class JmmConsistencyChecker(
         val atomicityState = atomicityChecker.check(event)
         if (atomicityState is ConsistencyState.Inconsistent) {
             state = atomicityState
+            return state
+        }
+
+        // check for final fields semantics violations
+        val finalFieldsState = finalFieldsChecker.check(event)
+        if (finalFieldsState is ConsistencyState.Inconsistent) {
+            state = finalFieldsState
             return state
         }
 
@@ -65,14 +73,27 @@ class JmmConsistencyChecker(
     override fun reset(execution: MutableExtendedExecution): ConsistencyState {
         this.execution = execution
         atomicityChecker.reset(execution)
+        finalFieldsChecker.reset(execution)
         state = ConsistencyState.Unknown
         return state
+    }
+
+    override fun filterInconsistent(
+        event: AtomicThreadEvent,
+        candidates: Sequence<AtomicThreadEvent>
+    ): Sequence<AtomicThreadEvent> {
+        if (state is ConsistencyState.Inconsistent) {
+            // An inconsistent prefix can still have revisits that repair it.
+            return candidates
+        }
+        return finalFieldsChecker.filterInconsistent(event, candidates)
     }
 
     private fun findInconsistency(): Inconsistency? {
         // First, check atomicity and locks.
         atomicityChecker.check()?.let { return it }
         lockChecker.check(execution)?.let { return it }
+        finalFieldsChecker.check()?.let { return it }
 
         // A coherence order that is still valid after the incremental extensions witnesses consistency.
         val coherenceOrder = execution.coherenceOrder
