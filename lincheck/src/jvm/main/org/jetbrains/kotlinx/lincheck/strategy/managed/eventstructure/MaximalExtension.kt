@@ -177,8 +177,7 @@ private class EventCursorMapping(private val retained: ExtendedExecution) {
 
             label is WriteAccessLabel || label is ReadAccessLabel && label.isResponse -> {
                 memory.getOrPut(label.location) {
-                    val latest = retained.memoryAccessEventIndex.getWrites(label.location)
-                        .maxByOrNull { retained.coherenceOrder.position(it) }
+                    val latest = retained.coherenceOrder.getLatestWrite(label.location)
                     EventCursor(latest ?: event.allocation)
                 }
             }

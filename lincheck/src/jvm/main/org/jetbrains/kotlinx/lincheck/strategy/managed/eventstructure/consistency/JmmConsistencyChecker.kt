@@ -107,7 +107,7 @@ class JmmConsistencyChecker(
         }
 
         // If the writes-before order is consistent, then try to build coherence order
-        // (total order on write events per each memory location).
+        // on atomic writes, from which the full partial modification order is derived.
         // In addition, JMM requires a coherence order to induce an acyclic PSC order of volatile accesses
         // (see `SequentialConsistencyMixedAccessRelation`).
         execution.coherenceOrder.invalidate() // to trigger a new coherence order search

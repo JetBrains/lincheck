@@ -28,12 +28,13 @@ import org.jetbrains.lincheck.util.collections.*
 typealias CoherenceList = List<AtomicThreadEvent>
 
 /**
- * Coherence order: a total ordering on same-location writes,
- * defining the order in which writes to the same memory location must be performed.
+ * Coherence order: a total ordering on same-location atomic writes.
+ *
+ * Stores only opaque-or-stronger writes and initialization events.
+ * Plain writes belong to [FullCoherenceOrder].
  *
  * The coherence order computation procedure searches for a coherence order
  * compatible with atomic updates and the memory model's causal order.
- *
  * Under release-acquire, any linearization of the [initialCoherenceApproximation] keeping read-modify-write chains contiguous
  * is a valid coherence order, so the first generated candidate is taken.
  *
@@ -46,7 +47,7 @@ typealias CoherenceList = List<AtomicThreadEvent>
  *
  * @param execution the execution whose writes are ordered;
  *   under sequential consistency, each candidate coherence order is checked by building an [ExecutionOrder] over it,
- *   and the execution's extended coherence and execution orders are updated with the ones of the found order.
+ *   and the found execution order is saved in the execution.
  * @param memoryAccessEventIndex the index supplying the writes to each memory location.
  * @param rmwChainsStorage the read-modify-write chains every candidate coherence order must respect.
  * @param initialCoherenceApproximation the initial approximation of the coherence order:
@@ -90,15 +91,30 @@ class CoherenceOrder(
         }
     }
 
+    private constructor(order: CoherenceOrder, coherence: Map<MemoryLocation, Entry>) : this(
+        order.execution,
+        order.memoryAccessEventIndex,
+        order.rmwChainsStorage,
+        order.initialCoherenceApproximation,
+        order.coherenceCausalOrder,
+        order.memoryModel,
+    ) {
+        map.putAll(coherence)
+        computed = true
+    }
+
     private val map = mutableMapOf<MemoryLocation, Entry>()
+
+    val fullCoherenceOrder: FullCoherenceOrder? =
+        if (memoryModel == MemoryModel.RelaxedJava) FullCoherenceOrder(this) else null
 
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean = relates(map, x, y)
 
     private fun relates(order: Map<MemoryLocation, Entry>, x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
-        val location = getLocationForSameLocationWriteAccesses(x, y)
-            ?: return false
-        val entry = order[location]
-            ?: return initialCoherenceApproximation(x, y)
+        val location = getLocationForSameLocationWriteAccesses(x, y) ?: return false
+        if (!x.isAtLeastOpaqueWrite() || !y.isAtLeastOpaqueWrite()) return false
+
+        val entry = order[location] ?: return initialCoherenceApproximation(x, y)
         return entry.position(x) < entry.position(y)
     }
 
@@ -107,13 +123,16 @@ class CoherenceOrder(
 
     override fun onAdd(event: AtomicThreadEvent) {
         if (!computed || !consistent) return
+
         val label = event.label
         if (!isConsistentExtension(event)) {
             invalidate()
+            return
         }
-        if (label is WriteAccessLabel) {
+        if (label is WriteAccessLabel && event.isAtLeastOpaqueWrite()) {
             addWrite(event, label.location)
         }
+        fullCoherenceOrder?.onAdd(event)
     }
 
     override fun onReset(execution: Execution<AtomicThreadEvent>) {
@@ -124,6 +143,7 @@ class CoherenceOrder(
         computed = false
         map.clear()
         consistent = true
+        fullCoherenceOrder?.onReset(execution)
     }
 
     override fun compute() {
@@ -136,7 +156,7 @@ class CoherenceOrder(
                 // if so, save it and exit the loop, if not, try the next one
                 if (!checkSequentialConsistency(coherence)) continue
             } else if (memoryModel == MemoryModel.RelaxedJava) {
-                // under the JMM, check that generated coherence order satisfies the volatile PSC constraint:
+                // Check full coherence, including plain accesses, before the volatile PSC constraint.
                 if (!checkVolatileAccessesOrder(coherence)) continue
             }
             this.map += coherence
@@ -150,14 +170,13 @@ class CoherenceOrder(
 
     /**
      * Checks that the candidate [coherence] order induces an acyclic execution order;
-     * if so, saves the induced extended coherence and execution orders.
+     * if so, saves the induced execution order.
      */
     private fun checkSequentialConsistency(coherence: Map<MemoryLocation, Entry>): Boolean {
         val order = Relation<AtomicThreadEvent> { x, y -> relates(coherence, x, y) }
-        val extendedCoherence = ExtendedCoherenceOrder(memoryAccessEventIndex,
-            writesOrder = order union coherenceCausalOrder
+        val extendedCoherence = ExtendedCoherenceOrder(
+            coherenceOrder = order union coherenceCausalOrder
         )
-            .apply { compute() }
 
         val executionOrder = ExecutionOrder(execution,
             approximation = extendedCoherence union coherenceCausalOrder,
@@ -165,7 +184,6 @@ class CoherenceOrder(
             .apply { compute() }
         if (!executionOrder.consistent)
             return false
-        this.execution.extendedCoherence.copyFrom(extendedCoherence)
         this.execution.executionOrder.copyFrom(executionOrder)
         return true
     }
@@ -174,21 +192,32 @@ class CoherenceOrder(
      * Checks the volatile PSC order for a candidate JMM coherence order.
      */
     private fun checkVolatileAccessesOrder(coherence: Map<MemoryLocation, Entry>): Boolean {
+        val coherence = CoherenceOrder(this, coherence)
+        val fullCoherence = coherence.fullCoherenceOrder?.apply { compute() }
+        if (fullCoherence != null && !fullCoherence.consistent) return false
+
         val volatileEvents = execution.filter { it.isVolatileAccess() }
-        if (volatileEvents.isEmpty()) return true
+        if (volatileEvents.isEmpty()) {
+            fullCoherenceOrder?.apply { copyFrom(fullCoherence!!) }
+            return true
+        }
+
         val enumerator = buildEnumerator(volatileEvents)
         val scRelation = SequentialConsistencyMixedAccessRelation(
             execution,
-            coherenceOrder = { x, y -> relates(coherence, x, y) },
+            coherenceOrder = fullCoherence ?: coherence,
         )
         // The relation is not transitively closed, but this is not required:
         // a topological sorting of the relation also respects its transitive closure,
         // and it does not exist (`topologicalSorting` returns null) iff the relation has a cycle.
-        return topologicalSorting(scRelation.toGraph(volatileEvents, enumerator)) != null
+        if (topologicalSorting(scRelation.toGraph(volatileEvents, enumerator)) == null) return false
+
+        fullCoherenceOrder?.apply { copyFrom(fullCoherence!!) }
+        return true
     }
 
     /**
-     * Returns a write event position in the current witness, with initialization at position zero.
+     * Returns an atomic write position in the current witness, with initialization at position zero.
      */
     fun position(write: AtomicThreadEvent): Int {
         check(computed && consistent) { "No coherence witness for the current exploration" }
@@ -198,7 +227,17 @@ class CoherenceOrder(
     }
 
     /**
-     * Retrieves the coherence-latest write event to the specified memory location.
+     * Sorts candidates by their source writes for exploration.
+     */
+    fun <T> sort(events: List<T>, location: MemoryLocation, selector: (T) -> AtomicThreadEvent): List<T> {
+        if (fullCoherenceOrder != null) {
+            return fullCoherenceOrder.sort(events, location, selector)
+        }
+        return events.sortedBy { position(selector(it)) }
+    }
+
+    /**
+     * Retrieves the selected latest write, including plain writes under relaxed Java.
      *
      * Requires a computed, consistent order.
      * For a newly accessed location, falls back to its allocation/initialization event.
@@ -206,8 +245,13 @@ class CoherenceOrder(
      * @param location the memory location for which the latest write event is to be retrieved
      * @return the latest write event to the specified location, or null if no such event exists
      */
-    fun getLatestWrite(location: MemoryLocation): AtomicThreadEvent? =
-        map[location]?.coherence?.last() ?: memoryAccessEventIndex.getWrites(location).firstOrNull()
+    fun getLatestWrite(location: MemoryLocation): AtomicThreadEvent? {
+        if (fullCoherenceOrder != null) {
+            return fullCoherenceOrder.getLatestWrite(location)
+        }
+        return map[location]?.coherence?.last()
+            ?: memoryAccessEventIndex.getWrites(location).firstOrNull()
+    }
 
     /**
      * Checks whether the extension of the coherence order with the newly added [event] is consistent.
@@ -236,9 +280,8 @@ class CoherenceOrder(
 
     private fun addWrite(write: AtomicThreadEvent, location: MemoryLocation) {
         val entry = map.getOrPut(location) {
-            // the location was first accessed after the coherence order computation,
-            // so the only preceding write is its initial one
-            Entry(memoryAccessEventIndex.getWrites(location).filter { it != write })
+            // Plain writes may have accessed this location before its first atomic write.
+            Entry(memoryAccessEventIndex.getWrites(location).filter { it != write && it.isAtLeastOpaqueWrite() })
         }
         entry.append(write)
     }
@@ -252,13 +295,14 @@ class CoherenceOrder(
         ): Sequence<Map<MemoryLocation, Entry>> {
             // Recreated events have different IDs, but the same logical execution must choose the same witness.
             val writesByLocation = memoryAccessEventIndex.locations.map { location ->
-                location to memoryAccessEventIndex.getWrites(location).sortedWith(eventPositionComparator)
+                location to memoryAccessEventIndex.getWrites(location)
+                    .filter { it.isAtLeastOpaqueWrite() }.sortedWith(eventPositionComparator)
             }.sortedWith(compareBy(eventPositionComparator) { (_, writes) ->
                 writes.firstOrNull { !it.label.isInitializingWriteAccess() } ?: writes.first()
             })
             val coherenceOrderings = writesByLocation.map { (location, writes) ->
                 val orderings = if (writes.size == 1) sequenceOf(writes) else {
-                    val enumerator = memoryAccessEventIndex.enumerator(AtomicMemoryAccessCategory.Write, location)!!
+                    val enumerator = buildEnumerator(writes)
                     topologicalSortings(writesOrder.toGraph(writes, enumerator)).filter {
                         rmwChainsStorage.respectful(it)
                     }
@@ -277,152 +321,281 @@ class CoherenceOrder(
 }
 
 /**
- * Extended coherence order: a partial order on the same-location writes and reads.
+ * Full modification order, including ordering between plain write accesses.
  *
- * Order almost all memory access events to the same location,
- * except concurrent read-read pairs reading from the same write event.
+ * Derived from atomic [coherenceOrder] using the following formula:
+ *   `H + H? ; (A + U ; A?) ; H?`
+ * where:
+ * - `H := [W] ; hb_loc ; [W]` is write/write happens-before;
+ * - `U := rf ; rmw` connects each RMW source to its write part;
+ * - `A` is the atomic accesses coherence order.
+ *
+ * Plain writes share clusters when their latest atomic predecessor and the earliest atomic successor agree.
+ * These bounds need not be adjacent: a plain write can be incomparable with several atomic writes.
+ * A separate latest-write map selects a maximal write for extension without ordering incomparable writes.
+ * Requires [coherenceOrder] to be computed before [compute]; queries use the incrementally maintained cache.
  */
-class ExtendedCoherenceOrder(
-    val memoryAccessEventIndex: AtomicMemoryAccessEventIndex,
-    val writesOrder: Relation<AtomicThreadEvent>,
+class FullCoherenceOrder(
+    private val coherenceOrder: CoherenceOrder,
 ) : CachedRelation<AtomicThreadEvent>, ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEvent>> {
 
-    private var computed = false
+    internal var computed = coherenceOrder.execution.isEmpty()
+        private set
 
-    override fun onAdd(event: AtomicThreadEvent) {
-        invalidate()
+    internal var consistent = true
+        private set
+
+    private data class AtomicWritesRange(
+        // Initialization events can represent writes to several locations.
+        val location: MemoryLocation,
+        val prevAtomicWrite: AtomicThreadEvent?,
+        val nextAtomicWrite: AtomicThreadEvent?,
+    )
+
+    private class PlainWritesCluster(
+        val range: AtomicWritesRange,
+    ) {
+        private val _writes = mutableListOf<AtomicThreadEvent>()
+        val writes: List<AtomicThreadEvent> get() = _writes
+
+        fun append(write: AtomicThreadEvent) {
+            _writes.add(write)
+        }
     }
 
-    override fun onReset(execution: Execution<AtomicThreadEvent>) {
-        invalidate()
-    }
+    private val memoryAccessEventIndex = coherenceOrder.memoryAccessEventIndex
 
-    internal fun copyFrom(other: ExtendedCoherenceOrder) {
-        relations.clear()
-        relations.putAll(other.relations)
-        computed = true
-    }
+    // a map from range to its unique cluster
+    private val clusterMap = mutableMapOf<AtomicWritesRange, PlainWritesCluster>()
 
-    private val relations: MutableMap<MemoryLocation, RelationMatrix<AtomicThreadEvent>> = mutableMapOf()
+    // a map from plain write events to the cluster they belong to
+    private val eventCluster = mutableMapOf<AtomicThreadEvent, PlainWritesCluster>()
+
+    // a map from a location to the latest write event to this location
+    private val latestWrites = mutableMapOf<MemoryLocation, AtomicThreadEvent>()
 
     override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
-        val location = getLocationForSameLocationAccesses(x, y)
-            ?: return false
-        if (!(isWriteOrReadResponse(x) && isWriteOrReadResponse(y)))
-            return false
-        return relations[location]?.get(x, y) ?: false
+        if (x == y || getLocationForSameLocationWriteAccesses(x, y) == null) return false
+
+        if ((x.isPlainOrInitialWrite()) && y.isPlainWrite() && writeHappensBefore(x, y)) return true
+        if (x.isAtLeastOpaqueWrite() && y.isAtLeastOpaqueWrite()) return coherenceOrder(x, y)
+
+        val firstCluster = eventCluster[x]
+        val lastCluster = eventCluster[y]
+        val next = if (firstCluster != null) (firstCluster.range.nextAtomicWrite ?: return false) else x
+        val prev = if ( lastCluster != null) ( lastCluster.range.prevAtomicWrite ?: return false) else y
+        return next == prev || coherenceOrder(next, prev)
+    }
+
+    override fun compute() {
+        if (computed) return
+
+        for (location in memoryAccessEventIndex.locations) {
+            val writes = memoryAccessEventIndex.getWrites(location)
+            val atomics = coherenceOrder[location]
+            for (write in writes) {
+                if (!write.isPlainWrite()) continue
+                val prev = atomics.lastOrNull { writeHappensBefore(it, write) }
+                val next = atomics.firstOrNull { precedesAtomic(write, it) }
+                addToCluster(write, AtomicWritesRange(location, prev, next))
+            }
+        }
+
+        computed = true
+        consistent = checkConsistency()
+        if (consistent) {
+            computeLatestWrites()
+        }
+    }
+
+    private fun computeLatestWrites() {
+        for (location in memoryAccessEventIndex.locations) {
+            val atomic = coherenceOrder[location].last()
+            // Only this cluster can contain successors of the last atomic write.
+            val writes = clusterMap[AtomicWritesRange(location, atomic, null)]?.writes
+            latestWrites[location] = writes?.asSequence()
+                ?.filter { write -> writes.none { other -> writeHappensBefore(write, other) } }
+                ?.maxWith(eventPositionComparator)
+                ?: atomic
+        }
+    }
+
+    internal fun copyFrom(other: FullCoherenceOrder) {
+        invalidate()
+        for ((range, cluster) in other.clusterMap) {
+            for (write in cluster.writes) {
+                addToCluster(write, range)
+            }
+        }
+        latestWrites.putAll(other.latestWrites)
+        computed = other.computed
+        consistent = other.consistent
+    }
+
+    override fun invalidate() {
+        computed = false
+        consistent = true
+        eventCluster.clear()
+        clusterMap.clear()
+        latestWrites.clear()
+    }
+
+    override fun onAdd(event: AtomicThreadEvent) {
+        if (!coherenceOrder.computed || !coherenceOrder.consistent) {
+            invalidate()
+            return
+        }
+        if (!computed || !consistent) return
+
+        val label = event.label as? WriteAccessLabel ?: return
+        if (event.isPlainWrite()) {
+            val previous = coherenceOrder[label.location].lastOrNull { writeHappensBefore(it, event) }
+            addToCluster(event, AtomicWritesRange(label.location, previous, null))
+        } else {
+            // A maximal atomic extension can only tighten previously unbounded successors.
+            for (previous in sequenceOf(null) + coherenceOrder[label.location].asSequence()) {
+                val range = AtomicWritesRange(label.location, previous, null)
+                val cluster = clusterMap.remove(range) ?: continue
+                for (write in cluster.writes) {
+                    val next = event.takeIf { precedesAtomic(write, it) }
+                    addToCluster(write, range.copy(nextAtomicWrite = next))
+                }
+            }
+        }
+        latestWrites[label.location] = event
+    }
+
+    override fun onReset(execution: Execution<AtomicThreadEvent>) = invalidate()
+
+    /**
+     * Returns the selected maximal write, without ordering incomparable plain writes.
+     */
+    fun getLatestWrite(location: MemoryLocation): AtomicThreadEvent? =
+        latestWrites[location] ?: memoryAccessEventIndex.getWrites(location).firstOrNull()
+
+    internal fun <T> sort(events: List<T>, location: MemoryLocation, selector: (T) -> AtomicThreadEvent): List<T> {
+        val latest = getLatestWrite(location)
+        // A newly appended plain write can be latest even when its predecessor belongs to an earlier bucket.
+        // This orders alternative candidates, not hb-related writes in the memory model.
+        val writeOrder =
+            // put `latest` at the end, so it is picked up first for the response event,
+            // as `latest` is guaranteed to produce a consistent execution extension
+            // which is important for algorithm correctness.
+            compareBy<AtomicThreadEvent> { it == latest }
+            // then order by bucket position, so the atomic writes are ordered by coherence order,
+            // and plain events are put after the last atomic write they happen-before.
+            .thenBy(::bucketPosition)
+            .thenBy { it.isPlainWrite() } // this puts atomic writes before plain ones, when they have the same bucket number
+            // finally, order the rest (plain writes only) by their position in the execution
+            .then(eventPositionComparator)
+        return events.sortedWith(compareBy(writeOrder, selector))
+    }
+
+    private fun bucketPosition(write: AtomicThreadEvent): Int {
+        val atomic = if (write.isPlainWrite()) eventCluster.getValue(write).range.prevAtomicWrite else write
+        return atomic?.let(coherenceOrder::position) ?: 0
+    }
+
+    private fun checkConsistency(): Boolean {
+        /* Checks `hb ; eco` for a candidate atomic order, including its derived plain-write edges. */
+
+        for (range in clusterMap.keys) {
+            val prev = range.prevAtomicWrite ?: continue
+            val next = range.nextAtomicWrite ?: continue
+            if (prev == next || coherenceOrder(next, prev)) return false
+        }
+
+        val eco = ExtendedCoherenceOrder(this, MemoryModel.RelaxedJava)
+        for (location in memoryAccessEventIndex.locations) {
+            val events =
+                memoryAccessEventIndex.getWrites(location) +
+                memoryAccessEventIndex.getReadResponses(location)
+            for (first in events) {
+                for (last in events) {
+                    if (eco(first, last) && happensBeforeOrder(last, first)) return false
+                }
+            }
+        }
+
+        return true
+    }
+
+    private fun addToCluster(
+        write: AtomicThreadEvent,
+        range: AtomicWritesRange,
+    ) {
+        val cluster = clusterMap.getOrPut(range) { PlainWritesCluster(range) }
+        cluster.append(write)
+        eventCluster[write] = cluster
+    }
+
+    private fun precedesAtomic(plain: AtomicThreadEvent, atomic: AtomicThreadEvent): Boolean =
+        writeHappensBefore(plain, atomic) || (
+            atomic.label.isExclusiveWriteAccess() &&
+            atomic.exclusiveReadPart.readsFrom.let { readsFrom ->
+                plain == readsFrom || writeHappensBefore(plain, readsFrom)
+            }
+        )
+}
+
+/**
+ * Extended coherence relation: `rf + mo + rb + mo;rf + rb;rf`, where `rb = rf^-1;mo`.
+ * Queries compare the writes supplying the two accesses using the current state of [coherenceOrder],
+ * with a separate case for the `rf` edge from a write to its reader.
+ * Under relaxed Java, `rb;rf` is included only when at least one read is opaque or stronger.
+ * In particular, this relation must not be transitively closed across plain reads.
+ *
+ * @param coherenceOrder an assumed coherence order relation,
+ *   that is a partial order on write-write accesses to the same memory location.
+ *   [Relation] rather than a [CoherenceOrder], to also accept
+ *   candidate orders and happens-before/writes-before approximations.
+ */
+class ExtendedCoherenceOrder(
+    val coherenceOrder: Relation<AtomicThreadEvent>,
+    val memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
+) : Relation<AtomicThreadEvent> {
+
+    override fun invoke(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean {
+        if (x == y || getLocationForSameLocationAccesses(x, y) == null) return false
+        if (!(isWriteOrReadResponse(x) && isWriteOrReadResponse(y))) return false
+
+        // plain read pairs are not ordered in JMM
+        if (memoryModel == MemoryModel.RelaxedJava &&
+            (x.label as? ReadAccessLabel)?.memoryOrdering == MemoryOrdering.PLAIN &&
+            (y.label as? ReadAccessLabel)?.memoryOrdering == MemoryOrdering.PLAIN
+        ) return false
+
+        val xWrite = if (x.label is ReadAccessLabel) x.readsFrom else x
+        val yWrite = if (y.label is ReadAccessLabel) y.readsFrom else y
+
+        // equal writes yield only write/read read-from edge, never a read/read or read/write edge
+        if (xWrite == yWrite) {
+            return (y.label is ReadAccessLabel) && (x == yWrite /* == y.readsFrom */)
+        }
+
+        return coherenceOrder(xWrite, yWrite)
     }
 
     private fun isWriteOrReadResponse(x: AtomicThreadEvent): Boolean {
         return (x.label.isWriteAccess() || x.label is ReadAccessLabel && x.label.isResponse)
     }
 
-    fun isIrreflexive(): Boolean =
-        relations.all { (_, relation) -> relation.isIrreflexive() }
+}
 
-    private fun initialize() {
-        for (location in memoryAccessEventIndex.locations) {
-            val events = mutableListOf<AtomicThreadEvent>().apply {
-                addAll(memoryAccessEventIndex.getWrites(location))
-                addAll(memoryAccessEventIndex.getReadResponses(location))
-            }
-            relations[location] = RelationMatrix(events, buildEnumerator(events))
-        }
-    }
+private fun AtomicThreadEvent.isPlainWrite(): Boolean =
+        (this.label as? WriteAccessLabel)?.memoryOrdering == MemoryOrdering.PLAIN
 
-    override fun compute() {
-        if (computed) return
-        initialize()
-        addCoherenceEdges()
-        addReadsFromEdges()
-        addReadsBeforeEdges()
-        addCoherenceReadFromEdges()
-        addReadsBeforeReadsFromEdges()
-        computed = true
-    }
+private fun AtomicThreadEvent.isPlainOrInitialWrite(): Boolean =
+    this.isPlainWrite() || this.label.isInitializingWriteAccess()
 
-    override fun invalidate() {
-        computed = false
-        relations.clear()
-    }
+private fun writeHappensBefore(first: AtomicThreadEvent, last: AtomicThreadEvent): Boolean =
+    first != last && (first.label.isInitializingWriteAccess() || happensBeforeOrder(first, last))
 
-    private fun addCoherenceEdges() {
-        for (location in memoryAccessEventIndex.locations) {
-            addCoherenceEdges(location)
-        }
-    }
-
-    private fun addCoherenceEdges(location: MemoryLocation) {
-        val relation = relations[location]!!
-        for (write1 in memoryAccessEventIndex.getWrites(location)) {
-            for (write2 in memoryAccessEventIndex.getWrites(location)) {
-                if (write1 != write2 && writesOrder(write1, write2))
-                    relation[write1, write2] = true
-            }
-        }
-    }
-
-    private fun addReadsFromEdges() {
-        for (location in memoryAccessEventIndex.locations) {
-            addReadsFromEdges(location)
-        }
-    }
-
-    private fun addReadsFromEdges(location: MemoryLocation) {
-        val relation = relations[location]!!
-        for (read in memoryAccessEventIndex.getReadResponses(location)) {
-            relation[read.readsFrom, read] = true
-        }
-    }
-
-    private fun addReadsBeforeEdges() {
-        for (location in memoryAccessEventIndex.locations) {
-            addReadsBeforeEdges(location)
-        }
-    }
-
-    private fun addReadsBeforeEdges(location: MemoryLocation) {
-        val relation = relations[location]!!
-        for (read in memoryAccessEventIndex.getReadResponses(location)) {
-            for (write in memoryAccessEventIndex.getWrites(location)) {
-                if (relation(read.readsFrom, write)) {
-                    relation[read, write] = true
-                }
-            }
-        }
-    }
-
-    private fun addCoherenceReadFromEdges() {
-        for (location in memoryAccessEventIndex.locations) {
-            addCoherenceReadFromEdges(location)
-        }
-    }
-
-    private fun addCoherenceReadFromEdges(location: MemoryLocation) {
-        val relation = relations[location]!!
-        for (read in memoryAccessEventIndex.getReadResponses(location)) {
-            for (write in memoryAccessEventIndex.getWrites(location)) {
-                if (relation(write, read.readsFrom)) {
-                    relation[write, read] = true
-                }
-            }
-        }
-    }
-
-    private fun addReadsBeforeReadsFromEdges() {
-        for (location in memoryAccessEventIndex.locations) {
-            addReadsBeforeReadsFromEdges(location)
-        }
-    }
-
-    private fun addReadsBeforeReadsFromEdges(location: MemoryLocation) {
-        val relation = relations[location]!!
-        for (read1 in memoryAccessEventIndex.getReadResponses(location)) {
-            for (read2 in memoryAccessEventIndex.getReadResponses(location)) {
-                if (relation(read1, read2.readsFrom)) {
-                    relation[read1, read2] = true
-                }
-            }
-        }
+private fun AtomicThreadEvent.isAtLeastOpaqueWrite(): Boolean {
+    val label = this.label
+    return when {
+        label is WriteAccessLabel           -> label.memoryOrdering.isAtLeast(MemoryOrdering.OPAQUE)
+        label.isInitializingWriteAccess()   -> true
+        else                                -> false
     }
 }

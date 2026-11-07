@@ -41,11 +41,19 @@ class LockOrder : ExecutionTracker<AtomicThreadEvent, Execution<AtomicThreadEven
         events[event] = events.size
     }
 
-    /** Returns an ordered event's position, or -1 for a non-mutex event. */
+    /**
+     * Returns an ordered event's position, or -1 for a non-mutex event.
+     */
     fun position(event: AtomicThreadEvent): Int {
         val label = event.label as? MutexLabel ?: return -1
         return positions.getValue(label.mutexID).getValue(event)
     }
+
+    /**
+     * Sorts candidates by their mutex events for exploration.
+     */
+    fun <T> sort(events: List<T>, selector: (T) -> AtomicThreadEvent): List<T> =
+        events.sortedBy { position(selector(it)) }
 
     private val EventLabel.isOrdered: Boolean
         get() = this is UnlockLabel || this is LockLabel && isResponse

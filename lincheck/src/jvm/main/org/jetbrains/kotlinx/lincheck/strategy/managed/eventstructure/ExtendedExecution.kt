@@ -64,6 +64,9 @@ interface ExtendedExecution : Execution<AtomicThreadEvent> {
      */
     val coherenceOrder: CoherenceOrder
 
+    /** Modification order including plain writes, available under relaxed Java. */
+    val fullCoherenceOrder: FullCoherenceOrder?
+
     /**
      * The exploration order of lock responses and unlocks.
      *
@@ -186,14 +189,6 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         memoryModel,
     )
 
-    override val extendedCoherence = ExtendedCoherenceOrder(
-        memoryAccessEventIndex, happensBeforeOrder union writesBeforeOrder,
-    )
-
-    override val sequentialConsistencyApproximationOrder = SequentialConsistencyApproximationOrder(
-        execution, memoryAccessEventIndex, happensBeforeOrder union extendedCoherence,
-    )
-
     override val coherenceOrder = CoherenceOrder(
         this,
         memoryAccessEventIndex,
@@ -201,6 +196,18 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         happensBeforeOrder union writesBeforeOrder,
         coherenceCausalOrder,
         memoryModel,
+    )
+
+    override val fullCoherenceOrder: FullCoherenceOrder?
+        get() = coherenceOrder.fullCoherenceOrder
+
+    override val extendedCoherence = ExtendedCoherenceOrder(
+        coherenceOrder = fullCoherenceOrder ?: (coherenceOrder union coherenceCausalOrder),
+        memoryModel,
+    )
+
+    override val sequentialConsistencyApproximationOrder = SequentialConsistencyApproximationOrder(
+        execution, memoryAccessEventIndex, happensBeforeOrder union extendedCoherence,
     )
 
     override val lockOrder = LockOrder().apply { onReset(execution) }
@@ -225,7 +232,6 @@ fun MutableExtendedExecution(memoryModel: MemoryModel): MutableExtendedExecution
         coherenceOrder, // should be updated before the consistency checker,
                         // which checks its consistency flag
         lockOrder,
-        extendedCoherence,
         sequentialConsistencyApproximationOrder,
         executionOrder
             // the execution order is used only for sequential consistency

@@ -83,6 +83,20 @@ enum class MemoryOrdering {
     }
 }
 
+/**
+ * Checks whether this ordering is at least as strong as [other].
+ *
+ * Orderings form a partial order: `PLAIN < OPAQUE < RELEASE, ACkQUIRE < VOLATILE`,
+ * where `RELEASE` and `ACQUIRE` are incomparable.
+ */
+fun MemoryOrdering.isAtLeast(other: MemoryOrdering): Boolean = when (other) {
+    MemoryOrdering.PLAIN    -> true
+    MemoryOrdering.OPAQUE   -> this != MemoryOrdering.PLAIN
+    MemoryOrdering.RELEASE  -> this == MemoryOrdering.RELEASE || this == MemoryOrdering.VOLATILE
+    MemoryOrdering.ACQUIRE  -> this == MemoryOrdering.ACQUIRE || this == MemoryOrdering.VOLATILE
+    MemoryOrdering.VOLATILE -> this == MemoryOrdering.VOLATILE
+}
+
 data class AtomicMethodAccessInfo(
     val obj: Any?,
     val clazz: Class<*>?,

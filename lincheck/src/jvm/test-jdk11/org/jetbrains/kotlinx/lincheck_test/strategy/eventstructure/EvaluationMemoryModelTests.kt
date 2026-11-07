@@ -26,6 +26,7 @@ import org.jetbrains.lincheck.datastructures.scenario
 import java.util.concurrent.atomic.*
 import org.junit.Test
 import org.junit.Ignore
+import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 import kotlin.concurrent.thread
 
@@ -2677,11 +2678,10 @@ class EvaluationMemoryModelTests {
     }
 
     // RESULT: Sometimes
-    @Ignore("Plain access mode is not supported.")
     @Test
     fun test_jcstress_basics_05_coherence_same_read_plain() {
         val expectedOutcomes: Set<Pair<Int, Int>> = setOf(0 to 0, 0 to 1, 1 to 0, 1 to 1)
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
+        litmusTest(assertSame(expectedOutcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val a = AtomicInteger(0)
             var t1_r1 = 0
             var t1_r2 = 0
@@ -3516,12 +3516,11 @@ class EvaluationMemoryModelTests {
         }
     }
 
-    // RESULT: Sometimes
-    @Ignore("Plain access mode is not supported.")
+    // A release RMW publishes earlier plain writes independently of release sequences.
     @Test
     fun test_release_sequence_rmw() {
-        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1, 2, 0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
+        val forbiddenOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1, 2, 0))
+        litmusTest(assertNever(forbiddenOutcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
             var t0_r1 = 0
@@ -3970,26 +3969,26 @@ class EvaluationMemoryModelTests {
         }
     }
 
-    // IGNORED_RESULT: Sometimes
-    @Ignore("Plain access mode is not supported.")
+    // RESULT: Sometimes
     @Test
     fun test_mp_fadd_acq() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1, 2, 0))
+        val handle = MethodHandles.arrayElementVarHandle(IntArray::class.java)
         litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
+            val y = IntArray(1)
             var t1_r1 = 0
             var t2_r2 = 0
             var t2_r3 = 0
             val t0 = thread {
                 x.setPlain(42)
-                y.setRelease(1)
+                handle.setRelease(y, 0, 1)
             }
             val t1 = thread {
-                t1_r1 = y.getAndAdd(1)
+                t1_r1 = handle.getAndAddAcquire(y, 0, 1) as Int
             }
             val t2 = thread {
-                t2_r2 = y.getAcquire()
+                t2_r2 = handle.getAcquire(y, 0) as Int
                 t2_r3 = x.getPlain()
             }
             t0.join()
@@ -3999,26 +3998,26 @@ class EvaluationMemoryModelTests {
         }
     }
 
-    // IGNORED_RESULT: Sometimes
-    @Ignore("Plain access mode is not supported.")
+    // RESULT: Sometimes
     @Test
     fun test_mp_fadd_rel() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1, 2, 0))
+        val handle = MethodHandles.arrayElementVarHandle(IntArray::class.java)
         litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
+            val y = IntArray(1)
             var t1_r1 = 0
             var t2_r2 = 0
             var t2_r3 = 0
             val t0 = thread {
                 x.setPlain(42)
-                y.setRelease(1)
+                handle.setRelease(y, 0, 1)
             }
             val t1 = thread {
-                t1_r1 = y.getAndAdd(1)
+                t1_r1 = handle.getAndAddRelease(y, 0, 1) as Int
             }
             val t2 = thread {
-                t2_r2 = y.getAcquire()
+                t2_r2 = handle.getAcquire(y, 0) as Int
                 t2_r3 = x.getPlain()
             }
             t0.join()

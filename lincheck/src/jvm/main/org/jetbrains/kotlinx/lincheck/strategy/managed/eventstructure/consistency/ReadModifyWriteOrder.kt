@@ -170,10 +170,10 @@ class ReadModifyWriteOrder(
     }
 
     /**
-     * Checks whether the given ordering of writes respects this read-modify-write order.
+     * Checks whether the given ordering of atomic writes respects this read-modify-write order.
      *
      * The ordering respects it if every rmw chain of the location appears in it
-     * as a contiguous block, in the chain's order;
+     * as a contiguous block, in the chain's order, with a plain source write omitted;
      * the chains themselves may come in any relative order,
      * interleaved with writes that belong to no chain.
      *
@@ -197,13 +197,15 @@ class ReadModifyWriteOrder(
                 continue
             }
             val chain = entry.chain
-            if (entry.position != 0 || position + chain.size > events.size ||
-                events.subList(position, position + chain.size) != chain
+            val start = if ((chain.first().label as? WriteAccessLabel)?.memoryOrdering == MemoryOrdering.PLAIN) 1 else 0
+            val length = chain.size - start
+            if (entry.position != start || position + length > events.size ||
+                events.subList(position, position + length) != chain.subList(start, chain.size)
             ) {
                 return false
             }
             matchedChains++
-            position += chain.size
+            position += length
         }
         return matchedChains == chains.size
     }

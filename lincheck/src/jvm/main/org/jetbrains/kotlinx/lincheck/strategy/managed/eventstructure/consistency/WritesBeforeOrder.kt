@@ -25,13 +25,19 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.lincheck.util.CachedRelation
 import org.jetbrains.lincheck.util.Relation
 import org.jetbrains.lincheck.util.RelationMatrix
+import org.jetbrains.lincheck.util.MemoryOrdering
+import org.jetbrains.lincheck.util.*
 
 /**
  * Writes-before order.
  *
  * Writes-before order is a partial order on the same-location writes,
  * defining the order in which writes to the same memory location must be performed.
- * It is an under-approximation of the total coherence order (see [CoherenceOrder]).
+ * It is an under-approximation of the total coherence order (see [CoherenceOrder]),
+ * and as such it constrains the linear witnesses searched by [CoherenceOrder.compute].
+ *
+ * Under relaxed Java, inferred edges between unordered plain writes are not enforced.
+ * Read-read coherence is only enforced if either read is at least opaque.
  *
  * @property memoryAccessEventIndex the index of the execution's memory accesses, grouped by location.
  * @property rmwChainsStorage the read-modify-write chains; each chain's writes share their writes-before edges,
@@ -131,7 +137,9 @@ class WritesBeforeOrder(
         val relation = this
         for (read in memoryAccessEventIndex.getReadResponses(location)) {
             for (write in memoryAccessEventIndex.getWrites(location)) {
-                if (happensBefore(write, read) && write != read.readsFrom) {
+                if (happensBefore(write, read) && write != read.readsFrom &&
+                    mustBeOrdered(write, read.readsFrom)
+                ) {
                     relation[write, read.readsFrom] = true
                 }
             }
@@ -147,19 +155,31 @@ class WritesBeforeOrder(
             val readFrom = read.readsFrom
             for (write in writes) {
                 // rf;hb
-                if (readFrom != write && happensBefore(read, write)) {
+                if (readFrom != write && happensBefore(read, write) && mustBeOrdered(readFrom, write)) {
                     this[readFrom, write] = true
                 }
             }
             for (laterRead in reads) {
                 val laterReadFrom = laterRead.readsFrom
-                // rf;hb;rf^-1
-                if (readFrom != laterReadFrom && happensBefore(read, laterRead)) {
+                // rf;([R>=opaque];hb + hb;[R>=opaque]);rf^-1
+                if (readFrom != laterReadFrom &&
+                    happensBefore(read, laterRead) &&
+                    mustBeOrdered(readFrom, laterReadFrom) && (
+                             (read.label as ReadAccessLabel).memoryOrdering.isAtLeast(MemoryOrdering.OPAQUE) ||
+                        (laterRead.label as ReadAccessLabel).memoryOrdering.isAtLeast(MemoryOrdering.OPAQUE)
+                    )
+                ) {
                     this[readFrom, laterReadFrom] = true
                 }
             }
         }
     }
+
+    private fun mustBeOrdered(x: AtomicThreadEvent, y: AtomicThreadEvent): Boolean =
+        (memoryModel == MemoryModel.RelaxedJava) implies {
+            ((x.label as? WriteAccessLabel)?.memoryOrdering?.isAtLeast(MemoryOrdering.OPAQUE) ?: true) &&
+            ((y.label as? WriteAccessLabel)?.memoryOrdering?.isAtLeast(MemoryOrdering.OPAQUE) ?: true)
+        }
 
     private fun RelationMatrix<AtomicThreadEvent>.computeReadModifyWriteChainsClosure(location: MemoryLocation) {
         this.equivalenceClosure { event ->

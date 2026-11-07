@@ -877,19 +877,19 @@ internal class EventStructure(
      */
     private fun List<SynchronizationCandidate>.sortedByCreationOrder(
         event: AtomicThreadEvent,
-    ): List<SynchronizationCandidate> =
-        sortedBy { candidate ->
-            when {
-                event.label.isSend ->
-                    candidate.request.id
-                event.label is ReadAccessLabel ->
-                    execution.coherenceOrder.position(candidate.send)
-                event.label is LockLabel && !(event.label as LockLabel).isReentry ->
-                    execution.lockOrder.position(candidate.send)
-                else ->
-                    candidate.send.id
-            }
+    ): List<SynchronizationCandidate> {
+        val label = event.label
+        return when {
+            label is ReadAccessLabel ->
+                execution.coherenceOrder.sort(this, label.location) { it.send }
+            label is LockLabel && !label.isReentry ->
+                execution.lockOrder.sort(this) { it.send }
+            label.isSend ->
+                sortedBy { it.request.id }
+            else ->
+                sortedBy { it.send.id }
         }
+    }
 
     private fun addBarrierSynchronizedEvents(
         event: AtomicThreadEvent,
@@ -1499,9 +1499,10 @@ internal class EventStructure(
     // reads to VOLATILE, effectively treating every read/write as sequentially-consistent (aka `volatile`).
     // In the case of release-acquire, we change the memory ordering of reads to ACQUIRE and writes to RELEASE,
     // treating every read/write as release-acquire, as `ReleaseAcquireConsistencyChecker` assumes.
-    // Both parts of a read-modify-write must have the same memory ordering (see `ReadModifyWriteAccessLabel`),
-    // so these become VOLATILE, the only memory ordering that is both acquire and release;
+    // Under release-acquire, both RMW parts become VOLATILE, the only ordering that is both acquire and release;
     // the read and write parts of a read-modify-write are passed with the `ReadModifyWriteAccess` label type.
+    // Under relaxed Java, plain RMWs become OPAQUE on both sides,
+    // imposing read-read coherence as well as atomic write coherence.
     private fun memoryOrderOverride(memoryOrder: MemoryOrdering, labelType: LabelType): MemoryOrdering =
         when (memoryModel) {
             MemoryModel.SequentialConsistency -> MemoryOrdering.VOLATILE
@@ -1511,6 +1512,9 @@ internal class EventStructure(
                 LabelType.ReadModifyWriteAccess -> MemoryOrdering.VOLATILE
                 else -> unreachable("Unexpected memory access label type: $labelType")
             }
-            MemoryModel.RelaxedJava -> memoryOrder
+            MemoryModel.RelaxedJava ->
+                if (labelType == LabelType.ReadModifyWriteAccess && memoryOrder == MemoryOrdering.PLAIN)
+                    MemoryOrdering.OPAQUE
+                else memoryOrder
         }
 }
