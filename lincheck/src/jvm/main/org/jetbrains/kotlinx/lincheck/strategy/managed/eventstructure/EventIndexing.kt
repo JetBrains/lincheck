@@ -136,6 +136,7 @@ interface AtomicMemoryAccessEventIndex : EventIndex<AtomicThreadEvent, AtomicMem
 
     // TODO: move race status maintenance logic into separate class (?)
     interface LocationInfo {
+        val accessModes: Set<MemoryOrdering>
         val isReadWriteRaceFree: Boolean
         val isWriteWriteRaceFree: Boolean
     }
@@ -224,6 +225,7 @@ typealias AtomicMemoryAccessEventClassifier =
 private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAccessEventIndex {
 
     private data class LocationInfoData(
+        override val accessModes: MutableSet<MemoryOrdering> = mutableSetOf(),
         override var isReadWriteRaceFree: Boolean,
         override var isWriteWriteRaceFree: Boolean,
         // TODO: also handle case when all accesses are totally ordered,
@@ -307,6 +309,8 @@ private class MutableAtomicMemoryAccessEventIndexImpl : MutableAtomicMemoryAcces
             /* Also initialize the race status data */
             _locationInfo[memAccessLabel.location] = LocationInfoData()
         }
+        _locationInfo[memAccessLabel.location]?.accessModes?.add(memAccessLabel.memoryOrdering)
+
         updateRaceStatus(memAccessLabel.location, event)
         updateReadsFromIndex(event)
 

@@ -3645,7 +3645,6 @@ class EvaluationMemoryModelTests {
 
     // ===================== IGNORED TESTS =====================
 
-    @Ignore
     @Test
     fun testPPOCA() {
         class TestPPOCA {
@@ -3661,7 +3660,7 @@ class EvaluationMemoryModelTests {
                 val x0 = y.getOpaque()
                 var x4 = 0
                 var x6 = 0
-                if (x0 == 0) {
+                if (x0 == 1) {
                     z.setOpaque(1)
                     x4 = z.getOpaque()
                     x6 = x.getOpaque()
@@ -3681,7 +3680,6 @@ class EvaluationMemoryModelTests {
         }
     }
 
-    @Ignore
     @Test
     fun testSBMfence() {
         class TestSBMfence {
@@ -3712,7 +3710,6 @@ class EvaluationMemoryModelTests {
         }
     }
 
-    @Ignore
     @Test
     fun testWRWC() {
         class TestWRWC {
@@ -3750,7 +3747,6 @@ class EvaluationMemoryModelTests {
         }
     }
 
-    @Ignore
     @Test
     fun testRWCSyncs() {
         class TestRWCSyncs {
@@ -3787,8 +3783,6 @@ class EvaluationMemoryModelTests {
     }
 
     // RESULT: Sometimes
-    // TODO: fences are not supported by the event structure strategy
-    @Ignore
     @Test
     fun test_jcstress_advanced_02_multi_copy_atomic_fenced() {
         val expectedOutcomes: Set<List<Int>> = setOf(listOf(1, 0, 1, 0))
@@ -3828,8 +3822,7 @@ class EvaluationMemoryModelTests {
     }
 
     // RESULT: Never
-    // TODO: fences are not supported by the event structure strategy
-    @Ignore
+    // eco_psc includes rb ; rf edges between plain reads across full fences.
     @Test
     fun test_jcstress_advanced_02_multi_copy_atomic_fully_fenced() {
         val forbiddenOutcomes: Set<List<Int>> = setOf(listOf(1, 0, 1, 0))
@@ -3870,9 +3863,8 @@ class EvaluationMemoryModelTests {
         }
     }
 
-    // IGNORED_RESULT: Never
-    // TODO: fences are not supported by the event structure strategy
-    @Ignore
+    // RESULT: Never
+    // eco_psc includes rb ; rf edges between plain reads across full fences.
     @Test
     fun test_iriw_sensibly_fenced() {
         val forbiddenOutcomes: Set<List<Int>> = setOf(listOf(1, 0, 1, 0))

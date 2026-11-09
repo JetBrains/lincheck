@@ -862,6 +862,7 @@ private val varHandleMethods = mapOf(
 )
 
 private val varHandleFenceMethods = mapOf(
+    "fullFence"     to AtomicMethodDescriptor(FENCE, VAR_HANDLE, VOLATILE),
     "releaseFence"  to AtomicMethodDescriptor(FENCE, VAR_HANDLE, RELEASE),
     "acquireFence"  to AtomicMethodDescriptor(FENCE, VAR_HANDLE, ACQUIRE),
 )

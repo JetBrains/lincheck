@@ -525,8 +525,6 @@ class JamMemoryModelTests {
         }
     }
 
-    // TODO: one day we will handle full fences
-    @Ignore
     @Test
     fun testRWCSyncs() {
         val forbiddenOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1,0,0))

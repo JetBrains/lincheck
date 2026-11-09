@@ -196,24 +196,30 @@ class CoherenceOrder(
         val fullCoherence = coherence.fullCoherenceOrder?.apply { compute() }
         if (fullCoherence != null && !fullCoherence.consistent) return false
 
-        val volatileEvents = execution.filter { it.isVolatileAccess() }
-        if (volatileEvents.isEmpty()) {
-            fullCoherenceOrder?.apply { copyFrom(fullCoherence!!) }
-            return true
-        }
-
-        val enumerator = buildEnumerator(volatileEvents)
-        val scRelation = SequentialConsistencyMixedAccessRelation(
-            execution,
-            coherenceOrder = fullCoherence ?: coherence,
-        )
-        // The relation is not transitively closed, but this is not required:
-        // a topological sorting of the relation also respects its transitive closure,
-        // and it does not exist (`topologicalSorting` returns null) iff the relation has a cycle.
-        if (topologicalSorting(scRelation.toGraph(volatileEvents, enumerator)) == null) return false
+        if (!checkVolatilePscOrder(fullCoherence ?: coherence)) return false
 
         fullCoherenceOrder?.apply { copyFrom(fullCoherence!!) }
         return true
+    }
+
+    /**
+     * Checks the volatile PSC order against an already-established [coherenceOrder] witness.
+     */
+    private fun checkVolatilePscOrder(coherenceOrder: Relation<AtomicThreadEvent>): Boolean {
+        val volatileEvents = execution.filter { it.isVolatileEvent() }
+        if (volatileEvents.isEmpty()) return true
+        val enumerator = buildEnumerator(volatileEvents)
+        val scRelation = SequentialConsistencyMixedAccessRelation(
+            execution,
+            extendedCoherence = ExtendedCoherenceOrder(coherenceOrder, memoryModel),
+            memoryAccessEventIndex = memoryAccessEventIndex,
+            memoryModel = memoryModel,
+        )
+        scRelation.compute()
+        // The relation is not transitively closed, but this is not required:
+        // a topological sorting of the relation also respects its transitive closure,
+        // and it does not exist (`topologicalSorting` returns null) iff the relation has a cycle.
+        return topologicalSorting(scRelation.toGraph(volatileEvents, enumerator)) != null
     }
 
     /**
@@ -539,10 +545,15 @@ class FullCoherenceOrder(
 }
 
 /**
- * Extended coherence relation: `rf + mo + rb + mo;rf + rb;rf`, where `rb = rf^-1;mo`.
+ * Extended coherence relation:
+ *   `rf + mo + rb + mo;rf + rb;rf`
+ * where `rb = rf^-1;mo`.
+ *
  * Queries compare the writes supplying the two accesses using the current state of [coherenceOrder],
  * with a separate case for the `rf` edge from a write to its reader.
- * Under relaxed Java, `rb;rf` is included only when at least one read is opaque or stronger.
+ * Under relaxed Java, `rb;rf` is included only when at least one read is opaque or stronger:
+ *     `rf + mo + rb + mo;rf + [R>=opaque] ; rb ; rf + rb ; rf ; [R>=opaque]`
+ *
  * In particular, this relation must not be transitively closed across plain reads.
  *
  * @param coherenceOrder an assumed coherence order relation,
