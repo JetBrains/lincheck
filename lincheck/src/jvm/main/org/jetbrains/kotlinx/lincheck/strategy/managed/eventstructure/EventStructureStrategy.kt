@@ -42,7 +42,7 @@ internal class EventStructureStrategy(
     runner: Runner,
     settings: ManagedStrategySettings,
     inIdeaPluginReplayMode: Boolean = false,
-    context: TraceContext,
+    private val context: TraceContext,
     val memoryModel : MemoryModel = MemoryModel.SequentialConsistency,
 ) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode, context) {
 
@@ -165,6 +165,10 @@ internal class EventStructureStrategy(
     override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
         // return super.tryCollectTrace(result)
         return null to result
+    }
+
+    internal fun collectExecutionGraph(): String = eventStructure.execution.toExecutionGraph(memoryModel, context) {
+        eventStructure.eventStructureObjectTracker.getObject(it)?.unwrap()
     }
 
     class Stats {

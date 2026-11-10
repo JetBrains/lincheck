@@ -21,6 +21,9 @@ sealed class LincheckFailure(
     val trace: Trace?,
     internal val analysisProfile: AnalysisProfile
 ) {
+    /** Rendered while the failing execution is still available; survives cleanup and minimization. */
+    internal var executionGraph: String? = null
+
     override fun toString() = StringBuilder().appendFailure(this).toString()
 }
 

@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.util.AnalysisProfile
@@ -144,7 +145,7 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
  */
 fun Strategy.verify(scenario: ExecutionScenario, result: InvocationResult, verifier: Verifier): LincheckFailure? {
     val analysisProfile = if (this is ManagedStrategy) this.analysisProfile else AnalysisProfile.DEFAULT
-    return when (result) {
+    val failure = when (result) {
         is InconsistentInvocationResult -> null
         is CompletedInvocationResult ->
             if (!verifier.verifyResults(scenario, result.results)) {
@@ -161,4 +162,10 @@ fun Strategy.verify(scenario: ExecutionScenario, result: InvocationResult, verif
             traceResult.toLincheckFailure(scenario, trace, analysisProfile)
         }
     }
+    // Capture before the strategy is closed or minimization advances to a different execution.
+    // Timed-out runners may still be mutating their graph and cannot supply a stable snapshot.
+    if (failure != null && this is EventStructureStrategy && result !is RunnerTimeoutInvocationResult) {
+        failure.executionGraph = collectExecutionGraph()
+    }
+    return failure
 }

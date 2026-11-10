@@ -340,7 +340,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
             // If some exception was thrown from the Lincheck itself, we ask for bug reporting
             is InternalLincheckBugResult -> {
                 appendInternalLincheckBugFailure(exceptionsProcessingResult.exception)
-                return this
+                return appendExecutionGraph(failure)
             }
 
             is ExceptionStackTracesResult -> exceptionsProcessingResult.exceptionStackTraces
@@ -361,7 +361,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
             appendLine()
             appendTrace(failure, exceptionStackTraces)
         }
-        return this
+        return appendExecutionGraph(failure)
     }
 
     when (failure) {
@@ -382,7 +382,14 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
     } else {
         appendExceptionsStackTracesBlock(exceptionStackTraces)
     }
-    return this
+    return appendExecutionGraph(failure)
+}
+
+private fun Appendable.appendExecutionGraph(failure: LincheckFailure): Appendable = apply {
+    failure.executionGraph?.let {
+        appendLine()
+        append(it)
+    }
 }
 
 internal fun isGeneralPurposeModelCheckingScenario(scenario: ExecutionScenario): Boolean {
