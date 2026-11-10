@@ -97,6 +97,8 @@ fun Execution<AtomicThreadEvent>.aggregate(
     return result to remapping
 }
 
+// TODO: consider removing existsLifting and the thread-aggregation utilities below,
+// which no longer have callers after the execution-order refactoring.
 fun Relation<AtomicThreadEvent>.existsLifting() = Relation<HyperThreadEvent> { x, y ->
     x.events.any { ex -> ex !in y.events && y.events.any { ey -> this(ex, ey) } }
 }

@@ -60,6 +60,9 @@ so no Gradle distribution is downloaded at test time (and the test JVM must sati
 
 - `test` is single-fork (`maxParallelForks = 1`, 6 GB heap) — concurrency tests need JVM isolation.
   Don't run after every edit; prefer compile-check + targeted `--tests`.
+- **Model-checker behavior** must be validated with end-to-end litmus tests.
+  Do not use unit tests over synthetic event graphs to test that behavior.
+  Reuse existing litmus tests for refactorings; add a new litmus test only when necessary and non-trivial.
 - **Representation tests** compare execution traces against baselines in `src/.../resources/`.
   Refresh with `-PoverwriteRepresentationTestsOutput=true` and diff before committing.
   **Always add a representation test** illustrating new behaviour when you change the managed strategy,

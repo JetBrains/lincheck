@@ -339,6 +339,7 @@ fun<E : ThreadEvent> Execution<E>.computeBackwardVectorClock(event: E, relation:
     return clock
 }
 
+// TODO: consider removing computeForwardVectorClock and buildGraph; execution-order checking no longer uses them.
 /**
  * Computes the forward vector clock for the given event and relation.
  *

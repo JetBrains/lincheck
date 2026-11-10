@@ -73,7 +73,20 @@ internal data class SequentialConsistencyReplayer(
     val monitorMapping: MutableMap<ObjectNumber, Any> = mutableMapOf(),
 ) {
 
+    /** Whether replaying [event] can change this state, including its monitor mapping. */
+    fun isMutable(event: AtomicThreadEvent): Boolean = when (val label = event.label) {
+        is WriteAccessLabel, is UnlockLabel, is NotifyLabel -> true
+        is LockLabel -> label.isResponse
+        else -> false
+    }
+
     fun replay(event: AtomicThreadEvent): SequentialConsistencyReplayer? {
+        val state = if (isMutable(event)) copy() else this
+        return state.replayInPlace(event)
+    }
+
+    /** Replays into this state; a failed replay may leave it partially modified. */
+    fun replayInPlace(event: AtomicThreadEvent): SequentialConsistencyReplayer? {
         val label = event.label
         return when {
 
@@ -89,7 +102,7 @@ internal data class SequentialConsistencyReplayer(
                 }
 
             label is WriteAccessLabel ->
-                this.copy().apply { memoryView[label.location] = event }
+                this.apply { memoryView[label.location] = event }
 
             label is LockLabel && label.isRequest ->
                 this
@@ -97,12 +110,12 @@ internal data class SequentialConsistencyReplayer(
             label is LockLabel && label.isResponse && !label.isSynthetic -> {
                 val monitor = getMonitor(label.mutexID)
                 if (this.monitorTracker.canAcquireMonitor(event.threadId, monitor)) {
-                    this.copy().apply { monitorTracker.acquireMonitor(event.threadId, monitor).ensureTrue() }
+                    this.apply { monitorTracker.acquireMonitor(event.threadId, monitor).ensureTrue() }
                 } else null
             }
 
             label is UnlockLabel && !label.isSynthetic ->
-                this.copy().apply { monitorTracker.releaseMonitor(event.threadId, getMonitor(label.mutexID)) }
+                this.apply { monitorTracker.releaseMonitor(event.threadId, getMonitor(label.mutexID)) }
 
             label is WaitLabel ->
                 // Notification delivery and monitor reacquisition are separate events,
@@ -110,17 +123,17 @@ internal data class SequentialConsistencyReplayer(
                 this
 
             label is NotifyLabel ->
-                this.copy().apply { monitorTracker.notify(event.threadId, getMonitor(label.mutexID), label.isBroadcast) }
+                this.apply { monitorTracker.notify(event.threadId, getMonitor(label.mutexID), label.isBroadcast) }
 
             // auxiliary unlock/lock events inserted before/after wait events
             label is LockLabel && label.isSynthetic -> {
                 val monitor = getMonitor(label.mutexID)
                 if (this.monitorTracker.canAcquireMonitor(event.threadId, monitor)) {
-                    this.copy().takeIf { !it.monitorTracker.waitOnMonitor(event.threadId, monitor) }
+                    this.takeIf { !it.monitorTracker.waitOnMonitor(event.threadId, monitor) }
                 } else null
             }
             label is UnlockLabel && label.isSynthetic ->
-                this.copy().apply { monitorTracker.waitOnMonitor(event.threadId, getMonitor(label.mutexID)).ensureTrue() }
+                this.apply { monitorTracker.waitOnMonitor(event.threadId, getMonitor(label.mutexID)).ensureTrue() }
 
             label is InitializationLabel -> this
             label is ObjectAllocationLabel -> this
@@ -147,6 +160,17 @@ internal data class SequentialConsistencyReplayer(
 
     fun replay(event: HyperThreadEvent): SequentialConsistencyReplayer? {
         return replay(event.events)
+    }
+
+    fun replayInPlace(events: Iterable<AtomicThreadEvent>): SequentialConsistencyReplayer? {
+        for (event in events) {
+            replayInPlace(event) ?: return null
+        }
+        return this
+    }
+
+    fun replayInPlace(event: HyperThreadEvent): SequentialConsistencyReplayer? {
+        return replayInPlace(event.events)
     }
 
     fun copy(): SequentialConsistencyReplayer =

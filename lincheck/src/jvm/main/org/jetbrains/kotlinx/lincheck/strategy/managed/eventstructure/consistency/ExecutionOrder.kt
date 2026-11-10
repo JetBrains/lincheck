@@ -50,8 +50,10 @@ import org.jetbrains.lincheck.util.union
  * - for a wait-response event - preceded by its request and the matching notification, in that order.
  * To check the reads, the order maintains its own view of the memory store, mapping each location to its latest write.
  *
- * Consistency checkers re-validate incrementally extended candidates by replay before accepting the execution,
- * since the replay additionally checks the monitor operations.
+ * Under sequential consistency, the order preserves happens-before:
+ * it starts from a topological or enumeration order and appends causally maximal events.
+ * Together with lock-source uniqueness checked separately by [LockConsistencyChecker],
+ * this orders each mutex's critical sections; replay is an optional sanity check.
  *
  * If the event is not a consistent extension, the order is marked inconsistent,
  * and the consistency checker is responsible for invalidating it.
@@ -109,7 +111,7 @@ class ExecutionOrder(
 
     override fun onReset(execution: Execution<AtomicThreadEvent>) {
         invalidate()
-        // Enumeration order is a cheap replay candidate; the checker still has to validate it.
+        // Enumeration order respects causality; the extension checks validate its memory accesses and waits.
         computed = true
         for (event in execution.enumerationOrderSorted()) {
             onAdd(event)
@@ -169,26 +171,54 @@ class ExecutionOrder(
     override fun compute() {
         if (computed) return
         val relation = approximation union constraints
-        // construct aggregated execution consisting of atomic events
-        // to incorporate the atomicity constraints during the search for topological sorting
-        val (aggregatedExecution, _) = execution.aggregate(ThreadAggregationAlgebra.aggregator())
-        val aggregatedRelation = relation.existsLifting()
-        // TODO: optimization --- we can build graph only for a subset of events, excluding:
-        //  - non-blocking request events
-        //  - events accessing race-free locations
-        //  - what else?
-        //  and then insert them back into the topologically sorted list
-        val graph = aggregatedExecution.buildGraph(aggregatedRelation)
+        val threads = buildOrderingThreads()
+        val events = threads.flatten()
+        // Program order connects each thread, so only its first related successor is needed.
+        val successors = events.associateWith { event ->
+            threads.mapNotNull { thread -> thread.firstOrNull { relation(event, it) } }
+        }
+        val graph = object : Graph<AtomicThreadEvent> {
+            override val nodes = events
+            override fun adjacent(node: AtomicThreadEvent) = successors.getValue(node)
+        }
         val ordering = topologicalSorting(graph)
         computed = true
         if (ordering == null) {
             consistent = false
             return
         }
-        // the extension checks also build the memory view of the order
-        for (event in ordering.flatMap { it.events }) {
-            add(event)
-            if (!consistent) break
+        reconstructFullOrder(ordering)
+    }
+
+    private fun buildOrderingThreads(): List<List<AtomicThreadEvent>> {
+        // Requests have no effect until their response, except wait requests, which must precede notification.
+        // Represent a complete RMW by its write: coherence orders the other accesses around the entire update.
+        return execution.threadMap.values.map { thread ->
+            thread.filterIndexed { index, event ->
+                val label = event.label
+                val next = thread.getOrNull(index + 1)
+                when {
+                    label.isRequest && !label.isSpanLabel && label !is WaitLabel -> next == null
+                    label is ReadAccessLabel && label.isResponse && label.isExclusive ->
+                        next == null || !next.isWritePartOfAtomicUpdate(event)
+                    else -> true
+                }
+            }
+        }
+    }
+
+    private fun reconstructFullOrder(ordering: List<AtomicThreadEvent>) {
+        // Restore omitted requests and RMW reads in program order immediately before their representative.
+        // Each event is visited once, including dangling requests and incomplete RMWs retained in the graph.
+        val positions = mutableMapOf<Int, Int>()
+        for (event in ordering) {
+            val thread = execution[event.threadId]!!
+            val position = positions[event.threadId] ?: 0
+            for (index in position..event.threadPosition) {
+                add(thread[index])
+                if (!consistent) return
+            }
+            positions[event.threadId] = event.threadPosition + 1
         }
     }
 

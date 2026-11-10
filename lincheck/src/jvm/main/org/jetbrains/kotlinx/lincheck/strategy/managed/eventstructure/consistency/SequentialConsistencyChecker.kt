@@ -35,6 +35,11 @@ class SequentialConsistencyChecker(
     private var execution: MutableExtendedExecution,
 ) : IncrementalConsistencyChecker<AtomicThreadEvent, MutableExtendedExecution> {
 
+    companion object {
+        private val replaySanityChecksEnabled =
+            System.getProperty("lincheck.sc.checkReplay", "true").toBoolean()
+    }
+
     private val atomicityChecker = ReadModifyWriteAtomicityChecker(execution)
     private val lockChecker = LockConsistencyChecker()
     private val coherenceChecker = CoherenceChecker()
@@ -148,12 +153,13 @@ class SequentialConsistencyChecker(
         atomicityChecker.check()?.let { return it }
         lockChecker.check(execution)?.let { return it }
 
-        // The execution order is a candidate for sequential consistency order:
-        // check it by replaying the events in the order they were added.
+        // The cached order preserves happens-before and passes the read, RMW and wait checks.
+        // Lock uniqueness above makes each mutex's critical sections a single happens-before chain,
+        // so replay is only a diagnostic here, as it is after coherence search.
         val executionOrder = execution.executionOrder
         if (execution.coherenceOrder.computed && execution.coherenceOrder.consistent &&
-            executionOrder.computed && executionOrder.consistent &&
-            SequentialConsistencyReplayer().replay(executionOrder.ordering) != null) {
+            executionOrder.computed && executionOrder.consistent) {
+            checkReplay()
             return null
         }
 
@@ -179,8 +185,17 @@ class SequentialConsistencyChecker(
         // with the found sequential consistency ordering.
         execution.coherenceOrder.invalidate() // to trigger a new coherence order search
         coherenceChecker.check(execution)?.let { return it }
-        check(SequentialConsistencyReplayer().replay(execution.executionOrder.ordering) != null)
+        checkReplay()
 
         return null
+    }
+
+    // The witness and lock-source checks establish consistency; replay only checks the implementation.
+    private fun checkReplay() {
+        if (replaySanityChecksEnabled) {
+            check(SequentialConsistencyReplayer().replayInPlace(execution.executionOrder.ordering) != null) {
+                "Computed sequential consistency order cannot be replayed"
+            }
+        }
     }
 }
