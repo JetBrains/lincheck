@@ -103,7 +103,10 @@ object Lincheck {
     private fun ModelCheckingCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
         val runner = LambdaRunner(timeoutMs = timeoutMs, block)
         if (useExperimentalModelChecking) {
-            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+            return EventStructureStrategy(
+                runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context,
+                printExecutionGraph = printExecutionGraph,
+            ).also {
                 runner.initializeStrategy(it)
             }
         }

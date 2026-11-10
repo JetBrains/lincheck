@@ -31,6 +31,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
 
     private var experimentalModelChecking = false
     private var memoryModel: MemoryModel = MemoryModel.SequentialConsistency
+    private var printExecutionGraph = false
 
     internal fun useExperimentalModelChecking(): ModelCheckingOptions {
         experimentalModelChecking = true
@@ -44,6 +45,16 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
     internal fun memoryModel(model: MemoryModel): ModelCheckingOptions {
         check(experimentalModelChecking) { "You need to set experimentalModelChecking to use this feature" }
         memoryModel = model
+        return this
+    }
+
+    /**
+     * Enables or disables appending the execution graph of the failing invocation to the failure report.
+     * Disabled by default.
+     */
+    internal fun printExecutionGraph(print: Boolean): ModelCheckingOptions {
+        check(experimentalModelChecking) { "You need to set experimentalModelChecking to use this feature" }
+        printExecutionGraph = print
         return this
     }
 
@@ -71,6 +82,7 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingC
             awaitLoopsAnalysisEnabled = awaitLoopsAnalysisEnabled,
             experimentalModelChecking = experimentalModelChecking,
             memoryModel = memoryModel,
+            printExecutionGraph = printExecutionGraph,
         )
     }
 }
@@ -101,6 +113,7 @@ class ModelCheckingCTestConfiguration(
     awaitLoopsAnalysisEnabled: Boolean,
     experimentalModelChecking: Boolean,
     val memoryModel: MemoryModel,
+    val printExecutionGraph: Boolean,
 ) : ManagedCTestConfiguration(
     testClass = testClass,
     iterations = iterations,
@@ -143,7 +156,7 @@ class ModelCheckingCTestConfiguration(
             useClocks = UseClocks.ALWAYS
         )
         if (useExperimentalModelChecking) {
-            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context, memoryModel).also {
+            return EventStructureStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context, memoryModel, printExecutionGraph).also {
                 runner.initializeStrategy(it)
             }
         } else {

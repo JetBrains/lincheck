@@ -33,5 +33,6 @@ class EventStructureExecutionGraphTest : BaseTraceRepresentationTest("event_stru
     override fun ModelCheckingOptions.customize() {
         useExperimentalModelChecking()
         memoryModel(MemoryModel.RelaxedJava)
+        printExecutionGraph(true)
     }
 }

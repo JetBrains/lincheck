@@ -164,7 +164,11 @@ fun Strategy.verify(scenario: ExecutionScenario, result: InvocationResult, verif
     }
     // Capture before the strategy is closed or minimization advances to a different execution.
     // Timed-out runners may still be mutating their graph and cannot supply a stable snapshot.
-    if (failure != null && this is EventStructureStrategy && result !is RunnerTimeoutInvocationResult) {
+    if (failure != null &&
+        this is EventStructureStrategy &&
+        printExecutionGraph &&
+        result !is RunnerTimeoutInvocationResult
+    ) {
         failure.executionGraph = collectExecutionGraph()
     }
     return failure

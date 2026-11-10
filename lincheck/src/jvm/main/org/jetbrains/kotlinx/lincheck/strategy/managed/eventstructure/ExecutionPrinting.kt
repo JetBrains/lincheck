@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.MemoryOrdering
@@ -23,10 +22,9 @@ import java.util.IdentityHashMap
  * Only recorded values and safe scalar object values are printed, never user-defined `toString` methods.
  */
 internal fun ExtendedExecution.toExecutionGraph(
-    memoryModel: MemoryModel,
     context: TraceContext,
     objectValue: (Int) -> Any? = { null },
-): String = ExecutionPrinter(this, context, objectValue).render(memoryModel)
+): String = ExecutionPrinter(this, context, objectValue).render()
 
 private class ExecutionPrinter(
     private val execution: ExtendedExecution,
@@ -47,8 +45,8 @@ private class ExecutionPrinter(
         }
     }
 
-    fun render(memoryModel: MemoryModel): String = buildString {
-        appendLine("Execution graph ($memoryModel):")
+    fun render(): String = buildString {
+        appendLine("Execution graph:")
         appendLine("Events in each thread are in program order; Tn:position identifies an event.")
         appendLine("rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).")
         for (tid in execution.threadIDs.sorted()) {
@@ -124,9 +122,11 @@ private class ExecutionPrinter(
     }
 
     private fun location(location: MemoryLocation): String = when (location) {
-        is StaticFieldMemoryLocation -> "${location.className}.${location.fieldName}"
+        is StaticFieldMemoryLocation -> "${simpleName(location.className)}.${location.fieldName}"
         is ObjectFieldMemoryLocation -> {
-            val owner = if (classNames[location.objID] == location.className) "" else "${location.className}."
+            // Prefix the declaring class only when it differs from the object's own class (e.g. superclass fields).
+            val declaringClass = simpleName(location.className)
+            val owner = if (classNames[location.objID]?.let(::simpleName) == declaringClass) "" else "$declaringClass."
             "${objectRef(location.objID)}.$owner${location.fieldName}"
         }
         is ArrayElementMemoryLocation -> "${objectRef(location.objID)}[${location.index}]"
@@ -146,7 +146,7 @@ private class ExecutionPrinter(
     private fun objectRef(id: Int): String {
         if (id == NULL_OBJECT_NUMBER) return "null"
         val number = objectNames.getOrPut(id) { objectNames.size + 1 }
-        val name = classNames[id]?.substringBefore('/')?.substringAfterLast('.') ?: "Object"
+        val name = classNames[id]?.let(::simpleName) ?: "Object"
         val scalar = scalar(objectValue(id))
         return "$name#$number" + if (scalar == null) "" else "($scalar)"
     }
@@ -172,6 +172,8 @@ private class ExecutionPrinter(
             "compareAndExchange(${value(type, descriptor.expectedValue)}, ${value(type, descriptor.newValue)})"
         is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> "fetchAndAdd(${value(type, descriptor.delta)}, ${descriptor.kind})"
     }
+
+    private fun simpleName(className: String): String = className.substringBefore('/').substringAfterLast('.')
 
     private fun references(events: List<ThreadEvent>): String =
         events.sortedWith(compareBy({ it.threadId }, { it.threadPosition })).joinToString { it.ref() }

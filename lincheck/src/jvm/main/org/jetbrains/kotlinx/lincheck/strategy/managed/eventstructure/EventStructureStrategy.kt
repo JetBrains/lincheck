@@ -44,6 +44,8 @@ internal class EventStructureStrategy(
     inIdeaPluginReplayMode: Boolean = false,
     private val context: TraceContext,
     val memoryModel : MemoryModel = MemoryModel.SequentialConsistency,
+    /** Whether to append the execution graph of a failing invocation to the failure report. */
+    val printExecutionGraph: Boolean = false,
 ) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode, context) {
 
     private val memoryInitializer: MemoryInitializer = { location ->
@@ -167,7 +169,7 @@ internal class EventStructureStrategy(
         return null to result
     }
 
-    internal fun collectExecutionGraph(): String = eventStructure.execution.toExecutionGraph(memoryModel, context) {
+    internal fun collectExecutionGraph(): String = eventStructure.execution.toExecutionGraph(context) {
         eventStructure.eventStructureObjectTracker.getObject(it)?.unwrap()
     }
 
