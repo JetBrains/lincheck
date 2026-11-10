@@ -8,9 +8,14 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
+package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.litmus
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.UNKNOWN
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertNever
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertSame
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertSometimes
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.litmusTest
 import org.junit.Test
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
@@ -19,7 +24,110 @@ import kotlin.concurrent.thread
 
 class PlainAccessMemoryModelTest {
     @Test
-    fun testAliasedPlainReads() {
+    fun TestPlainReadsSeparatedByUnrelatedOpaqueRead() {
+        val outcomes = setOf(Triple(0, 0, 0), Triple(0, 0, 1), Triple(1, 0, 0), Triple(1, 0, 1))
+        litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            val unrelated = AtomicInteger(0)
+            var first = -1
+            var middle = -1
+            var second = -1
+            val writer = thread { x.setPlain(1) }
+            val reader = thread {
+                first = x.getPlain()
+                middle = unrelated.getOpaque()
+                second = x.getPlain()
+            }
+            writer.join()
+            reader.join()
+            Triple(first, middle, second)
+        }
+    }
+
+    @Test
+    fun TestPlainReadsSeparatedByAcquireFence() {
+        litmusTest(assertSame(setOf(0 to 0, 0 to 1, 1 to 0, 1 to 1)), MemoryModel.RelaxedJava,
+            requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            var first = -1
+            var second = -1
+            val writer = thread { x.setPlain(1) }
+            val reader = thread {
+                first = x.getPlain()
+                VarHandle.acquireFence()
+                second = x.getPlain()
+            }
+            writer.join()
+            reader.join()
+            first to second
+        }
+    }
+
+    @Test
+    fun TestPlainReadsSeparatedByLoadLoadFence() {
+        litmusTest(assertSame(setOf(0 to 0, 0 to 1, 1 to 0, 1 to 1)), MemoryModel.RelaxedJava,
+            requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            var first = -1
+            var second = -1
+            val writer = thread { x.setPlain(1) }
+            val reader = thread {
+                first = x.getPlain()
+                VarHandle.loadLoadFence()
+                second = x.getPlain()
+            }
+            writer.join()
+            reader.join()
+            first to second
+        }
+    }
+
+    @Test
+    fun TestAliasedPlainOpaquePlainReads() {
+        val outcomes = setOf(Triple(0, 0, 0), Triple(0, 0, 1), Triple(0, 1, 1), Triple(1, 1, 1))
+        litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            val alias = x
+            var first = -1
+            var middle = -1
+            var last = -1
+            val writer = thread { x.setPlain(1) }
+            val reader = thread {
+                first = x.getPlain()
+                middle = alias.getOpaque()
+                last = x.getPlain()
+            }
+            writer.join()
+            reader.join()
+            Triple(first, middle, last)
+        }
+    }
+
+    @Test
+    fun TestAliasedPlainOpaquePlainReadsAfterCommonSubexpressionElimination() {
+        // The modeled either-endpoint coherence rule does not validate this optimization across an opaque read.
+        val outcomes = setOf(Triple(0, 0, 0), Triple(0, 1, 0), Triple(1, 1, 1))
+        litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            val alias = x
+            var first = -1
+            var middle = -1
+            var last = -1
+            val writer = thread { x.setPlain(1) }
+            val reader = thread {
+                val cached = x.getPlain()
+                first = cached
+                middle = alias.getOpaque()
+                last = cached
+            }
+            writer.join()
+            reader.join()
+            Triple(first, middle, last)
+        }
+    }
+
+    @Test
+    fun TestAliasedPlainReads() {
         val outcomes = buildSet {
             for (first in 0..2) {
                 for (second in 0..2) {
@@ -49,7 +157,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testAliasedPlainReadsAfterCommonSubexpressionElimination() {
+    fun TestAliasedPlainReadsAfterCommonSubexpressionElimination() {
         val outcomes = buildSet {
             for (first in 0..2) {
                 for (second in 0..2) add(Triple(first, second, first))
@@ -78,7 +186,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testOpaqueReadsOfConcurrentPlainWrites() {
+    fun TestOpaqueReadsOfConcurrentPlainWrites() {
         val outcomes = buildSet {
             for (first in 0..2) {
                 for (second in 0..2) {
@@ -110,12 +218,12 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testOppositeOpaqueObservationsOfConcurrentPlainWrites() {
+    fun TestOppositeOpaqueObservationsOfConcurrentPlainWrites() {
         checkOppositeOpaqueObservations(opaqueSecondWrite = false)
     }
 
     @Test
-    fun testOppositeOpaqueObservationsOfConcurrentPlainAndOpaqueWrites() {
+    fun TestOppositeOpaqueObservationsOfConcurrentPlainAndOpaqueWrites() {
         checkOppositeOpaqueObservations(opaqueSecondWrite = true)
     }
 
@@ -153,7 +261,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testPlainReadAfterReleaseAcquirePublication() {
+    fun TestPlainReadAfterReleaseAcquirePublication() {
         val outcomes = setOf(0 to 0, 0 to 1, 1 to 1)
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = Cell()
@@ -175,7 +283,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testLatestPlainWriteAfterCrossThreadPublication() {
+    fun TestLatestPlainWriteAfterCrossThreadPublication() {
         val outcomes = setOf(0 to 1, 1 to 2)
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -197,7 +305,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testOwnPlainWriteRemainsVisibleAfterAnInterveningRead() {
+    fun TestOwnPlainWriteRemainsVisibleAfterAnInterveningRead() {
         val outcomes = setOf(1 to 1, 1 to 2, 2 to 1, 2 to 2)
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -216,7 +324,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testPlainCompareAndSetRemainsAtomic() {
+    fun TestPlainCompareAndSetRemainsAtomic() {
         val outcomes = setOf(true to false, false to true)
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -231,12 +339,12 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testPlainReadBeforePlainCompareAndSetWithPlainWriter() {
+    fun TestPlainReadBeforePlainCompareAndSetWithPlainWriter() {
         checkPlainReadBeforePlainCompareAndSet(opaqueWriter = false)
     }
 
     @Test
-    fun testPlainReadBeforePlainCompareAndSetWithOpaqueWriter() {
+    fun TestPlainReadBeforePlainCompareAndSetWithOpaqueWriter() {
         checkPlainReadBeforePlainCompareAndSet(opaqueWriter = true)
     }
 
@@ -262,7 +370,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testPlainCompareAndSetCompetingForAPlainWrite() {
+    fun TestPlainCompareAndSetCompetingForAPlainWrite() {
         val outcomes = setOf(false to false, true to false, false to true)
         litmusTest(assertSame(outcomes, executionCount = UNKNOWN), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -279,7 +387,138 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testAtomicCoherenceOrderExtendsThroughHappensBeforeToPlainWrites() {
+    fun TestCasAcrossPlainWritesObservedByOpaqueReads() {
+        checkCasAcrossWritesObservedByOpaqueReads(opaqueSource = false, opaqueCompetitor = false)
+    }
+
+    @Test
+    fun TestCasAcrossPlainSourceAndOpaqueWriteObservedByOpaqueReads() {
+        checkCasAcrossWritesObservedByOpaqueReads(opaqueSource = false, opaqueCompetitor = true)
+    }
+
+    @Test
+    fun TestCasAcrossOpaqueSourceAndPlainWriteObservedByOpaqueReads() {
+        checkCasAcrossWritesObservedByOpaqueReads(opaqueSource = true, opaqueCompetitor = false)
+    }
+
+    @Test
+    fun TestCasAcrossOpaqueWritesObservedByOpaqueReads() {
+        checkCasAcrossWritesObservedByOpaqueReads(opaqueSource = true, opaqueCompetitor = true)
+    }
+
+    private fun checkCasAcrossWritesObservedByOpaqueReads(opaqueSource: Boolean, opaqueCompetitor: Boolean) {
+        // Total coherence would force W1 < W2 < W3, interrupting the successful CAS from W1 to W3.
+        // If either ordinary write is plain, one of these edges need not exist in partial coherence.
+        // Java has no opaque CAS; the checker promotes both halves of a plain RMW to opaque.
+        // Recording success distinguishes the RMW witness from a possibly spurious weak-CAS failure.
+        val witness = setOf(Triple(2, 3, true))
+        val verifier = if (opaqueSource && opaqueCompetitor) assertNever(witness) else assertSometimes(witness)
+        litmusTest(verifier, MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            var first = -1
+            var second = -1
+            var success = false
+            val readerWriter = thread {
+                if (opaqueSource) x.setOpaque(1) else x.setPlain(1)
+                first = x.getOpaque()
+                second = x.getOpaque()
+            }
+            val updater = thread { success = x.weakCompareAndSetPlain(1, 3) }
+            val competingWriter = thread {
+                if (opaqueCompetitor) x.setOpaque(2) else x.setPlain(2)
+            }
+            readerWriter.join()
+            updater.join()
+            competingWriter.join()
+            Triple(first, second, success)
+        }
+    }
+
+    @Test
+    fun TestPlainReadBeforeFailedReleaseCompareAndExchange() {
+        // An impossible expected value exposes the failed read without weak-CAS spurious failures.
+        val outcomes = setOf(0 to 0, 0 to 1, 1 to 1)
+        litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            var first = -1
+            var second = -1
+            val writer = thread { x.setPlain(1) }
+            val reader = thread {
+                first = x.getPlain()
+                second = x.compareAndExchangeRelease(2, 3)
+            }
+            writer.join()
+            reader.join()
+            first to second
+        }
+    }
+
+    @Test
+    fun TestFailedReleaseCompareAndExchangeBeforePlainRead() {
+        val outcomes = setOf(0 to 0, 0 to 1, 1 to 1)
+        litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            var first = -1
+            var second = -1
+            val writer = thread { x.setPlain(1) }
+            val reader = thread {
+                first = x.compareAndExchangeRelease(2, 3)
+                second = x.getPlain()
+            }
+            writer.join()
+            reader.join()
+            first to second
+        }
+    }
+
+    @Test
+    fun TestPlainReadBeforeSuccessfulReleaseCompareAndExchange() {
+        val outcomes = setOf(0 to 0, 0 to 1, 1 to 1)
+        litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            var first = -1
+            var witness = -1
+            val writer = thread { x.setPlain(1) }
+            val updater = thread {
+                first = x.getPlain()
+                witness = x.compareAndExchangeRelease(0, 2)
+            }
+            writer.join()
+            updater.join()
+            first to witness
+        }
+    }
+
+    @Test
+    fun TestAcquireCompareAndExchangeWriteHasAtomicCoherence() {
+        val forbidden = setOf(listOf(0, 1, 2, 2, 1))
+        litmusTest(assertNever(forbidden), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val x = AtomicInteger(0)
+            var witness = -1
+            var first = -1
+            var second = -1
+            var third = -1
+            var fourth = -1
+            val updater = thread { witness = x.compareAndExchangeAcquire(0, 1) }
+            val writer = thread { x.setOpaque(2) }
+            val firstReader = thread {
+                first = x.getOpaque()
+                second = x.getOpaque()
+            }
+            val secondReader = thread {
+                third = x.getOpaque()
+                fourth = x.getOpaque()
+            }
+            updater.join()
+            writer.join()
+            firstReader.join()
+            secondReader.join()
+            listOf(witness, first, second, third, fourth)
+        }
+    }
+
+    @Test
+    fun TestAtomicCoherenceOrderExtendsThroughHappensBeforeToPlainWrites() {
         val outcomes = setOf(0 to 0, 0 to 1, 2 to 1, 3 to 1)
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -303,7 +542,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testConsecutivePlainCompareAndSetsCannotConsumeTheSamePlainWrite() {
+    fun TestConsecutivePlainCompareAndSetsCannotConsumeTheSamePlainWrite() {
         val outcomes = setOf(false to false, true to false, false to true)
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -321,7 +560,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testCoherenceThroughPlainRmwSourceAtomicOrderAndPlainSuffix() {
+    fun TestCoherenceThroughPlainRmwSourceAtomicOrderAndPlainSuffix() {
         val outcomes = buildSet {
             for (success in listOf(false, true)) {
                 val maximum = if (success) 5 else 2
@@ -359,7 +598,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testOpaqueReadsAcrossPlainClusters() {
+    fun TestOpaqueReadsAcrossPlainClusters() {
         val outcomes = buildSet {
             for (first in 0..5) {
                 for (second in first..5) add(first to second)
@@ -387,7 +626,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testPlainClustersKeepAtomicBoundsLocalToEachField() {
+    fun TestPlainClustersKeepAtomicBoundsLocalToEachField() {
         val outcomes = setOf(0 to 0, 0 to 1, 0 to 2, 1 to 1, 1 to 2, 2 to 2)
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val cells = TwoFieldCell()
@@ -411,7 +650,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testConcurrentPlainWriteCanOverlapAtomicBounds() {
+    fun TestConcurrentPlainWriteCanOverlapAtomicBounds() {
         val outcomes = buildSet {
             for (first in 0..4) {
                 for (second in 0..4) {
@@ -443,7 +682,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testIndependentRmwChainsWithPlainSources() {
+    fun TestIndependentRmwChainsWithPlainSources() {
         val outcomes = setOf(false to false, false to true, true to false, true to true)
         litmusTest(assertSame(outcomes, executionCount = UNKNOWN), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -464,7 +703,7 @@ class PlainAccessMemoryModelTest {
     }
 
     @Test
-    fun testRmwChainWithPlainSourceAndConcurrentOpaqueWrite() {
+    fun TestRmwChainWithPlainSourceAndConcurrentOpaqueWrite() {
         val outcomes = setOf(false to false, true to false, true to true)
         litmusTest(assertSame(outcomes, executionCount = UNKNOWN), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)

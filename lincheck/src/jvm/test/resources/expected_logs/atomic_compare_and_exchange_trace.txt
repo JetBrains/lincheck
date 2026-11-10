@@ -1,0 +1,42 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                    Thread 1                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                                                                     |
+|   integer.compareAndExchange(0, 1): 0 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:25)                                 |
+|   integer.compareAndExchangeAcquire(0, 2): 1 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:26)                          |
+|   integer.compareAndExchangeRelease(1, 2): 1 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:27)                          |
+|   long.compareAndExchange(0, 1): 0 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:29)                                    |
+|   long.compareAndExchangeAcquire(0, 2): 1 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:30)                             |
+|   long.compareAndExchangeRelease(1, 2): 1 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:31)                             |
+|   boolean.compareAndExchange(false, true): false at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:33)                      |
+|   boolean.compareAndExchangeAcquire(false, false): true at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:34)               |
+|   boolean.compareAndExchangeRelease(true, false): true at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:35)                |
+|   reference.compareAndExchange("initial", "next"): "initial" at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:37)          |
+|   reference.compareAndExchangeAcquire("initial", "other"): "next" at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:38)     |
+|   reference.compareAndExchangeRelease("next", "done"): "next" at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:39)         |
+|   integers[1].compareAndExchange(0, 1): 0 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:41)                             |
+|   integers[1].compareAndExchangeAcquire(0, 2): 1 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:42)                      |
+|   integers[1].compareAndExchangeRelease(1, 2): 1 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:43)                      |
+|   longs[1].compareAndExchange(0, 1): 0 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:45)                                |
+|   longs[1].compareAndExchangeAcquire(0, 2): 1 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:46)                         |
+|   longs[1].compareAndExchangeRelease(1, 2): 1 at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:47)                         |
+|   references[1].compareAndExchange("initial", "next"): "initial" at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:49)      |
+|   references[1].compareAndExchangeAcquire("initial", "other"): "next" at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:50) |
+|   references[1].compareAndExchangeRelease("next", "done"): "next" at AtomicCompareAndExchangeRepresentationTest.operation(AtomicCompareAndExchangeRepresentationTest.kt:51)     |
+|   result: void                                                                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

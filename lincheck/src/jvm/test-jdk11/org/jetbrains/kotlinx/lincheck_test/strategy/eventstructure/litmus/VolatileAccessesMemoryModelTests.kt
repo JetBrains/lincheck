@@ -18,9 +18,13 @@
  * <http://www.gnu.org/licenses/lgpl-3.0.html>
  */
 
-package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
+package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.litmus
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertNever
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertSame
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertSometimes
+import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.litmusTest
 import org.junit.Test
 import java.lang.invoke.VarHandle
 import java.util.concurrent.atomic.AtomicInteger
@@ -30,7 +34,7 @@ import kotlin.concurrent.thread
 class VolatileAccessesMemoryModelTests {
 
     @Test
-    fun testStoreBufferingWithOneFullFenceAndVolatileAccesses() {
+    fun TestStoreBufferingWithOneFullFenceAndVolatileAccesses() {
         litmusTest(assertNever(setOf(0 to 0)), MemoryModel.RelaxedJava) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -52,7 +56,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testFullFenceRetainsWritesSubsumedByReads() {
+    fun TestFullFenceRetainsWritesSubsumedByReads() {
         litmusTest(assertNever(setOf(Triple(1, 0, 0))), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -77,7 +81,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testFullFencesWithReadsFromTheSameWrite() {
+    fun TestFullFencesWithReadsFromTheSameWrite() {
         litmusTest(assertSame(setOf(listOf(0, 0, 0, 0))), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             var r0 = -1
@@ -101,7 +105,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testFullFencesWithPlainReadsFromTheSameWrite() {
+    fun TestFullFencesWithPlainReadsFromTheSameWrite() {
         litmusTest(assertSame(setOf(listOf(0, 0, 0, 0))), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             var r0 = -1
@@ -125,7 +129,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testFullFenceWithIndependentVolatileArrayElements() {
+    fun TestFullFenceWithIndependentVolatileArrayElements() {
         litmusTest(assertSame(setOf(0)), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val values = AtomicIntegerArray(2)
             values.set(0, 1)
@@ -135,7 +139,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testFullFenceOrdersPlainReads() {
+    fun TestFullFenceOrdersPlainReads() {
         val outcomes = (0..2).flatMap { first -> (first..2).map { second -> first to second } }.toSet()
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -157,7 +161,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testFullFenceDoesNotTreatReadSourcesAsPrecedingWrites() {
+    fun TestFullFenceDoesNotTreatReadSourcesAsPrecedingWrites() {
         litmusTest(assertSometimes(setOf(Triple(1, 0, 0))), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -182,7 +186,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testIRIWWithFullFences() {
+    fun TestIRIWWithFullFences() {
         litmusTest(assertNever(setOf(listOf(1, 0, 1, 0))), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -211,7 +215,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testIRIWWithPlainReadsAndFullFences() {
+    fun TestIRIWWithPlainReadsAndFullFences() {
         litmusTest(assertNever(setOf(listOf(1, 0, 1, 0))), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -240,7 +244,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testIRIWWithPlainAndOpaqueReadsAfterFullFence() {
+    fun TestIRIWWithPlainAndOpaqueReadsAfterFullFence() {
         litmusTest(assertNever(setOf(listOf(1, 0, 0, 1, 0))), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -272,7 +276,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testIRIWWithPlainAndOpaqueReadsBeforeFullFence() {
+    fun TestIRIWWithPlainAndOpaqueReadsBeforeFullFence() {
         litmusTest(assertNever(setOf(listOf(1, 0, 1, 1, 0))), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
             val y = AtomicInteger(0)
@@ -304,7 +308,7 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testFullFencesWithConcurrentPlainAndAtomicWrites() {
+    fun TestFullFencesWithConcurrentPlainAndAtomicWrites() {
         val outcomes = (1..3).flatMap { first -> (1..3).map { second -> first to second } }.toSet()
         litmusTest(assertSame(outcomes), MemoryModel.RelaxedJava, requireExhaustion = true) {
             val x = AtomicInteger(0)
@@ -329,12 +333,12 @@ class VolatileAccessesMemoryModelTests {
     }
 
     @Test
-    fun testRepeatedFullFencesWithOpaqueWrites() {
+    fun TestRepeatedFullFencesWithOpaqueWrites() {
         checkRepeatedFullFences(plainWrites = false)
     }
 
     @Test
-    fun testRepeatedFullFencesWithPlainWrites() {
+    fun TestRepeatedFullFencesWithPlainWrites() {
         checkRepeatedFullFences(plainWrites = true)
     }
 

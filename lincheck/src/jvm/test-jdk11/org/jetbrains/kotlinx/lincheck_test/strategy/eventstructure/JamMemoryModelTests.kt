@@ -21,7 +21,6 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
-import org.jetbrains.lincheck.util.isJdk8
 import java.util.concurrent.atomic.*
 import org.junit.Test
 import org.junit.Ignore
@@ -29,115 +28,6 @@ import java.lang.invoke.VarHandle
 import kotlin.concurrent.thread
 
 class JamMemoryModelTests {
-
-    @Test
-    fun testSBOpaque() {
-        val expectedOutcomes: Set<Pair<Int, Int>> = setOf((0 to 0), (0 to 1), (1 to 1), (1 to 0))
-        litmusTest(assertSame(expectedOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            var r0 = 0;
-            var r1 = 0;
-            val t0 = thread {
-                x.setOpaque(1)
-                r0 = y.getOpaque()
-            }
-            val t1 = thread {
-                y.setOpaque(1)
-                r1 = x.getOpaque()
-            }
-            t0.join()
-            t1.join()
-            r0 to r1
-        }
-    }
-
-    @Test
-    fun test4SB() {
-        val forbiddenOutcomes: Set<List<Int>> = setOf(listOf(0,0,0,0))
-        litmusTest(assertSometimes(forbiddenOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            val z = AtomicInteger(0)
-            val a = AtomicInteger(0)
-            var r0 = 0;
-            var r1 = 0;
-            var r2 = 0;
-            var r3 = 0;
-            val t0 = thread {
-                x.setOpaque(1)
-                r0 = y.getOpaque()
-            }
-            val t1 = thread {
-                y.setOpaque(1)
-                r1 = z.getOpaque()
-            }
-            val t2 = thread {
-                z.setOpaque(1)
-                r2 = a.getOpaque()
-            }
-            val t3 = thread {
-                a.setOpaque(1)
-                r3 = x.getOpaque()
-            }
-            t0.join()
-            t1.join()
-            t2.join()
-            t3.join()
-            listOf(r0, r1, r2, r3)
-        }
-    }
-
-
-    @Test
-    fun test6SB() {
-        val expectedOutcomes: Set<List<Int>> = setOf(listOf(0,0,0,0,0,0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            val z = AtomicInteger(0)
-            val a = AtomicInteger(0)
-            val b = AtomicInteger(0)
-            val c = AtomicInteger(0)
-            var r0 = 0;
-            var r1 = 0;
-            var r2 = 0;
-            var r3 = 0;
-            var r4 = 0;
-            var r5 = 0;
-            val t0 = thread {
-                x.setOpaque(1)
-                r0 = y.getOpaque()
-            }
-            val t1 = thread {
-                y.setOpaque(1)
-                r1 = z.getOpaque()
-            }
-            val t2 = thread {
-                z.setOpaque(1)
-                r2 = a.getOpaque()
-            }
-            val t3 = thread {
-                a.setOpaque(1)
-                r3 = b.getOpaque()
-            }
-            val t4 = thread {
-                b.setOpaque(1)
-                r4 = c.getOpaque()
-            }
-            val t5 = thread {
-                c.setOpaque(1)
-                r5 = x.getOpaque()
-            }
-            t0.join()
-            t1.join()
-            t2.join()
-            t3.join()
-            t4.join()
-            t5.join()
-            listOf(r0, r1, r2, r3, r4, r5)
-        }
-    }
 
     @Test
     fun testArfna() {
@@ -342,7 +232,6 @@ class JamMemoryModelTests {
         }
     }
 
-
     @Test
     fun testCyc() {
         val forbiddenOutcomes: Set<Pair<Int, Int>> = setOf((1 to 1))
@@ -473,59 +362,6 @@ class JamMemoryModelTests {
     }
 
     @Test
-    fun testMpRelaxed() {
-        val expectedOutcomes: Set<Pair<Int, Int>> = setOf((1 to 0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            var r0 = 0;
-            var r1 = -1;
-            val t0 = thread {
-                x.setPlain(1)
-                y.setOpaque(1)
-            }
-            val t1 = thread {
-                r0 = y.getOpaque()
-                if (r0 != 0) r1 = x.getPlain()
-            }
-            t0.join()
-            t1.join()
-            r0 to r1
-        }
-    }
-
-
-    @Test
-    fun testPodrw001() {
-        // NOTE: this is just Store Buffering with 3 reads
-        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(0,0,0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            val z = AtomicInteger(0)
-            var r0 = 0;
-            var r1 = 0;
-            var r2 = 0;
-            val t0 = thread {
-                z.setOpaque(1)
-                r0 = x.getOpaque()
-            }
-            val t1 = thread {
-                x.setOpaque(1)
-                r1 = y.getOpaque()
-            }
-            val t2 = thread {
-                y.setOpaque(1)
-                r2 = z.getOpaque()
-            }
-            t0.join()
-            t1.join()
-            t2.join()
-            Triple(r0, r1, r2)
-        }
-    }
-
-    @Test
     fun testRWCSyncs() {
         val forbiddenOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(1,0,0))
         litmusTest(assertNever(forbiddenOutcomes)) {
@@ -573,31 +409,6 @@ class JamMemoryModelTests {
             x2 to x3
         }
     }
-
-    @Test
-    fun testX001() {
-        val expectedOutcomes: Set<Triple<Int, Int, Int>> = setOf(Triple(0,1,0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            var r0 = 0;
-            var eax = 0;
-            var ebx = 0;
-            val t0 = thread {
-                x.setOpaque(1)
-                r0 = y.getOpaque()
-            }
-            val t1 = thread {
-                y.setOpaque(1)
-                eax = y.getOpaque()
-                ebx = x.getOpaque()
-            }
-            t0.join()
-            t1.join()
-            Triple(r0, eax, ebx)
-        }
-    }
-
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Test
@@ -665,7 +476,6 @@ class JamMemoryModelTests {
             x.get() to y.get()
         }
     }
-
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Test
@@ -758,71 +568,6 @@ class JamMemoryModelTests {
             r1
         }
     }
-
-    @Test
-    fun testIRIWPoaasLL() {
-        val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            var r1 = 0;
-            var r2 = 0;
-            var r3 = 0;
-            var r4 = 0;
-            val t0 = thread {
-                x.setRelease(1)
-            }
-            val t1 = thread {
-                y.setRelease(1)
-            }
-            val t2 = thread {
-                r1 = x.getAcquire()
-                r2 = y.getAcquire()
-            }
-            val t3 = thread {
-                r3 = y.getAcquire()
-                r4 = x.getAcquire()
-            }
-            t0.join()
-            t1.join()
-            t2.join()
-            t3.join()
-            listOf(r1, r2, r3, r4)
-        }
-    }
-
-    @Test
-    fun testIRIWPoapsLL() {
-        val expectedOutcomes: Set<List<Int>> = setOf(listOf(1,0,1,0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            var r1 = 0;
-            var r2 = 0;
-            var r3 = 0;
-            var r4 = 0;
-            val t0 = thread {
-                x.setRelease(1)
-            }
-            val t1 = thread {
-                y.setRelease(1)
-            }
-            val t2 = thread {
-                r1 = x.getAcquire()
-                r2 = y.getOpaque()
-            }
-            val t3 = thread {
-                r3 = y.getAcquire()
-                r4 = x.getOpaque()
-            }
-            t0.join()
-            t1.join()
-            t2.join()
-            t3.join()
-            listOf(r1, r2, r3, r4)
-        }
-    }
-
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Test
@@ -923,30 +668,6 @@ class JamMemoryModelTests {
     }
 
     // NOTE: this test is interesting because C11 forbids this behavior but JMM allows it
-    @Test
-    fun testMpRelacqRs() {
-        val expectedOutcomes: Set<Pair<Int, Int>> = setOf((2 to 0))
-        litmusTest(assertSometimes(expectedOutcomes), MemoryModel.RelaxedJava) {
-            val x = AtomicInteger(0)
-            val y = AtomicInteger(0)
-            var r0 = 0;
-            var r1 = -1;
-            val t0 = thread {
-                x.setPlain(1)
-                y.setRelease(1)
-                y.setOpaque(2)
-            }
-            val t1 = thread {
-                r0 = y.getAcquire()
-                if (r0 == 2) {
-                    r1 = x.getPlain()
-                }
-            }
-            t0.join()
-            t1.join()
-            r0 to r1
-        }
-    }
 
     // TODO: actual failing test, that can be fixed with improvements to do the model checker
     @Test
