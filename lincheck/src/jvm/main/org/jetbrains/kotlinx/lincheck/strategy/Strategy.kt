@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStruc
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.util.AnalysisProfile
+import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.TimeoutException
 import java.io.Closeable
 
@@ -117,21 +118,27 @@ abstract class Strategy : Closeable {
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
     val scenario = (runner as? ExecutionScenarioRunner)?.scenario ?: emptyScenario()
-    repeat(invocations) {
-        if (!nextInvocation()) return null
-        val result = runInvocation()
-        val failure = try {
-            verify(scenario, result, verifier)
-        } finally {
-            // verifier calls `@Operation`s of the class under test which can
-            // modify the static memory; thus, we need to restore initial values
-            if (this is ManagedStrategy) {
-                restoreMemorySnapshot()
+    var invocationsRun = 0
+    try {
+        repeat(invocations) {
+            if (!nextInvocation()) return null
+            val result = runInvocation()
+            invocationsRun++
+            val failure = try {
+                verify(scenario, result, verifier)
+            } finally {
+                // verifier calls `@Operation`s of the class under test which can
+                // modify the static memory; thus, we need to restore initial values
+                if (this is ManagedStrategy) {
+                    restoreMemorySnapshot()
+                }
             }
+            if (failure != null) return failure
         }
-        if (failure != null) return failure
+        return null
+    } finally {
+        Logger.info { "Iteration finished: $invocationsRun invocations run" }
     }
-    return null
 }
 
 /**

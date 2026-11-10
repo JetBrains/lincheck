@@ -115,6 +115,7 @@ internal fun<Outcome> litmusTest(
         createStrategy(testClass, memoryModel, testScenario).use { strategy ->
             val failure = strategy.runIteration(invocations, verifier)
             assert(failure == null) { failure.toString() }
+            strategy.checkAndPrintStats(invocations)
             outcomeVerifier.verify(outcomes)
         }
     }
@@ -209,13 +210,33 @@ internal inline fun<reified Outcome> litmusTest(
             if (requireExhaustion) {
                 Assert.assertFalse("Exploration did not exhaust within $invocations invocations", strategy.nextInvocation())
             }
-            // NOTE: Nice to see stats even if the test is passing, to see how many redudndant executions we are exploring
-            println("Stats: ${strategy.stats}")
+            strategy.checkAndPrintStats(invocations)
             outcomeVerifier.verify(outcomes)
         }
     }
 }
 
+
+/**
+ * Checks the invariants of the exploration statistics and prints them,
+ * so that the number of redundant explorations is visible even for passing tests.
+ *
+ * Every explored execution graph is a sub-graph of the event structure at the end of its exploration,
+ * so the event structure sizes dominate the execution graph sizes.
+ */
+internal fun EventStructureStrategy.checkAndPrintStats(invocations: Int) {
+    println("Stats: $stats")
+    Assert.assertTrue("No explored invocations are counted", stats.totalInvocations in 1..invocations)
+    Assert.assertTrue("Explored execution graphs are empty", stats.executionEventsTotal > 0)
+    Assert.assertTrue(
+        "Event structure is smaller than the explored execution graphs",
+        stats.eventStructureEventsTotal >= stats.executionEventsTotal,
+    )
+    Assert.assertTrue(
+        "Event structure is smaller than the largest explored execution graph",
+        stats.maxEventStructureEvents >= stats.maxExecutionEvents,
+    )
+}
 
 internal const val TIMEOUT = 30 * 1000L // 30 sec
 

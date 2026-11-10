@@ -36,6 +36,7 @@ import org.jetbrains.lincheck.util.collections.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.util.MemoryOrdering
 import sun.nio.ch.lincheck.ThreadDescriptor
+import java.util.Locale
 import org.objectweb.asm.Type as AsmType
 
 internal class EventStructureStrategy(
@@ -144,9 +145,12 @@ internal class EventStructureStrategy(
     fun runNextExploration(): Pair<InvocationResult?, Inconsistency?> {
         var result: InvocationResult? = null
         var inconsistency: Inconsistency? = eventStructure.checkConsistency()
+        var executionEvents = eventStructure.execution.size
         if (inconsistency == null) {
             eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
             result = super.runInvocationImpl()
+            // Measure before an abort resets the execution graph to its replayed prefix.
+            executionEvents = eventStructure.execution.size
             // if invocation was aborted, we also abort the current execution inside event structure
             if (result.isAbortedInvocation()) {
                 eventStructure.abortExploration()
@@ -159,8 +163,13 @@ internal class EventStructureStrategy(
             }
         }
 
-        stats.update(result, inconsistency)
+        stats.update(inconsistency, executionEvents, eventStructure.events.size)
         return (result to inconsistency)
+    }
+
+    override fun close() {
+        Logger.info { "Event structure exploration statistics:\n$stats" }
+        super.close()
     }
 
     // (OLD) TODO: temporarily disable trace collection for event structure strategy
@@ -173,12 +182,34 @@ internal class EventStructureStrategy(
         eventStructure.eventStructureObjectTracker.getObject(it)?.unwrap()
     }
 
+    /**
+     * Statistics of the explorations performed by the strategy.
+     *
+     * Besides the invocation counters, it accumulates the sizes of the explored execution graphs
+     * and of the event structure, measured at the end of each exploration (consistent or not).
+     */
     class Stats {
 
         var consistentInvocations: Int = 0
             private set
 
         var blockedInvocations: Int = 0
+            private set
+
+        /** Sum of the execution graph sizes (in events) over all explored invocations. */
+        var executionEventsTotal: Long = 0
+            private set
+
+        /** Sum of the event structure sizes (in events) over all explored invocations. */
+        var eventStructureEventsTotal: Long = 0
+            private set
+
+        /** Maximal size (in events) of an explored execution graph. */
+        var maxExecutionEvents: Int = 0
+            private set
+
+        /** Maximal size (in events) of the event structure at the end of an exploration. */
+        var maxEventStructureEvents: Int = 0
             private set
 
         private var lockConsistencyViolationCount: Int = 0
@@ -209,7 +240,28 @@ internal class EventStructureStrategy(
         val totalInvocations: Int
             get() = consistentInvocations + inconsistentInvocations + blockedInvocations
 
-        fun update(result: InvocationResult?, inconsistency: Inconsistency?) {
+        val averageExecutionEvents: Double
+            get() = if (totalInvocations == 0) 0.0 else executionEventsTotal.toDouble() / totalInvocations
+
+        val averageEventStructureEvents: Double
+            get() = if (totalInvocations == 0) 0.0 else eventStructureEventsTotal.toDouble() / totalInvocations
+
+        /** Ratio of the event structure size to the execution graph size, over all explored invocations. */
+        val eventStructureToExecutionRatio: Double
+            get() = if (executionEventsTotal == 0L) 0.0 else eventStructureEventsTotal.toDouble() / executionEventsTotal
+
+        /**
+         * Records a completed exploration.
+         *
+         * @param inconsistency the inconsistency that aborted the exploration, or null if the execution graph is consistent.
+         * @param executionEvents the number of events in the explored execution graph.
+         * @param eventStructureEvents the number of events in the event structure at the end of the exploration.
+         */
+        fun update(inconsistency: Inconsistency?, executionEvents: Int, eventStructureEvents: Int) {
+            executionEventsTotal += executionEvents
+            eventStructureEventsTotal += eventStructureEvents
+            maxExecutionEvents = maxOf(maxExecutionEvents, executionEvents)
+            maxEventStructureEvents = maxOf(maxEventStructureEvents, eventStructureEvents)
             if (inconsistency == null) {
                 consistentInvocations++
                 return
@@ -242,6 +294,11 @@ internal class EventStructureStrategy(
             #SeqCst violations   = $sequentialConsistencyViolationsCount
                 #coher.  phase   = $seqCstCoherenceViolationCount
                 #replay  phase   = $seqCstReplayViolationCount
+            #Events per execution graph  (avg) = ${"%.2f".format(Locale.ROOT, averageExecutionEvents)}
+            #Events per event structure  (avg) = ${"%.2f".format(Locale.ROOT, averageEventStructureEvents)}
+            #Events in execution graph   (max) = $maxExecutionEvents
+            #Events in event structure   (max) = $maxEventStructureEvents
+            #Event structure / execution graph events ratio = ${"%.3f".format(Locale.ROOT, eventStructureToExecutionRatio)}
         """.trimIndent()
 
     }
