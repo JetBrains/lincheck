@@ -1,0 +1,4603 @@
+[
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainReadsSeparatedByUnrelatedOpaqueRead",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadsSeparatedByUnrelatedOpaqueRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "first",
+      "middle",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainReadsSeparatedByAcquireFence",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadsSeparatedByAcquireFence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainReadsSeparatedByLoadLoadFence",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadsSeparatedByLoadLoadFence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestAliasedPlainOpaquePlainReads",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAliasedPlainOpaquePlainReads",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "first",
+      "middle",
+      "last"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestAliasedPlainOpaquePlainReadsAfterCommonSubexpressionElimination",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAliasedPlainOpaquePlainReadsAfterCommonSubexpressionElimination",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "first",
+      "middle",
+      "last"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestAliasedPlainReads",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAliasedPlainReads",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "third"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestAliasedPlainReadsAfterCommonSubexpressionElimination",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAliasedPlainReadsAfterCommonSubexpressionElimination",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "third"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestOpaqueReadsOfConcurrentPlainWrites",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOpaqueReadsOfConcurrentPlainWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "third"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainReadAfterReleaseAcquirePublication",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadAfterReleaseAcquirePublication",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "publication",
+      "value"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestLatestPlainWriteAfterCrossThreadPublication",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestLatestPlainWriteAfterCrossThreadPublication",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "publication",
+      "x.getOpaque()"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestOwnPlainWriteRemainsVisibleAfterAnInterveningRead",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOwnPlainWriteRemainsVisibleAfterAnInterveningRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainCompareAndSetRemainsAtomic",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainCompareAndSetRemainsAtomic",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "ZZ_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainCompareAndSetCompetingForAPlainWrite",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainCompareAndSetCompetingForAPlainWrite",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "ZZ_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainReadBeforeFailedReleaseCompareAndExchange",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadBeforeFailedReleaseCompareAndExchange",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestFailedReleaseCompareAndExchangeBeforePlainRead",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestFailedReleaseCompareAndExchangeBeforePlainRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainReadBeforeSuccessfulReleaseCompareAndExchange",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadBeforeSuccessfulReleaseCompareAndExchange",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "witness"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestAcquireCompareAndExchangeWriteHasAtomicCoherence",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAcquireCompareAndExchangeWriteHasAtomicCoherence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 4,
+    "result_type": "IIIII_Result",
+    "outcome_components": [
+      "witness",
+      "first",
+      "second",
+      "third",
+      "fourth"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestAtomicCoherenceOrderExtendsThroughHappensBeforeToPlainWrites",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAtomicCoherenceOrderExtendsThroughHappensBeforeToPlainWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestConsecutivePlainCompareAndSetsCannotConsumeTheSamePlainWrite",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestConsecutivePlainCompareAndSetsCannotConsumeTheSamePlainWrite",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "ZZ_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestCoherenceThroughPlainRmwSourceAtomicOrderAndPlainSuffix",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCoherenceThroughPlainRmwSourceAtomicOrderAndPlainSuffix",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "ZII_Result",
+    "outcome_components": [
+      "success",
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestOpaqueReadsAcrossPlainClusters",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOpaqueReadsAcrossPlainClusters",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainClustersKeepAtomicBoundsLocalToEachField",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainClustersKeepAtomicBoundsLocalToEachField",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestConcurrentPlainWriteCanOverlapAtomicBounds",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestConcurrentPlainWriteCanOverlapAtomicBounds",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestIndependentRmwChainsWithPlainSources",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestIndependentRmwChainsWithPlainSources",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "ZZ_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestRmwChainWithPlainSourceAndConcurrentOpaqueWrite",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestRmwChainWithPlainSourceAndConcurrentOpaqueWrite",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "ZZ_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestOppositeOpaqueObservationsOfConcurrentPlainWrites",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOppositeOpaqueObservationsOfConcurrentPlainWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "third",
+      "fourth"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestOppositeOpaqueObservationsOfConcurrentPlainAndOpaqueWrites",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOppositeOpaqueObservationsOfConcurrentPlainAndOpaqueWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "third",
+      "fourth"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainReadBeforePlainCompareAndSetWithPlainWriter",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadBeforePlainCompareAndSetWithPlainWriter",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "IZ_Result",
+    "outcome_components": [
+      "value",
+      "success"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainReadBeforePlainCompareAndSetWithOpaqueWriter",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadBeforePlainCompareAndSetWithOpaqueWriter",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 2,
+    "result_type": "IZ_Result",
+    "outcome_components": [
+      "value",
+      "success"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestCasAcrossPlainWritesObservedByOpaqueReads",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCasAcrossPlainWritesObservedByOpaqueReads",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "IIZ_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "success"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestCasAcrossPlainSourceAndOpaqueWriteObservedByOpaqueReads",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCasAcrossPlainSourceAndOpaqueWriteObservedByOpaqueReads",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "IIZ_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "success"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestCasAcrossOpaqueSourceAndPlainWriteObservedByOpaqueReads",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCasAcrossOpaqueSourceAndPlainWriteObservedByOpaqueReads",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "IIZ_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "success"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestCasAcrossOpaqueWritesObservedByOpaqueReads",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCasAcrossOpaqueWritesObservedByOpaqueReads",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "actors": 3,
+    "result_type": "IIZ_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "success"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestStoreBufferingWithOneFullFenceAndVolatileAccesses",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestStoreBufferingWithOneFullFenceAndVolatileAccesses",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestFullFenceRetainsWritesSubsumedByReads",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestFullFenceRetainsWritesSubsumedByReads",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestFullFencesWithReadsFromTheSameWrite",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestFullFencesWithReadsFromTheSameWrite",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 2,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestFullFencesWithPlainReadsFromTheSameWrite",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestFullFencesWithPlainReadsFromTheSameWrite",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 2,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestFullFenceOrdersPlainReads",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestFullFenceOrdersPlainReads",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestFullFenceDoesNotTreatReadSourcesAsPrecedingWrites",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestFullFenceDoesNotTreatReadSourcesAsPrecedingWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestIRIWWithFullFences",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestIRIWWithFullFences",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestIRIWWithPlainReadsAndFullFences",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestIRIWWithPlainReadsAndFullFences",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestIRIWWithPlainAndOpaqueReadsAfterFullFence",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestIRIWWithPlainAndOpaqueReadsAfterFullFence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 4,
+    "result_type": "IIIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3",
+      "r4"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestIRIWWithPlainAndOpaqueReadsBeforeFullFence",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestIRIWWithPlainAndOpaqueReadsBeforeFullFence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 4,
+    "result_type": "IIIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3",
+      "r4"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestFullFencesWithConcurrentPlainAndAtomicWrites",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestFullFencesWithConcurrentPlainAndAtomicWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 3,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestRepeatedFullFencesWithOpaqueWrites",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestRepeatedFullFencesWithOpaqueWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestRepeatedFullFencesWithPlainWrites",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestRepeatedFullFencesWithPlainWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestSBReleaseOpaque",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestSBReleaseOpaque",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestSBOpaque",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestSBOpaque",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.Test4SB",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.Test4SB",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.Test6SB",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.Test6SB",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 6,
+    "result_type": "IIIIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestArfna",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestArfna",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestArfnaTransformed",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestArfnaTransformed",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestB",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestB",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestBReorder",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestBReorder",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestC",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestC",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "p.get()",
+      "q.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCReorder",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCReorder",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "p.get()",
+      "q.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCyc",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCyc",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestFig1",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestFig1",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "a.get()",
+      "x.get()",
+      "y.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestIriwInternal",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestIriwInternal",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t0a",
+      "t0b",
+      "t1a",
+      "t1b"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestMpRelaxed",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestMpRelaxed",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestPodrw001",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestPodrw001",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestX001",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestX001",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r0",
+      "eax",
+      "ebx"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestX003",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestX003",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "y.get()",
+      "eax",
+      "ebx"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestX006",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestX006",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "y.get()",
+      "r0"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestX86_2plus2W",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestX86_2plus2W",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "x.get()",
+      "y.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestA1",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestA1",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "x.get()",
+      "y.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestA1Reorder",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestA1Reorder",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "x.get()",
+      "y.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestA3",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestA3",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestA3Reorder",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestA3Reorder",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestIRIWPoaasLL",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestIRIWPoaasLL",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3",
+      "r4"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestIRIWPoapsLL",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestIRIWPoapsLL",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3",
+      "r4"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestLinearisation",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestLinearisation",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "IIIII_Result",
+    "outcome_components": [
+      "t",
+      "w.get()",
+      "x.get()",
+      "y.get()",
+      "z.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestLinearisation2",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestLinearisation2",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "IIIII_Result",
+    "outcome_components": [
+      "r0",
+      "w.get()",
+      "x.get()",
+      "y.get()",
+      "z.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestMpRelacq",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestMpRelacq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestMpRelacqRs",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestMpRelacqRs",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestRoachmotel",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestRoachmotel",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "a.get()",
+      "z.get()",
+      "x.get()",
+      "y.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestRoachmotel2",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestRoachmotel2",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "a.get()",
+      "z.get()",
+      "x.get()",
+      "y.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestRseqWeak",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestRseqWeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "x.get()",
+      "y.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestRseqWeak2",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestRseqWeak2",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "x.get()",
+      "y.get()"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestTotalco",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestTotalco",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t0r",
+      "t1r",
+      "t2r"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestWWRRWWRRWsilpPoaaWsilpPoaa",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestWWRRWWRRWsilpPoaaWsilpPoaa",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIIIII_Result",
+    "outcome_components": [
+      "x.get()",
+      "y.get()",
+      "t1a",
+      "t1b",
+      "t3a",
+      "t3b"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestMpFences",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestMpFences",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r0",
+      "r1"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality01",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality01",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r1",
+      "r2"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality02",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality02",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality03",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality03",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality04",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality04",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r1",
+      "r2"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality05",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality05",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 4,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality06",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality06",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r1",
+      "r2"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality07",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality07",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality08",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality08",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality09",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality09",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality10",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality10",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 4,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality11",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality11",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3",
+      "r4"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality12",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality12",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality13",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality13",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r1",
+      "r2"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality14SingleIteration",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality14SingleIteration",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality15SingleIteration",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality15SingleIteration",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 3,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r0",
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality16",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality16",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r1",
+      "r2"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality17",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality17",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality18",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality18",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_2_2",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_2_2",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r2",
+      "t1_r1"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_2_5",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_2_5",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2",
+      "t1_r3"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_3_1",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_3_1",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_3_3b",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_3_3b",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t0_r2",
+      "t1_r3"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_3_9",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_3_9",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2_r1",
+      "t2_r2",
+      "t3_r3",
+      "t3_r4"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_5",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_5",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 4,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t3_r0",
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_6",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_6",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 4,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t3_r0",
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_8",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_8",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t0_r2",
+      "t1_r3"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_9",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_9",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2",
+      "t2_r3",
+      "t3_r4"
+    ]
+  },
+  {
+    "id": "MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_11",
+    "group": "MansonThesisMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonThesisMemoryModelTests.Test_jmanson_thesis_fig_4_11",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonThesisMemoryModelTests.java",
+    "source_sha256": "33d8271a946072062e91e848911881dd87a70dc098078192ba42347831702670",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2",
+      "t2_r3"
+    ]
+  },
+  {
+    "id": "SevcikAspinallMemoryModelTests.Test_SA08_irrelevant_read_introduction_source",
+    "group": "SevcikAspinallMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SevcikAspinallMemoryModelTests.Test_SA08_irrelevant_read_introduction_source",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SevcikAspinallMemoryModelTests.java",
+    "source_sha256": "38ea4e793bed31c1555abd0c25938d3c9f70f19fd0cc681b0637100d4351b119",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "SevcikAspinallMemoryModelTests.Test_SA08_redundant_read_after_read_elimination_source",
+    "group": "SevcikAspinallMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SevcikAspinallMemoryModelTests.Test_SA08_redundant_read_after_read_elimination_source",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SevcikAspinallMemoryModelTests.java",
+    "source_sha256": "38ea4e793bed31c1555abd0c25938d3c9f70f19fd0cc681b0637100d4351b119",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "SevcikAspinallMemoryModelTests.Test_Sevcik_2008_Tester_source",
+    "group": "SevcikAspinallMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SevcikAspinallMemoryModelTests.Test_Sevcik_2008_Tester_source",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SevcikAspinallMemoryModelTests.java",
+    "source_sha256": "38ea4e793bed31c1555abd0c25938d3c9f70f19fd0cc681b0637100d4351b119",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "t1_ans"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_advanced_02_multi_copy_atomic_fenced",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_advanced_02_multi_copy_atomic_fenced",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2_r1",
+      "t2_r2",
+      "t3_r3",
+      "t3_r4"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_advanced_02_multi_copy_atomic_fully_fenced",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_advanced_02_multi_copy_atomic_fully_fenced",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2_r1",
+      "t2_r2",
+      "t3_r3",
+      "t3_r4"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_advanced_02_multi_copy_atomic_opaque",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_advanced_02_multi_copy_atomic_opaque",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2_r1",
+      "t2_r2",
+      "t3_r3",
+      "t3_r4"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_advanced_03_non_mca_coherence",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_advanced_03_non_mca_coherence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2_r1",
+      "t2_r2",
+      "t3_r3",
+      "t3_r4"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_advanced_15_volatiles_are_not_fences",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_advanced_15_volatiles_are_not_fences",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2",
+      "t1_r3"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_05_coherence_same_read_opaque",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_05_coherence_same_read_opaque",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_05_coherence_same_read_plain",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_05_coherence_same_read_plain",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_05_coherence_same_read_volatile",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_05_coherence_same_read_volatile",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_06_causality_message_passing_acqrel",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_06_causality_message_passing_acqrel",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_06_causality_message_passing_opaque",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_06_causality_message_passing_opaque",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_06_causality_message_passing_plain",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_06_causality_message_passing_plain",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_06_causality_message_passing_volatile",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_06_causality_message_passing_volatile",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_07_consensus_dekker_acqrel",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_07_consensus_dekker_acqrel",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_07_consensus_dekker_plain",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_07_consensus_dekker_plain",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_basics_07_consensus_dekker_volatile",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_basics_07_consensus_dekker_volatile",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_rmw_09_gas_effects_1_cts_cts",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_rmw_09_gas_effects_1_cts_cts",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_rmw_09_gas_effects_2_cas_cas",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_rmw_09_gas_effects_2_cas_cas",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_rmw_09_gas_effects_3_gts_cas",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_rmw_09_gas_effects_3_gts_cas",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JcstressSampleMemoryModelTests.Test_jcstress_rmw_09_gas_effects_4_gas_cas",
+    "group": "JcstressSampleMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JcstressSampleMemoryModelTests.Test_jcstress_rmw_09_gas_effects_4_gas_cas",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java",
+    "source_sha256": "edd233ef203c3a6ea1085ef99700cb5e75c34adb6b7e11ea1d360c1e3a84c8db",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.TestFigure5CompilationCounterexample",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.TestFigure5CompilationCounterexample",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 3,
+    "result_type": "IIIII_Result",
+    "outcome_components": [
+      "a",
+      "b",
+      "c",
+      "d",
+      "e"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_2plus2W_opq",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_2plus2W_opq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_lb_if",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_lb_if",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_lb_ra",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_lb_ra",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_2_access",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_2_access",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 3,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t1_a",
+      "t1_b",
+      "t2_c",
+      "t2_d"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_fadd_vol",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_fadd_vol",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t2_r2",
+      "t2_r3"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_fake_fence",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_fake_fence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r2",
+      "t1_r4"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_fence",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_fence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2",
+      "t1_r3"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_large_transfer",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_large_transfer",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2",
+      "t1_r3"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_once_two_unsync_writers",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_once_two_unsync_writers",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t2_r3",
+      "t2_r4"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_overwrite",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_overwrite",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_quasi_fence",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_quasi_fence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r2",
+      "t1_r4"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_trans",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_trans",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t2_r2",
+      "t2_r3"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_no_future_read_opq",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_no_future_read_opq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 1,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "t0_r1"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_no_future_read_pln",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_no_future_read_pln",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 1,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "t0_r1"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_no_future_read_ra",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_no_future_read_ra",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 1,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "t0_r1"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_no_future_read_vol",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_no_future_read_vol",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 1,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "t0_r1"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_release_sequence_opq",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_release_sequence_opq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_release_sequence_pln",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_release_sequence_pln",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_release_sequence_rmw",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_release_sequence_rmw",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2",
+      "t1_r3"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_sb_fadd_volatile_acquire",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_sb_fadd_volatile_acquire",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_sb_fake_fence",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_sb_fake_fence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r2",
+      "t1_r4"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_SB_opq_vol",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_SB_opq_vol",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r2"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_sb_quasi_fence",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_sb_quasi_fence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r2",
+      "t1_r4"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_iriw_sensibly_fenced",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_iriw_sensibly_fenced",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2_r1",
+      "t2_r2",
+      "t3_r3",
+      "t3_r4"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_lb_fake_fence",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_lb_fake_fence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t1_r3"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_2_fence",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_2_fence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 3,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t1_a",
+      "t1_b",
+      "t2_c",
+      "t2_d"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_fadd_acq",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_fadd_acq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t2_r2",
+      "t2_r3"
+    ]
+  },
+  {
+    "id": "JmtMemoryModelTests.Test_mp_fadd_rel",
+    "group": "JmtMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JmtMemoryModelTests.Test_mp_fadd_rel",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java",
+    "source_sha256": "d031afc1fcc5530e494ac9898d4cd5db4b1ae997cb5a2c6bc6d46042b307231b",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1_r1",
+      "t2_r2",
+      "t2_r3"
+    ]
+  },
+  {
+    "id": "CompilingVolatileMemoryModelTests.TestFigure8BeforeRegisterPromotion",
+    "group": "CompilingVolatileMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CompilingVolatileMemoryModelTests.TestFigure8BeforeRegisterPromotion",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CompilingVolatileMemoryModelTests.java",
+    "source_sha256": "029f73cebc84b1c1055af962c4ee678a9f5115d5326d75b2de9107ebb902ca62",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3",
+      "r4"
+    ]
+  },
+  {
+    "id": "CompilingVolatileMemoryModelTests.TestFigure9AfterRegisterPromotion",
+    "group": "CompilingVolatileMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CompilingVolatileMemoryModelTests.TestFigure9AfterRegisterPromotion",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CompilingVolatileMemoryModelTests.java",
+    "source_sha256": "029f73cebc84b1c1055af962c4ee678a9f5115d5326d75b2de9107ebb902ca62",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3",
+      "r4"
+    ]
+  },
+  {
+    "id": "CompilingVolatileMemoryModelTests.Test_LBP21_volatile_non_sc_4",
+    "group": "CompilingVolatileMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CompilingVolatileMemoryModelTests.Test_LBP21_volatile_non_sc_4",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CompilingVolatileMemoryModelTests.java",
+    "source_sha256": "029f73cebc84b1c1055af962c4ee678a9f5115d5326d75b2de9107ebb902ca62",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t2_r2",
+      "t3_r3",
+      "t3_r4"
+    ]
+  },
+  {
+    "id": "CompilingVolatileMemoryModelTests.Test_LBP21_volatile_non_sc_5",
+    "group": "CompilingVolatileMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CompilingVolatileMemoryModelTests.Test_LBP21_volatile_non_sc_5",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CompilingVolatileMemoryModelTests.java",
+    "source_sha256": "029f73cebc84b1c1055af962c4ee678a9f5115d5326d75b2de9107ebb902ca62",
+    "actors": 5,
+    "result_type": "IIIII_Result",
+    "outcome_components": [
+      "t0_r1",
+      "t2_r2",
+      "t3_r3",
+      "t4_r4",
+      "t4_r5"
+    ]
+  },
+  {
+    "id": "MixedAccessMemoryModelTests.ReleaseChain",
+    "group": "MixedAccessMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MixedAccessMemoryModelTests.ReleaseChain",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MixedAccessMemoryModelTests.java",
+    "source_sha256": "5491af077c108577a36c68393ad7465b95aff4d806d2405ae21eec7f85522fd8",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "first",
+      "second",
+      "third"
+    ]
+  },
+  {
+    "id": "MixedAccessMemoryModelTests.VolatileFenceVarHandle",
+    "group": "MixedAccessMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MixedAccessMemoryModelTests.VolatileFenceVarHandle",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MixedAccessMemoryModelTests.java",
+    "source_sha256": "5491af077c108577a36c68393ad7465b95aff4d806d2405ae21eec7f85522fd8",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "MixedAccessMemoryModelTests.VolatileFence",
+    "group": "MixedAccessMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MixedAccessMemoryModelTests.VolatileFence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MixedAccessMemoryModelTests.java",
+    "source_sha256": "5491af077c108577a36c68393ad7465b95aff4d806d2405ae21eec7f85522fd8",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "MixedAccessMemoryModelTests.VolatileFenceWithReadbacks",
+    "group": "MixedAccessMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MixedAccessMemoryModelTests.VolatileFenceWithReadbacks",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MixedAccessMemoryModelTests.java",
+    "source_sha256": "5491af077c108577a36c68393ad7465b95aff4d806d2405ae21eec7f85522fd8",
+    "actors": 2,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "firstFlag",
+      "secondFlag",
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_PLAIN_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_PLAIN_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_PLAIN_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_PLAIN_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_PLAIN_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_PLAIN_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_PLAIN_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_PLAIN_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_OPAQUE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_OPAQUE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_OPAQUE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_OPAQUE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_OPAQUE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_OPAQUE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_OPAQUE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_OPAQUE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_RELEASE_ACQUIRE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_RELEASE_ACQUIRE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_RELEASE_ACQUIRE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_RELEASE_ACQUIRE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_RELEASE_ACQUIRE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_RELEASE_ACQUIRE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_RELEASE_ACQUIRE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_RELEASE_ACQUIRE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_VOLATILE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_VOLATILE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_VOLATILE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_VOLATILE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_VOLATILE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_VOLATILE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__PLAIN_VOLATILE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__PLAIN_VOLATILE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_PLAIN_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_PLAIN_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_PLAIN_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_PLAIN_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_PLAIN_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_PLAIN_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_PLAIN_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_PLAIN_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_OPAQUE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_OPAQUE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_OPAQUE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_OPAQUE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_OPAQUE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_OPAQUE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_OPAQUE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_OPAQUE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_RELEASE_ACQUIRE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_RELEASE_ACQUIRE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_RELEASE_ACQUIRE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_RELEASE_ACQUIRE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_RELEASE_ACQUIRE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_RELEASE_ACQUIRE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_RELEASE_ACQUIRE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_RELEASE_ACQUIRE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_VOLATILE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_VOLATILE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_VOLATILE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_VOLATILE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_VOLATILE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_VOLATILE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__OPAQUE_VOLATILE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__OPAQUE_VOLATILE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_PLAIN_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_PLAIN_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_PLAIN_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_PLAIN_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_PLAIN_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_PLAIN_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_PLAIN_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_PLAIN_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_OPAQUE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_OPAQUE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_OPAQUE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_OPAQUE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_OPAQUE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_OPAQUE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_OPAQUE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_OPAQUE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_RELEASE_ACQUIRE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_RELEASE_ACQUIRE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_RELEASE_ACQUIRE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_RELEASE_ACQUIRE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_RELEASE_ACQUIRE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_RELEASE_ACQUIRE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_RELEASE_ACQUIRE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_RELEASE_ACQUIRE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_VOLATILE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_VOLATILE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_VOLATILE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_VOLATILE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_VOLATILE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_VOLATILE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_VOLATILE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__RELEASE_ACQUIRE_VOLATILE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_PLAIN_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_PLAIN_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_PLAIN_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_PLAIN_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_PLAIN_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_PLAIN_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_PLAIN_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_PLAIN_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_OPAQUE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_OPAQUE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_OPAQUE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_OPAQUE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_OPAQUE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_OPAQUE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_OPAQUE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_OPAQUE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_RELEASE_ACQUIRE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_RELEASE_ACQUIRE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_RELEASE_ACQUIRE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_RELEASE_ACQUIRE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_RELEASE_ACQUIRE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_RELEASE_ACQUIRE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_RELEASE_ACQUIRE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_RELEASE_ACQUIRE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_VOLATILE_PLAIN",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_VOLATILE_PLAIN",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_VOLATILE_OPAQUE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_VOLATILE_OPAQUE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_VOLATILE_RELEASE_ACQUIRE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_VOLATILE_RELEASE_ACQUIRE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "CoRRMemoryModelTest.TestCoRR__VOLATILE_VOLATILE_VOLATILE",
+    "group": "CoRRMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.CoRRMemoryModelTest.TestCoRR__VOLATILE_VOLATILE_VOLATILE",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java",
+    "source_sha256": "278a28da01a1daf638e009d11d474e1926be4e7d4d553126aef805391d0fa9d1",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveLeakedAfterAssignment",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveLeakedAfterAssignment",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.SuperclassFreezePrecedesSubclassLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.SuperclassFreezePrecedesSubclassLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "baseResult",
+      "derivedResult"
+    ]
+  },
+  {
+    "id": "PublicationTests.DelegatingConstructorDoesNotRefreezeFinalReference",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.DelegatingConstructorDoesNotRefreezeFinalReference",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.HolderPublicationAfterFreezeProtectsEarlierLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.HolderPublicationAfterFreezeProtectsEarlierLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.PlainRelayCarriesFreezeOfPrematurelyPublishedObject",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.PlainRelayCarriesFreezeOfPrematurelyPublishedObject",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 3,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.AcquireProtectsPreviouslyReadLeakedReference",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.AcquireProtectsPreviouslyReadLeakedReference",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceRejectsStaleWritesAndAllowsLaterWrites",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceRejectsStaleWritesAndAllowsLaterWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceProtectsWritesFromJoinedThread",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceProtectsWritesFromJoinedThread",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferencePreservesConcurrentProtectedWrites",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferencePreservesConcurrentProtectedWrites",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceRejectsStaleWriteFromAnotherThread",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceRejectsStaleWriteFromAnotherThread",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceProtectsArrayElements",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceProtectsArrayElements",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceProtectsTransitiveDereference",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceProtectsTransitiveDereference",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.AbruptConstructorExitFreezesAssignedFinalField",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.AbruptConstructorExitFreezesAssignedFinalField",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.ExceptionFromCalledMethodFreezesAssignedFinalField",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.ExceptionFromCalledMethodFreezesAssignedFinalField",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.HiddenFieldsHaveDistinctWritesAndFreezes",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.HiddenFieldsHaveDistinctWritesAndFreezes",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "baseResult",
+      "derivedResult",
+      "inheritedResult"
+    ]
+  },
+  {
+    "id": "PublicationTests.CompletedSubclassProtectsBothHiddenFields",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.CompletedSubclassProtectsBothHiddenFields",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "baseResult",
+      "derivedResult"
+    ]
+  },
+  {
+    "id": "PublicationTests.RepeatedReferenceReadRetainsEarlierFreezeView",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.RepeatedReferenceReadRetainsEarlierFreezeView",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 3,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.PlainRepeatedReferenceReadRetainsEarlierFreezeView",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.PlainRepeatedReferenceReadRetainsEarlierFreezeView",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "sawPublished",
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.RepeatedReferenceWriteCarriesAccumulatedView",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.RepeatedReferenceWriteCarriesAccumulatedView",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 3,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.RepeatedAliasRetainsFinalReferenceProtection",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.RepeatedAliasRetainsFinalReferenceProtection",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.UnrelatedReferenceDoesNotAccumulateFreezeView",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.UnrelatedReferenceDoesNotAccumulateFreezeView",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.SameReferenceViewsRemainThreadLocal",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.SameReferenceViewsRemainThreadLocal",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 3,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.LaterReferenceViewDoesNotProtectEarlierRead",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.LaterReferenceViewDoesNotProtectEarlierRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "before",
+      "after"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitive",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitive",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.MutablePrimitive",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.MutablePrimitive",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.MutablePrimitiveWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.MutablePrimitiveWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReference",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReference",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.MutableReference",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.MutableReference",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.MutableReferenceWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.MutableReferenceWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalAndMutableFields",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalAndMutableFields",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "finalResult",
+      "mutableResult"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalAndMutableFieldsWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalAndMutableFieldsWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "finalResult",
+      "mutableResult"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceProtectsMutableField",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceProtectsMutableField",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestFig6",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestFig6",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIIIIII_Result",
+    "outcome_components": [
+      "r",
+      "t3[0]",
+      "t3[1]",
+      "t3[2]",
+      "t3[3]",
+      "t3[4]",
+      "t3[5]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestFig6Translated",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestFig6Translated",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIIIIII_Result",
+    "outcome_components": [
+      "r",
+      "t3[0]",
+      "t3[1]",
+      "t3[2]",
+      "t3[3]",
+      "t3[4]",
+      "t3[5]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestIriwAcqSc",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestIriwAcqSc",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2[0]",
+      "t2[1]",
+      "t3[0]",
+      "t3[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestIriwScRlxAcq",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestIriwScRlxAcq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2[0]",
+      "t2[1]",
+      "t3[0]",
+      "t3[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestIriwSc",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestIriwSc",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2[0]",
+      "t2[1]",
+      "t3[0]",
+      "t3[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestMpSc",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestMpSc",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "captured1[0]",
+      "captured1[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestZ6U",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestZ6U",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1[0]",
+      "t1[1]",
+      "t2"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestA3v2",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestA3v2",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "captured1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCp",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCp",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCpReorder",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCpReorder",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCpq",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCpq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCpqReorder",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCpqReorder",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCq",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCqReorder",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCqReorder",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestX002",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestX002",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "eax0",
+      "t1[0]",
+      "t1[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestX005",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestX005",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "eax0",
+      "eax1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestSbPlusRfis",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestSbPlusRfis",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t0[0]",
+      "t0[1]",
+      "t1[0]",
+      "t1[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestSeq",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestSeq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]",
+      "post0[2]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestSeq2",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestSeq2",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]",
+      "post0[2]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestStrengthen",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestStrengthen",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]",
+      "post0[2]",
+      "post0[3]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestStrengthen2",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestStrengthen2",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "post0[0]",
+      "post0[1]",
+      "post0[2]",
+      "post0[3]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCppMemIriwRelacq",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCppMemIriwRelacq",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 4,
+    "result_type": "IIII_Result",
+    "outcome_components": [
+      "t2[0]",
+      "t2[1]",
+      "t3[0]",
+      "t3[1]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.Test2Plus2W",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.Test2Plus2W",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "r1_0",
+      "r1_1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestPPOCA",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestPPOCA",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "captured1[0]",
+      "captured1[1]",
+      "captured1[2]"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestSBMfence",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestSBMfence",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "eax0",
+      "eax1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestWRWC",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestWRWC",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1[0]",
+      "t1[1]",
+      "t2"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestRWCSyncs",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestRWCSyncs",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 3,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "t1[0]",
+      "t1[1]",
+      "r1"
+    ]
+  },
+  {
+    "id": "JamMemoryModelTests.TestCoRWR",
+    "group": "JamMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.JamMemoryModelTests.TestCoRWR",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/JamMemoryModelTests.java",
+    "source_sha256": "7ed4c4fff36700b8c02b799534e063b7ff10253caf1a8b96201cb26c848846f0",
+    "actors": 1,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "eax",
+      "ebx"
+    ]
+  },
+  {
+    "id": "VolatileAccessesMemoryModelTests.TestFullFenceWithIndependentVolatileArrayElements",
+    "group": "VolatileAccessesMemoryModelTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.VolatileAccessesMemoryModelTests.TestFullFenceWithIndependentVolatileArrayElements",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java",
+    "source_sha256": "3d774432da4b7a54a626809bce548be3b2695ce84589d4c1495480ef529c9932",
+    "actors": 1,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.ConstructorReadsDefaultBeforeAssignmentAndOwnWriteAfterward",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.ConstructorReadsDefaultBeforeAssignmentAndOwnWriteAfterward",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 1,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "result[0]",
+      "result[1]"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveGet",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveGet",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveGetOpaque",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveGetOpaque",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveGetAcquire",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveGetAcquire",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveGetVolatile",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveGetVolatile",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveGetWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveGetWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveGetOpaqueWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveGetOpaqueWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveGetAcquireWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveGetAcquireWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalPrimitiveGetVolatileWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalPrimitiveGetVolatileWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.MutablePrimitiveGet",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.MutablePrimitiveGet",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.MutablePrimitiveGetOpaque",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.MutablePrimitiveGetOpaque",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.MutablePrimitiveGetAcquire",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.MutablePrimitiveGetAcquire",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.MutablePrimitiveGetVolatile",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.MutablePrimitiveGetVolatile",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGet",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGet",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetOpaque",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetOpaque",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetAcquire",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetAcquire",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetVolatile",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetVolatile",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetOpaqueWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetOpaqueWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetAcquireWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetAcquireWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetVolatileWithLeak",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetVolatileWithLeak",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetProtectsMutableField",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetProtectsMutableField",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetOpaqueProtectsMutableField",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetOpaqueProtectsMutableField",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetAcquireProtectsMutableField",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetAcquireProtectsMutableField",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "PublicationTests.FinalReferenceGetVolatileProtectsMutableField",
+    "group": "PublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PublicationTests.FinalReferenceGetVolatileProtectsMutableField",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java",
+    "source_sha256": "0d014bd03827f65de19b550b5c249f6d71e4821dad7d750336f39e28777f7a8c",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "result"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality19",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality19",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "MansonCausalityTests.TestCausality20",
+    "group": "MansonCausalityTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.MansonCausalityTests.TestCausality20",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/MansonCausalityTests.java",
+    "source_sha256": "8b58c8c3223506b62a2b7ad0ef0b82d442a64189a69a03bc604134a3ed225586",
+    "actors": 2,
+    "result_type": "III_Result",
+    "outcome_components": [
+      "r1",
+      "r2",
+      "r3"
+    ]
+  },
+  {
+    "id": "SkipListPublicationTests.CasFenceBeforeRead",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasFenceBeforeRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.CasFenceBeforeReadControl",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasFenceBeforeReadControl",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1,
+      "value_not_read": -2
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.CasFenceBeforeValueOnly",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasFenceBeforeValueOnly",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "value"
+    ],
+    "interesting_outcomes": [
+      "0"
+    ],
+    "sentinels": {
+      "no_publication": -1
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.CasFenceAfterRead",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasFenceAfterRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.CasFenceAfterReadControl",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasFenceAfterReadControl",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1,
+      "value_not_read": -2
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.CasAcquireRead",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasAcquireRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.CasAcquireReadControl",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasAcquireReadControl",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1,
+      "value_not_read": -2
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.PlainFinalKey",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.PlainFinalKey",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.PlainFinalKeyControl",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.PlainFinalKeyControl",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1,
+      "value_not_read": -2
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.PlainFinalReference",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.PlainFinalReference",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "payload value"
+    ],
+    "interesting_outcomes": [
+      "0"
+    ],
+    "sentinels": {
+      "no_publication": -1,
+      "null_final_payload_reference": -2
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.CasFenceBeforePlainKey",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasFenceBeforePlainKey",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.CasFenceBeforePlainKeyControl",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.CasFenceBeforePlainKeyControl",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1,
+      "value_not_read": -2
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.PlainKey",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.PlainKey",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.PlainKeyControl",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.PlainKeyControl",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "key",
+      "value"
+    ],
+    "interesting_outcomes": [
+      "1, 0"
+    ],
+    "sentinels": {
+      "no_publication": -1,
+      "value_not_read": -2
+    }
+  },
+  {
+    "id": "SkipListPublicationTests.MarkerFenceBeforeRead",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.MarkerFenceBeforeRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "head state"
+    ],
+    "interesting_outcomes": [
+      "0"
+    ]
+  },
+  {
+    "id": "SkipListPublicationTests.MarkerFenceAfterRead",
+    "group": "SkipListPublicationTests",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.SkipListPublicationTests.MarkerFenceAfterRead",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java",
+    "source_sha256": "a4f059abb24640f2f4e516d13ae6174f92cabf790ccf2ba503025bfe83c003a9",
+    "actors": 2,
+    "result_type": "I_Result",
+    "outcome_components": [
+      "head state"
+    ],
+    "interesting_outcomes": [
+      "0"
+    ]
+  }
+]

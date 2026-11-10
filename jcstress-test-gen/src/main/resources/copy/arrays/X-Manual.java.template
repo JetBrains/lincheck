@@ -1,0 +1,75 @@
+/*
+ * Copyright (c) 2017, Red Hat Inc. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package $package$;
+
+import java.util.Arrays;
+import org.openjdk.jcstress.annotations.*;
+import org.openjdk.jcstress.infra.results.*;
+
+#warn
+
+/**
+ * Tests if arrays experience coherence failures.
+ */
+@JCStressTest
+#if[safe]
+@Outcome(id = "true, 1, $default$", expect = Expect.FORBIDDEN, desc = "Seeing array, but not its contents.")
+#else[safe]
+@Outcome(id = "true, 1, $default$", expect = Expect.ACCEPTABLE, desc = "Seeing array, but not its contents.")
+#end[safe]
+@Outcome(id = "true, 1, $set$", expect = Expect.ACCEPTABLE, desc = "Seeing the complete update.")
+@State
+public class $name$ {
+
+    static final $type$[] src;
+    static {
+       src = new $type$[1];
+       src[0] = $setLiteral$;
+    }
+
+    $modifier$$type$[] copy;
+
+    @Actor
+    public void actor1() {
+        $type$[] c = new $type$[1];
+        c[0] = src[0];
+        copy = c;
+    }
+
+    @Actor
+    public void actor2(ZI$T$_Result r) {
+        $type$[] t = copy;
+        if (t != null) {
+          r.r1 = (t.getClass() == $type$[].class);
+          r.r2 = t.length;
+          r.r3 = t[0];
+        } else {
+          r.r1 = true;
+          r.r2 = 1;
+          r.r3 = $setLiteral$;
+        }
+    }
+
+}

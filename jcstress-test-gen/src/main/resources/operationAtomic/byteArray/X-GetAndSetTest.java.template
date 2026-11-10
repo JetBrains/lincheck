@@ -1,0 +1,81 @@
+/*
+ * Copyright (c) 2016, Oracle and/or its affiliates. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package $package$;
+
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.util.Random;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
+import org.openjdk.jcstress.annotations.Actor;
+import org.openjdk.jcstress.annotations.Arbiter;
+import org.openjdk.jcstress.annotations.Expect;
+import org.openjdk.jcstress.annotations.JCStressTest;
+import org.openjdk.jcstress.annotations.Outcome;
+import org.openjdk.jcstress.annotations.State;
+import org.openjdk.jcstress.annotations.Description;
+import org.openjdk.jcstress.infra.results.$T$$T$$T$_Result;
+
+
+@JCStressTest
+@Description("Tests atomicity of getAndSet.")
+@Outcome(id = "$value0$, $value1$, $value2$", expect = Expect.ACCEPTABLE,  desc = "actor1 execute before actor2")
+@Outcome(id = "$value2$, $value0$, $value1$", expect = Expect.ACCEPTABLE,  desc = "actor1 execute after actor2")
+@Outcome(id = "$value0$, $value0$, $value2$", expect = Expect.FORBIDDEN, desc = "This won't happen because getAndSet is atomic")
+@Outcome(id = "$value0$, $value0$, $value1$", expect = Expect.FORBIDDEN, desc = "This won't happen because getAndSet is atomic")
+@State
+public class $TestClassName$ {
+
+    static final int OFF = ByteBuffer.wrap(new byte[128]).alignmentOffset(0, 8);
+
+    static final VarHandle vh;
+
+    static {
+        try {
+            vh = MethodHandles.byteArrayViewVarHandle($type$[].class, ByteOrder.$byte_order$);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    byte[] byteArray = new byte[OFF + 8];
+
+    @Actor
+    public void actor1($T$$T$$T$_Result r) {
+        r.r1 = ($type$) %GetAndSet<$valueLiteral1$>%
+    }
+
+    @Actor
+    public void actor2($T$$T$$T$_Result r) {
+        r.r2 = ($type$) %GetAndSet<$valueLiteral2$>%
+    }
+
+    @Arbiter
+    public void arbiter1($T$$T$$T$_Result r) {
+        r.r3 = ($type$) vh.get(byteArray, OFF);
+    }
+
+}

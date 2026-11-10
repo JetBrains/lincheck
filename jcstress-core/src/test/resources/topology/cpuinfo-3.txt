@@ -1,0 +1,405 @@
+processor	: 0
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 1
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 2
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 3
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 4
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 5
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 6
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 7
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 8
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 9
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 10
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 11
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 12
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 13
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 14
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 15
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 16
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 17
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 18
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 19
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 20
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 21
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 22
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 23
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 24
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 25
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 26
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 27
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 28
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 29
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 30
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 31
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 32
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 33
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 34
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 35
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 36
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 37
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 38
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 39
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 40
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 41
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 42
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 43
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 44
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 45
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 46
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 47
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 48
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 49
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 50
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 51
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 52
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 53
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 54
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 55
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 56
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 57
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 58
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 59
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 60
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 61
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 62
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 63
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 64
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 65
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 66
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 67
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 68
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 69
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 70
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 71
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 72
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 73
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 74
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 75
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 76
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 77
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 78
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+processor	: 79
+cpu		: POWER8E (raw), altivec supported
+clock		: 3690.000000MHz
+revision	: 2.1 (pvr 004b 0201)
+
+timebase	: 512000000
+platform	: PowerNV
+model		: 8247-21L
+machine		: PowerNV 8247-21L
+firmware	: OPAL v3

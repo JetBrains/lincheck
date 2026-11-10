@@ -1,0 +1,7 @@
+.idea/
+*.iml
+*.versionsBackup
+target/
+jcstress.*
+result/
+scratch/

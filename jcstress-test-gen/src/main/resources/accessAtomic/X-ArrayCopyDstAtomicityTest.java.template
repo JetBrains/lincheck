@@ -1,0 +1,60 @@
+/*
+ * Copyright (c) 2020, Red Hat Inc. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package $package$;
+
+import org.openjdk.jcstress.annotations.*;
+import org.openjdk.jcstress.infra.results.*;
+
+#warn
+
+/**
+ * Tests if fields experience non-atomic reads/writes.
+ */
+@JCStressTest
+@Outcome(id = "$set$", expect = Expect.ACCEPTABLE, desc = "Full store from T1.")
+@Outcome(id = "$default$", expect = Expect.ACCEPTABLE, desc = "Full store from T2.")
+@Outcome(expect = Expect.ACCEPTABLE_INTERESTING, desc = "Conflicting stores, persisting non-atomic result.")
+@State
+public class $name$ {
+
+    $modifier$$type$[] src = new $type$[1];
+    $modifier$$type$[] dst = new $type$[1];
+
+    @Actor
+    public void actor1() {
+        dst[0] = $setLiteral$;
+    }
+
+    @Actor
+    public void actor2() {
+        System.arraycopy(src, 0, dst, 0, 1);
+    }
+
+    @Arbiter
+    public void check($T$_Result r) {
+        r.r1 = dst[0];
+    }
+
+}

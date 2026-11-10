@@ -1,0 +1,863 @@
+processor	: 0
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 0
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 0
+initial apicid	: 0
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 1
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 1
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 1
+initial apicid	: 1
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 2
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 2
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 2
+initial apicid	: 2
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 3
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 3
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 3
+initial apicid	: 3
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 4
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 4
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 4
+initial apicid	: 4
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 5
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 5
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 5
+initial apicid	: 5
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 6
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 6
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 6
+initial apicid	: 6
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 7
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 7
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 7
+initial apicid	: 7
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 8
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 8
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 8
+initial apicid	: 8
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 9
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 9
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 9
+initial apicid	: 9
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 10
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 10
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 10
+initial apicid	: 10
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 11
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 11
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 11
+initial apicid	: 11
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 12
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 12
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 12
+initial apicid	: 12
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 13
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 13
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 13
+initial apicid	: 13
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 14
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 14
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 14
+initial apicid	: 14
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 15
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 15
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 15
+initial apicid	: 15
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 16
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 16
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 16
+initial apicid	: 16
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 17
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 17
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 17
+initial apicid	: 17
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 18
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 18
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 18
+initial apicid	: 18
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 19
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 19
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 19
+initial apicid	: 19
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 20
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 20
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 20
+initial apicid	: 20
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 21
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 21
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 21
+initial apicid	: 21
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 22
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 22
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 22
+initial apicid	: 22
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 23
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 23
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 23
+initial apicid	: 23
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 24
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 24
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 24
+initial apicid	: 24
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 25
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 25
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 25
+initial apicid	: 25
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 26
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 26
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 26
+initial apicid	: 26
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 27
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 27
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 27
+initial apicid	: 27
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 28
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 28
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 28
+initial apicid	: 28
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 29
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 29
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 29
+initial apicid	: 29
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 30
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 30
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 30
+initial apicid	: 30
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:
+
+processor	: 31
+vendor_id	: AuthenticAMD
+cpu family	: 23
+model		: 49
+model name	: AMD Ryzen Threadripper 3970X 32-Core Processor 
+stepping	: 0
+microcode	: 0x6000626
+cpu MHz		: 3700.000
+cache size	: 131072 KB
+physical id	: 31
+siblings	: 32
+core id		: 0
+cpu cores	: 32
+apicid		: 31
+initial apicid	: 31
+fpu		: yes
+fpu_exception	: yes
+cpuid level	: 18
+wp		: yes
+flags		: fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt rdtscp lm constant_tsc rep_good nopl xtopology tsc_reliable nonstop_tsc cpuid extd_apicid pni pclmuldq ssse3 cx16 sse4_1 sse4_2 movbe popcnt aes xsave avx rdrand hypervisor lahf_lm cmp_legacy cr8_legacy abm sse4a misalignsse 3dnowprefetch fsgsbase avx2 rdseed clflushopt
+bogomips	: 7400.00
+TLB size	: 3072 4K pages
+clflush size	: 64
+cache_alignment	: 64
+address sizes	: 48 bits physical, 48 bits virtual
+power management:

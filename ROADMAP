@@ -1,0 +1,284 @@
+TESTS AND HARNESS ROADMAPS
+-----------------------------------------------------------------------
+
+We can separate the tests in the several chapters. Often, it does not make
+sense to move to the next major chapters if there are bugs in the lower chapters.
+
+Legend:
+ "----"    -- status is not applicable (the test group)
+ "    "    -- missing the status
+ "####"    -- needs expansion
+ "...."    -- not started
+ "DONE"    -- all planned tests are done
+ "PARTIAL" -- some of the tests are complete
+
+==== CHAPTER 0.a: LANGUAGE FOUNDATION: Basic properties
+
+Tests the very basic properties of Java Language:
+  a) access atomicity;
+  b) default values;
+  c) initialization safety;
+  d) word tearing
+
+This is done only on the basic language constructs: fields and arrays.
+
+Add:
+  - per-byte reads and writes, known to trip optimizers into doing multiple ops
+  - initialization with fences?
+
+==== CHAPTER 0.b: LANGUAGE FOUNDATION: Basic memory effects
+
+Tests the memory effects:
+  a) sequential consistency of synchronized actions;
+  b) happens-before effects;
+
+Both are tested only on the basic language constructs: volatiles.
+
+==== CHAPTER 1.a: CORE LIBRARY FOUNDATIONS: ATOMICS
+
+--------- scalars:
+---------   atomic/AtomicBoolean
+ DONE         initial value
+ DONE         pairwise operation tests
+ ....         lambda pairwise operation tests
+ ....         memory effects across the ops
+---------   atomic/AtomicInteger
+ DONE         initial value
+ DONE         pairwise operation tests
+ ....         lambda pairwise operation tests
+ ....         memory effects across the ops
+---------   atomic/AtomicLong
+ DONE         initial value
+ DONE         pairwise operation tests
+ ....         high/low word tests
+ ....         lambda pairwise operation tests
+ ....         memory effects across the ops
+---------   atomic/AtomicDouble
+ ....         initial value
+ ....         pairwise operation tests
+ ....         high/low word tests
+ ....         lambda pairwise operation tests
+ ....         memory effects across the ops
+---------   atomic/AtomicReference
+ ....         initial value
+ ....         pairwise operation tests
+ ....         lambda pairwise operation tests
+ ....         memory effects across the ops
+---------
+--------- updaters:
+---------   atomic/AtomicIntegerFieldUpdater:
+ ....         initial value
+ DONE         pairwise operation tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+ ....         interaction with the naked ops
+---------   atomic/AtomicLongFieldUpdater:
+ ....         initial value
+ DONE         pairwise operation tests
+ ....         high/low word tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+ ....         interaction with the naked ops
+---------   atomic/AtomicReferenceFieldUpdater:
+ ....         initial value
+ DONE         pairwise operation tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+ ....         interaction with the naked ops
+---------
+--------- arrays:
+---------   atomic/AtomicIntegerArray:
+ DONE         initial value
+ DONE         pairwise operation tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+ DONE         word tearing
+---------   atomic/AtomicLongArray:
+ DONE         initial value
+ DONE         pairwise operation tests
+ ....         high/low word tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+ DONE         word tearing
+---------   atomic/AtomicDoubleArray:
+ ....         initial value
+ ....         pairwise operation tests
+ ....         high/low word tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+ ....         word tearing
+---------   atomic/AtomicReferenceArray:
+ ....         initial value
+ ....         pairwise operation tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+ ....         word tearing
+---------
+--------- other:
+---------   atomic/AtomicMarkableReference:
+ ....         initial value
+ ....         pairwise operation tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+---------   atomic/AtomicStampedReference
+ ....         initial value
+ ....         pairwise operation tests
+ ....         lambda pairwise operation tests?
+ ....         memory effects across the ops
+
+
+==== CHAPTER 1.b: CORE LIBRARY FOUNDATIONS: VARHANDLES
+
+==== CHAPTER 1.c: CORE LIBRARY FOUNDATIONS: SYNCHRONIZERS
+
+Q: tons of methods, we should probably cover the "protected" only?
+Q: we can skip it and rely on testing the implementations on higher tiers?
+
+--------- locks/AbstractQueuedSynchronizer
+ #####      TBD
+--------- locks/AbstractQueuedLongSynchronizer
+ #####      TBD
+
+==== CHAPTER 2.c: CORE LIBRARY: LOCKS
+
+--------- synchronized
+ DONE       mutual exclusion
+ ....       memory effects across the ops
+ ....       starvation avoidance
+ ....       fairness
+--------- locks/ReentrantLock/non-fair
+ DONE       mutual exclusion
+ ....       memory effects across the ops
+ ....       starvation avoidance
+--------- locks/ReentrantLock/fair
+ DONE       mutual exclusion
+ ....       memory effects across the ops
+ ....       starvation avoidance
+ ....       fairness
+--------- locks/ReentrantReadWriteLock/non-fair
+ DONE       mutual exclusion
+ ....       memory effects across the ops
+ ....       starvation avoidance
+ ....       memory effects
+--------- locks/ReentrantReadWriteLock/fair
+ DONE       mutual exclusion
+ ....       memory effects across the ops
+ ....       starvation avoidance
+ ....       fairness
+--------- locks/StampedLock
+ DONE       mutual exclusion
+ DONE       mutual exclusion in the face of state transitions
+ ....       memory effects across the ops
+ ....       starvation avoidance
+ ....       fairness
+
+==== CHAPTER 2.d: CORE LIBRARY: AUXILIARY ATOMICS
+
+--------- atomic/DoubleAccumulator
+ ....       racy updates
+ ....       racy resets
+--------- atomic/DoubleAdder
+ ....       racy updates
+ ....       racy resets
+--------- atomic/LongAccumulator
+ ....       racy updates
+ ....       racy resets
+--------- atomic/LongAdder
+ ....       racy updates
+ ....       racy resets
+
+==== CHAPTER 2.e: CORE LIBRARY: USER SYNCHRONIZERS
+
+--------- CountDownLatch
+ ....       initial state
+ ....       all threads are unblocked
+ ....       await after zero
+ ....       memory effects across the ops
+--------- Semaphore/non-fair
+ ....       mutual exclusion
+ ....       multiple passers
+ ....       memory effects across the ops
+ ....       starvation avoidance
+ ....       fairness
+--------- CyclicBarrier
+ ####       TBD
+--------- CompletableFuture
+ ####       TBD
+--------- Phaser
+ ####       TBD
+--------- Exchanger
+ ####       TBD
+--------- FutureTask
+ ####       TBD
+
+==== CHAPTER 3.x: CORE LIBRARY: REFLECTION
+
+==== CHAPTER 3.x: CORE LIBRARY: BUFFERS
+
+==== CHAPTER 3.x: CORE LIBRARY: EXECUTORS
+
+--------- ScheduledThreadPoolExecutor
+ ####       TBD
+--------- ThreadPoolExecutor
+ ####       TBD
+--------- ExecutorCompletionService
+ ####       TBD
+--------- ForkJoinPool
+ ####       TBD
+--------- ForkJoinTask
+ ####       TBD
+--------- CountedCompleter
+ ####       TBD
+--------- RecursiveAction
+ ####       TBD
+--------- RecursiveTask
+ ####       TBD
+
+==== CHAPTER 3.x: CORE LIBRARY: CONCURRENT COLLECTIONS
+
+--------- ConcurrentHashMap
+ ####       TBD
+--------- ConcurrentNavigableMap
+ ####       TBD
+--------- ConcurrentSkipListMap
+ ####       TBD
+--------- ConcurrentSkipListSet
+ ####       TBD
+--------- CopyOnWriteArrayList
+ ####       TBD
+--------- CopyOnWriteArraySet
+ ####       TBD
+--------- ReadMostlyVector
+ ####       TBD
+
+==== CHAPTER 3.x: CORE LIBRARY: QUEUES
+
+--------- ArrayBlockingQueue
+ ####       TBD
+--------- ConcurrentLinkedDeque
+ ####       TBD
+--------- ConcurrentLinkedQueue
+ ####       TBD
+--------- LinkedBlockingDeque
+ ####       TBD
+--------- LinkedBlockingQueue
+ ####       TBD
+--------- PriorityBlockingQueue
+ ####       TBD
+--------- SynchronousQueue
+ ####       TBD
+--------- TransferQueue
+ ####       TBD
+--------- DelayQueue
+ ####       TBD
+
+==== CHAPTER 4.x: OTHER
+
+--------- ThreadLocalRandom
+ ####       TBD
+
+==== CHAPTER 5.x: OTHER LIBRARY
+
+--------- java.nio.buffers
+ ####       read/write atomicity tests
+ ####       crosscache atomicity tests

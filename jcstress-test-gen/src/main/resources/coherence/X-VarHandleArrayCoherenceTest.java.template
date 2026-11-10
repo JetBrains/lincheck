@@ -1,0 +1,62 @@
+/*
+ * Copyright (c) 2017, Red Hat Inc. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package $package$;
+
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+
+import org.openjdk.jcstress.annotations.*;
+import org.openjdk.jcstress.infra.results.*;
+
+#warn
+
+/**
+ * Tests if array element accessors experience coherence failures.
+ */
+@JCStressTest
+@Outcome(id = "$default$, $default$", expect = Expect.ACCEPTABLE, desc = "Default value for the fields. Allowed to see this: data race.")
+@Outcome(id = "$default$, $set$", expect = Expect.ACCEPTABLE, desc = "Observe second read, but not first: sequential consistency.")
+@Outcome(id = "$set$, $set$", expect = Expect.ACCEPTABLE, desc = "Observers sees both read.")
+@Outcome(id = "$set$, $default$", expect = Expect.FORBIDDEN, desc = "Seeing first read, but not second: coherence violation.")
+@State
+public class $name$ {
+
+    static final VarHandle VH = MethodHandles.arrayElementVarHandle($type$[].class);
+
+    $type$[] xs = new $type$[1];
+
+    @Actor
+    public void actor1() {
+        VH.$setOp$(xs, 0, $setLiteral$);
+    }
+
+    @Actor
+    public void actor2($T$$T$_Result r) {
+        r.r1 = ($type$)VH.$getOp$(xs, 0);
+        r.r2 = ($type$)VH.$getOp$(xs, 0);
+    }
+
+}
+

@@ -1,0 +1,79 @@
+/*
+ * Copyright (c) 2017, Red Hat Inc. All rights reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.  Oracle designates this
+ * particular file as subject to the "Classpath" exception as provided
+ * by Oracle in the LICENSE file that accompanied this code.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License version
+ * 2 along with this work; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA.
+ *
+ * Please contact Oracle, 500 Oracle Parkway, Redwood Shores, CA 94065 USA
+ * or visit www.oracle.com if you need additional information or have any
+ * questions.
+ */
+package $package$;
+
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+
+import org.openjdk.jcstress.annotations.*;
+import org.openjdk.jcstress.infra.results.*;
+
+#warn
+
+/**
+ * Tests if array element accessors experience coherence failures.
+ */
+@JCStressTest
+@Outcome(id = {
+        "$defaultV$, $defaultV$, $defaultG$",
+        "$setV$, $defaultV$, $defaultG$",
+        "$defaultV$, $setV$, $defaultG$",
+        "$setV$, $setV$, $defaultG$",
+    }, expect = Expect.ACCEPTABLE, desc = "Default value for guard, allowed to see anything.")
+@Outcome(id = {
+        "$defaultV$, $setV$, $setG$",
+        "$setV$, $setV$, $setG$",
+    }, expect = Expect.ACCEPTABLE, desc = "Observing the value for guard, allowed to see latest value.")
+@Outcome(id = {
+        "$defaultV$, $defaultV$, $setG$",
+        "$setV$, $defaultV$, $setG$",
+    }, expect = Expect.FORBIDDEN, desc = "Seeing previous writes, forbidden with proper guard.")
+@State
+public class $name$ {
+
+    static final VarHandle VH = MethodHandles.arrayElementVarHandle($typeG$[].class);
+
+    $typeV$ v;
+    $typeG$[] g = new $typeG$[1];
+
+    @Actor
+    public void actor1() {
+        v = $defaultVLiteral$;
+        v = $setVLiteral$;
+        VH.$setOp$(g, 0, $setGLiteral$);
+    }
+
+    @Actor
+    public void actor2($TV$$TV$$TG$_Result r) {
+        $typeV$ v1 = v;
+        $typeG$ g1 = ($typeG$)VH.$getOp$(g, 0);
+        $typeV$ v2 = v;
+        r.r1 = v1;
+        r.r2 = v2;
+        r.r3 = g1;
+    }
+
+}
+
