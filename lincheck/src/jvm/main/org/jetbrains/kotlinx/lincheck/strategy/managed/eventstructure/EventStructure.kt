@@ -35,7 +35,8 @@ internal class EventStructure(
     // TODO: refactor --- avoid using callbacks!
     private var reportInconsistencyCallback: ReportInconsistencyCallback?,
     private val currentThreadIdCallback: CurrentThreadIdCallback,
-    private val onThreadReplayFinished: (ThreadId) -> Unit,
+    private val threadReplayFinishedCallback: ThreadReplayFinishedCallback,
+    private val discardedExplorationCallback: DiscardedExplorationCallback,
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
 ) {
     val mainThreadId = 0
@@ -156,12 +157,21 @@ internal class EventStructure(
     /*      Exploration                                                          */
     /* ************************************************************************* */
 
+    /**
+     * Rolls back to the next unvisited backtracking point and resets the exploration to it.
+     *
+     * Explorations skipped by the reset are reported to [discardedExplorationCallback];
+     * they are never run and therefore consume no invocation.
+     *
+     * @return true if a new exploration has been set up, false if there is nothing left to explore.
+     */
     fun startNextExploration(): Boolean {
         while (true) {
             val backtrackingPoint = rollbackTo { !it.visited }
                 ?: return false
             backtrackingPoint.visit()
             if (resetExploration(backtrackingPoint)) return true
+            discardedExplorationCallback()
         }
     }
 
@@ -677,7 +687,7 @@ internal class EventStructure(
         playedFrontier.update(event)
         // Fresh exploration gets its own loop budget, independently for each replaying thread.
         if (isReplayedEvent && !inReplayPhase(event.threadId)) {
-            onThreadReplayFinished(event.threadId)
+            threadReplayFinishedCallback(event.threadId)
         }
         // Unblock the thread if the unblocking response was added.
         if (event.label.isResponse && event.label.isBlocking && isBlockedRequest(event.request!!)) {

@@ -55,10 +55,12 @@ internal class EventStructureStrategy(
         }
     }
 
+    val stats = Stats()
+
     private val eventStructure: EventStructure =
         EventStructure(
             memoryModel, memoryInitializer, ::onInconsistency, ::getCurrentThreadId,
-            loopDetector::resetLoopIterations,
+            loopDetector::resetLoopIterations, stats::discardExploration,
         ) { iThread, reason ->
             switchCurrentThread(iThread, reason)
         }
@@ -103,8 +105,6 @@ internal class EventStructureStrategy(
             eventStructure.addFreezeEvent(getCurrentThreadId(), objectID, locations)
         }
     }
-
-    val stats = Stats()
 
     override fun shouldInvokeBeforeEvent(): Boolean {
         // TODO: fixme
@@ -184,16 +184,19 @@ internal class EventStructureStrategy(
 
     /**
      * Statistics of the explorations performed by the strategy.
-     *
-     * Besides the invocation counters, it accumulates the sizes of the explored execution graphs
-     * and of the event structure, measured at the end of each exploration (consistent or not).
      */
     class Stats {
 
+        /** Consistent invocations */
         var consistentInvocations: Int = 0
             private set
 
+        /** Blocked invocations */
         var blockedInvocations: Int = 0
+            private set
+
+        /** Explorations discarded before running, outside of the invocation budget. */
+        var discardedExplorations: Int = 0
             private set
 
         /** Sum of the execution graph sizes (in events) over all explored invocations. */
@@ -282,11 +285,17 @@ internal class EventStructureStrategy(
             }
         }
 
+        fun discardExploration() {
+            discardedExplorations++
+        }
+
         override fun toString(): String = """
             #Total invocations   = $totalInvocations         
                 #consistent      = $consistentInvocations    
                 #inconsistent    = $inconsistentInvocations
                 #blocked         = $blockedInvocations
+            #Discarded early     = $discardedExplorations
+            ----
             #Lock   violations   = $lockConsistencyViolationCount                
             #Atom.  violations   = $atomicityInconsistenciesCount
             #RelAcq violations   = $relAcqInconsistenciesCount
@@ -294,11 +303,12 @@ internal class EventStructureStrategy(
             #SeqCst violations   = $sequentialConsistencyViolationsCount
                 #coher.  phase   = $seqCstCoherenceViolationCount
                 #replay  phase   = $seqCstReplayViolationCount
-            #Events per execution graph  (avg) = ${"%.2f".format(Locale.ROOT, averageExecutionEvents)}
-            #Events per event structure  (avg) = ${"%.2f".format(Locale.ROOT, averageEventStructureEvents)}
-            #Events in execution graph   (max) = $maxExecutionEvents
-            #Events in event structure   (max) = $maxEventStructureEvents
-            #Event structure / execution graph events ratio = ${"%.3f".format(Locale.ROOT, eventStructureToExecutionRatio)}
+            ----    
+            #Events per exec graph   (avg) = ${"%.2f".format(Locale.ROOT, averageExecutionEvents)}
+            #Events per event struct (avg) = ${"%.2f".format(Locale.ROOT, averageEventStructureEvents)}
+            #Events in exec graph    (max) = $maxExecutionEvents
+            #Events in event struct  (max) = $maxEventStructureEvents
+            #Events ratio (struct / graph) = ${"%.3f".format(Locale.ROOT, eventStructureToExecutionRatio)}
         """.trimIndent()
 
     }
@@ -657,6 +667,8 @@ internal class EventStructureStrategy(
 
 internal typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
 internal typealias CurrentThreadIdCallback = () -> ThreadId
+internal typealias ThreadReplayFinishedCallback = (ThreadId) -> Unit
+internal typealias DiscardedExplorationCallback = () -> Unit
 internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason?) -> Unit
 
 private class EventStructureMemoryTracker(
