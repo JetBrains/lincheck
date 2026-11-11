@@ -122,10 +122,7 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
                     fieldName = accessLocation.fieldName,
                     type = getVarHandleAccessType(receiver)!!,
                     isStatic = (accessLocation is StaticFieldAccessLocation),
-                    isFinal =
-                        accessLocation.fieldDescriptor.isFinal &&
-                        atomicMethodDescriptor.kind == AtomicMethodKind.GET &&
-                        atomicMethodDescriptor.ordering == MemoryOrdering.PLAIN,
+                    isFinal = atomicMethodDescriptor.isFinalFieldRead(accessLocation.fieldDescriptor),
                 )
             }
             is ArrayElementByIndexAccessLocation -> {
@@ -145,10 +142,7 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
                     fieldName = accessLocation.fieldName,
                     type = parseUnsafeMethodAccessType(methodName)!!,
                     isStatic = (accessLocation is StaticFieldAccessLocation),
-                    isFinal =
-                        accessLocation.fieldDescriptor.isFinal &&
-                        atomicMethodDescriptor.kind == AtomicMethodKind.GET &&
-                        atomicMethodDescriptor.ordering == MemoryOrdering.PLAIN,
+                    isFinal = atomicMethodDescriptor.isFinalFieldRead(accessLocation.fieldDescriptor),
                 )
             }
             is ArrayElementByIndexAccessLocation -> {
@@ -163,12 +157,23 @@ internal fun ObjectTracker.getAtomicAccessMemoryLocation(
     }
 }
 
+/**
+ * Whether this atomic (VarHandle, Unsafe) access reads a final field with final-field visibility semantics.
+ *
+ * Reads keep the guarantee in every access mode,
+ * so that a stronger mode never admits an outcome the plain read of the same field forbids.
+ * Read-modify-write accesses update the field after construction and get no such guarantee.
+ */
+private fun AtomicMethodDescriptor.isFinalFieldRead(fieldDescriptor: FieldDescriptor): Boolean =
+    fieldDescriptor.isFinal && kind == AtomicMethodKind.GET
+
 class StaticFieldMemoryLocation(
     val className: String,
     val fieldName: String,
     override val type: Types.Type,
     private val field: Field,
-    // not derived from `field`: atomic (VarHandle, Unsafe) non-plain reads of a final field lack final-field semantics
+    // not derived from `field`:
+    // atomic (VarHandle, Unsafe) accesses of a final field other than reads lack final-field semantics
     override val isFinal: Boolean,
 ) : MemoryLocation {
 
@@ -210,7 +215,8 @@ class ObjectFieldMemoryLocation(
     val fieldName: String,
     override val type: Types.Type,
     private val field: Field,
-    // not derived from `field`: atomic (VarHandle, Unsafe) non-plain reads of a final field lack final-field semantics
+    // not derived from `field`:
+    // atomic (VarHandle, Unsafe) accesses of a final field other than reads lack final-field semantics
     override val isFinal: Boolean,
 ) : MemoryLocation {
 

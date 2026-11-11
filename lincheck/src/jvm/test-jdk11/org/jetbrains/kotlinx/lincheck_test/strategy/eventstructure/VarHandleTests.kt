@@ -89,7 +89,8 @@ class VarHandleTests {
         leaksThis: Boolean = false,
         memoryModel: MemoryModel = MemoryModel.RelaxedJava,
     ) {
-        val outcomes = if (leaksThis || mode != MemoryOrdering.PLAIN) setOf(-1, 0, 42) else setOf(-1, 42)
+        // The final-field guarantee does not depend on the read mode; only a leaked `this` breaks it.
+        val outcomes = if (leaksThis) setOf(-1, 0, 42) else setOf(-1, 42)
         litmusTest(assertSame(outcomes, UNKNOWN), memoryModel, requireExhaustion = true) {
             var published: FinalIntVariable? = null
             var result = -1
