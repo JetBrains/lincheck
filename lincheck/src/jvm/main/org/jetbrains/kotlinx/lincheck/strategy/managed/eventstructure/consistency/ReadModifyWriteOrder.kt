@@ -115,6 +115,17 @@ class ReadModifyWriteOrder(
         return rmwChainsMap[location]
     }
 
+    /**
+     * Checks whether a successful read-modify-write operation already reads from [write],
+     * that is, whether an exclusive write follows [write] in its read-modify-write chain.
+     * Expects the relation to be computed.
+     */
+    fun hasReadModifyWriteSuccessor(write: AtomicThreadEvent, location: MemoryLocation): Boolean {
+        // the chains are only known once the relation is computed
+        val entry = get(location, write) ?: return false
+        return entry.position + 1 < entry.chain.size
+    }
+
     private fun add(event: AtomicThreadEvent) {
         val writeLabel = event.label.refine<WriteAccessLabel> { isExclusive }
             ?: return

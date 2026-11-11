@@ -184,6 +184,7 @@ internal fun <T> createStrategy(
  * @param requireExhaustion checks that no unexplored invocation remains after the invocation budget.
  * @param options execution settings, including loop bounds.
  * @param expectedFailure requires this failure type instead of successful exploration.
+ * @param checkStats inspects the exploration statistics after the outcomes were collected.
  * @param block the block of code that is going to be tested
  */
 internal inline fun<reified Outcome> litmusTest(
@@ -193,6 +194,7 @@ internal inline fun<reified Outcome> litmusTest(
     requireExhaustion: Boolean = false,
     options: ModelCheckingOptions = ModelCheckingOptions().analyzeStdLib(true),
     expectedFailure: KClass<out LincheckFailure>? = null,
+    noinline checkStats: ((EventStructureStrategy.Stats) -> Unit)? = null,
     noinline block: () -> Outcome,
 ) {
     val testCfg = options.createTestConfigurations(block::class.java)
@@ -211,6 +213,7 @@ internal inline fun<reified Outcome> litmusTest(
                 Assert.assertFalse("Exploration did not exhaust within $invocations invocations", strategy.nextInvocation())
             }
             strategy.checkAndPrintStats(invocations)
+            checkStats?.invoke(strategy.stats)
             outcomeVerifier.verify(outcomes)
         }
     }

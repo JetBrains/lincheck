@@ -33,7 +33,7 @@ internal class EventStructure(
     private val memoryModel: MemoryModel,
     val memoryInitializer: MemoryInitializer,
     // TODO: refactor --- avoid using callbacks!
-    private val reportInconsistencyCallback: ReportInconsistencyCallback,
+    private var reportInconsistencyCallback: ReportInconsistencyCallback?,
     private val currentThreadIdCallback: CurrentThreadIdCallback,
     private val onThreadReplayFinished: (ThreadId) -> Unit,
     private val internalThreadSwitchCallback: InternalThreadSwitchCallback,
@@ -265,12 +265,81 @@ internal class EventStructure(
         // We replay the events in the order that we added them
         val replayOrdering = _execution.sortedBy { it.id }
         replayer = Replayer(replayOrdering)
+
+        // A forward RMW choice that the atomicity checker is known to reject is resolved here instead of executed.
+        // The new replayer is inert until `initializeExploration`, so the write part is added as a fresh event.
+        if (skipAtomicityRejectedExploration(event)) return false
+
+        return true
+    }
+
+    /**
+     * Resolves a forward read-modify-write choice that the atomicity checker is known to reject
+     * without executing it.
+     *
+     * When an exclusive read takes a forward choice, the other RMW that reads from the same write is retained
+     * (see [getConflictingEvents]), so the invocation is rejected as soon as the write part is added;
+     * its only effect is the backtracking points created by that write part.
+     * Instead of replaying the execution graph, waiting for write part to deem it inconsistent,
+     * we skip the replay part, add required backtracking points immediately,
+     * and discard this inconsistent exploration.
+     *
+     * The write part's label is determined by the read response and its descriptor,
+     * so it is added to the restored execution directly, creating the same backtracking points
+     * without replaying the prefix in a real invocation.
+     *
+     * @param event the visited read-response event of the backtracking point, after the execution was restored.
+     * @return true if the exploration was resolved here and the backtracking point should be skipped.
+     */
+    private fun skipAtomicityRejectedExploration(event: AtomicThreadEvent): Boolean {
+        // only an exclusive read-response can start a rejected exploration
+        val label = event.label as? ReadAccessLabel ?: return false
+        if (!(label.isResponse && label.isExclusive)) return false
+        // the write part exists only for a successful RMW (a failed CAS has none)
+        val descriptor = label.readModifyWriteDescriptor ?: return false
+        val writeValue = descriptor.writeValue(label.value) ?: return false
+
+        // a forward choice reads from a write that existed before the read request
+        val write = event.readsFrom
+        val request = event.parent!!
+        // a backward choice cuts the conflicting RMWs, so its invocation stays consistent
+        if (write.id > request.id) return false
+        // without another RMW reading from the same write, the write part is consistent as well;
+        // the RMW relation was computed by the consistency check of the restored execution
+        if (!_execution.readModifyWriteOrder.hasReadModifyWriteSuccessor(write, label.location)) return false
+        // an already inconsistent prefix is reported by the strategy as before
+        if (execution.inconsistency != null) return false
+
+        // the restored events count as played, so the write part becomes the thread's next event
+        playedFrontier = execution.toMutableFrontier()
+        // the write part is known to violate atomicity, and there is no running invocation to abort
+        suppressInconsistencyReporting {
+            addWriteEvent(event.threadId, label.codeLocation, label.location, label.memoryOrdering, writeValue, descriptor)
+        }
+        check(execution.inconsistency is ReadModifyWriteAtomicityViolation) {
+            "The write part of a forward RMW choice reading from an RMW's source must violate atomicity"
+        }
+
         return true
     }
 
     fun checkConsistency(): Inconsistency? {
         // TODO: set suddenInvocationResult?
         return _execution.checkConsistency()
+    }
+
+    /**
+     * Runs [block] with inconsistency reporting disabled,
+     * for adding events that are known to be inconsistent outside a running invocation.
+     */
+    private inline fun <T> suppressInconsistencyReporting(block: () -> T): T {
+        val callback = reportInconsistencyCallback
+        reportInconsistencyCallback = null
+        try {
+            return block()
+        } finally {
+            reportInconsistencyCallback = callback
+        }
     }
 
     /* ************************************************************************* */
@@ -643,7 +712,7 @@ internal class EventStructure(
         // Check consistency of the new event.
         val inconsistency = execution.inconsistency
         if (inconsistency != null) {
-            reportInconsistencyCallback(inconsistency)
+            reportInconsistencyCallback?.invoke(inconsistency)
         }
     }
 

@@ -698,45 +698,24 @@ private class EventStructureMemoryTracker(
         }
         // handle different kinds of RMWs
         // TODO: perform actual write to memory for successful CAS
-        when (rmwDescriptor) {
-            is ReadModifyWriteDescriptor.GetAndSetDescriptor -> {
-                val newValueID = rmwDescriptor.newValue
-                val newValue = getValue(label.location, newValueID)
-                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
-                label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
-                return getValue(label.location, label.value)
-            }
-
-            is ReadModifyWriteDescriptor.CompareAndSetDescriptor -> {
-                if (label.value == rmwDescriptor.expectedValue) {
-                    val newValueID = rmwDescriptor.newValue
-                    val newValue = getValue(label.location, newValueID)
-                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
-                    label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
-                    return getValue(Types.BOOLEAN_TYPE, true.toInt().toLong())
-                }
-                return getValue(Types.BOOLEAN_TYPE, false.toInt().toLong())
-            }
-
-            is ReadModifyWriteDescriptor.CompareAndExchangeDescriptor -> {
-                if (label.value == rmwDescriptor.expectedValue) {
-                    val newValueID = rmwDescriptor.newValue
-                    val newValue = getValue(label.location, newValueID)
-                    eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
-                    label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
-                }
-                return getValue(label.location, label.value)
-            }
-
-            is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> {
-                val newValueID = label.value + rmwDescriptor.delta
-                val newValue = getValue(label.location, newValueID)
-                eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
-                label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
-                return when (rmwDescriptor.kind) {
-                    ReadModifyWriteDescriptor.IncrementKind.Pre  -> getValue(label.location, label.value)
-                    ReadModifyWriteDescriptor.IncrementKind.Post -> getValue(label.location, newValueID)
-                }
+        // The write part's value is determined by the descriptor and the read value (see `writeValue`);
+        // the event structure relies on this to resolve rejected forward RMW choices without executing them.
+        val newValueID = rmwDescriptor.writeValue(label.value)
+        if (newValueID != null) {
+            val newValue = getValue(label.location, newValueID)
+            eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
+            label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
+        }
+        return when (rmwDescriptor) {
+            is ReadModifyWriteDescriptor.GetAndSetDescriptor ->
+                getValue(label.location, label.value)
+            is ReadModifyWriteDescriptor.CompareAndSetDescriptor ->
+                getValue(Types.BOOLEAN_TYPE, (newValueID != null).toInt().toLong())
+            is ReadModifyWriteDescriptor.CompareAndExchangeDescriptor ->
+                getValue(label.location, label.value)
+            is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> when (rmwDescriptor.kind) {
+                ReadModifyWriteDescriptor.IncrementKind.Pre  -> getValue(label.location, label.value)
+                ReadModifyWriteDescriptor.IncrementKind.Post -> getValue(label.location, newValueID!!)
             }
         }
     }

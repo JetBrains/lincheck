@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.lincheck.datastructures.scenario
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
@@ -58,6 +59,33 @@ class AtomicsTests {
                 exchanger.join()
                 Triple(read, exchanged, x.get())
             }
+        }
+    }
+
+    @Test
+    fun testFetchAndAddChainsSkipRejectedForwardChoices() {
+        // Each of the 4! orders of the increments is a distinct execution.
+        // A forward choice of an increment's read onto a write already consumed by a completed increment
+        // is resolved inside the event structure instead of being executed and rejected,
+        // so the 24 executions need fewer rejected invocations (10) than executing those choices would (55).
+        litmusTest(
+            assertSame(setOf(4), 24),
+            MemoryModel.SequentialConsistency,
+            requireExhaustion = true,
+            checkStats = { stats ->
+                assertTrue(stats.inconsistentInvocations < stats.consistentInvocations)
+            },
+        ) {
+            val x = AtomicInteger(0)
+            val t1 = thread { x.getAndIncrement() }
+            val t2 = thread { x.getAndIncrement() }
+            val t3 = thread { x.getAndIncrement() }
+            val t4 = thread { x.getAndIncrement() }
+            t1.join()
+            t2.join()
+            t3.join()
+            t4.join()
+            x.get()
         }
     }
 

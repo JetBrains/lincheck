@@ -552,6 +552,17 @@ sealed class ReadModifyWriteDescriptor {
 }
 
 /**
+ * The value written by the write part of a read-modify-write operation whose read part read [readValue],
+ * or null if the operation fails on that value and has no write part (a failed CAS).
+ */
+internal fun ReadModifyWriteDescriptor.writeValue(readValue: ValueID): ValueID? = when (this) {
+    is ReadModifyWriteDescriptor.GetAndSetDescriptor -> newValue
+    is ReadModifyWriteDescriptor.CompareAndSetDescriptor -> newValue.takeIf { readValue == expectedValue }
+    is ReadModifyWriteDescriptor.CompareAndExchangeDescriptor -> newValue.takeIf { readValue == expectedValue }
+    is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> readValue + delta
+}
+
+/**
  * Checks whether [memoryOrdering] is valid for a read.
  */
 fun isValidReadMemoryOrder(memoryOrdering: MemoryOrdering): Boolean = when (memoryOrdering) {
