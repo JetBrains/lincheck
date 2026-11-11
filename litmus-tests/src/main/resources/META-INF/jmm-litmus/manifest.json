@@ -4,7 +4,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadsSeparatedByUnrelatedOpaqueRead",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "III_Result",
     "outcome_components": [
@@ -18,7 +18,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadsSeparatedByAcquireFence",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -31,7 +31,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadsSeparatedByLoadLoadFence",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -44,7 +44,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAliasedPlainOpaquePlainReads",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "III_Result",
     "outcome_components": [
@@ -58,7 +58,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAliasedPlainOpaquePlainReadsAfterCommonSubexpressionElimination",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "III_Result",
     "outcome_components": [
@@ -72,7 +72,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAliasedPlainReads",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "III_Result",
     "outcome_components": [
@@ -86,7 +86,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAliasedPlainReadsAfterCommonSubexpressionElimination",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "III_Result",
     "outcome_components": [
@@ -100,7 +100,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOpaqueReadsOfConcurrentPlainWrites",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "III_Result",
     "outcome_components": [
@@ -114,7 +114,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadAfterReleaseAcquirePublication",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -127,7 +127,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestLatestPlainWriteAfterCrossThreadPublication",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -140,7 +140,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOwnPlainWriteRemainsVisibleAfterAnInterveningRead",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -153,7 +153,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainCompareAndSetRemainsAtomic",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "ZZ_Result",
     "outcome_components": [
@@ -166,7 +166,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainCompareAndSetCompetingForAPlainWrite",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "ZZ_Result",
     "outcome_components": [
@@ -179,7 +179,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadBeforeFailedReleaseCompareAndExchange",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -192,7 +192,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestFailedReleaseCompareAndExchangeBeforePlainRead",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -205,7 +205,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadBeforeSuccessfulReleaseCompareAndExchange",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -218,7 +218,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAcquireCompareAndExchangeWriteHasAtomicCoherence",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 4,
     "result_type": "IIIII_Result",
     "outcome_components": [
@@ -234,7 +234,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestAtomicCoherenceOrderExtendsThroughHappensBeforeToPlainWrites",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -247,7 +247,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestConsecutivePlainCompareAndSetsCannotConsumeTheSamePlainWrite",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "ZZ_Result",
     "outcome_components": [
@@ -260,7 +260,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCoherenceThroughPlainRmwSourceAtomicOrderAndPlainSuffix",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "ZII_Result",
     "outcome_components": [
@@ -274,7 +274,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOpaqueReadsAcrossPlainClusters",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -287,7 +287,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainClustersKeepAtomicBoundsLocalToEachField",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "II_Result",
     "outcome_components": [
@@ -300,7 +300,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestConcurrentPlainWriteCanOverlapAtomicBounds",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "II_Result",
     "outcome_components": [
@@ -313,7 +313,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestIndependentRmwChainsWithPlainSources",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "ZZ_Result",
     "outcome_components": [
@@ -326,7 +326,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestRmwChainWithPlainSourceAndConcurrentOpaqueWrite",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "ZZ_Result",
     "outcome_components": [
@@ -339,7 +339,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOppositeOpaqueObservationsOfConcurrentPlainWrites",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 4,
     "result_type": "IIII_Result",
     "outcome_components": [
@@ -354,7 +354,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestOppositeOpaqueObservationsOfConcurrentPlainAndOpaqueWrites",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 4,
     "result_type": "IIII_Result",
     "outcome_components": [
@@ -369,7 +369,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadBeforePlainCompareAndSetWithPlainWriter",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "IZ_Result",
     "outcome_components": [
@@ -382,7 +382,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainReadBeforePlainCompareAndSetWithOpaqueWriter",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 2,
     "result_type": "IZ_Result",
     "outcome_components": [
@@ -395,7 +395,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCasAcrossPlainWritesObservedByOpaqueReads",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "IIZ_Result",
     "outcome_components": [
@@ -409,7 +409,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCasAcrossPlainSourceAndOpaqueWriteObservedByOpaqueReads",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "IIZ_Result",
     "outcome_components": [
@@ -423,7 +423,7 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCasAcrossOpaqueSourceAndPlainWriteObservedByOpaqueReads",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "IIZ_Result",
     "outcome_components": [
@@ -437,13 +437,26 @@
     "group": "PlainAccessMemoryModelTest",
     "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestCasAcrossOpaqueWritesObservedByOpaqueReads",
     "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
-    "source_sha256": "e74698d7e6d92bffccdf5aa9e0267d23483cef8e929d64e2745780e092ec6bd1",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
     "actors": 3,
     "result_type": "IIZ_Result",
     "outcome_components": [
       "first",
       "second",
       "success"
+    ]
+  },
+  {
+    "id": "PlainAccessMemoryModelTest.TestPlainLoadBuffering",
+    "group": "PlainAccessMemoryModelTest",
+    "jcstress": "org.openjdk.jcstress.tests.jmm.PlainAccessMemoryModelTest.TestPlainLoadBuffering",
+    "source": "src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java",
+    "source_sha256": "e8dcccd4da19150dc50ab695f51116e5fd17d0d6ff018655f80740706a331fee",
+    "actors": 2,
+    "result_type": "II_Result",
+    "outcome_components": [
+      "first",
+      "second"
     ]
   },
   {

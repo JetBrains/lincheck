@@ -19,9 +19,9 @@ manifest_bytes = (HERE / "src/main/resources/META-INF/jmm-litmus/manifest.json")
 manifest = json.loads(manifest_bytes)
 names = {c["jcstress"] for c in manifest}
 keys = {c["id"] for c in manifest}
-assert len(manifest) == len(names) == len(keys) == 339, "Incomplete or duplicate corpus entries"
+assert len(manifest) == len(names) == len(keys) == 340, "Incomplete or duplicate corpus entries"
 expected_counts = {
-    "CoRRMemoryModelTest": 64, "PlainAccessMemoryModelTest": 33, "PublicationTests": 59,
+    "CoRRMemoryModelTest": 64, "PlainAccessMemoryModelTest": 34, "PublicationTests": 59,
     "VolatileAccessesMemoryModelTests": 14, "JamMemoryModelTests": 64, "MansonCausalityTests": 20,
     "MansonThesisMemoryModelTests": 10, "SevcikAspinallMemoryModelTests": 3,
     "JcstressSampleMemoryModelTests": 19, "CompilingVolatileMemoryModelTests": 4,

@@ -1,6 +1,6 @@
 # Java memory model litmus tests
 
-339 Java litmus tests for [JCStress](https://openjdk.org/projects/code-tools/jcstress/),
+340 Java litmus tests for [JCStress](https://openjdk.org/projects/code-tools/jcstress/),
 covering coherence, causality, publication, atomics and fences.
 The repository includes the harness and builds a standalone jar.
 
@@ -15,7 +15,7 @@ python3 litmus-tests/verify.py
 python3 litmus-tests/run.py --output litmus-tests/results/run-001 --budget 1h
 ```
 
-This runs all 339 tests and saves the results in `litmus-tests/results/run-001/`.
+This runs all 340 tests and saves the results in `litmus-tests/results/run-001/`.
 Use a fresh output directory for each run.
 The runner also records the machine it runs on in `system.txt`
 (see [Experimental setup](#experimental-setup)).
@@ -133,7 +133,7 @@ Each file groups related tests; nested class names are the JCStress selectors.
 | Group | Tests | Subject |
 | --- | ---: | --- |
 | [CoRRMemoryModelTest](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/CoRRMemoryModelTest.java) | 64 | Write/read/read access-mode matrix |
-| [PlainAccessMemoryModelTest](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java) | 33 | Plain coherence, mixed modes, CSE and RMWs |
+| [PlainAccessMemoryModelTest](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/PlainAccessMemoryModelTest.java) | 34 | Plain coherence, mixed modes, CSE, RMWs and load buffering |
 | [PublicationTests](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/PublicationTests.java) | 59 | Final fields, also read through VarHandles in every access mode, and unsafe publication |
 | [SkipListPublicationTests](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/SkipListPublicationTests.java) | 16 | Node publication, key-dependent value reads and deletion-marker forwarding |
 | [VolatileAccessesMemoryModelTests](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/VolatileAccessesMemoryModelTests.java) | 14 | Volatile accesses and fences |
@@ -145,7 +145,7 @@ Each file groups related tests; nested class names are the JCStress selectors.
 | [JcstressSampleMemoryModelTests](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/JcstressSampleMemoryModelTests.java) | 19 | OpenJDK JCStress examples ([8](#references)) |
 | [CompilingVolatileMemoryModelTests](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/CompilingVolatileMemoryModelTests.java) | 4 | JAM21 examples ([5](#references)) |
 | [JmtMemoryModelTests](litmus-tests/src/main/java/org/openjdk/jcstress/tests/jmm/JmtMemoryModelTests.java) | 29 | jMT collection ([6](#references)) |
-| **Total** | **339** | |
+| **Total** | **340** | |
 
 ## References
 

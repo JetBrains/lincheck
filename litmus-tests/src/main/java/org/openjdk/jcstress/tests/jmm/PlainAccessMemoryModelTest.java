@@ -1060,4 +1060,38 @@ public class PlainAccessMemoryModelTest {
             throw new ExceptionInInitializerError(e);
         }
     }
+
+    /**
+     * Bare load buffering on plain fields; the JMM permits (1, 1), which the checker does not explore.
+     * Plain fields rather than AtomicInteger.getPlain/setPlain: C2 wraps the Unsafe-based accessors in compiler-only
+     * barriers and does not reorder them, so only direct field accesses let the JIT form the cycle.
+     */
+    @JCStressTest
+    @State
+    @Outcome(id = "1, 1", expect = Expect.ACCEPTABLE_INTERESTING, desc = "Load buffering: each read sees the other actor's later write.")
+    @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
+    public static class TestPlainLoadBuffering {
+        private int x;
+        private int y;
+        private int first = -1;
+        private int second = -1;
+
+        @Actor
+        public void actor1() {
+            first = x;
+            y = 1;
+        }
+
+        @Actor
+        public void actor2() {
+            second = y;
+            x = 1;
+        }
+
+        @Arbiter
+        public void collect(II_Result jcstressResult) {
+            jcstressResult.r1 = first;
+            jcstressResult.r2 = second;
+        }
+    }
 }
