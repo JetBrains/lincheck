@@ -90,6 +90,15 @@ class ReleaseAcquireConsistencyChecker(
         return state
     }
 
+    override fun filterInconsistent(
+        event: AtomicThreadEvent,
+        candidates: Sequence<AtomicThreadEvent>
+    ): Sequence<AtomicThreadEvent> {
+        val label = event.label
+        return if (label is ReadAccessLabel && label.isRequest) filterOverwrittenWrites(execution, event, candidates)
+        else candidates
+    }
+
     private fun findInconsistency(): Inconsistency? {
         // First, check atomicity and locks.
         atomicityChecker.check()?.let { return it }

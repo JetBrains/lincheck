@@ -82,11 +82,16 @@ class JmmConsistencyChecker(
         event: AtomicThreadEvent,
         candidates: Sequence<AtomicThreadEvent>
     ): Sequence<AtomicThreadEvent> {
+        // No revisit can repair a read from a write overwritten in the read's happens-before prefix.
+        val label = event.label
+        val readableCandidates =
+            if (label is ReadAccessLabel && label.isRequest) filterOverwrittenWrites(execution, event, candidates)
+            else candidates
         if (state is ConsistencyState.Inconsistent) {
             // An inconsistent prefix can still have revisits that repair it.
-            return candidates
+            return readableCandidates
         }
-        return finalFieldsChecker.filterInconsistent(event, candidates)
+        return finalFieldsChecker.filterInconsistent(event, readableCandidates)
     }
 
     private fun findInconsistency(): Inconsistency? {

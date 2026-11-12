@@ -13,6 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.lincheck.datastructures.scenario
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
@@ -86,6 +87,36 @@ class AtomicsTests {
             t3.join()
             t4.join()
             x.get()
+        }
+    }
+
+    @Test
+    fun testOverwrittenWriteChoicesAreNotCreated() {
+        // A read request synchronizes only with the writes it can read from consistently:
+        // the writes overwritten in its happens-before prefix are filtered out under every memory model.
+        // Here `r1` (same thread as the writes) and `r2` (after joining the writer) must read 2,
+        // so no invocation is spent on their forward choices of 0 or 1; only `r3` races with the writes.
+        for (memoryModel in MemoryModel.entries) {
+            litmusTest(
+                assertSame(setOf(Triple(2, 2, 0), Triple(2, 2, 1), Triple(2, 2, 2))),
+                memoryModel,
+                requireExhaustion = true,
+                checkStats = { stats -> assertEquals(0, stats.inconsistentInvocations) },
+            ) {
+                val x = AtomicInteger(0)
+                var r1 = 0
+                var r3 = 0
+                val writer = thread {
+                    x.set(1)
+                    x.set(2)
+                    r1 = x.get()
+                }
+                val racer = thread { r3 = x.get() }
+                writer.join()
+                val r2 = x.get()
+                racer.join()
+                Triple(r1, r2, r3)
+            }
         }
     }
 
