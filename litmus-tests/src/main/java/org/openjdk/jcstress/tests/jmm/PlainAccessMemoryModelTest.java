@@ -19,7 +19,6 @@ import org.openjdk.jcstress.infra.results.II_Result;
 import org.openjdk.jcstress.infra.results.IZ_Result;
 import org.openjdk.jcstress.infra.results.ZII_Result;
 import org.openjdk.jcstress.infra.results.ZZ_Result;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 
@@ -30,22 +29,24 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainReadsSeparatedByUnrelatedOpaqueRead {
-        private final AtomicInteger x = new AtomicInteger(0);
-        private final AtomicInteger unrelated = new AtomicInteger(0);
+        int x;
+        int unrelated;
+        private static final VarHandle X = fieldHandle(TestPlainReadsSeparatedByUnrelatedOpaqueRead.class, "x");
+        private static final VarHandle UNRELATED = fieldHandle(TestPlainReadsSeparatedByUnrelatedOpaqueRead.class, "unrelated");
         private int first = -1;
         private int middle = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.getPlain();
-            middle = unrelated.getOpaque();
-            second = x.getPlain();
+            first = x;
+            middle = (int) UNRELATED.getOpaque(this);
+            second = x;
         }
 
         @Arbiter
@@ -60,47 +61,21 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainReadsSeparatedByAcquireFence {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestPlainReadsSeparatedByAcquireFence.class, "x");
         private int first = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.getPlain();
+            first = x;
             VarHandle.acquireFence();
-            second = x.getPlain();
-        }
-
-        @Arbiter
-        public void collect(II_Result jcstressResult) {
-            jcstressResult.r1 = first;
-            jcstressResult.r2 = second;
-        }
-    }
-
-    @JCStressTest
-    @State
-    @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
-    public static class TestPlainReadsSeparatedByLoadLoadFence {
-        private final AtomicInteger x = new AtomicInteger(0);
-        private int first = -1;
-        private int second = -1;
-
-        @Actor
-        public void actor1() {
-            x.setPlain(1);
-        }
-
-        @Actor
-        public void actor2() {
-            first = x.getPlain();
-            VarHandle.loadLoadFence();
-            second = x.getPlain();
+            second = x;
         }
 
         @Arbiter
@@ -114,22 +89,22 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestAliasedPlainOpaquePlainReads {
-        private final AtomicInteger x = new AtomicInteger(0);
-        private final AtomicInteger alias = x;
+        int x;
+        private static final VarHandle X = fieldHandle(TestAliasedPlainOpaquePlainReads.class, "x");
         private int first = -1;
         private int middle = -1;
         private int last = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.getPlain();
-            middle = alias.getOpaque();
-            last = x.getPlain();
+            first = x;
+            middle = (int) X.getOpaque(this);
+            last = x;
         }
 
         @Arbiter
@@ -144,22 +119,22 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestAliasedPlainOpaquePlainReadsAfterCommonSubexpressionElimination {
-        private final AtomicInteger x = new AtomicInteger(0);
-        private final AtomicInteger alias = x;
+        int x;
+        private static final VarHandle X = fieldHandle(TestAliasedPlainOpaquePlainReadsAfterCommonSubexpressionElimination.class, "x");
         private int first = -1;
         private int middle = -1;
         private int last = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            var cached = x.getPlain();
+            var cached = x;
             first = cached;
-            middle = alias.getOpaque();
+            middle = (int) X.getOpaque(this);
             last = cached;
         }
 
@@ -238,26 +213,27 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestOpaqueReadsOfConcurrentPlainWrites {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestOpaqueReadsOfConcurrentPlainWrites.class, "x");
         private int first = -1;
         private int second = -1;
         private int third = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            x.setPlain(2);
+            x = 2;
         }
 
         @Actor
         public void actor3() {
-            first = x.getOpaque();
-            second = x.getOpaque();
-            third = x.getOpaque();
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
+            third = (int) X.getOpaque(this);
         }
 
         @Arbiter
@@ -272,21 +248,22 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainReadAfterReleaseAcquirePublication {
-        private final Cell x = new Cell();
-        private final AtomicInteger published = new AtomicInteger(0);
+        int x;
+        int published;
+        private static final VarHandle PUBLISHED = fieldHandle(TestPlainReadAfterReleaseAcquirePublication.class, "published");
         private int publication = -1;
         private int value = -1;
 
         @Actor
         public void actor1() {
-            x.value = 1;
-            published.setRelease(1);
+            x = 1;
+            PUBLISHED.setRelease(this, 1);
         }
 
         @Actor
         public void actor2() {
-            publication = published.getAcquire();
-            value = x.value;
+            publication = (int) PUBLISHED.getAcquire(this);
+            value = x;
         }
 
         @Arbiter
@@ -300,27 +277,29 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestLatestPlainWriteAfterCrossThreadPublication {
-        private final AtomicInteger x = new AtomicInteger(0);
-        private final AtomicInteger published = new AtomicInteger(0);
+        int x;
+        int published;
+        private static final VarHandle X = fieldHandle(TestLatestPlainWriteAfterCrossThreadPublication.class, "x");
+        private static final VarHandle PUBLISHED = fieldHandle(TestLatestPlainWriteAfterCrossThreadPublication.class, "published");
         private int publication = -1;
         // The happens-before-latest write belongs to the first-created thread.
 
         @Actor
         public void actor1() {
-            publication = published.getAcquire();
-            if (publication == 1) x.setPlain(2);
+            publication = (int) PUBLISHED.getAcquire(this);
+            if (publication == 1) x = 2;
         }
 
         @Actor
         public void actor2() {
-            x.setPlain(1);
-            published.setRelease(1);
+            x = 1;
+            PUBLISHED.setRelease(this, 1);
         }
 
         @Arbiter
         public void collect(II_Result jcstressResult) {
             jcstressResult.r1 = publication;
-            jcstressResult.r2 = x.getOpaque();
+            jcstressResult.r2 = (int) X.getOpaque(this);
         }
     }
 
@@ -328,20 +307,21 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestOwnPlainWriteRemainsVisibleAfterAnInterveningRead {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestOwnPlainWriteRemainsVisibleAfterAnInterveningRead.class, "x");
         private int first = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
-            first = x.getPlain();
-            second = x.getPlain();
+            x = 1;
+            first = x;
+            second = x;
         }
 
         @Actor
         public void actor2() {
-            x.setPlain(2);
+            x = 2;
         }
 
         @Arbiter
@@ -355,18 +335,19 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainCompareAndSetRemainsAtomic {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestPlainCompareAndSetRemainsAtomic.class, "x");
         private boolean first = false;
         private boolean second = false;
 
         @Actor
         public void actor1() {
-            first = x.weakCompareAndSetPlain(0, 1);
+            first = X.weakCompareAndSetPlain(this, 0, 1);
         }
 
         @Actor
         public void actor2() {
-            second = x.weakCompareAndSetPlain(0, 2);
+            second = X.weakCompareAndSetPlain(this, 0, 2);
         }
 
         @Arbiter
@@ -380,23 +361,24 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainCompareAndSetCompetingForAPlainWrite {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestPlainCompareAndSetCompetingForAPlainWrite.class, "x");
         private boolean first = false;
         private boolean second = false;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.weakCompareAndSetPlain(1, 2);
+            first = X.weakCompareAndSetPlain(this, 1, 2);
         }
 
         @Actor
         public void actor3() {
-            second = x.weakCompareAndSetPlain(1, 3);
+            second = X.weakCompareAndSetPlain(this, 1, 3);
         }
 
         @Arbiter
@@ -410,19 +392,20 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainReadBeforeFailedReleaseCompareAndExchange {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestPlainReadBeforeFailedReleaseCompareAndExchange.class, "x");
         private int first = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.getPlain();
-            second = x.compareAndExchangeRelease(2, 3);
+            first = x;
+            second = (int) X.compareAndExchangeRelease(this, 2, 3);
         }
 
         @Arbiter
@@ -436,19 +419,20 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestFailedReleaseCompareAndExchangeBeforePlainRead {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestFailedReleaseCompareAndExchangeBeforePlainRead.class, "x");
         private int first = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.compareAndExchangeRelease(2, 3);
-            second = x.getPlain();
+            first = (int) X.compareAndExchangeRelease(this, 2, 3);
+            second = x;
         }
 
         @Arbiter
@@ -462,19 +446,20 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainReadBeforeSuccessfulReleaseCompareAndExchange {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestPlainReadBeforeSuccessfulReleaseCompareAndExchange.class, "x");
         private int first = -1;
         private int witness = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.getPlain();
-            witness = x.compareAndExchangeRelease(0, 2);
+            first = x;
+            witness = (int) X.compareAndExchangeRelease(this, 0, 2);
         }
 
         @Arbiter
@@ -488,7 +473,8 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestAcquireCompareAndExchangeWriteHasAtomicCoherence {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestAcquireCompareAndExchangeWriteHasAtomicCoherence.class, "x");
         private int witness = -1;
         private int first = -1;
         private int second = -1;
@@ -497,24 +483,24 @@ public class PlainAccessMemoryModelTest {
 
         @Actor
         public void actor1() {
-            witness = x.compareAndExchangeAcquire(0, 1);
+            witness = (int) X.compareAndExchangeAcquire(this, 0, 1);
         }
 
         @Actor
         public void actor2() {
-            x.setOpaque(2);
+            X.setOpaque(this, 2);
         }
 
         @Actor
         public void actor3() {
-            first = x.getOpaque();
-            second = x.getOpaque();
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Actor
         public void actor4() {
-            third = x.getOpaque();
-            fourth = x.getOpaque();
+            third = (int) X.getOpaque(this);
+            fourth = (int) X.getOpaque(this);
         }
 
         @Arbiter
@@ -531,23 +517,25 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestAtomicCoherenceOrderExtendsThroughHappensBeforeToPlainWrites {
-        private final AtomicInteger x = new AtomicInteger(0);
-        private final AtomicInteger y = new AtomicInteger(0);
+        int x;
+        int y;
+        private static final VarHandle X = fieldHandle(TestAtomicCoherenceOrderExtendsThroughHappensBeforeToPlainWrites.class, "x");
+        private static final VarHandle Y = fieldHandle(TestAtomicCoherenceOrderExtendsThroughHappensBeforeToPlainWrites.class, "y");
         private int first = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            first = x.getPlain();
-            x.set(1);
-            second = y.get();
+            first = x;
+            X.setVolatile(this, 1);
+            second = (int) Y.getVolatile(this);
         }
 
         @Actor
         public void actor2() {
-            y.set(1);
-            x.set(2);
-            x.setPlain(3);
+            Y.setVolatile(this, 1);
+            X.setVolatile(this, 2);
+            x = 3;
         }
 
         @Arbiter
@@ -561,19 +549,20 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestConsecutivePlainCompareAndSetsCannotConsumeTheSamePlainWrite {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestConsecutivePlainCompareAndSetsCannotConsumeTheSamePlainWrite.class, "x");
         private boolean first = false;
         private boolean second = false;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.weakCompareAndSetPlain(1, 2);
-            second = x.weakCompareAndSetPlain(1, 3);
+            first = X.weakCompareAndSetPlain(this, 1, 2);
+            second = X.weakCompareAndSetPlain(this, 1, 3);
         }
 
         @Arbiter
@@ -587,30 +576,31 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestCoherenceThroughPlainRmwSourceAtomicOrderAndPlainSuffix {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestCoherenceThroughPlainRmwSourceAtomicOrderAndPlainSuffix.class, "x");
         private boolean success = false;
         private int first = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
-            x.setPlain(2);
+            x = 1;
+            x = 2;
         }
 
         @Actor
         public void actor2() {
-            success = x.weakCompareAndSetPlain(2, 3);
+            success = X.weakCompareAndSetPlain(this, 2, 3);
             if (success) {
-                x.setOpaque(4);
-                x.setPlain(5);
+                X.setOpaque(this, 4);
+                x = 5;
             }
         }
 
         @Actor
         public void actor3() {
-            first = x.getOpaque();
-            second = x.getOpaque();
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Arbiter
@@ -625,23 +615,24 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestOpaqueReadsAcrossPlainClusters {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestOpaqueReadsAcrossPlainClusters.class, "x");
         private int first = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
-            x.setOpaque(2);
-            x.setPlain(3);
-            x.setOpaque(4);
-            x.setPlain(5);
+            x = 1;
+            X.setOpaque(this, 2);
+            x = 3;
+            X.setOpaque(this, 4);
+            x = 5;
         }
 
         @Actor
         public void actor2() {
-            first = x.getOpaque();
-            second = x.getOpaque();
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Arbiter
@@ -685,26 +676,27 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestConcurrentPlainWriteCanOverlapAtomicBounds {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestConcurrentPlainWriteCanOverlapAtomicBounds.class, "x");
         private int first = -1;
         private int second = -1;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
-            x.setOpaque(2);
-            x.setPlain(3);
+            x = 1;
+            X.setOpaque(this, 2);
+            x = 3;
         }
 
         @Actor
         public void actor2() {
-            x.setPlain(4);
+            x = 4;
         }
 
         @Actor
         public void actor3() {
-            first = x.getOpaque();
-            second = x.getOpaque();
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Arbiter
@@ -718,20 +710,21 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestIndependentRmwChainsWithPlainSources {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestIndependentRmwChainsWithPlainSources.class, "x");
         private boolean first = false;
         private boolean second = false;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
-            first = x.weakCompareAndSetPlain(1, 2);
+            x = 1;
+            first = X.weakCompareAndSetPlain(this, 1, 2);
         }
 
         @Actor
         public void actor2() {
-            x.setPlain(3);
-            second = x.weakCompareAndSetPlain(3, 4);
+            x = 3;
+            second = X.weakCompareAndSetPlain(this, 3, 4);
         }
 
         @Arbiter
@@ -745,24 +738,25 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestRmwChainWithPlainSourceAndConcurrentOpaqueWrite {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestRmwChainWithPlainSourceAndConcurrentOpaqueWrite.class, "x");
         private boolean first = false;
         private boolean second = false;
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            first = x.weakCompareAndSetPlain(1, 2);
-            second = x.weakCompareAndSetPlain(2, 3);
+            first = X.weakCompareAndSetPlain(this, 1, 2);
+            second = X.weakCompareAndSetPlain(this, 2, 3);
         }
 
         @Actor
         public void actor3() {
-            x.setOpaque(4);
+            X.setOpaque(this, 4);
         }
 
         @Arbiter
@@ -776,7 +770,8 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestOppositeOpaqueObservationsOfConcurrentPlainWrites {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestOppositeOpaqueObservationsOfConcurrentPlainWrites.class, "x");
         private int first = -1;
         private int second = -1;
         private int third = -1;
@@ -784,24 +779,24 @@ public class PlainAccessMemoryModelTest {
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            if (false) { x.setOpaque(2); } else { x.setPlain(2); }
+            if (false) { X.setOpaque(this, 2); } else { x = 2; }
         }
 
         @Actor
         public void actor3() {
-            first = x.getOpaque();
-            second = x.getOpaque();
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Actor
         public void actor4() {
-            third = x.getOpaque();
-            fourth = x.getOpaque();
+            third = (int) X.getOpaque(this);
+            fourth = (int) X.getOpaque(this);
         }
 
         @Arbiter
@@ -817,7 +812,8 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestOppositeOpaqueObservationsOfConcurrentPlainAndOpaqueWrites {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestOppositeOpaqueObservationsOfConcurrentPlainAndOpaqueWrites.class, "x");
         private int first = -1;
         private int second = -1;
         private int third = -1;
@@ -825,24 +821,24 @@ public class PlainAccessMemoryModelTest {
 
         @Actor
         public void actor1() {
-            x.setPlain(1);
+            x = 1;
         }
 
         @Actor
         public void actor2() {
-            if (true) { x.setOpaque(2); } else { x.setPlain(2); }
+            if (true) { X.setOpaque(this, 2); } else { x = 2; }
         }
 
         @Actor
         public void actor3() {
-            first = x.getOpaque();
-            second = x.getOpaque();
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Actor
         public void actor4() {
-            third = x.getOpaque();
-            fourth = x.getOpaque();
+            third = (int) X.getOpaque(this);
+            fourth = (int) X.getOpaque(this);
         }
 
         @Arbiter
@@ -858,19 +854,20 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainReadBeforePlainCompareAndSetWithPlainWriter {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestPlainReadBeforePlainCompareAndSetWithPlainWriter.class, "x");
         private int value = -1;
         private boolean success = false;
 
         @Actor
         public void actor1() {
-            if (false) { x.setOpaque(1); } else { x.setPlain(1); }
+            if (false) { X.setOpaque(this, 1); } else { x = 1; }
         }
 
         @Actor
         public void actor2() {
-            value = x.getPlain();
-            success = x.weakCompareAndSetPlain(0, 2);
+            value = x;
+            success = X.weakCompareAndSetPlain(this, 0, 2);
         }
 
         @Arbiter
@@ -884,19 +881,20 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestPlainReadBeforePlainCompareAndSetWithOpaqueWriter {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestPlainReadBeforePlainCompareAndSetWithOpaqueWriter.class, "x");
         private int value = -1;
         private boolean success = false;
 
         @Actor
         public void actor1() {
-            if (true) { x.setOpaque(1); } else { x.setPlain(1); }
+            if (true) { X.setOpaque(this, 1); } else { x = 1; }
         }
 
         @Actor
         public void actor2() {
-            value = x.getPlain();
-            success = x.weakCompareAndSetPlain(0, 2);
+            value = x;
+            success = X.weakCompareAndSetPlain(this, 0, 2);
         }
 
         @Arbiter
@@ -910,26 +908,27 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestCasAcrossPlainWritesObservedByOpaqueReads {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestCasAcrossPlainWritesObservedByOpaqueReads.class, "x");
         private int first = -1;
         private int second = -1;
         private boolean success = false;
 
         @Actor
         public void actor1() {
-            if (false) { x.setOpaque(1); } else { x.setPlain(1); }
-            first = x.getOpaque();
-            second = x.getOpaque();
+            if (false) { X.setOpaque(this, 1); } else { x = 1; }
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Actor
         public void actor2() {
-            success = x.weakCompareAndSetPlain(1, 3);
+            success = X.weakCompareAndSetPlain(this, 1, 3);
         }
 
         @Actor
         public void actor3() {
-            if (false) { x.setOpaque(2); } else { x.setPlain(2); }
+            if (false) { X.setOpaque(this, 2); } else { x = 2; }
         }
 
         @Arbiter
@@ -944,26 +943,27 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestCasAcrossPlainSourceAndOpaqueWriteObservedByOpaqueReads {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestCasAcrossPlainSourceAndOpaqueWriteObservedByOpaqueReads.class, "x");
         private int first = -1;
         private int second = -1;
         private boolean success = false;
 
         @Actor
         public void actor1() {
-            if (false) { x.setOpaque(1); } else { x.setPlain(1); }
-            first = x.getOpaque();
-            second = x.getOpaque();
+            if (false) { X.setOpaque(this, 1); } else { x = 1; }
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Actor
         public void actor2() {
-            success = x.weakCompareAndSetPlain(1, 3);
+            success = X.weakCompareAndSetPlain(this, 1, 3);
         }
 
         @Actor
         public void actor3() {
-            if (true) { x.setOpaque(2); } else { x.setPlain(2); }
+            if (true) { X.setOpaque(this, 2); } else { x = 2; }
         }
 
         @Arbiter
@@ -978,26 +978,27 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestCasAcrossOpaqueSourceAndPlainWriteObservedByOpaqueReads {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestCasAcrossOpaqueSourceAndPlainWriteObservedByOpaqueReads.class, "x");
         private int first = -1;
         private int second = -1;
         private boolean success = false;
 
         @Actor
         public void actor1() {
-            if (true) { x.setOpaque(1); } else { x.setPlain(1); }
-            first = x.getOpaque();
-            second = x.getOpaque();
+            if (true) { X.setOpaque(this, 1); } else { x = 1; }
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Actor
         public void actor2() {
-            success = x.weakCompareAndSetPlain(1, 3);
+            success = X.weakCompareAndSetPlain(this, 1, 3);
         }
 
         @Actor
         public void actor3() {
-            if (false) { x.setOpaque(2); } else { x.setPlain(2); }
+            if (false) { X.setOpaque(this, 2); } else { x = 2; }
         }
 
         @Arbiter
@@ -1012,26 +1013,27 @@ public class PlainAccessMemoryModelTest {
     @State
     @Outcome(expect = Expect.ACCEPTABLE, desc = "Observed outcome.")
     public static class TestCasAcrossOpaqueWritesObservedByOpaqueReads {
-        private final AtomicInteger x = new AtomicInteger(0);
+        int x;
+        private static final VarHandle X = fieldHandle(TestCasAcrossOpaqueWritesObservedByOpaqueReads.class, "x");
         private int first = -1;
         private int second = -1;
         private boolean success = false;
 
         @Actor
         public void actor1() {
-            if (true) { x.setOpaque(1); } else { x.setPlain(1); }
-            first = x.getOpaque();
-            second = x.getOpaque();
+            if (true) { X.setOpaque(this, 1); } else { x = 1; }
+            first = (int) X.getOpaque(this);
+            second = (int) X.getOpaque(this);
         }
 
         @Actor
         public void actor2() {
-            success = x.weakCompareAndSetPlain(1, 3);
+            success = X.weakCompareAndSetPlain(this, 1, 3);
         }
 
         @Actor
         public void actor3() {
-            if (true) { x.setOpaque(2); } else { x.setPlain(2); }
+            if (true) { X.setOpaque(this, 2); } else { x = 2; }
         }
 
         @Arbiter
