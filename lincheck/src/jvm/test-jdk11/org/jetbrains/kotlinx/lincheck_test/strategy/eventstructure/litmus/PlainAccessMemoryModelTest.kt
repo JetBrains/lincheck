@@ -724,6 +724,11 @@ class PlainAccessMemoryModelTest {
 
     private class Cell(var value: Int = 0)
 
+    private class PlainPair {
+        @JvmField var x = 0
+        @JvmField var y = 0
+    }
+
     private class TwoFieldCell {
         @JvmField
         var first: Int = 0
@@ -736,6 +741,26 @@ class PlainAccessMemoryModelTest {
                 .findVarHandle(TwoFieldCell::class.java, "first", Int::class.javaPrimitiveType)
             val SECOND: VarHandle = MethodHandles.lookup()
                 .findVarHandle(TwoFieldCell::class.java, "second", Int::class.javaPrimitiveType)
+        }
+    }
+
+    @Test
+    fun TestPlainLoadBuffering() {
+        litmusTest(assertSame(setOf(0 to 0, 0 to 1, 1 to 0)), MemoryModel.RelaxedJava, requireExhaustion = true) {
+            val pair = PlainPair()
+            var first = -1
+            var second = -1
+            val t1 = thread {
+                first = pair.x
+                pair.y = 1
+            }
+            val t2 = thread {
+                second = pair.y
+                pair.x = 1
+            }
+            t1.join()
+            t2.join()
+            first to second
         }
     }
 }
