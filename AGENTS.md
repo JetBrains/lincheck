@@ -63,6 +63,9 @@ so no Gradle distribution is downloaded at test time (and the test JVM must sati
 - **Model-checker behavior** must be validated with end-to-end litmus tests.
   Do not use unit tests over synthetic event graphs to test that behavior.
   Reuse existing litmus tests for refactorings; add a new litmus test only when necessary and non-trivial.
+  Every `litmusTest` run prints one `LITMUS_OUTCOMES test=<Class.method> ... set=[...]` line
+  with the complete explored outcome set, also when the verifier checks only a subset of it or fails;
+  read it from the test's stdout (`<system-out>` in `build/test-results/test/*.xml`).
 - **Representation tests** compare execution traces against baselines in `src/.../resources/`.
   Refresh with `-PoverwriteRepresentationTestsOutput=true` and diff before committing.
   **Always add a representation test** illustrating new behaviour when you change the managed strategy,

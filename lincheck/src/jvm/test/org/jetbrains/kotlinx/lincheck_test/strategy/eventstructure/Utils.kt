@@ -34,6 +34,7 @@ import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.junit.Assert
+import org.junit.Test
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import kotlin.reflect.KClass
@@ -115,7 +116,9 @@ internal fun<Outcome> litmusTest(
         createStrategy(testClass, memoryModel, testScenario).use { strategy ->
             val failure = strategy.runIteration(invocations, verifier)
             assert(failure == null) { failure.toString() }
+            val exhausted = !strategy.nextInvocation()
             strategy.checkAndPrintStats(invocations)
+            printLitmusOutcomes(memoryModel, exhausted, outcomes)
             outcomeVerifier.verify(outcomes)
         }
     }
@@ -209,16 +212,47 @@ internal inline fun<reified Outcome> litmusTest(
         createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, memoryModel, block).use { strategy ->
             val failure = strategy.runIteration(invocations, verifier)
             Assert.assertEquals("Unexpected exploration failure: $failure", expectedFailure, failure?.let { it::class })
+            // Probing the next invocation mutates the event structure, so probe once,
+            // and not after a failure unless exhaustion is asserted.
+            val exhausted = if (failure == null || requireExhaustion) !strategy.nextInvocation() else null
             if (requireExhaustion) {
-                Assert.assertFalse("Exploration did not exhaust within $invocations invocations", strategy.nextInvocation())
+                Assert.assertTrue("Exploration did not exhaust within $invocations invocations", exhausted == true)
             }
             strategy.checkAndPrintStats(invocations)
+            printLitmusOutcomes(memoryModel, exhausted, outcomes)
             checkStats?.invoke(strategy.stats)
             outcomeVerifier.verify(outcomes)
         }
     }
 }
 
+
+/**
+ * Prints the complete explored outcome set of a litmus test as one machine-readable line,
+ * so that the checker's outcome set stays visible when the verifier checks only a subset of it
+ * ([assertNever], [assertSometimes]) or fails.
+ *
+ * Gradle reports stdout once per test class, so the line names the running `@Test` method itself.
+ *
+ * @param exhausted whether no unexplored invocation remained, or `null` if that was not probed.
+ */
+internal fun printLitmusOutcomes(memoryModel: MemoryModel, exhausted: Boolean?, outcomes: List<*>) {
+    val set = outcomes.map { it.toString() }.distinct().sorted()
+    println(
+        "LITMUS_OUTCOMES test=${currentTestName()} model=$memoryModel exhausted=${exhausted ?: "unknown"} " +
+        "completed=${outcomes.size} outcomes=${set.size} set=$set"
+    )
+}
+
+/** The innermost JUnit `@Test` method on the current stack as `Class.method`, or `unknown` if there is none. */
+private fun currentTestName(): String {
+    val frame = Thread.currentThread().stackTrace.firstOrNull { frame ->
+        frame.className.startsWith("org.jetbrains.kotlinx.lincheck_test.") &&
+            runCatching { Class.forName(frame.className) }.getOrNull()
+                ?.declaredMethods?.any { it.name == frame.methodName && it.isAnnotationPresent(Test::class.java) } == true
+    } ?: return "unknown"
+    return "${frame.className.substringAfterLast('.')}.${frame.methodName}"
+}
 
 /**
  * Checks the invariants of the exploration statistics and prints them,
