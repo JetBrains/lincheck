@@ -88,6 +88,18 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites(projectNames: Set<St
                 relativePath = RelativePath(file.isFile, *correctPath.toTypedArray())
             }
             includeEmptyDirs = false
+            // Pinned upstream builds still reference Space repositories retired after those revisions.
+            filesMatching(listOf("**/*.gradle.kts", "**/*.gradle")) {
+                filter { line: String ->
+                    line.replace(
+                        "https://maven.pkg.jetbrains.space/kotlin/p/kotlinx/maven",
+                        "https://packages.jetbrains.team/maven/p/kotlinx-team-infra/maven",
+                    ).replace(
+                        "https://maven.pkg.jetbrains.space/public/p/ktor/eap",
+                        "https://packages.jetbrains.team/maven/p/ktor/eap",
+                    )
+                }
+            }
         }
     }
 
