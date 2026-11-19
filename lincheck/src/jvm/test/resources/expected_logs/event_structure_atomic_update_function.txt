@@ -1,0 +1,60 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+Execution graph:
+Events in each thread are in program order; Tn:position identifies an event.
+rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).
+Thread -1:
+  T-1:0: Init
+Thread 0:
+  T0:0: ThreadStart^req T0
+  T0:1: ThreadStart^rsp T0
+    senders: T-1:0
+    hb: T-1:0
+  T0:2: Alloc EventStructureAtomicUpdateFunctionTest#1
+    hb: T-1:0
+  T0:3: Actor Start operation()
+    hb: T-1:0
+  T0:4: Read^req Plain EventStructureAtomicUpdateFunctionTest#1.counter final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureAtomicUpdateFunctionTest.operation(EventStructureAtomicUpdateFunctionTest.kt:26)
+    hb: T-1:0
+  T0:5: Read^rsp Plain EventStructureAtomicUpdateFunctionTest#1.counter final read=AtomicInteger#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureAtomicUpdateFunctionTest.operation(EventStructureAtomicUpdateFunctionTest.kt:26)
+    rf: T0:2
+    hb: T-1:0
+  T0:6: Read^req Plain EventStructureAtomicUpdateFunctionTest$Increment.INSTANCE final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureAtomicUpdateFunctionTest.operation(EventStructureAtomicUpdateFunctionTest.kt:26)
+    hb: T-1:0
+  T0:7: Read^rsp Plain EventStructureAtomicUpdateFunctionTest$Increment.INSTANCE final read=Increment#3 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureAtomicUpdateFunctionTest.operation(EventStructureAtomicUpdateFunctionTest.kt:26)
+    rf: T-1:0
+    hb: T-1:0
+  T0:8: Read^req Volatile AtomicInteger#2.value at java/util/concurrent/atomic/AtomicInteger.updateAndGet(AtomicInteger.java:278)
+    hb: T-1:0
+  T0:9: Read^rsp Volatile AtomicInteger#2.value read=0 at java/util/concurrent/atomic/AtomicInteger.updateAndGet(AtomicInteger.java:278)
+    rf: T-1:0
+    hb: T-1:0
+  T0:10: Read^req Volatile AtomicInteger#2.value compareAndSet(0, 1) at java/util/concurrent/atomic/AtomicInteger.updateAndGet(AtomicInteger.java:282)
+    hb: T-1:0
+  T0:11: Read^rsp Volatile AtomicInteger#2.value read=0 compareAndSet(0, 1) at java/util/concurrent/atomic/AtomicInteger.updateAndGet(AtomicInteger.java:282)
+    rf: T-1:0
+    hb: T-1:0
+  T0:12: Write Volatile AtomicInteger#2.value write=1 compareAndSet(0, 1) at java/util/concurrent/atomic/AtomicInteger.updateAndGet(AtomicInteger.java:282)
+    hb: T-1:0
+  T0:13: Read^req Plain EventStructureAtomicUpdateFunctionTest#1.counter final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureAtomicUpdateFunctionTest.operation(EventStructureAtomicUpdateFunctionTest.kt:27)
+    hb: T-1:0
+  T0:14: Read^rsp Plain EventStructureAtomicUpdateFunctionTest#1.counter final read=AtomicInteger#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureAtomicUpdateFunctionTest.operation(EventStructureAtomicUpdateFunctionTest.kt:27)
+    rf: T0:2
+    hb: T-1:0
+  T0:15: Read^req Volatile AtomicInteger#2.value at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureAtomicUpdateFunctionTest.operation(EventStructureAtomicUpdateFunctionTest.kt:27)
+    hb: T-1:0
+  T0:16: Read^rsp Volatile AtomicInteger#2.value read=1 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureAtomicUpdateFunctionTest.operation(EventStructureAtomicUpdateFunctionTest.kt:27)
+    rf: T0:12
+    hb: T-1:0
+  T0:17: Actor End operation()
+    hb: T-1:0
+  T0:18: ThreadFinish [0]
+    hb: T-1:0
+Coherence (adjacent atomic writes, including initialization):
+  AtomicInteger#2.value: T-1:0 -> T0:12
+Additional coherence edges involving plain writes:

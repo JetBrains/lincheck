@@ -469,9 +469,8 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
             // Instrument `Throwable` as it has `synchronized` methods,
             // and corresponding monitor events should be intercepted.
             if (className == "java.lang.Throwable") return true
-            // Instrument `java.util.concurrent` classes, except atomics.
-            if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) return false
-            // Instrument `java.util` classes.
+            // Instrument `java.util` classes;
+            // of the atomics, only the function-update methods are instrumented (see `getMethodConfiguration`).
             if (className.startsWith("java.util.")) return true
             return false
         }
@@ -527,6 +526,18 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
             return config
         }
 
+        // The JDK atomics are modelled at the level of their method calls, so their code is not analyzed.
+        // The function-update methods are not modelled, but they are retry loops
+        // over the modelled `get` and `compareAndSet` methods:
+        // tracking the calls in their bodies turns an update into the reads and CASes it consists of.
+        if (className.startsWith("java.util.concurrent.") && className.contains("Atomic")) {
+            if (methodName !in atomicFunctionUpdateMethods) return config
+            return config.apply {
+                trackMethodCalls = true
+                interceptMethodCallResults = true
+            }
+        }
+
         // For `java.lang.Thread` class (and `ThreadContainer.start()` method),
         // we only apply `ThreadTransformer` and skip all other transformations
         if (isThreadClass(className) || isThreadContainerThreadStartMethod(className, methodName)) {
@@ -580,6 +591,9 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
             trackAwaitLoops = true
         }
     }
+
+    private val atomicFunctionUpdateMethods =
+        setOf("getAndUpdate", "updateAndGet", "getAndAccumulate", "accumulateAndGet")
 }
 
 class LiveDebuggerTransformationProfile(
