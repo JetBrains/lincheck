@@ -1,0 +1,22 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------ |
+|                                                   Thread 1                                                   |
+| ------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                  |
+|   receiver.value(): 42 at ReceiverEqualsRepresentationTest.operation(ReceiverEqualsRepresentationTest.kt:17) |
+|   result: void                                                                                               |
+| ------------------------------------------------------------------------------------------------------------ |

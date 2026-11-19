@@ -2277,8 +2277,8 @@ internal abstract class ManagedStrategy(
             return AnalysisSectionType.IGNORED
         }
         // Ignore methods called on standard I/O streams
-        when (owner) {
-            System.`in`, System.out, System.err -> return AnalysisSectionType.IGNORED
+        if (owner === System.`in` || owner === System.out || owner === System.err) {
+            return AnalysisSectionType.IGNORED
         }
         // TODO: decide if we need to introduce special `DETERMINISTIC` guarantee?
         if (deterministicMethodDescriptor != null) {
