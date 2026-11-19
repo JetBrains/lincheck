@@ -2276,7 +2276,8 @@ internal abstract class ManagedStrategy(
         if (owner.isImmutable && methodName == "toString") {
             return AnalysisSectionType.IGNORED
         }
-        // Ignore methods called on standard I/O streams
+        // Ignore methods called on standard I/O streams.
+        // The owner is compared by reference: its `equals` is code of the analyzed program.
         if (owner === System.`in` || owner === System.out || owner === System.err) {
             return AnalysisSectionType.IGNORED
         }

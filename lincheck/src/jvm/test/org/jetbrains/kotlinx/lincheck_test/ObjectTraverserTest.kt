@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.enumerateAllObjects
 import org.jetbrains.kotlinx.lincheck.strategy.managed.enumerateReachableObjects
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.LocalObjectManager
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ExecutionMode
@@ -19,6 +20,8 @@ import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.atomicArrayOfNulls
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.withLincheckTestContext
 import org.junit.Assert
 import org.junit.Before
 import org.junit.Test
@@ -144,5 +147,45 @@ class ObjectTraverserTest {
                 listOf(myObject, a, b)
             )
         )
+    }
+
+    @Test
+    fun `should not call equals and hashCode while enumerating reachable objects`() {
+        val a = ObjectWithFailingEqualsAndHashCode()
+        val b = ObjectWithFailingEqualsAndHashCode()
+        val myObject = object : Any() {
+            val first = a
+            val second = b
+        }
+        val objectEnumeration = objectTracker.enumerateReachableObjects(myObject)
+
+        Assert.assertTrue(
+            objectEnumeration.size == 3 &&
+            objectEnumeration.keys.containsAll(listOf(myObject, a, b))
+        )
+    }
+
+    // Registering an object needs the classes that the Lincheck agent adds to the bootstrap class path.
+    @Test
+    fun `should not call equals and hashCode while enumerating all objects`() =
+        withLincheckTestContext(InstrumentationMode.STRESS) {
+            val a = ObjectWithFailingEqualsAndHashCode()
+            val b = ObjectWithFailingEqualsAndHashCode()
+            objectTracker.registerExternalObject(a)
+            objectTracker.registerExternalObject(b)
+            val objectEnumeration = objectTracker.enumerateAllObjects()
+
+            Assert.assertTrue(
+                objectEnumeration.size == 2 &&
+                objectEnumeration.keys.containsAll(listOf(a, b))
+            )
+        }
+
+    private class ObjectWithFailingEqualsAndHashCode {
+        override fun equals(other: Any?): Boolean =
+            error("equals() of an enumerated object was called")
+
+        override fun hashCode(): Int =
+            error("hashCode() of an enumerated object was called")
     }
 }

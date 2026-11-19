@@ -265,10 +265,11 @@ fun ObjectTracker.getObjectDisplayNumber(obj: Any): Int =
  * Uses the same a numeration map as the trace reporter via [getObjectDisplayNumber] method, so objects have the
  * same numbers, as they have in the trace.
  *
- * @return a map associating each reachable object with its display number.
+ * @return a map associating each reachable object with its display number;
+ *   the map compares its keys by reference, so that `equals` and `hashCode` of the objects are not called.
  */
 internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
-    val objectNumberMap = hashMapOf<Any, Int>()
+    val objectNumberMap = IdentityHashMap<Any, Int>()
     for (objectEntry in enumerateObjectEntries()) {
         val obj = objectEntry.objectWeakReference.get() ?: continue
         objectNumberMap[obj] = objectEntry.objectDisplayNumber
@@ -285,10 +286,11 @@ internal fun ObjectTracker.enumerateAllObjects(): Map<Any, Int> {
  * same numbers, as they have in the trace.
  *
  * @param root the object from which the traversal begins.
- * @return a map associating each reachable object with its display number.
+ * @return a map associating each reachable object with its display number;
+ *   the map compares its keys by reference, so that `equals` and `hashCode` of the objects are not called.
  */
 internal fun ObjectTracker.enumerateReachableObjects(root: Any): Map<Any, Int> {
-    val objectNumberMap = hashMapOf<Any, Int>()
+    val objectNumberMap = IdentityHashMap<Any, Int>()
     val shouldEnumerateRecursively = { obj: Any ->
         obj !is CharSequence &&
         obj !is Continuation<*>
