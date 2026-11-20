@@ -51,6 +51,11 @@ sourceSets {
         } else {
             java.srcDir("src/jvm/test-jdk8")
         }
+        // `record` classes (JEP 395) need the toolchain's own compiler, not just a newer JDK API:
+        // javac only accepts the `record` keyword when compiling at source level 16 or later.
+        if (jdkToolchainVersion.toInt() >= 16) {
+            java.srcDir("src/jvm/test-jdk16")
+        }
 
         // Tests that test classes from the bootstrap module `sun.nio.ch.lincheck` need to import these classes;
         // therefore, we need to add bootstrap to the compilation classpath.

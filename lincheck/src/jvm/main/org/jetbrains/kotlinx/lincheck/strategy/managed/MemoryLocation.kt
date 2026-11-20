@@ -229,7 +229,9 @@ class ObjectFieldMemoryLocation(
 
     override fun read(valueMapper: ValueMapper): Any? {
         // return field.get(valueMapper(OBJECT_TYPE, objID)?.unwrap())
-        return readFieldViaUnsafe(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), field)
+        // `sun.misc.Unsafe.objectFieldOffset` refuses the fields of a `record` class (JEP 395),
+        // so this falls back to reflection for them, as `readFieldSafely` already does elsewhere.
+        return readFieldSafely(valueMapper(Types.OBJECT_TYPE, objID.toLong())?.unwrap(), field).getOrThrow()
     }
 
     override fun write(value: Any?, valueMapper: ValueMapper) {
