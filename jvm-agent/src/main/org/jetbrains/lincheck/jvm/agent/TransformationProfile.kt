@@ -482,6 +482,8 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
         if (className.startsWith("jdk.")) {
             // Transform `ThreadContainer.start` to detect thread forking.
             if (isThreadContainerClass(className)) return true
+            // Of the internal `Unsafe`, only the bitwise updates are instrumented (see `getMethodConfiguration`).
+            if (isInternalUnsafeClass(className)) return true
             return false
         }
 
@@ -554,6 +556,18 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
         if (isThreadClass(className) || isThreadContainerThreadStartMethod(className, methodName)) {
             return config.apply {
                 trackAllThreadsOperations = true
+            }
+        }
+
+        // The internal `Unsafe` is modelled at the level of its method calls, so its code is not analyzed.
+        // Its bitwise updates (`getAndBitwiseOrInt` and the like) are not modelled, but they are retry loops
+        // over the modelled `get<Type>` and `weakCompareAndSet<Type>` methods:
+        // tracking the calls in their bodies turns an update into the reads and CASes it consists of.
+        if (isInternalUnsafeClass(className)) {
+            if (!isInternalUnsafeBitwiseUpdateMethod(className, methodName)) return config
+            return config.apply {
+                trackMethodCalls = true
+                interceptMethodCallResults = true
             }
         }
 

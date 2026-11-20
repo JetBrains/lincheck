@@ -220,6 +220,18 @@ fun isJavaLangAccessClass(className: String): Boolean =
 
 
 // ========================================================
+//   Java: Unsafe
+// ========================================================
+
+fun isInternalUnsafeClass(className: String): Boolean =
+    className == "jdk.internal.misc.Unsafe"
+
+/** Checks whether the method is a bitwise update of the internal JDK `Unsafe`. */
+fun isInternalUnsafeBitwiseUpdateMethod(className: String, methodName: String): Boolean =
+    isInternalUnsafeClass(className) && methodName.startsWith("getAndBitwise")
+
+
+// ========================================================
 //   Java: lambdas
 // ========================================================
 

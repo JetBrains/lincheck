@@ -1,0 +1,271 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+Execution graph:
+Events in each thread are in program order; Tn:position identifies an event.
+rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).
+Thread -1:
+  T-1:0: Init
+Thread 0:
+  T0:0: ThreadStart^req T0
+  T0:1: ThreadStart^rsp T0
+    senders: T-1:0
+    hb: T-1:0
+  T0:2: Alloc EventStructureUnsafeBitwiseUpdateTest#1
+    hb: T-1:0
+  T0:3: Actor Start operation()
+    hb: T-1:0
+  T0:4: Read^req Plain EventStructureUnsafeBitwiseUpdateTest#1.lock final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureUnsafeBitwiseUpdateTest.operation(EventStructureUnsafeBitwiseUpdateTest.kt:28)
+    hb: T-1:0
+  T0:5: Read^rsp Plain EventStructureUnsafeBitwiseUpdateTest#1.lock final read=ReentrantLock#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureUnsafeBitwiseUpdateTest.operation(EventStructureUnsafeBitwiseUpdateTest.kt:28)
+    rf: T0:2
+    hb: T-1:0
+  T0:6: Read^req Plain ReentrantLock#2.sync final at java/util/concurrent/locks/ReentrantLock.lock(ReentrantLock.java:322)
+    hb: T-1:0
+  T0:7: Read^rsp Plain ReentrantLock#2.sync final read=NonfairSync#3 at java/util/concurrent/locks/ReentrantLock.lock(ReentrantLock.java:322)
+    rf: T-1:0
+    hb: T-1:0
+  T0:8: Read^req Plain AbstractQueuedSynchronizer.U final at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    hb: T-1:0
+  T0:9: Read^rsp Plain AbstractQueuedSynchronizer.U final read=Unsafe#4 at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    rf: T-1:0
+    hb: T-1:0
+  T0:10: Read^req Plain AbstractQueuedSynchronizer.STATE final at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    hb: T-1:0
+  T0:11: Read^rsp Plain AbstractQueuedSynchronizer.STATE final read=16 at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    rf: T-1:0
+    hb: T-1:0
+  T0:12: Read^req Volatile NonfairSync#3.AbstractQueuedSynchronizer.state compareAndSet(0, 1) at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    hb: T-1:0
+  T0:13: Read^rsp Volatile NonfairSync#3.AbstractQueuedSynchronizer.state read=0 compareAndSet(0, 1) at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    rf: T-1:0
+    hb: T-1:0
+  T0:14: Write Volatile NonfairSync#3.AbstractQueuedSynchronizer.state write=1 compareAndSet(0, 1) at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    hb: T-1:0
+  T0:15: Write Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread write=TestThread#5 at java/util/concurrent/locks/AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)
+    hb: T-1:0
+  T0:16: Read^req Plain EventStructureUnsafeBitwiseUpdateTest#1.condition final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureUnsafeBitwiseUpdateTest.operation(EventStructureUnsafeBitwiseUpdateTest.kt:30)
+    hb: T-1:0
+  T0:17: Read^rsp Plain EventStructureUnsafeBitwiseUpdateTest#1.condition final read=ConditionObject#6 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureUnsafeBitwiseUpdateTest.operation(EventStructureUnsafeBitwiseUpdateTest.kt:30)
+    rf: T0:2
+    hb: T-1:0
+  T0:18: Alloc ConditionNode#7
+    hb: T-1:0
+  T0:19: Read^req Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.this$0 final at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1507)
+    hb: T-1:0
+  T0:20: Read^rsp Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.this$0 final read=NonfairSync#3 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1507)
+    rf: T-1:0
+    hb: T-1:0
+  T0:21: Read^req Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread at java/util/concurrent/locks/AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)
+    hb: T-1:0
+  T0:22: Read^rsp Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread read=TestThread#5 at java/util/concurrent/locks/AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)
+    rf: T0:15
+    hb: T-1:0
+  T0:23: Write Plain ConditionNode#7.AbstractQueuedSynchronizer$Node.waiter write=TestThread#5 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1508)
+    hb: T-1:0
+  T0:24: Read^req Plain AbstractQueuedSynchronizer.U final at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)
+    hb: T-1:0
+  T0:25: Read^rsp Plain AbstractQueuedSynchronizer.U final read=Unsafe#4 at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)
+    rf: T-1:0
+    hb: T-1:0
+  T0:26: Read^req Plain AbstractQueuedSynchronizer$Node.STATUS final at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)
+    hb: T-1:0
+  T0:27: Read^rsp Plain AbstractQueuedSynchronizer$Node.STATUS final read=12 at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)
+    rf: T-1:0
+    hb: T-1:0
+  T0:28: Write Plain ConditionNode#7.AbstractQueuedSynchronizer$Node.status write=3 at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.setStatusRelaxed(AbstractQueuedSynchronizer.java:474)
+    hb: T-1:0
+  T0:29: Read^req Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.lastWaiter at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1510)
+    hb: T-1:0
+  T0:30: Read^rsp Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.lastWaiter read=null at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1510)
+    rf: T-1:0
+    hb: T-1:0
+  T0:31: Write Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.firstWaiter write=ConditionNode#7 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1512)
+    hb: T-1:0
+  T0:32: Write Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.lastWaiter write=ConditionNode#7 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1515)
+    hb: T-1:0
+  T0:33: Read^req Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.this$0 final at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1516)
+    hb: T-1:0
+  T0:34: Read^rsp Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.this$0 final read=NonfairSync#3 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1516)
+    rf: T-1:0
+    hb: T-1:0
+  T0:35: Read^req Volatile NonfairSync#3.AbstractQueuedSynchronizer.state at java/util/concurrent/locks/AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)
+    hb: T-1:0
+  T0:36: Read^rsp Volatile NonfairSync#3.AbstractQueuedSynchronizer.state read=1 at java/util/concurrent/locks/AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)
+    rf: T0:14
+    hb: T-1:0
+  T0:37: Read^req Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.this$0 final at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1517)
+    hb: T-1:0
+  T0:38: Read^rsp Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.this$0 final read=NonfairSync#3 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.enableWait(AbstractQueuedSynchronizer.java:1517)
+    rf: T-1:0
+    hb: T-1:0
+  T0:39: Read^req Volatile NonfairSync#3.AbstractQueuedSynchronizer.state at java/util/concurrent/locks/AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)
+    hb: T-1:0
+  T0:40: Read^rsp Volatile NonfairSync#3.AbstractQueuedSynchronizer.state read=1 at java/util/concurrent/locks/AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)
+    rf: T0:14
+    hb: T-1:0
+  T0:41: Read^req Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread at java/util/concurrent/locks/AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)
+    hb: T-1:0
+  T0:42: Read^rsp Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread read=TestThread#5 at java/util/concurrent/locks/AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)
+    rf: T0:15
+    hb: T-1:0
+  T0:43: Write Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread write=null at java/util/concurrent/locks/AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)
+    hb: T-1:0
+  T0:44: Write Volatile NonfairSync#3.AbstractQueuedSynchronizer.state write=0 at java/util/concurrent/locks/AbstractQueuedSynchronizer.setState(AbstractQueuedSynchronizer.java:541)
+    hb: T-1:0
+  T0:45: Read^req Volatile NonfairSync#3.AbstractQueuedSynchronizer.head at java/util/concurrent/locks/AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1008)
+    hb: T-1:0
+  T0:46: Read^rsp Volatile NonfairSync#3.AbstractQueuedSynchronizer.head read=null at java/util/concurrent/locks/AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1008)
+    rf: T-1:0
+    hb: T-1:0
+  T0:47: Read^req Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.prev at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.canReacquire(AbstractQueuedSynchronizer.java:1533)
+    hb: T-1:0
+  T0:48: Read^rsp Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.prev read=null at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.canReacquire(AbstractQueuedSynchronizer.java:1533)
+    rf: T0:18
+    hb: T-1:0
+  T0:49: Read^req Plain AbstractQueuedSynchronizer.U final at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.getAndUnsetStatus(AbstractQueuedSynchronizer.java:468)
+    hb: T-1:0
+  T0:50: Read^rsp Plain AbstractQueuedSynchronizer.U final read=Unsafe#4 at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.getAndUnsetStatus(AbstractQueuedSynchronizer.java:468)
+    rf: T-1:0
+    hb: T-1:0
+  T0:51: Read^req Plain AbstractQueuedSynchronizer$Node.STATUS final at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.getAndUnsetStatus(AbstractQueuedSynchronizer.java:468)
+    hb: T-1:0
+  T0:52: Read^rsp Plain AbstractQueuedSynchronizer$Node.STATUS final read=12 at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.getAndUnsetStatus(AbstractQueuedSynchronizer.java:468)
+    rf: T-1:0
+    hb: T-1:0
+  T0:53: Read^req Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.status at jdk/internal/misc/Unsafe.getAndBitwiseAndInt(Unsafe.java:3227)
+    hb: T-1:0
+  T0:54: Read^rsp Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.status read=3 at jdk/internal/misc/Unsafe.getAndBitwiseAndInt(Unsafe.java:3227)
+    rf: T0:28
+    hb: T-1:0
+  T0:55: Read^req Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.status compareAndSet(3, 1) at jdk/internal/misc/Unsafe.getAndBitwiseAndInt(Unsafe.java:3228)
+    hb: T-1:0
+  T0:56: Read^rsp Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.status read=3 compareAndSet(3, 1) at jdk/internal/misc/Unsafe.getAndBitwiseAndInt(Unsafe.java:3228)
+    rf: T0:28
+    hb: T-1:0
+  T0:57: Write Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.status write=1 compareAndSet(3, 1) at jdk/internal/misc/Unsafe.getAndBitwiseAndInt(Unsafe.java:3228)
+    hb: T-1:0
+  T0:58: Read^req Plain AbstractQueuedSynchronizer.U final at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.clearStatus(AbstractQueuedSynchronizer.java:477)
+    hb: T-1:0
+  T0:59: Read^rsp Plain AbstractQueuedSynchronizer.U final read=Unsafe#4 at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.clearStatus(AbstractQueuedSynchronizer.java:477)
+    rf: T-1:0
+    hb: T-1:0
+  T0:60: Read^req Plain AbstractQueuedSynchronizer$Node.STATUS final at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.clearStatus(AbstractQueuedSynchronizer.java:477)
+    hb: T-1:0
+  T0:61: Read^rsp Plain AbstractQueuedSynchronizer$Node.STATUS final read=12 at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.clearStatus(AbstractQueuedSynchronizer.java:477)
+    rf: T-1:0
+    hb: T-1:0
+  T0:62: Write Opaque ConditionNode#7.AbstractQueuedSynchronizer$Node.status write=0 at java/util/concurrent/locks/AbstractQueuedSynchronizer$Node.clearStatus(AbstractQueuedSynchronizer.java:477)
+    hb: T-1:0
+  T0:63: Read^req Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.this$0 final at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.awaitNanos(AbstractQueuedSynchronizer.java:1682)
+    hb: T-1:0
+  T0:64: Read^rsp Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.this$0 final read=NonfairSync#3 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.awaitNanos(AbstractQueuedSynchronizer.java:1682)
+    rf: T-1:0
+    hb: T-1:0
+  T0:65: Read^req Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.prev at java/util/concurrent/locks/AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)
+    hb: T-1:0
+  T0:66: Read^rsp Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.prev read=null at java/util/concurrent/locks/AbstractQueuedSynchronizer.acquire(AbstractQueuedSynchronizer.java:656)
+    rf: T0:18
+    hb: T-1:0
+  T0:67: Read^req Volatile NonfairSync#3.AbstractQueuedSynchronizer.state at java/util/concurrent/locks/AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)
+    hb: T-1:0
+  T0:68: Read^rsp Volatile NonfairSync#3.AbstractQueuedSynchronizer.state read=0 at java/util/concurrent/locks/AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)
+    rf: T0:44
+    hb: T-1:0
+  T0:69: Read^req Plain AbstractQueuedSynchronizer.U final at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    hb: T-1:0
+  T0:70: Read^rsp Plain AbstractQueuedSynchronizer.U final read=Unsafe#4 at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    rf: T-1:0
+    hb: T-1:0
+  T0:71: Read^req Plain AbstractQueuedSynchronizer.STATE final at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    hb: T-1:0
+  T0:72: Read^rsp Plain AbstractQueuedSynchronizer.STATE final read=16 at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    rf: T-1:0
+    hb: T-1:0
+  T0:73: Read^req Volatile NonfairSync#3.AbstractQueuedSynchronizer.state compareAndSet(0, 1) at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    hb: T-1:0
+  T0:74: Read^rsp Volatile NonfairSync#3.AbstractQueuedSynchronizer.state read=0 compareAndSet(0, 1) at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    rf: T0:44
+    hb: T-1:0
+  T0:75: Write Volatile NonfairSync#3.AbstractQueuedSynchronizer.state write=1 compareAndSet(0, 1) at java/util/concurrent/locks/AbstractQueuedSynchronizer.compareAndSetState(AbstractQueuedSynchronizer.java:556)
+    hb: T-1:0
+  T0:76: Write Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread write=TestThread#5 at java/util/concurrent/locks/AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)
+    hb: T-1:0
+  T0:77: Read^req Plain ConditionNode#7.AbstractQueuedSynchronizer$ConditionNode.nextWaiter at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1542)
+    hb: T-1:0
+  T0:78: Read^rsp Plain ConditionNode#7.AbstractQueuedSynchronizer$ConditionNode.nextWaiter read=null at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1542)
+    rf: T0:18
+    hb: T-1:0
+  T0:79: Read^req Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.lastWaiter at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1542)
+    hb: T-1:0
+  T0:80: Read^rsp Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.lastWaiter read=ConditionNode#7 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1542)
+    rf: T0:32
+    hb: T-1:0
+  T0:81: Read^req Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.firstWaiter at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1543)
+    hb: T-1:0
+  T0:82: Read^rsp Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.firstWaiter read=ConditionNode#7 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1543)
+    rf: T0:31
+    hb: T-1:0
+  T0:83: Read^req Plain ConditionNode#7.AbstractQueuedSynchronizer$ConditionNode.nextWaiter at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1545)
+    hb: T-1:0
+  T0:84: Read^rsp Plain ConditionNode#7.AbstractQueuedSynchronizer$ConditionNode.nextWaiter read=null at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1545)
+    rf: T0:18
+    hb: T-1:0
+  T0:85: Read^req Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.status at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1546)
+    hb: T-1:0
+  T0:86: Read^rsp Volatile ConditionNode#7.AbstractQueuedSynchronizer$Node.status read=0 at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1546)
+    rf: T0:62
+    hb: T-1:0
+  T0:87: Write Plain ConditionNode#7.AbstractQueuedSynchronizer$ConditionNode.nextWaiter write=null at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1547)
+    hb: T-1:0
+  T0:88: Write Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.firstWaiter write=null at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1549)
+    hb: T-1:0
+  T0:89: Write Plain ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.lastWaiter write=null at java/util/concurrent/locks/AbstractQueuedSynchronizer$ConditionObject.unlinkCancelledWaiters(AbstractQueuedSynchronizer.java:1553)
+    hb: T-1:0
+  T0:90: Read^req Plain EventStructureUnsafeBitwiseUpdateTest#1.lock final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureUnsafeBitwiseUpdateTest.operation(EventStructureUnsafeBitwiseUpdateTest.kt:32)
+    hb: T-1:0
+  T0:91: Read^rsp Plain EventStructureUnsafeBitwiseUpdateTest#1.lock final read=ReentrantLock#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureUnsafeBitwiseUpdateTest.operation(EventStructureUnsafeBitwiseUpdateTest.kt:32)
+    rf: T0:2
+    hb: T-1:0
+  T0:92: Read^req Plain ReentrantLock#2.sync final at java/util/concurrent/locks/ReentrantLock.unlock(ReentrantLock.java:494)
+    hb: T-1:0
+  T0:93: Read^rsp Plain ReentrantLock#2.sync final read=NonfairSync#3 at java/util/concurrent/locks/ReentrantLock.unlock(ReentrantLock.java:494)
+    rf: T-1:0
+    hb: T-1:0
+  T0:94: Read^req Volatile NonfairSync#3.AbstractQueuedSynchronizer.state at java/util/concurrent/locks/AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)
+    hb: T-1:0
+  T0:95: Read^rsp Volatile NonfairSync#3.AbstractQueuedSynchronizer.state read=1 at java/util/concurrent/locks/AbstractQueuedSynchronizer.getState(AbstractQueuedSynchronizer.java:532)
+    rf: T0:75
+    hb: T-1:0
+  T0:96: Read^req Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread at java/util/concurrent/locks/AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)
+    hb: T-1:0
+  T0:97: Read^rsp Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread read=TestThread#5 at java/util/concurrent/locks/AbstractOwnableSynchronizer.getExclusiveOwnerThread(AbstractOwnableSynchronizer.java:84)
+    rf: T0:76
+    hb: T-1:0
+  T0:98: Write Plain NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread write=null at java/util/concurrent/locks/AbstractOwnableSynchronizer.setExclusiveOwnerThread(AbstractOwnableSynchronizer.java:74)
+    hb: T-1:0
+  T0:99: Write Volatile NonfairSync#3.AbstractQueuedSynchronizer.state write=0 at java/util/concurrent/locks/AbstractQueuedSynchronizer.setState(AbstractQueuedSynchronizer.java:541)
+    hb: T-1:0
+  T0:100: Read^req Volatile NonfairSync#3.AbstractQueuedSynchronizer.head at java/util/concurrent/locks/AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1008)
+    hb: T-1:0
+  T0:101: Read^rsp Volatile NonfairSync#3.AbstractQueuedSynchronizer.head read=null at java/util/concurrent/locks/AbstractQueuedSynchronizer.release(AbstractQueuedSynchronizer.java:1008)
+    rf: T-1:0
+    hb: T-1:0
+  T0:102: Actor End operation()
+    hb: T-1:0
+  T0:103: ThreadFinish [0]
+    hb: T-1:0
+Coherence (adjacent atomic writes, including initialization):
+  ConditionNode#7.AbstractQueuedSynchronizer$Node.status: T0:18 -> T0:57 -> T0:62
+  NonfairSync#3.AbstractQueuedSynchronizer.state: T-1:0 -> T0:14 -> T0:44 -> T0:75 -> T0:99
+Additional coherence edges involving plain writes:
+  ConditionNode#7.AbstractQueuedSynchronizer$ConditionNode.nextWaiter: T0:18 -> T0:87
+  ConditionNode#7.AbstractQueuedSynchronizer$Node.status: T0:18 -> T0:28, T0:28 -> T0:57, T0:28 -> T0:62
+  ConditionNode#7.AbstractQueuedSynchronizer$Node.waiter: T0:18 -> T0:23
+  ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.firstWaiter: T-1:0 -> T0:31, T-1:0 -> T0:88, T0:31 -> T0:88
+  ConditionObject#6.AbstractQueuedSynchronizer$ConditionObject.lastWaiter: T-1:0 -> T0:32, T-1:0 -> T0:89, T0:32 -> T0:89
+  NonfairSync#3.AbstractOwnableSynchronizer.exclusiveOwnerThread: T-1:0 -> T0:15, T-1:0 -> T0:43, T-1:0 -> T0:76, T-1:0 -> T0:98, T0:15 -> T0:43, T0:15 -> T0:76, T0:15 -> T0:98, T0:43 -> T0:76, T0:43 -> T0:98, T0:76 -> T0:98
