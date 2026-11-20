@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.nativecalls
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.RandomTracker
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.toMethodSignature
@@ -20,9 +21,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 internal fun getDeterministicRandomMethodDescriptorOrNull(
     methodCallInfo: MethodCallInfo,
+    randomTracker: RandomTracker,
+    threadId: Int,
 ): DeterministicMethodDescriptor<*, *>? {
     if (methodCallInfo.isRandomClassProbesMethod()) {
-        return PureDeterministicMethodDescriptor(methodCallInfo) { _, _ -> Injections.nextInt() }
+        return PureDeterministicMethodDescriptor(methodCallInfo) { _, _ -> randomTracker.nextInt(threadId) }
     }
     if (methodCallInfo.ownerType.isSecureRandom() && methodCallInfo.methodSignature.isSecureRandomMethodToSkip()) {
         return null
@@ -36,7 +39,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
             require(currentMethodType == byteArrayMethodType || currentMethodType == secureByteArrayMethodType) {
                 "nextBytes descriptor is not $byteArrayMethodType and $secureByteArrayMethodType: $methodCallInfo"
             }
-            RandomBytesDeterministicMethodDescriptor(methodCallInfo)
+            RandomBytesDeterministicMethodDescriptor(methodCallInfo, randomTracker, threadId)
         }
 
         else -> {
@@ -46,7 +49,7 @@ internal fun getDeterministicRandomMethodDescriptorOrNull(
                 "Only primitive arguments and ByteArrays are supported for default deterministic random: $methodCallInfo"
             }
             PureDeterministicMethodDescriptor(methodCallInfo) { _: Any?, params: Array<Any?>, ->
-                callWithGivenReceiver(Injections.deterministicRandom(), params)
+                callWithGivenReceiver(randomTracker.getThreadLocalRandom(threadId), params)
             }
         }
     }
@@ -91,10 +94,12 @@ private fun getPublicOrProtectedClassMethods(clazz: Class<*>): Set<MethodSignatu
     classMethodsImpl.getOrPut(clazz) { clazz.getMethodsToReplace().toSet() }
 
 private data class RandomBytesDeterministicMethodDescriptor(
-    override val methodCallInfo: MethodCallInfo
+    override val methodCallInfo: MethodCallInfo,
+    val randomTracker: RandomTracker,
+    val threadId: Int,
 ) : DeterministicMethodDescriptor<Result<ByteArray>, Any>() {
     override fun runFake(receiver: Any?, params: Array<Any?>): Result<Any> = runCatching {
-        callWithGivenReceiver(Injections.deterministicRandom(), params)
+        callWithGivenReceiver(randomTracker.getThreadLocalRandom(threadId), params)
         Injections.VOID_RESULT
     }
 

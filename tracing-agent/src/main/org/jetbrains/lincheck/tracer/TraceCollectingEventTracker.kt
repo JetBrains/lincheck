@@ -933,18 +933,6 @@ class TraceCollectingEventTracker(
         threadData.exitLoop()
     }
 
-    override fun getThreadLocalRandom(): InjectedRandom  = runInsideIgnoredSection {
-        val msg = "Trace Recorder mode doesn't support Random calls determinism"
-        Logger.error { msg }
-        error(msg)
-    }
-
-    override fun randomNextInt(): Int = runInsideIgnoredSection {
-        val msg = "Trace Recorder mode doesn't support Random calls determinism"
-        Logger.error { msg }
-        error(msg)
-    }
-
     override fun shouldInvokeBeforeEvent(): Boolean = runInsideIgnoredSection {
         Logger. error { "Trace Recorder mode doesn't support IDEA Plugin integration" }
         return false

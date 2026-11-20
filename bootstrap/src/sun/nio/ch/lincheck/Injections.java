@@ -684,20 +684,6 @@ public class Injections {
     }
 
     /**
-     * Called from the instrumented code replacing random `int` generation with a deterministic random value.
-     */
-    public static int nextInt() {
-        return getEventTracker().randomNextInt();
-    }
-
-    /**
-     * Called from the instrumented code to get a random instance that is deterministic and controlled by Lincheck.
-     */
-    public static InjectedRandom deterministicRandom() {
-        return getEventTracker().getThreadLocalRandom();
-    }
-
-    /**
      * Called from the instrumented code before each field read.
      */
     public static void beforeReadField(ThreadDescriptor descriptor, int codeLocation, Object obj, int fieldId, ResultInterceptor interceptor) {

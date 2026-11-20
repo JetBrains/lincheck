@@ -109,6 +109,9 @@ internal abstract class ManagedStrategy(
     // Tracker of the thread parking.
     protected abstract val parkingTracker: ParkingTracker
 
+    // Tracker of per-thread deterministic random number generators.
+    protected val randomTracker: RandomTracker = RandomTracker()
+
     // Cache for evaluated invoke dynamic call sites
     private val invokeDynamicCallSites = ConcurrentHashMap<ConstantDynamic, CallSite>()
 
@@ -150,9 +153,6 @@ internal abstract class ManagedStrategy(
 
     // Last coroutine cancellation trace point, occurred in the current thread.
     private var lastCoroutineCancellationTracePoint = mutableThreadMapOf<CoroutineCancellationTracePoint?>()
-
-    // Random instances with fixed seeds to replace random calls in instrumented code.
-    private var randoms = mutableThreadMapOf<InjectedRandom>()
 
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
     private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = settings.guarantees
@@ -764,10 +764,10 @@ internal abstract class ManagedStrategy(
         suspendedFunctionsStack[threadId] = mutableListOf()
         shadowStack[threadId] = arrayListOf(ShadowStackFrame(testInstance))
         analysisSectionStack[threadId] = arrayListOf()
-        randoms[threadId] = InjectedRandom(threadId + 239L)
         objectTracker.registerThread(threadId, thread)
         monitorTracker.registerThread(threadId)
         parkingTracker.registerThread(threadId)
+        randomTracker.registerThread(threadId)
         return threadId
     }
 
@@ -779,7 +779,7 @@ internal abstract class ManagedStrategy(
         suspendedFunctionsStack.clear()
         shadowStack.clear()
         analysisSectionStack.clear()
-        randoms.clear()
+        randomTracker.reset()
         loopDetector.resetAll()
     }
 
@@ -1575,14 +1575,6 @@ internal abstract class ManagedStrategy(
     private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
         obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
 
-    override fun getThreadLocalRandom(): InjectedRandom = runInsideIgnoredSection {
-        return randoms[threadScheduler.getCurrentThreadId()]!!
-    }
-
-    override fun randomNextInt(): Int = runInsideIgnoredSection {
-        getThreadLocalRandom().nextInt()
-    }
-
     override fun getCachedInvokeDynamicCallSite(
         name: String,
         descriptor: String,
@@ -1786,7 +1778,7 @@ internal abstract class ManagedStrategy(
             methodId = methodId,
         )
         // obtain deterministic method descriptor if required
-        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo)
+        val deterministicMethodDescriptor = getDeterministicMethodDescriptorOrNull(receiver, params, methodCallInfo, randomTracker, threadId)
 
         if (deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.processDeterministicMethodCall(receiver, params, methodCallInfo, interceptor)

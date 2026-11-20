@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.nativecalls
 
+import org.jetbrains.kotlinx.lincheck.strategy.managed.RandomTracker
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.io.getDeterministicFileMethodDescriptorOrNull
 import org.jetbrains.lincheck.descriptors.MethodSignature
 import org.jetbrains.lincheck.descriptors.Types
@@ -52,9 +53,15 @@ internal fun <State, T> DeterministicMethodDescriptor<State, T>.saveFirstResultW
     receiver: Any?, params: Array<Any?>, result: Result<Any?>, saveState: (State) -> Unit
 ) = saveFirstResult(receiver, params, result.map { it as T }, saveState)
 
-internal fun getDeterministicMethodDescriptorOrNull(receiver: Any?, params: Array<Any?>, methodCallInfo: MethodCallInfo): DeterministicMethodDescriptor<*, *>? {
+internal fun getDeterministicMethodDescriptorOrNull(
+    receiver: Any?,
+    params: Array<Any?>,
+    methodCallInfo: MethodCallInfo,
+    randomTracker: RandomTracker,
+    threadId: Int,
+): DeterministicMethodDescriptor<*, *>? {
     getDeterministicTimeMethodDescriptorOrNull(methodCallInfo)?.let { return it }
-    getDeterministicRandomMethodDescriptorOrNull(methodCallInfo)?.let { return it }
+    getDeterministicRandomMethodDescriptorOrNull(methodCallInfo, randomTracker, threadId)?.let { return it }
     getDeterministicFileMethodDescriptorOrNull(receiver, params, methodCallInfo)?.let { return it }
     return null
 }

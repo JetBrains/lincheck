@@ -72,9 +72,6 @@ public interface EventTracker {
     void onThrow(ThreadDescriptor descriptor, int codeLocation, Throwable exception);
     void onCatch(ThreadDescriptor descriptor, int codeLocation, Throwable exception);
 
-    InjectedRandom getThreadLocalRandom();
-    int randomNextInt();
-
     CallSite getCachedInvokeDynamicCallSite(
             String name,
             String descriptor,
