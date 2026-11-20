@@ -348,15 +348,22 @@ class AtomicPrimitiveMemoryLocation(
 
     private val getMethod by lazy {
         // TODO: can we use getOpaque() here?
+        // `Class.methods` has no specified order: a subclass that overloads `get` with extra parameters
+        // (e.g. an indexed `get(int)`) must not shadow the real, no-argument `AtomicXxx.get()`.
         resolveClass(clazz).methods
-            .first { it.name == "get" }
+            .first { it.name == "get" && it.parameterCount == 0 }
             .apply { isAccessible = true }
     }
 
     private val setMethod by lazy {
         // TODO: can we use setOpaque() here?
+        // `Class.methods` has no specified order, and a subclass may declare another one-argument `set`
+        // overload (e.g. `set(String)`) that would be picked before the real `AtomicXxx.set(value)` and then
+        // crash when invoked with the atomic's value. The value type is exactly what `get()` returns, so
+        // resolve the setter by that parameter type rather than by parameter count alone.
+        val valueType = getMethod.returnType
         resolveClass(clazz).methods
-            .first { it.name == "set" }
+            .first { it.name == "set" && it.parameterCount == 1 && it.parameterTypes[0] == valueType }
             .apply { isAccessible = true }
     }
 
