@@ -1342,6 +1342,7 @@ internal abstract class ManagedStrategy(
         resultInterceptor: ResultInterceptor?,
     ): Unit = threadDescriptor.runInsideIgnoredSection {
         if (array == null) return // ignore, `NullPointerException` will be thrown
+        if (!isArrayIndexInBounds(array, index)) return // ignore, `ArrayIndexOutOfBoundsException` will be thrown
         updateSnapshotOnArrayElementAccess(array, index)
         if (!shouldTrackArrayAccess(array)) {
             return
@@ -1491,6 +1492,9 @@ internal abstract class ManagedStrategy(
         val threadId = threadScheduler.getCurrentThreadId()
         if (array == null) {
             return // ignore, `NullPointerException` will be thrown
+        }
+        if (!isArrayIndexInBounds(array, index)) {
+            return // ignore, `ArrayIndexOutOfBoundsException` will be thrown
         }
         updateSnapshotOnArrayElementAccess(array, index)
         objectTracker.registerObjectLink(fromObject = array, toObject = value)
@@ -2722,6 +2726,9 @@ internal abstract class ManagedStrategy(
         return objectTracker.enumerateAllObjects()
     }
 }
+
+private fun isArrayIndexInBounds(array: Any, index: Int): Boolean =
+    index >= 0 && index < java.lang.reflect.Array.getLength(array)
 
 private fun TracePoint.isActorMethodCallTracePoint() =
     (this is MethodCallTracePoint && this.isRootCall)
