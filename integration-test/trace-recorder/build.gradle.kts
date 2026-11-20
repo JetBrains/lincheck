@@ -57,7 +57,7 @@ tasks {
         TraceAgentIntegrationTestSuite.Basic, TraceAgentIntegrationTestSuite.All -> copyClasspathClashTestProjects()
         else -> emptyList()
     }
-    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "trace-recorder-fat.jar", prerequisites)
+    val copyTraceRecorderFatJar = copyTraceAgentFatJar(project(":trace-recorder"), "traceRecorderFatJar", prerequisites)
 
     // Optional deterministic sharding, e.g. `-PintegrationTestShard=2/4`,
     // used to parallelize the (large) suite across separate CI build configurations.

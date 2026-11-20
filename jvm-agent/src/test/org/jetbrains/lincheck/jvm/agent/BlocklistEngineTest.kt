@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.settings.BlocklistRule
-import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
-import org.jetbrains.lincheck.settings.SensitiveAreaBlocklistRegistry
-import org.jetbrains.lincheck.settings.blocklist.BlocklistEngine
+import org.jetbrains.lincheck.settings.privacy.BlocklistRule
+import org.jetbrains.lincheck.settings.privacy.SensitiveAreaBlocklist
+import org.jetbrains.lincheck.settings.privacy.SensitiveAreaBlocklistRegistry
+import org.jetbrains.lincheck.settings.privacy.BlocklistEngine
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull

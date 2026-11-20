@@ -30,6 +30,8 @@ rootProject.name = name
 include(":lincheck")
 include(":trace-recorder")
 include(":live-debugger")
+include(":live-debugger-protocol")
+include(":trace-recorder-protocol")
 // Common modules
 include(":bootstrap")
 include(":jvm-agent-wrapper")

@@ -16,7 +16,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointTransformer
-import org.jetbrains.lincheck.trace.network.TracingServer
+import org.jetbrains.lincheck.trace.network.TraceTransport
 import java.lang.instrument.Instrumentation
 
 /**
@@ -40,7 +40,7 @@ sealed class TracingEntryPoint {
  */
 abstract class TracingAgent {
 
-    var server: TracingServer? = null
+    var server: TraceTransport? = null
         protected set
 
     // entry point for a statically attached java agent
@@ -170,5 +170,5 @@ abstract class TracingAgent {
         }
     }
 
-    protected abstract fun createTracingServer(): TracingServer?
+    protected abstract fun createTracingServer(): TraceTransport?
 }

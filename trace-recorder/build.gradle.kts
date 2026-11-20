@@ -1,4 +1,3 @@
-import org.gradle.kotlin.dsl.named
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -30,6 +29,7 @@ sourceSets {
         implementation(project(":common"))
         implementation(project(":jvm-agent"))
         implementation(project(":trace"))
+        implementation(project(":trace-recorder-protocol"))
         implementation(project(":tracing-agent"))
 
         api(kotlin("reflect"))
@@ -48,13 +48,6 @@ configurations.runtimeClasspath {
 }
 
 tasks {
-    named<JavaCompile>("compileTestJava") {
-        setupJavaToolchain(project)
-    }
-    named<KotlinCompile>("compileTestKotlin") {
-        setupKotlinToolchain(project)
-    }
-
     withType<KotlinCompile> {
         getAccessToInternalDefinitionsOf(
             project(":common"),

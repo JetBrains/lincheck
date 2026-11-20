@@ -233,7 +233,11 @@ internal class LincheckClassVisitor(
                 }
             } else {
                 chain.addTransformer { adapter, mv ->
-                    SnapshotBreakpointTransformer(fileName, className, methodName, desc, access, methodInfo, context, adapter, mv, config, breakpoints, classInformation.enclosingClass, classVisitor.loader)
+                    SnapshotBreakpointTransformer(
+                        fileName, className, methodName, desc, access, methodInfo, context, adapter, mv,
+                        config, breakpoints, classInformation.enclosingClass, classVisitor.loader,
+                        checkNotNull(config.breakpointExpressionCompiler),
+                    )
                 }
             }
         }

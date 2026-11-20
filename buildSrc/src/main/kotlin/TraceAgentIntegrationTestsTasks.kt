@@ -15,6 +15,8 @@ import org.gradle.api.file.RelativePath
 import org.gradle.api.tasks.Copy
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.bundling.Jar
+import org.gradle.kotlin.dsl.named
 import org.gradle.kotlin.dsl.register
 import java.io.File
 import java.util.Properties
@@ -105,8 +107,6 @@ fun Project.registerTraceAgentIntegrationTestsPrerequisites(projectNames: Set<St
 
     return tasks.register("traceAgentIntegrationTestsPrerequisites") {
         prerequisite.forEach { dependsOn(it) }
-        dependsOn(":trace-recorder:traceRecorderFatJar")
-        dependsOn(":live-debugger:liveDebuggerFatJar")
     }
 }
 
@@ -145,25 +145,17 @@ fun Test.exposeHostGradleInstallation() {
 }
 
 /**
- * This function is required to copy `trace-recorder-fat.jar` file from
- * the corresponding project into the lincheck's build directory. This allows integration tests to see
- * the fat-jar and add a path to it via `-javaagent` VM flag.
- *
- * @param fromProject trace-recorder project from which to copy the fat-jar.
- * @param fatJarName expected fat-jar name.
- * @param prerequisites preparation owned by this integration-test module.
+ * Stages the selected agent's fat jar for integration tests without building the other agent.
  */
 fun Project.copyTraceAgentFatJar(
     fromProject: Project,
-    fatJarName: String,
+    fatJarTaskName: String,
     prerequisites: TaskProvider<Task>,
 ): TaskProvider<Copy> {
-    val copyTraceAgentFatJar = tasks.register<Copy>("${fromProject.name}_copyAgentFatJar") {
+    val fatJar = fromProject.tasks.named<Jar>(fatJarTaskName)
+    return tasks.register<Copy>("${fromProject.name}_copyAgentFatJar") {
         dependsOn(prerequisites)
-        val fatJarFile = fromProject.layout.buildDirectory.file("libs/$fatJarName")
-        from(fatJarFile)
+        from(fatJar.flatMap { it.archiveFile })
         into(layout.buildDirectory.dir("libs"))
     }
-
-    return copyTraceAgentFatJar
 }

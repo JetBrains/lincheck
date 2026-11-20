@@ -10,12 +10,12 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.settings.BlocklistFileParser
-import org.jetbrains.lincheck.settings.BlocklistRule
-import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
-import org.jetbrains.lincheck.settings.SensitiveAreaBlocklistRegistry
-import org.jetbrains.lincheck.settings.decodeBlocklistsFromString
-import org.jetbrains.lincheck.settings.encodeToString
+import org.jetbrains.lincheck.settings.privacy.BlocklistFileParser
+import org.jetbrains.lincheck.settings.privacy.BlocklistRule
+import org.jetbrains.lincheck.settings.privacy.SensitiveAreaBlocklist
+import org.jetbrains.lincheck.settings.privacy.SensitiveAreaBlocklistRegistry
+import org.jetbrains.lincheck.settings.privacy.decodeBlocklistsFromString
+import org.jetbrains.lincheck.settings.privacy.encodeToString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

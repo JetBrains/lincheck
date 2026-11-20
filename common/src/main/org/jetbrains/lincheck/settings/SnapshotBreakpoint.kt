@@ -1,0 +1,571 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2026 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.jetbrains.lincheck.settings
+
+import org.jetbrains.lincheck.util.*
+import java.io.File
+import java.util.UUID
+import java.util.*
+
+/**
+ * Name of the environment variable carrying the base URL of the control-plane service.
+ */
+const val LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR = "LIVE_DEBUGGER_CONTROL_PLANE_URL"
+
+/** The agent takes its blocklist and data-redaction policy from the control plane's heartbeat responses. */
+const val POLICY_SOURCE_CONTROL_PLANE = "controlPlane"
+
+/** The agent takes its blocklist and data-redaction policy from the deployment's startup files. */
+const val POLICY_SOURCE_DEPLOYMENT = "deployment"
+
+/**
+ * Name of the environment variable carrying the API token presented to the control plane
+ * named by [LIVE_DEBUGGER_CONTROL_PLANE_URL_ENV_VAR].
+ */
+const val LIVE_DEBUGGER_CONTROL_PLANE_TOKEN_ENV_VAR = "LIVE_DEBUGGER_CONTROL_PLANE_TOKEN"
+
+/**
+ * Internal simple integer-based identifiers for breakpoints.
+ * These identifiers are only used internally within javaagent ---
+ * external clients should identify breakpoints by [UUID] instead.
+ */
+typealias BreakpointId = Int
+
+/**
+ * [SnapshotBreakpoint] stores information about non-suspending snapshot-based breakpoints.
+ *
+ * [SnapshotBreakpoint]-s are identified and compared by their [uuid].
+ * Same-line breakpoints with different UUIDs are deliberately distinct;
+ * so multiple clients can each install their own breakpoint on the same source code line.
+ *
+ * **Content-identity contract.**
+ * The [uuid] identifies the breakpoint's *content*, not a stable "slot" that survives breakpoint properties' edits:
+ * any change to the breakpoint's content (condition, watches, hit limit, …) MUST produce a fresh [uuid],
+ * and a [uuid] is never reused across content changes.
+ * Any atomic breakpoint update API must respect this contract and not use breakpoint UUID
+ * as a breakpoint's identity persisting breakpoint property changes.
+ *
+ * @property uuid The client-assigned globally unique identifier for this breakpoint.
+ * @property className The fully qualified name of the class where the breakpoint is set.
+ * @property fileName The name of the file containing the breakpoint.
+ * @property lineNumber The specific line number in the file where the breakpoint is set.
+ * @property conditionClassName The class name that provides the conditional logic for the breakpoint if any.
+ *   Should be unique withing one JVM instance.
+ * @property conditionFactoryMethodName The factory method name in the [conditionClassName] that generates the condition logic, if any.
+ * @property conditionClasses Bytecode of every class produced when compiling the condition, keyed by fully
+ *   qualified class name: the main [conditionClassName] plus any auxiliary classes the compiler emits for it
+ *   (e.g. the Kotlin pipeline's `$Companion` holding the `createFactory` factory, or synthetic lambda classes).
+ *   The agent defines all of them; members of the *user's* classes are reached via reflection, not shipped here.
+ *   Null if there is no condition.
+ * @property watchClassName The class name that provides watch logic, if any.
+ *   Should be unique withing one JVM instance.
+ * @property watchFactoryMethodName The factory method name in [watchClassName] that generates the watch logic, if any.
+ * @property watchClasses Bytecode of every class produced when compiling the watches, keyed by fully qualified
+ *   class name (main [watchClassName] plus any auxiliaries the compiler emits, as for [conditionClasses]).
+ *   The agent defines all of them. Null if there are no watches.
+ * @property hitLimit The maximum number of times the breakpoint can be hit before it is automatically disabled.
+ * @property watchLabels Ordered watch expressions corresponding to values returned by the watch supplier.
+ *   Null when no label metadata is available — a payload encoded before labels existed, or a startup INI
+ *   without the `watchLabels` key. Capture must not confuse that with "this breakpoint has no watches".
+ * @property expressionLanguage The language of every source-carried expression on this breakpoint.
+ * @property conditionSource The condition as source text, for agents advertising
+ *   `AGENT_COMPILED_EXPRESSIONS_V1`: the agent compiles it at instrumentation time in the language
+ *   of [fileName]. Ignored when [conditionClasses] already carries precompiled bytecode.
+ * @property watchSources Watch expressions as source text, compiled agent-side under the same
+ *   capability. Ignored when [watchClasses] already carries precompiled bytecode.
+ */
+class SnapshotBreakpoint(
+    val uuid: UUID,
+    val className: String,
+    val fileName: String,
+    val lineNumber: Int,
+    val expressionLanguage: String? = null,
+    val conditionSource: String? = null,
+    val conditionClassName: String? = null,
+    val conditionFactoryMethodName: String? = null,
+    val conditionClasses: Map<String, ByteArray>? = null,
+    val watchSources: List<String>? = null,
+    val watchClassName: String? = null,
+    val watchFactoryMethodName: String? = null,
+    val watchClasses: Map<String, ByteArray>? = null,
+    val hitLimit: Int = DEFAULT_HIT_LIMIT,
+    val watchLabels: List<String>? = null,
+) {
+    /** Main condition class bytecode (first/only entry when no companion classes). */
+    val conditionCodeFragment: ByteArray? get() = conditionClasses?.get(conditionClassName)
+
+    /** Main watch class bytecode. */
+    val watchCodeFragment: ByteArray? get() = watchClasses?.get(watchClassName)
+
+    companion object {
+        const val DEFAULT_HIT_LIMIT = 10_000
+        const val EXPRESSION_LANGUAGE_JAVA = "JAVA"
+        const val EXPRESSION_LANGUAGE_KOTLIN = "KOTLIN"
+        const val EXPRESSION_LANGUAGE_JVM_BYTECODE = "JVM_BYTECODE"
+
+        /**
+         * Decodes a breakpoint from the string produced by [encodeToString].
+         */
+        fun decodeFromString(string: String): SnapshotBreakpoint {
+            val parts = string.split(":")
+
+            // Index order mirrors the SnapshotBreakpoint constructor.
+            val uuid = UUID.fromString(parts[0])
+            val className = parts[1]
+            val fileName = parts[2]
+            val lineNumber = parts[3].toInt()
+
+            val conditionClassName = parts.getOrNull(4)?.let { if (it == "null") null else it }
+            val conditionFactoryMethodName = parts.getOrNull(5)?.let { if (it == "null") null else it }
+            val conditionClasses = decodeClassMap(parts.getOrNull(6))
+            val watchClassName = parts.getOrNull(7)?.let { if (it == "null") null else it }
+            val watchFactoryMethodName = parts.getOrNull(8)?.let { if (it == "null") null else it }
+            val watchClasses = decodeClassMap(parts.getOrNull(9))
+            val hitLimit = parts.getOrNull(10)?.toIntOrNull() ?: DEFAULT_HIT_LIMIT
+            val watchLabels = decodeWatchLabels(parts.getOrNull(11))
+            // Source-carried expressions (AGENT_COMPILED_EXPRESSIONS_V1); appended fields,
+            // so payloads encoded before them still decode.
+            val conditionSource = decodeSourceText(parts.getOrNull(12))
+            val watchSources = decodeWatchLabels(parts.getOrNull(13))
+            val expressionLanguage = parts.getOrNull(14)?.let { if (it == "null") null else it }
+
+            return SnapshotBreakpoint(
+                uuid = uuid,
+                className = className,
+                fileName = fileName,
+                lineNumber = lineNumber,
+                expressionLanguage = expressionLanguage,
+                conditionClassName = conditionClassName,
+                conditionFactoryMethodName = conditionFactoryMethodName,
+                conditionClasses = conditionClasses,
+                watchClassName = watchClassName,
+                watchFactoryMethodName = watchFactoryMethodName,
+                watchClasses = watchClasses,
+                hitLimit = hitLimit,
+                watchLabels = watchLabels,
+                conditionSource = conditionSource,
+                watchSources = watchSources,
+            )
+        }
+
+        /**
+         * Decodes a list of breakpoints from a list of strings produced by [encodeToString].
+         */
+        fun decodeListFromString(string: String): List<SnapshotBreakpoint> {
+            return string.split(",").map { decodeFromString(it) }
+        }
+
+        fun encodeClassMap(classes: Map<String, ByteArray>?): String {
+            if (classes.isNullOrEmpty()) return "null"
+            return classes.entries.joinToString(";") { (name, bytes) ->
+                "$name|${Base64.getEncoder().encodeToString(bytes)}"
+            }
+        }
+
+        internal fun decodeClassMap(encoded: String?): Map<String, ByteArray>? {
+            if (encoded == null || encoded == "null") return null
+            val result = LinkedHashMap<String, ByteArray>()
+            for (entry in encoded.split(";")) {
+                val sep = entry.indexOf('|')
+                if (sep == -1) throw IllegalArgumentException("Malformed class-map entry (missing '|' separator): $entry")
+                val name = entry.substring(0, sep)
+                val bytes = try {
+                    Base64.getDecoder().decode(entry.substring(sep + 1))
+                } catch (e: IllegalArgumentException) {
+                    throw IllegalArgumentException("Invalid Base64 bytecode for class '$name'", e)
+                }
+                result[name] = bytes
+            }
+            return result
+        }
+
+        /** Encodes complete watch labels as one delimiter-safe Base64 field. */
+        fun encodeWatchLabels(labels: List<String>?): String {
+            if (labels.isNullOrEmpty()) return "null"
+            return labels.joinToString(";") { label ->
+                Base64.getEncoder().encodeToString(label.toByteArray(Charsets.UTF_8))
+            }
+        }
+
+        /** Encodes one source-text field (condition) as delimiter-safe Base64, or `"null"`. */
+        fun encodeSourceText(source: String?): String =
+            if (source.isNullOrEmpty()) "null"
+            else Base64.getEncoder().encodeToString(source.toByteArray(Charsets.UTF_8))
+
+        /** Decodes the field produced by [encodeSourceText]. */
+        fun decodeSourceText(encoded: String?): String? {
+            if (encoded == null || encoded == "null") return null
+            return try {
+                String(Base64.getDecoder().decode(encoded), Charsets.UTF_8)
+            } catch (e: IllegalArgumentException) {
+                throw IllegalArgumentException("Invalid Base64 expression source", e)
+            }
+        }
+
+        /**
+         * Decodes the field produced by [encodeWatchLabels].
+         *
+         * Returns `null` when the field is absent or carries no labels, so a breakpoint that never
+         * shipped label metadata stays distinguishable from one whose labels are known.
+         */
+        fun decodeWatchLabels(encoded: String?): List<String>? {
+            if (encoded == null || encoded == "null") return null
+            return encoded.split(";").map { label ->
+                try {
+                    String(Base64.getDecoder().decode(label), Charsets.UTF_8)
+                } catch (e: IllegalArgumentException) {
+                    throw IllegalArgumentException("Invalid Base64 watch label", e)
+                }
+            }
+        }
+    }
+    
+    /**
+     * Encodes this breakpoint as a colon-separated string accepted by [decodeFromString].
+     *
+     * Format: `uuid:className:fileName:lineNumber:conditionClassName:conditionFactoryMethodName:conditionClasses:watchClassName:watchFactoryMethodName:watchClasses:hitLimit:watchLabels`
+     *
+     * Class maps are encoded as semicolon-separated `name|base64` pairs
+     * (e.g. `com.Foo|CAFEBABE;com.Foo$Companion|DEADBEEF`), or the literal `"null"`.
+     */
+    fun encodeToString(): String {
+        val parts = mutableListOf(
+            uuid.toString(),
+            className,
+            fileName,
+            lineNumber.toString(),
+            conditionClassName ?: "null",
+            conditionFactoryMethodName ?: "null",
+            encodeClassMap(conditionClasses),
+            watchClassName ?: "null",
+            watchFactoryMethodName ?: "null",
+            encodeClassMap(watchClasses),
+            hitLimit.toString(),
+            encodeWatchLabels(watchLabels),
+            encodeSourceText(conditionSource),
+            encodeWatchLabels(watchSources),
+            expressionLanguage ?: "null",
+        )
+        // The source-expression fields are appended only when carried, so a breakpoint without
+        // them encodes exactly as before the fields existed.
+        while (parts.size > 12 && parts.last() == "null") parts.removeAt(parts.size - 1)
+        return parts.joinToString(":")
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is SnapshotBreakpoint) return false
+        return (uuid == other.uuid)
+    }
+
+    override fun hashCode(): Int =
+        uuid.hashCode()
+
+    override fun toString(): String {
+        return buildString {
+            append("Breakpoint #$uuid at $fileName:$lineNumber")
+
+            append("[")
+            append("class=$className,")
+            if (conditionClassName != null) {
+                append("condition=$conditionClassName,")
+            }
+            if (conditionFactoryMethodName != null) {
+                append("factory=$conditionFactoryMethodName,")
+            }
+            conditionCodeFragment?.let {
+                append("code=${it.toHexPreview(8)},")
+            }
+            if (watchClassName != null) {
+                append("watch=$watchClassName,")
+            }
+            if (watchFactoryMethodName != null) {
+                append("watchFactory=$watchFactoryMethodName,")
+            }
+            watchCodeFragment?.let {
+                append("watchCode=${it.toHexPreview(8)},")
+            }
+            append("hitLimit=$hitLimit")
+            append("]")
+        }
+    }
+}
+
+/**
+ * Kind of breakpoint expression an unsafety notification refers to.
+ */
+enum class BreakpointExpressionSlot { Condition, Watch }
+
+fun List<SnapshotBreakpoint>.encodeToString(): String =
+    joinToString(",") { it.encodeToString() }
+
+/**
+ * Class-only pre-filter: returns true when [className] (in canonical form)
+ * is this breakpoint's declared owner or a `<owner>$...` generated descendant.
+ *
+ * Used when the source file name is not available.
+ * The file-aware overload below narrows the match.
+ */
+fun SnapshotBreakpoint.isApplicableTo(className: String): Boolean =
+    className.startsWith(this.className)
+
+/**
+ * Returns true if this breakpoint applies to
+ * a class whose canonical name is [className] residing in source file [sourceFileName].
+ * A breakpoint applies to its declared owner class or to a generated JVM descendant
+ * compiled from the same source file.
+ *
+ * Kotlin lambdas, SAM conversions, suspend continuations, and anonymous objects
+ * compile into separate JVM classes whose names start with `<owner>$`,
+ * so strict owner matching would drop live breakpoints set on such source lines.
+ */
+fun SnapshotBreakpoint.isApplicableTo(className: String, sourceFileName: String): Boolean =
+    this.className == className || (isApplicableTo(className) && fileName == sourceFileName)
+
+/**
+ * Class-only pre-filter: returns the breakpoints whose
+ * owner class is [className] or a `<owner>$...` generated descendant.
+ *
+ * Used when the source file name is not available.
+ * The file-aware overload below narrows the match.
+ */
+fun Iterable<SnapshotBreakpoint>.applicableTo(className: String): List<SnapshotBreakpoint> =
+    filter { it.isApplicableTo(className) }
+
+/**
+ * Returns the breakpoints applicable to a class with the given canonical name and source file.
+ * See [SnapshotBreakpoint.isApplicableTo] for the matching rules.
+ *
+ * Class names should be passed in **canonical** form (e.g., `com.example.Foo$Bar`).
+ */
+fun Iterable<SnapshotBreakpoint>.applicableTo(className: String, sourceFileName: String): List<SnapshotBreakpoint> =
+    filter { it.isApplicableTo(className, sourceFileName) }
+
+/**
+ * Keys of the breakpoints INI format, shared by [BreakpointsFileParser] and [BreakpointsFileWriter].
+ *
+ * Source-carried expressions, compiled by the agent (AGENT_COMPILED_EXPRESSIONS_V1):
+ * `conditionSource` is plain source text; `watchSources` uses the same
+ * semicolon-separated Base64 list encoding as `watchLabels`.
+ */
+private object IniKey {
+    const val UUID = "uuid"
+    const val CLASS_NAME = "className"
+    const val FILE_NAME = "fileName"
+    const val LINE_NUMBER = "lineNumber"
+    const val HIT_LIMIT = "hitLimit"
+    const val EXPRESSION_LANGUAGE = "expressionLanguage"
+    const val CONDITION_SOURCE = "conditionSource"
+    const val CONDITION_CLASS_NAME = "conditionClassName"
+    const val CONDITION_FACTORY_METHOD_NAME = "conditionFactoryMethodName"
+    const val CONDITION_CLASSES = "conditionClasses"
+    const val WATCH_SOURCES = "watchSources"
+    const val WATCH_CLASS_NAME = "watchClassName"
+    const val WATCH_FACTORY_METHOD_NAME = "watchFactoryMethodName"
+    const val WATCH_CLASSES = "watchClasses"
+    const val WATCH_LABELS = "watchLabels"
+}
+
+/**
+ * Parses information about breakpoints from an INI configuration file.
+ *
+ * Expected file format:
+ *   ```
+ *   # comments are allowed
+ *   ; this is also a comment
+ *
+ *   [Breakpoint 1]
+ *   className = org.example.MyClass
+ *   fileName = MyClass.java
+ *   lineNumber = 101
+ *
+ *   # breakpoint id in a section header can be an arbitrary number
+ *   [Breakpoint 2]
+ *   className = org.example.MyClass
+ *   fileName = MyClass.java
+ *   lineNumber = 120
+ *   # the following properties are optional
+ *   uuid = 550e8400-e29b-41d4-a716-446655440000
+ *   hitLimit = 50
+ *   conditionClassName = org.example.MyCondition
+ *   conditionFactoryMethodName = create
+ *   conditionClasses = org.example.MyCondition|<base64>;org.example.MyCondition$Companion|<base64>
+ *   watchClassName = org.example.MyWatches
+ *   watchFactoryMethodName = createFactory
+ *   watchClasses = org.example.MyWatches|<base64>
+ * ```
+ *
+ * The `uuid` field is optional; if omitted, a random UUID is assigned at parse time.
+ */
+object BreakpointsFileParser {
+
+    private val SECTION_NAME_REGEX = Regex("Breakpoint \\d+")
+
+    /**
+     * Parses breakpoints from an INI file.
+     *
+     * @param filePath Path to the INI file containing breakpoint definitions.
+     * @return List of parsed [SnapshotBreakpoint] objects.
+     */
+    fun parseBreakpointsFile(filePath: String): List<SnapshotBreakpoint> {
+        val file = File(filePath)
+        check(file.exists()) { "Breakpoints file not found: $filePath" }
+        check(file.canRead()) { "Cannot read breakpoints file: $filePath" }
+
+        val content = file.readText()
+        val sections = parseIniSections(content)
+
+        return sections.map { (sectionName, properties) ->
+            try {
+                convertToSnapshotBreakpoint(properties)
+            } catch (e: Exception) {
+                throw IllegalArgumentException(
+                    "Failed to process breakpoint in section [$sectionName]: ${e.message}", e
+                )
+            }
+        }
+    }
+
+    /**
+     * Parses INI content into a list of (section name, key-value map) pairs.
+     */
+    private fun parseIniSections(content: String): List<Pair<String, Map<String, String>>> {
+        val sections = mutableListOf<Pair<String, MutableMap<String, String>>>()
+        var currentSection: Pair<String, MutableMap<String, String>>? = null
+
+        for (line in content.lines()) {
+            val trimmed = line.trim()
+
+            // skip empty lines and comments
+            if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.startsWith(";")) {
+                continue
+            }
+
+            // section header
+            if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                val sectionName = trimmed.substring(1, trimmed.length - 1).trim()
+                require(SECTION_NAME_REGEX.matches(sectionName)) {
+                    "Invalid section header: '$sectionName' (expected 'Breakpoint <number>')"
+                }
+                currentSection = sectionName to mutableMapOf()
+                sections.add(currentSection)
+                continue
+            }
+
+            // key = value
+            val eqIndex = trimmed.indexOf('=')
+            require(eqIndex >= 0) { "Invalid line (expected 'key = value'): $trimmed" }
+
+            val key = trimmed.substring(0, eqIndex).trim()
+            val value = trimmed.substring(eqIndex + 1).trim()
+            val section = currentSection
+            checkNotNull(section) { "Property '$key' found outside of any section" }
+
+            section.second[key] = value
+        }
+
+        return sections
+    }
+
+    private fun convertToSnapshotBreakpoint(properties: Map<String, String>): SnapshotBreakpoint {
+        val className = properties[IniKey.CLASS_NAME]
+        val fileName = properties[IniKey.FILE_NAME]
+
+        requireNotNull(className) { "Missing required property '${IniKey.CLASS_NAME}'" }
+        requireNotNull(fileName) { "Missing required property '${IniKey.FILE_NAME}'" }
+        require(className.isNotBlank()) { "Class name is blank" }
+        require(fileName.isNotBlank()) { "File name is blank" }
+
+        val lineNumber = properties[IniKey.LINE_NUMBER]
+            .ensureNotNull { "Missing required property '${IniKey.LINE_NUMBER}'" }
+            .toIntOrNull()
+
+        requireNotNull(lineNumber) { "Invalid line number: ${properties[IniKey.LINE_NUMBER]}" }
+        require(lineNumber > 0) { "Line number must be positive: $lineNumber" }
+
+        val conditionClassName = properties[IniKey.CONDITION_CLASS_NAME]
+        val conditionFactoryMethodName = properties[IniKey.CONDITION_FACTORY_METHOD_NAME]
+        val conditionClasses = parseClassMap(properties[IniKey.CONDITION_CLASSES])
+
+        val watchClassName = properties[IniKey.WATCH_CLASS_NAME]
+        val watchFactoryMethodName = properties[IniKey.WATCH_FACTORY_METHOD_NAME]
+        val watchClasses = parseClassMap(properties[IniKey.WATCH_CLASSES])
+        val watchLabels = SnapshotBreakpoint.decodeWatchLabels(properties[IniKey.WATCH_LABELS]?.ifBlank { null })
+        val expressionLanguage = properties[IniKey.EXPRESSION_LANGUAGE]?.ifBlank { null }
+        val conditionSource = properties[IniKey.CONDITION_SOURCE]?.ifBlank { null }
+        val watchSources = SnapshotBreakpoint.decodeWatchLabels(properties[IniKey.WATCH_SOURCES]?.ifBlank { null })
+
+        val hitLimit = properties[IniKey.HIT_LIMIT]?.toIntOrNull() ?: SnapshotBreakpoint.DEFAULT_HIT_LIMIT
+
+        val uuid = properties[IniKey.UUID]?.let {
+            try {
+                UUID.fromString(it)
+            } catch (e: IllegalArgumentException) {
+                throw IllegalArgumentException("Invalid UUID: '$it'", e)
+            }
+        } ?: UUID.randomUUID()
+
+        return SnapshotBreakpoint(
+            uuid = uuid,
+            className = className,
+            fileName = fileName,
+            lineNumber = lineNumber,
+            expressionLanguage = expressionLanguage,
+            conditionClassName = conditionClassName,
+            conditionFactoryMethodName = conditionFactoryMethodName,
+            conditionClasses = conditionClasses,
+            watchClassName = watchClassName,
+            watchFactoryMethodName = watchFactoryMethodName,
+            watchClasses = watchClasses,
+            hitLimit = hitLimit,
+            watchLabels = watchLabels,
+            conditionSource = conditionSource,
+            watchSources = watchSources,
+        )
+    }
+
+    private fun parseClassMap(value: String?): Map<String, ByteArray>? =
+        SnapshotBreakpoint.decodeClassMap(value?.ifBlank { null })
+}
+
+/** Writes breakpoints in the INI format [BreakpointsFileParser] reads; optional fields are omitted when absent. */
+object BreakpointsFileWriter {
+
+    fun render(breakpoints: List<SnapshotBreakpoint>): String = buildString {
+        breakpoints.forEachIndexed { index, breakpoint ->
+            if (index > 0) appendLine()
+            appendLine("[Breakpoint ${index + 1}]")
+            appendLine("${IniKey.UUID} = ${breakpoint.uuid}")
+            appendLine("${IniKey.CLASS_NAME} = ${breakpoint.className}")
+            appendLine("${IniKey.FILE_NAME} = ${breakpoint.fileName}")
+            appendLine("${IniKey.LINE_NUMBER} = ${breakpoint.lineNumber}")
+            appendLine("${IniKey.HIT_LIMIT} = ${breakpoint.hitLimit}")
+            breakpoint.expressionLanguage?.let { appendLine("${IniKey.EXPRESSION_LANGUAGE} = $it") }
+            breakpoint.conditionSource?.let { appendLine("${IniKey.CONDITION_SOURCE} = $it") }
+            breakpoint.conditionClassName?.let { appendLine("${IniKey.CONDITION_CLASS_NAME} = $it") }
+            breakpoint.conditionFactoryMethodName?.let { appendLine("${IniKey.CONDITION_FACTORY_METHOD_NAME} = $it") }
+            breakpoint.conditionClasses?.let {
+                appendLine("${IniKey.CONDITION_CLASSES} = ${SnapshotBreakpoint.encodeClassMap(it)}")
+            }
+            breakpoint.watchSources?.takeIf { it.isNotEmpty() }?.let {
+                appendLine("${IniKey.WATCH_SOURCES} = ${SnapshotBreakpoint.encodeWatchLabels(it)}")
+            }
+            breakpoint.watchClassName?.let { appendLine("${IniKey.WATCH_CLASS_NAME} = $it") }
+            breakpoint.watchFactoryMethodName?.let { appendLine("${IniKey.WATCH_FACTORY_METHOD_NAME} = $it") }
+            breakpoint.watchClasses?.let {
+                appendLine("${IniKey.WATCH_CLASSES} = ${SnapshotBreakpoint.encodeClassMap(it)}")
+            }
+            breakpoint.watchLabels?.takeIf { it.isNotEmpty() }?.let {
+                appendLine("${IniKey.WATCH_LABELS} = ${SnapshotBreakpoint.encodeWatchLabels(it)}")
+            }
+        }
+    }
+}

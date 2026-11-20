@@ -10,21 +10,24 @@
 
 package org.jetbrains.lincheck.livedebugger
 
+import org.jetbrains.lincheck.jvm.agent.expressions.BreakpointExpressionCompiler
+import org.jetbrains.lincheck.jvm.agent.expressions.breakpointExpressionCompiler
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.SourceFileClassIndex
 import org.jetbrains.lincheck.jvm.agent.analysis.SafetyViolation
-import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
-import org.jetbrains.lincheck.settings.BlocklistFileParser
+import org.jetbrains.lincheck.livedebugger.expressions.ExpressionCompiler
+import org.jetbrains.lincheck.settings.privacy.BlocklistFileParser
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.BreakpointsFileParser
-import org.jetbrains.lincheck.settings.RedactionFileParser
-import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
+import org.jetbrains.lincheck.settings.privacy.RedactionFileParser
+import org.jetbrains.lincheck.settings.privacy.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
+import org.jetbrains.lincheck.settings.breakpointsConfiguration
 import org.jetbrains.lincheck.settings.isApplicableTo
-import org.jetbrains.lincheck.settings.liveDebuggerSettings
-import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
-import org.jetbrains.lincheck.trace.network.TracingNotificationListener
+import org.jetbrains.lincheck.livedebugger.settings.liveDebuggerSettings
+import org.jetbrains.lincheck.livedebugger.network.LiveDebuggerNotification
+import org.jetbrains.lincheck.livedebugger.network.LiveDebuggerNotificationListener
 import org.jetbrains.lincheck.util.Logger
 import sun.nio.ch.lincheck.BreakpointStorage
 import java.util.UUID
@@ -35,10 +38,15 @@ import java.util.concurrent.atomic.AtomicReference
 
 internal object LiveDebugger {
 
+    init {
+        breakpointsConfiguration = liveDebuggerSettings
+        breakpointExpressionCompiler = BreakpointExpressionCompiler(ExpressionCompiler::resolveCompiledExpressions)
+    }
+
     /**
      * Listener responsible for handling live debugging notifications.
      */
-    private val notificationListener = AtomicReference<TracingNotificationListener>()
+    private val notificationListener = AtomicReference<LiveDebuggerNotificationListener>()
 
     /**
      * Single-threaded executor used to process hit-limit events off the instrumented thread.
@@ -605,7 +613,7 @@ internal object LiveDebugger {
         }
     }
 
-    fun installNotificationListener(listener: TracingNotificationListener) {
+    fun installNotificationListener(listener: LiveDebuggerNotificationListener) {
         val wasAlreadySet = !notificationListener.compareAndSet(null, listener)
         if (wasAlreadySet) {
             error("Live Debugger notification listener was already set")

@@ -138,6 +138,7 @@ fun Project.registerTraceAgentTasks(fatJarName: String, fatJarTaskName: String, 
     }
 
     val agentPayloadJar = tasks.register<Jar>("${fatJarTaskName}Payload") {
+        dependsOn(runtimeClasspath)
         destinationDirectory.set(nestedJarsDir)
         archiveFileName.set("agent-payload.jar")
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE

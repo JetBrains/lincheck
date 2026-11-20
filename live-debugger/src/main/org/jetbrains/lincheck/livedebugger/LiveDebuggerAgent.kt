@@ -30,15 +30,15 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SSL_TRUSTS
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.classUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.methodUnderTracing
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
-import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
+import org.jetbrains.lincheck.settings.privacy.SensitiveAreaBlocklist
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
-import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
+import org.jetbrains.lincheck.livedebugger.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.trace.RUNTIME_JVM
-import org.jetbrains.lincheck.trace.network.AgentHelloMessage
-import org.jetbrains.lincheck.trace.network.LiveDebuggerNotification
-import org.jetbrains.lincheck.trace.network.PROTOCOL_VERSION
-import org.jetbrains.lincheck.trace.network.TracingServer
-import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
+import org.jetbrains.lincheck.livedebugger.network.AgentHelloMessage
+import org.jetbrains.lincheck.livedebugger.network.LiveDebuggerNotification
+import org.jetbrains.lincheck.livedebugger.network.PROTOCOL_VERSION
+import org.jetbrains.lincheck.livedebugger.network.LiveDebuggerServer
+import org.jetbrains.lincheck.livedebugger.network.websocket.LiveDebuggerWebSocketServer
 import org.jetbrains.lincheck.trace.serialization.TRACE_VERSION
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.Tracer
@@ -138,7 +138,7 @@ internal object LiveDebuggerAgent {
 
         override val tracingEntryPointMethodVisitorProvider: TracingEntryPointMethodVisitorProvider? = null
 
-        override fun createTracingServer(): TracingServer? {
+        override fun createTracingServer(): LiveDebuggerServer? {
             return if (TraceAgentParameters.serverEnabled) {
                 startServer(InetSocketAddress(TraceAgentParameters.serverPort))
             } else if (TraceAgentParameters.heartBeatEnabled) {
@@ -149,14 +149,14 @@ internal object LiveDebuggerAgent {
         }
 
         override fun startTracingServerIfRequested() {
-            val wsServer = createTracingServer() as TracingWebSocketServer?
+            val wsServer = createTracingServer() as LiveDebuggerWebSocketServer?
             if (wsServer != null) {
                 server = wsServer
                 Runtime.getRuntime().addShutdownHook(Thread { wsServer.close() })
             }
             if (TraceAgentParameters.heartBeatEnabled) {
                 PhoneHomeHeartbeat.start(::connectToControlPlane) {
-                    (server as? TracingWebSocketServer)?.connection?.close()
+                    (server as? LiveDebuggerWebSocketServer)?.connection?.close()
                 }
             }
         }
@@ -207,9 +207,9 @@ internal object LiveDebuggerAgent {
         ),
     )
 
-    private fun startServer(address: InetSocketAddress?): TracingWebSocketServer? {
+    private fun startServer(address: InetSocketAddress?): LiveDebuggerWebSocketServer? {
         return try {
-             val server = object : TracingWebSocketServer(address) {
+             val server = object : LiveDebuggerWebSocketServer(address) {
                 override fun startFileTracing(traceDumpFilePath: String, packTrace: Boolean) {
                     if (!LiveDebugger.isDebuggingAllowed) {
                         Logger.warn { "Ignoring startFileTracing: required redaction policy is unavailable" }
@@ -343,7 +343,7 @@ internal object LiveDebuggerAgent {
             // `https` maps to `wss` by the same rewrite; the URL was already scheme-normalized upstream.
             val wsUrl = controlPlaneUrl
                 .replace(Regex("^http"), "ws") + "/api/agent/$agentId"
-            val server = this.agent.server as? TracingWebSocketServer
+            val server = this.agent.server as? LiveDebuggerWebSocketServer
             if (server == null) {
                 Logger.warn { "Cannot open reversed connection — no server started" }
                 return

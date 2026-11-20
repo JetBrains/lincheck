@@ -13,7 +13,7 @@ package org.jetbrains.lincheck.jvm.agent
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.instrumentedClasses
 import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.buildClassInformation
-import org.jetbrains.lincheck.settings.liveDebuggerSettings
+import org.jetbrains.lincheck.settings.breakpointsConfiguration
 import org.jetbrains.lincheck.trace.TraceContext
 import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
@@ -159,7 +159,7 @@ class LincheckClassFileTransformer(
         val writer = SafeClassWriter(reader, loader, ClassWriter.COMPUTE_FRAMES)
 
         try {
-            val classInfo = buildClassInformation(classNode, reader, transformationProfile, liveDebuggerSettings, loader)
+            val classInfo = buildClassInformation(classNode, reader, transformationProfile, breakpointsConfiguration, loader)
             val visitor = LincheckClassVisitor(writer, classInfo, instrumentationMode, transformationProfile, statsTracker, context)
             val timeNano = measureTimeNano {
                 classNode.accept(visitor)

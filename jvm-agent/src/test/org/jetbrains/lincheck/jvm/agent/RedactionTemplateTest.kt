@@ -10,11 +10,11 @@
 
 package org.jetbrains.lincheck.jvm.agent
 
-import org.jetbrains.lincheck.settings.CompiledRedactionPolicy
-import org.jetbrains.lincheck.settings.RedactionFileParser
-import org.jetbrains.lincheck.settings.RedactionRule
-import org.jetbrains.lincheck.settings.RedactionTemplate
-import org.jetbrains.lincheck.settings.RedactionTemplateRegistry
+import org.jetbrains.lincheck.settings.privacy.CompiledRedactionPolicy
+import org.jetbrains.lincheck.settings.privacy.RedactionFileParser
+import org.jetbrains.lincheck.settings.privacy.RedactionRule
+import org.jetbrains.lincheck.settings.privacy.RedactionTemplate
+import org.jetbrains.lincheck.settings.privacy.RedactionTemplateRegistry
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull

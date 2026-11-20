@@ -11,9 +11,8 @@
 package org.jetbrains.lincheck.trace
 
 import org.jetbrains.lincheck.descriptors.ClassDescriptor
-import org.jetbrains.lincheck.settings.CompiledRedactionPolicy
-import org.jetbrains.lincheck.settings.LiveDebuggerSettings
-import org.jetbrains.lincheck.settings.RedactionMatch
+import org.jetbrains.lincheck.settings.privacy.RedactionPolicy
+import org.jetbrains.lincheck.settings.privacy.RedactionMatch
 import org.jetbrains.lincheck.util.allDeclaredInstanceFields
 import org.jetbrains.lincheck.util.findArrayLength
 import org.jetbrains.lincheck.util.isKClass
@@ -46,7 +45,7 @@ interface SnapshotCapturer {
 }
 
 /** Selects the capturer for [policy]: the plain implementation when no redaction rules are set. */
-fun SnapshotCapturer(context: TraceContext, policy: CompiledRedactionPolicy): SnapshotCapturer =
+fun SnapshotCapturer(context: TraceContext, policy: RedactionPolicy): SnapshotCapturer =
     if (policy.isEmpty) PlainSnapshotCapturer(context) else RedactingSnapshotCapturer(context, policy)
 
 private fun requireAlignedNames(values: Array<Any?>, names: List<String>?) {
@@ -75,7 +74,7 @@ internal class PlainSnapshotCapturer(private val context: TraceContext) : Snapsh
 
         value::class.java.isArray -> {
             val arraySize = findArrayLength(value)
-            val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
+            val elementsToRead = minOf(MAX_ARRAY_ELEMENTS, arraySize)
             val elements = findElementsForArray(value, elementsToRead)
             TraceArraySnapshot(context, value, arraySize, elements, captureToString = true)
         }
@@ -101,7 +100,7 @@ internal class PlainSnapshotCapturer(private val context: TraceContext) : Snapsh
  */
 internal class RedactingSnapshotCapturer(
     private val context: TraceContext,
-    private val policy: CompiledRedactionPolicy,
+    private val policy: RedactionPolicy,
 ) : SnapshotCapturer {
 
     override fun captureNamedExpressionValues(
@@ -136,7 +135,7 @@ internal class RedactingSnapshotCapturer(
         val nonNullValue = value ?: return TraceNull
         if (nonNullValue.javaClass.isArray) {
             val arraySize = findArrayLength(nonNullValue)
-            val elementsToRead = minOf(LiveDebuggerSettings.MAX_ARRAY_ELEMENTS, arraySize)
+            val elementsToRead = minOf(MAX_ARRAY_ELEMENTS, arraySize)
             val elements = findElementsForArray(nonNullValue, elementsToRead).map(::captureLeafValue)
             val descriptor = context.createAndRegisterClassDescriptor(nonNullValue.javaClass.name)
             return TraceArraySnapshot(
@@ -306,3 +305,5 @@ internal class RedactingSnapshotCapturer(
 
     private fun runtimeClassName(value: Any?): String? = value?.javaClass?.name
 }
+
+private const val MAX_ARRAY_ELEMENTS = 10

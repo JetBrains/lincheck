@@ -77,6 +77,8 @@ tasks {
             ":common:publishToMavenLocal",
             ":jvm-agent:publishToMavenLocal",
             ":trace:publishToMavenLocal",
+            ":live-debugger-protocol:publishToMavenLocal",
+            ":trace-recorder-protocol:publishToMavenLocal",
             ":lincheck:publishToMavenLocal",
 
             // also publish java agents' fat jars
@@ -94,6 +96,10 @@ tasks {
             ":trace:publishMavenPublicationToSpacePackagesRepository",
             ":lincheck:publishMavenPublicationToSpacePackagesRepository",
 
+            // Also publish the agents' client-facing protocol libraries.
+            ":trace-recorder-protocol:publishMavenPublicationToSpacePackagesRepository",
+            ":live-debugger-protocol:publishMavenPublicationToSpacePackagesRepository",
+
             // also publish java agents' fat jars
             ":trace-recorder:publishMavenPublicationToSpacePackagesRepository",
             ":live-debugger:publishMavenPublicationToSpacePackagesRepository",
@@ -108,6 +114,10 @@ tasks {
             ":common:publishMavenPublicationToSpacePackagesRepository",
             ":trace:publishMavenPublicationToSpacePackagesRepository",
 
+            // Also publish the agents' client-facing protocol libraries.
+            ":trace-recorder-protocol:publishMavenPublicationToSpacePackagesRepository",
+            ":live-debugger-protocol:publishMavenPublicationToSpacePackagesRepository",
+
             // also publish java agents' fat jars
             ":trace-recorder:publishMavenPublicationToSpacePackagesRepository",
             ":live-debugger:publishMavenPublicationToSpacePackagesRepository",
@@ -120,6 +130,8 @@ tasks {
         dependsOn(":common:publishMavenPublicationToArtifactsRepository")
         dependsOn(":jvm-agent:publishMavenPublicationToArtifactsRepository")
         dependsOn(":trace:publishMavenPublicationToArtifactsRepository")
+        dependsOn(":live-debugger-protocol:publishMavenPublicationToArtifactsRepository")
+        dependsOn(":trace-recorder-protocol:publishMavenPublicationToArtifactsRepository")
         dependsOn(":lincheck:publishMavenPublicationToArtifactsRepository")
 
         from(layout.buildDirectory.dir("artifacts/maven"))

@@ -11,8 +11,8 @@
 package org.jetbrains.lincheck.trace.serialization
 
 import org.jetbrains.lincheck.trace.*
-import org.jetbrains.lincheck.trace.network.TracingCallbacks
-import org.jetbrains.lincheck.trace.network.TracingServer
+import org.jetbrains.lincheck.trace.network.TraceDataSink
+import org.jetbrains.lincheck.trace.network.TraceTransport
 import org.jetbrains.lincheck.util.Logger
 import java.io.*
 import java.util.concurrent.ArrayBlockingQueue
@@ -45,7 +45,7 @@ import kotlin.reflect.KClass
  */
 class NetworkStreamingTraceCollecting(
     val context: TraceContext,
-    val tracingServer: TracingServer,
+    val tracingServer: TraceTransport,
     private val queueCapacity: Int = DEFAULT_QUEUE_CAPACITY,
     private val undeliveredHitsFilePath: String? = null,
 ) : TraceCollectingStrategy, Closeable {
@@ -60,9 +60,9 @@ class NetworkStreamingTraceCollecting(
     private lateinit var sender: NetworkTracePointSender
 
     // Tracks the last client reference we wrote to, so we can detect reconnects.
-    private var lastClient: TracingCallbacks? = null
+    private var lastClient: TraceDataSink? = null
 
-    private var lostClient: TracingCallbacks? = null
+    private var lostClient: TraceDataSink? = null
 
     @Volatile
     private var running = true
@@ -184,7 +184,7 @@ class NetworkStreamingTraceCollecting(
         saveUndelivered(pending)
     }
 
-    private fun clientReadyToReceiveTracePoints(): TracingCallbacks? =
+    private fun clientReadyToReceiveTracePoints(): TraceDataSink? =
         tracingServer.connectedClient?.takeUnless { it === lostClient }
 
     private fun saveUndelivered(pending: SnapshotLineBreakpointTracePoint?) {
@@ -208,7 +208,7 @@ class NetworkStreamingTraceCollecting(
      * sent so far. The sink turns a transport failure into [ClientLostException], which
      * [writeTracePointToSubscriber] tells apart from a trace point that cannot be serialized.
      */
-    private fun resetSender(client: TracingCallbacks) {
+    private fun resetSender(client: TraceDataSink) {
         sender = NetworkTracePointSender(
             sink = { frame ->
                 try {
@@ -229,7 +229,7 @@ class NetworkStreamingTraceCollecting(
      *   so the point waits for the next client; `true` when it was sent, or cannot be written at all and is dropped.
      */
     private fun writeTracePointToSubscriber(
-        client: TracingCallbacks,
+        client: TraceDataSink,
         tracePoint: SnapshotLineBreakpointTracePoint,
     ): Boolean {
         if (client !== lastClient) {
@@ -305,7 +305,7 @@ private class SubscriberTraceContextSavedState : TraceContextSavedState {
 
 /**
  * Serializes [SnapshotLineBreakpointTracePoint] objects into the frames of the trace stream
- * and hands each frame to [sink] — a [TracingCallbacks] websocket, or any other frame consumer.
+ * and hands each frame to [sink] — a [TraceDataSink] websocket, or any other frame consumer.
  *
  * This class encapsulates the header and per-trace-point serialization logic so that
  * both the lincheck tracing infrastructure and the control-plane can send trace points
@@ -320,7 +320,7 @@ class NetworkTracePointSender(
     context: TraceContext,
     private val runtime: String = RUNTIME_JVM,
 ) {
-    constructor(callbacks: TracingCallbacks, context: TraceContext, runtime: String = RUNTIME_JVM) :
+    constructor(callbacks: TraceDataSink, context: TraceContext, runtime: String = RUNTIME_JVM) :
         this(callbacks::binaryTraceData, context, runtime)
 
     private val lock = ReentrantLock()

@@ -12,10 +12,10 @@ package org.jetbrains.lincheck.jvm.agent.transformers
 
 import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.jvm.agent.analysis.*
+import org.jetbrains.lincheck.jvm.agent.expressions.BreakpointExpressionCompiler
 import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.ClassModel
 import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.LocalVariableInfo
 import org.jetbrains.lincheck.jvm.agent.bytecodeinfo.MethodInformation
-import org.jetbrains.lincheck.jvm.agent.expressions.ExpressionCompiler
 import org.jetbrains.lincheck.settings.BreakpointExpressionSlot
 import org.jetbrains.lincheck.settings.BreakpointId
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
@@ -46,6 +46,7 @@ internal class SnapshotBreakpointTransformer(
     private val breakpoints: Map<BreakpointId, SnapshotBreakpoint>,
     private val enclosingClass: ClassModel,
     private val classLoader: ClassLoader,
+    private val breakpointExpressionCompiler: BreakpointExpressionCompiler,
 ) : LincheckMethodVisitor(fileName, className, methodName, descriptor, access, methodInfo, context, adapter, methodVisitor) {
 
     private val traceIdCapturers = TraceIdCapturerRegistry(config, classLoader)
@@ -118,7 +119,7 @@ internal class SnapshotBreakpointTransformer(
             // first point where the line's locals and their types are known. The result carries
             // ordinary fragments, so everything downstream is the same as for IDE-compiled ones;
             // `null` means compilation failed (reported once) and the breakpoint is skipped.
-            val effectiveBreakpoint = ExpressionCompiler.resolveCompiledExpressions(
+            val effectiveBreakpoint = breakpointExpressionCompiler.compile(
                 breakpointId = breakpointId,
                 breakpoint = breakpoint,
                 activeLocals = currentActiveLocalVariablesInfo,

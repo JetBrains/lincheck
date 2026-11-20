@@ -11,11 +11,13 @@
 package org.jetbrains.lincheck.jvm.agent
 
 import org.jetbrains.lincheck.jvm.agent.transformers.*
+import org.jetbrains.lincheck.jvm.agent.expressions.BreakpointExpressionCompiler
+import org.jetbrains.lincheck.jvm.agent.expressions.breakpointExpressionCompiler
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.*
-import org.jetbrains.lincheck.settings.LiveDebuggerSettings
+import org.jetbrains.lincheck.settings.BreakpointsConfiguration
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
-import org.jetbrains.lincheck.settings.liveDebuggerSettings
+import org.jetbrains.lincheck.settings.breakpointsConfiguration
 import org.jetbrains.lincheck.util.*
 
 interface TransformationProfile {
@@ -83,6 +85,8 @@ class TransformationConfiguration(
     //     before `injectBeforeSharedReadAccess` and/or `injectAfterSharedReadAccess`.
     //   - and other ...
 ) {
+    internal var breakpointExpressionCompiler: BreakpointExpressionCompiler? = null
+
     var trackAllSynchronizationOperations: Boolean
         get() =
             trackMonitorsOperations &&
@@ -208,7 +212,7 @@ fun createTransformationProfile(
     val defaultProfile = when (mode) {
         STRESS -> StressDefaultTransformationProfile
         TRACE_RECORDING -> TraceRecorderDefaultTransformationProfile
-        LIVE_DEBUGGING -> LiveDebuggerTransformationProfile(liveDebuggerSettings)
+        LIVE_DEBUGGING -> LiveDebuggerTransformationProfile(breakpointsConfiguration, breakpointExpressionCompiler)
         MODEL_CHECKING -> ModelCheckingDefaultTransformationProfile
         EXPERIMENTAL_MODEL_CHECKING -> ExperimentalModelCheckingTransformationProfile
     }
@@ -603,8 +607,9 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
         setOf("getAndUpdate", "updateAndGet", "getAndAccumulate", "accumulateAndGet")
 }
 
-class LiveDebuggerTransformationProfile(
-    val settings: LiveDebuggerSettings,
+class LiveDebuggerTransformationProfile internal constructor(
+    val settings: BreakpointsConfiguration,
+    private val breakpointExpressionCompiler: BreakpointExpressionCompiler,
 ) : TransformationProfile {
 
     override fun shouldTransform(className: String, loader: ClassLoader?): Boolean {
@@ -636,6 +641,7 @@ class LiveDebuggerTransformationProfile(
         return TransformationConfiguration().apply {
             trackSnapshotLineBreakpoints = true
             trackTraceIds = true
+            breakpointExpressionCompiler = this@LiveDebuggerTransformationProfile.breakpointExpressionCompiler
         }
     }
 }

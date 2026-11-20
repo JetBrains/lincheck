@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.jvm.agent.TransformationProfile
 import org.jetbrains.lincheck.jvm.agent.isSyntheticLambdaMethod
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.settings.BreakpointId
-import org.jetbrains.lincheck.settings.LiveDebuggerSettings
+import org.jetbrains.lincheck.settings.BreakpointsConfiguration
 import org.jetbrains.lincheck.settings.SnapshotBreakpoint
 import org.jetbrains.lincheck.settings.isApplicableTo
 import org.objectweb.asm.ClassReader
@@ -57,17 +57,17 @@ internal fun buildClassInformation(
     classNode: ClassNode,
     classReader: ClassReader,
     profile: TransformationProfile,
-    liveDebuggerSettings: LiveDebuggerSettings,
+    breakpointsConfiguration: BreakpointsConfiguration,
     classLoader: ClassLoader? = null,
 ): ClassInformation {
     val canonicalClassName = classNode.name.toCanonicalClassName()
     val smap = readClassSMAP(classNode, classReader)
     val (lineRanges, linesToMethodNames) = getMethodsLineRanges(classNode)
     val nonSyntheticMethodLines = getNonSyntheticMethodLines(classNode)
-    val applicableBreakpoints = computeApplicableBreakpoints(classNode, liveDebuggerSettings)
+    val applicableBreakpoints = computeApplicableBreakpoints(classNode, breakpointsConfiguration)
     // Sensitive-area blocklist verdicts (Stage 2) are consumed only by classes with applicable snapshot breakpoints.
     // Per-method verdicts are computed only when the class as a whole is not blocked.
-    val blocklistEngine = liveDebuggerSettings.blocklistEngine
+    val blocklistEngine = breakpointsConfiguration.blocklistEngine
         .takeIf { !it.isEmpty() && applicableBreakpoints.isNotEmpty() }
     val classBlockMatch = blocklistEngine?.classBlock(canonicalClassName)
     val methods = classNode.methods.associateBy(
@@ -103,11 +103,11 @@ internal fun buildClassInformation(
  */
 private fun computeApplicableBreakpoints(
     classNode: ClassNode,
-    liveDebuggerSettings: LiveDebuggerSettings,
+    breakpointsConfiguration: BreakpointsConfiguration,
 ): Map<BreakpointId, SnapshotBreakpoint> {
     val canonicalClassName = classNode.name.toCanonicalClassName()
     val sourceFileName = classNode.sourceFile ?: ""
-    return liveDebuggerSettings.lineBreakpoints.filterValues { it.isApplicableTo(canonicalClassName, sourceFileName) }
+    return breakpointsConfiguration.lineBreakpoints.filterValues { it.isApplicableTo(canonicalClassName, sourceFileName) }
 }
 
 /**

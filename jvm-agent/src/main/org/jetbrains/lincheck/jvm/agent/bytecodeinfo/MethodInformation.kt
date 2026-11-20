@@ -15,8 +15,8 @@ import org.jetbrains.lincheck.jvm.agent.TransformationConfiguration
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.buildControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.BasicBlockControlFlowGraph
 import org.jetbrains.lincheck.jvm.agent.analysis.controlflow.emptyControlFlowGraph
-import org.jetbrains.lincheck.settings.BlockMatch
-import org.jetbrains.lincheck.settings.blocklist.BlocklistEngine
+import org.jetbrains.lincheck.settings.privacy.BlockMatch
+import org.jetbrains.lincheck.settings.privacy.BlocklistMatcher
 import org.jetbrains.lincheck.trace.isThisName
 import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
@@ -191,7 +191,7 @@ internal fun computeControlFlowGraph(
 internal fun computeMethodBlockMatch(
     canonicalClassName: String,
     methodNode: MethodNode,
-    blocklistEngine: BlocklistEngine,
+    blocklistEngine: BlocklistMatcher,
 ): BlockMatch? {
     // The visitor never transforms native methods; mirror its skip to avoid needless matching.
     if ((methodNode.access and Opcodes.ACC_NATIVE) != 0) return null

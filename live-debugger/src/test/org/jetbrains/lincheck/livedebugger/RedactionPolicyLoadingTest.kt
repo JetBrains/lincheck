@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.livedebugger
 
-import org.jetbrains.lincheck.settings.liveDebuggerSettings
+import org.jetbrains.lincheck.livedebugger.settings.liveDebuggerSettings
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

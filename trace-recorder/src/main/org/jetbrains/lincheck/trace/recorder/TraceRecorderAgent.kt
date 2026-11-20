@@ -22,10 +22,8 @@ import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_PACK
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_SERVER_PORT
 import org.jetbrains.lincheck.jvm.agent.TraceAgentParameters.ARGUMENT_START_SERVER
 import org.jetbrains.lincheck.jvm.agent.TracingEntryPointMethodVisitorProvider
-import org.jetbrains.lincheck.settings.SensitiveAreaBlocklist
-import org.jetbrains.lincheck.settings.SnapshotBreakpoint
-import org.jetbrains.lincheck.trace.network.TracingServer
-import org.jetbrains.lincheck.trace.network.websocket.TracingWebSocketServer
+import org.jetbrains.lincheck.trace.recorder.network.TracingServer
+import org.jetbrains.lincheck.trace.recorder.network.websocket.TracingWebSocketServer
 import org.jetbrains.lincheck.tracer.TraceOutputMode
 import org.jetbrains.lincheck.tracer.Tracer
 import org.jetbrains.lincheck.tracer.TracingEntryPoint
@@ -98,22 +96,6 @@ internal object TraceRecorderAgent {
 
                     override fun stopTracing() {
                         Tracer.stopTracing()
-                    }
-
-                    override fun addBreakpoints(breakpoints: List<SnapshotBreakpoint>) {
-                        Logger.error { "Add breakpoints is not supported in trace recorder mode" }
-                    }
-
-                    override fun removeBreakpoints(uuids: List<java.util.UUID>) {
-                        Logger.error { "Remove breakpoints is not supported in trace recorder mode" }
-                    }
-
-                    override fun addSensitiveAreaBlocklists(blocklists: List<SensitiveAreaBlocklist>) {
-                        Logger.error { "Sensitive-area blocklists are not supported in trace recorder mode" }
-                    }
-
-                    override fun onDisconnected() {
-                        // No cleanup needed for trace recorder
                     }
                 }
                 Logger.info { "Started trace streaming server on port $port" }

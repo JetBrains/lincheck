@@ -1,3 +1,4 @@
+import java.util.zip.ZipFile
 import org.gradle.kotlin.dsl.named
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
@@ -17,7 +18,17 @@ java {
     configureJava()
 }
 
+// Compilers are loaded in isolation by tests and nested as resources in the packaged agent.
+val kotlinExpressionCompiler: Configuration by configurations.creating
+val java8ExpressionCompiler: Configuration by configurations.creating
+val java11ExpressionCompiler: Configuration by configurations.creating
+val java17ExpressionCompiler: Configuration by configurations.creating
+
 sourceSets {
+    create("kotlinExpressionAnalyzer") {
+        java.srcDirs("src/kotlin-expression-analyzer")
+        compileClasspath += kotlinExpressionCompiler
+    }
     main {
         java.srcDirs("src/main")
     }
@@ -28,6 +39,21 @@ sourceSets {
 
     dependencies {
         // main
+        // Structural source generation for agent-compiled expression wrappers.
+        val javaPoetVersion: String by project
+        val kotlinPoetVersion: String by project
+        implementation("com.squareup:javapoet:${javaPoetVersion}")
+        implementation("com.squareup:kotlinpoet-jvm:${kotlinPoetVersion}")
+
+        val kotlinVersion: String by project
+        val ecjJdk8Version: String by project
+        val ecjJdk11Version: String by project
+        val ecjJdk17Version: String by project
+        // Transitive: the embeddable compiler does not bundle the Kotlin runtime it needs.
+        kotlinExpressionCompiler("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
+        java8ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk8Version")
+        java11ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk11Version")
+        java17ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk17Version")
         val asmVersion: String by project
         val junitVersion: String by project
 
@@ -35,6 +61,7 @@ sourceSets {
         implementation(project(":common"))
         implementation(project(":jvm-agent"))
         implementation(project(":trace"))
+        implementation(project(":live-debugger-protocol"))
         implementation(project(":tracing-agent"))
 
         api(kotlin("reflect"))
@@ -42,6 +69,7 @@ sourceSets {
         api("org.ow2.asm:asm-util:${asmVersion}")
 
         testImplementation("junit:junit:$junitVersion")
+        testImplementation(project(":bootstrap"))
     }
 }
 
@@ -68,13 +96,11 @@ tasks {
         getAccessToInternalDefinitionsOf(
             project(":common"),
             project(":trace"),
-            project(":tracing-agent")
+            project(":tracing-agent"),
+            project(":jvm-agent")
         )
     }
 
-    test {
-        configureJvmTestCommon(project)
-    }
 }
 
 registerTraceAgentTasks(
@@ -83,28 +109,30 @@ registerTraceAgentTasks(
     premainClass = "org.jetbrains.lincheck.livedebugger.LiveDebuggerAgent"
 )
 
-// The agent-side expression compilers ship as nested jar resources — like `bootstrap.jar`,
-// never unpacked into the fat-jar root. The agent loads each in an isolated class loader
-// on first use, so compiler classes never touch the instrumented application's class path.
-// The Kotlin compiler does not bundle its runtime, so its dependency set is merged into one jar.
-val kotlinExpressionCompiler: Configuration by configurations.creating
-val java8ExpressionCompiler: Configuration by configurations.creating
-val java11ExpressionCompiler: Configuration by configurations.creating
-val java17ExpressionCompiler: Configuration by configurations.creating
+val kotlinExpressionAnalyzerJar = tasks.register<Jar>("kotlinExpressionAnalyzerJar") {
+    from(sourceSets["kotlinExpressionAnalyzer"].output)
+    archiveFileName.set("kotlin-expression-analyzer.jar")
+}
 
-dependencies {
-    val kotlinVersion: String by project
-    val ecjJdk8Version: String by project
-    val ecjJdk11Version: String by project
-    val ecjJdk17Version: String by project
-    kotlinExpressionCompiler("org.jetbrains.kotlin:kotlin-compiler-embeddable:$kotlinVersion")
-    java8ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk8Version")
-    java11ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk11Version")
-    java17ExpressionCompiler("org.eclipse.jdt:ecj:$ecjJdk17Version")
+tasks {
+    test {
+        dependsOn(kotlinExpressionAnalyzerJar)
+        configureJvmTestCommon(project)
+        val compilerJars = kotlinExpressionCompiler + files(kotlinExpressionAnalyzerJar)
+        doFirst {
+            systemProperty(
+                "lincheck.kotlinCompilerJar",
+                compilerJars.files.joinToString(File.pathSeparator) { it.absolutePath },
+            )
+            systemProperty("lincheck.javaCompilerJar.8", java8ExpressionCompiler.singleFile.absolutePath)
+            systemProperty("lincheck.javaCompilerJar.11", java11ExpressionCompiler.singleFile.absolutePath)
+            systemProperty("lincheck.javaCompilerJar.17", java17ExpressionCompiler.singleFile.absolutePath)
+        }
+    }
 }
 
 val kotlinExpressionCompilerJar = tasks.register<Zip>("kotlinExpressionCompilerJar") {
-    dependsOn(":jvm-agent:kotlinExpressionAnalyzerJar")
+    dependsOn(kotlinExpressionAnalyzerJar)
     archiveFileName.set("kotlin-expression-compiler.jar")
     destinationDirectory.set(layout.buildDirectory.dir("kotlinExpressionCompiler"))
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
@@ -112,8 +140,19 @@ val kotlinExpressionCompilerJar = tasks.register<Zip>("kotlinExpressionCompilerJ
         exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "module-info.class", "META-INF/versions/*/module-info.class")
     }
     from({
-        zipTree(layout.projectDirectory.file("../jvm-agent/build/libs/kotlin-expression-analyzer.jar"))
+        zipTree(kotlinExpressionAnalyzerJar.get().archiveFile)
     })
+}
+
+// The analyzer is compiled separately against compiler internals and must travel inside the isolated compiler jar.
+tasks.named("liveDebuggerFatJarVerify") {
+    doLast {
+        ZipFile(kotlinExpressionCompilerJar.get().archiveFile.get().asFile).use { compiler ->
+            check(compiler.getEntry(
+                "org/jetbrains/lincheck/livedebugger/expressions/kotlin/compiler/KotlinExpressionAnalyzer.class"
+            ) != null) { "The nested Kotlin compiler is missing its expression analyzer" }
+        }
+    }
 }
 
 fun javaExpressionCompilerJar(

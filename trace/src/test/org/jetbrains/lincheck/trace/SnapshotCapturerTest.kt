@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck.trace
 
-import org.jetbrains.lincheck.settings.CompiledRedactionPolicy
-import org.jetbrains.lincheck.settings.RedactionRule
-import org.jetbrains.lincheck.settings.RedactionTemplate
-import org.jetbrains.lincheck.settings.RedactionTemplateRegistry
+import org.jetbrains.lincheck.settings.privacy.CompiledRedactionPolicy
+import org.jetbrains.lincheck.settings.privacy.RedactionRule
+import org.jetbrains.lincheck.settings.privacy.RedactionTemplate
+import org.jetbrains.lincheck.settings.privacy.RedactionTemplateRegistry
 import org.jetbrains.lincheck.trace.serialization.writeTraceValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows

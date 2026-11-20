@@ -63,7 +63,7 @@ tasks {
         LiveDebuggerIntegrationTestSuite.Basic, LiveDebuggerIntegrationTestSuite.All -> copyClasspathClashTestProjects()
         else -> emptyList()
     }
-    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "app-glass-agent.jar", prerequisites)
+    val copyLiveDebuggerFatJar = copyTraceAgentFatJar(project(":live-debugger"), "liveDebuggerFatJar", prerequisites)
     val copyAgentExpressionTestProject = register<Copy>("copyAgentExpressionTestProject") {
         from(rootProject.layout.projectDirectory.dir("integration-test/test-projects/agent-expressions"))
         into(layout.buildDirectory.dir("integrationTestProjects/agent-expressions"))

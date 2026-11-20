@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.tracer
 
-import org.jetbrains.lincheck.trace.network.TracingServer
+import org.jetbrains.lincheck.trace.network.TraceTransport
 
 /**
  * Trace output mode defines trace collecting and output strategy,
@@ -48,7 +48,7 @@ sealed class TraceOutputMode {
      *   written as a file (see `writeUndeliveredHitsFile`); `null` drops them.
      */
     class BinaryNetworkStream(
-        val tracingServer: TracingServer,
+        val tracingServer: TraceTransport,
         val undeliveredHitsFilePath: String? = null,
     ) : TraceOutputMode()
 
