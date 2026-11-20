@@ -56,6 +56,17 @@ fun MethodDescriptor.isSystemArrayCopy() : Boolean {
     return className == "java.lang.System" && methodName == "arraycopy"
 }
 
+/**
+ * Checks whether the method is `java.lang.Object.clone`.
+ *
+ * Every class that overrides [Object.clone] eventually calls `super.clone()` down its hierarchy,
+ * bottoming out at this exact native method; an array's `clone()` is a distinct, synthetic method
+ * whose owner is the array type itself, not `java.lang.Object`.
+ */
+fun MethodDescriptor.isObjectCloneMethod(): Boolean {
+    return className == "java.lang.Object" && methodName == "clone"
+}
+
 // TODO: java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations
 //  add all tracked intrinsics here
 fun MethodDescriptor.isTrackedIntrinsic(): Boolean =

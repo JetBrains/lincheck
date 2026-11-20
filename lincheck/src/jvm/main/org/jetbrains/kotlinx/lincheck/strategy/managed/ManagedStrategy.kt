@@ -1693,10 +1693,12 @@ internal abstract class ManagedStrategy(
         if (
             (methodDescriptor.isIntrinsic && methodDescriptor.isArraysCopyOfIntrinsic()) ||
             (methodDescriptor.isIntrinsic && methodDescriptor.isArraysCopyOfRangeIntrinsic()) ||
-            methodDescriptor.isArrayNewInstance()
+            methodDescriptor.isArrayNewInstance() ||
+            methodDescriptor.isObjectCloneMethod()
         ) {
-            // `Arrays.copyOf`/`copyOfRange` allocate a fresh array as their return value;
-            // route it through the same path as a regular array allocation.
+            // `Arrays.copyOf`/`copyOfRange`, `Array.newInstance`, and `Object.clone()` all produce
+            // their result outside any `NEW` instruction the instrumentation could see;
+            // route it through the same path as a regular object allocation.
             // `canonicalName` mirrors what `ObjectCreationTransformer` pushes for static array allocations
             // (e.g. `int[]`, `java.lang.String[]`); fall back to `name` if it is `null`.
             result?.let {

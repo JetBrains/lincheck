@@ -1,0 +1,36 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+Execution graph:
+Events in each thread are in program order; Tn:position identifies an event.
+rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).
+Thread -1:
+  T-1:0: Init
+Thread 0:
+  T0:0: ThreadStart^req T0
+  T0:1: ThreadStart^rsp T0
+    senders: T-1:0
+    hb: T-1:0
+  T0:2: Alloc EventStructureObjectCloneTest#1
+    hb: T-1:0
+  T0:3: Actor Start operation()
+    hb: T-1:0
+  T0:4: Read^req Volatile EventStructureObjectCloneTest#1.original final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureObjectCloneTest.operation(EventStructureObjectCloneTest.kt:27)
+    hb: T-1:0
+  T0:5: Read^rsp Volatile EventStructureObjectCloneTest#1.original final read=EventStructureObjectCloneTestBox#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureObjectCloneTest.operation(EventStructureObjectCloneTest.kt:27)
+    rf: T0:2
+    hb: T-1:0
+  T0:6: Alloc EventStructureObjectCloneTestBox#3
+    hb: T-1:0
+  T0:7: Write Volatile EventStructureObjectCloneTestBox#3.value write=2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureObjectCloneTestBox.setValue(EventStructureObjectCloneTest.kt:15)
+    hb: T-1:0
+  T0:8: Actor End operation()
+    hb: T-1:0
+  T0:9: ThreadFinish [0]
+    hb: T-1:0
+Coherence (adjacent atomic writes, including initialization):
+  EventStructureObjectCloneTestBox#3.value: T0:6 -> T0:7
