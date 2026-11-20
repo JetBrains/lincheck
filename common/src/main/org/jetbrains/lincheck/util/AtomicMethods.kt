@@ -34,6 +34,7 @@ enum class AtomicMethodKind {
     GET_AND_ADD, ADD_AND_GET,
     GET_AND_INCREMENT, INCREMENT_AND_GET,
     GET_AND_DECREMENT, DECREMENT_AND_GET,
+    GET_AND_BITWISE_AND, GET_AND_BITWISE_OR, GET_AND_BITWISE_XOR,
     FENCE;
 }
 
@@ -864,6 +865,17 @@ private val varHandleMethods = mapOf(
     "getAndAdd"         to AtomicMethodDescriptor(GET_AND_ADD, VAR_HANDLE, VOLATILE),
     "getAndAddAcquire"  to AtomicMethodDescriptor(GET_AND_ADD, VAR_HANDLE, ACQUIRE),
     "getAndAddRelease"  to AtomicMethodDescriptor(GET_AND_ADD, VAR_HANDLE, RELEASE),
+
+    // getAndBitwiseAnd/Or/Xor
+    "getAndBitwiseAnd"         to AtomicMethodDescriptor(GET_AND_BITWISE_AND, VAR_HANDLE, VOLATILE),
+    "getAndBitwiseAndAcquire"  to AtomicMethodDescriptor(GET_AND_BITWISE_AND, VAR_HANDLE, ACQUIRE),
+    "getAndBitwiseAndRelease"  to AtomicMethodDescriptor(GET_AND_BITWISE_AND, VAR_HANDLE, RELEASE),
+    "getAndBitwiseOr"          to AtomicMethodDescriptor(GET_AND_BITWISE_OR, VAR_HANDLE, VOLATILE),
+    "getAndBitwiseOrAcquire"   to AtomicMethodDescriptor(GET_AND_BITWISE_OR, VAR_HANDLE, ACQUIRE),
+    "getAndBitwiseOrRelease"   to AtomicMethodDescriptor(GET_AND_BITWISE_OR, VAR_HANDLE, RELEASE),
+    "getAndBitwiseXor"         to AtomicMethodDescriptor(GET_AND_BITWISE_XOR, VAR_HANDLE, VOLATILE),
+    "getAndBitwiseXorAcquire"  to AtomicMethodDescriptor(GET_AND_BITWISE_XOR, VAR_HANDLE, ACQUIRE),
+    "getAndBitwiseXorRelease"  to AtomicMethodDescriptor(GET_AND_BITWISE_XOR, VAR_HANDLE, RELEASE),
 )
 
 // The release and the acquire fence are the weakest fences that are modelled,

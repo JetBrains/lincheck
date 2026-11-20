@@ -548,6 +548,7 @@ sealed class ReadModifyWriteDescriptor {
     data class CompareAndSetDescriptor(val expectedValue: ValueID, val newValue: ValueID): ReadModifyWriteDescriptor()
     data class CompareAndExchangeDescriptor(val expectedValue: ValueID, val newValue: ValueID): ReadModifyWriteDescriptor()
     data class FetchAndAddDescriptor(val delta: ValueID, val kind: IncrementKind): ReadModifyWriteDescriptor()
+    data class FetchAndBitwiseOpDescriptor(val operand: ValueID, val op: BitwiseOp): ReadModifyWriteDescriptor()
     enum class IncrementKind { Pre, Post }
 }
 
@@ -560,6 +561,11 @@ internal fun ReadModifyWriteDescriptor.writeValue(readValue: ValueID): ValueID? 
     is ReadModifyWriteDescriptor.CompareAndSetDescriptor -> newValue.takeIf { readValue == expectedValue }
     is ReadModifyWriteDescriptor.CompareAndExchangeDescriptor -> newValue.takeIf { readValue == expectedValue }
     is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> readValue + delta
+    is ReadModifyWriteDescriptor.FetchAndBitwiseOpDescriptor -> when (op) {
+        BitwiseOp.AND -> readValue and operand
+        BitwiseOp.OR  -> readValue or operand
+        BitwiseOp.XOR -> readValue xor operand
+    }
 }
 
 /**

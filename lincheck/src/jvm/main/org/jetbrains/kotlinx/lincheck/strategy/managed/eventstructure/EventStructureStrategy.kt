@@ -729,6 +729,9 @@ private class EventStructureMemoryTracker(
                 ReadModifyWriteDescriptor.IncrementKind.Pre  -> getValue(label.location, label.value)
                 ReadModifyWriteDescriptor.IncrementKind.Post -> getValue(label.location, newValueID!!)
             }
+            is ReadModifyWriteDescriptor.FetchAndBitwiseOpDescriptor ->
+                // `getAndBitwiseAnd/Or/Xor` always return the value prior to the update, like `getAndAdd`.
+                getValue(label.location, label.value)
         }
     }
 
@@ -823,6 +826,22 @@ private class EventStructureMemoryTracker(
             readModifyWriteDescriptor = ReadModifyWriteDescriptor.FetchAndAddDescriptor(
                 delta = getValueID(location, delta.opaque()),
                 kind = ReadModifyWriteDescriptor.IncrementKind.Post,
+            )
+        )
+    }
+
+    override fun beforeGetAndBitwiseOp(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        operand: Any,
+        op: BitwiseOp,
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
+            readModifyWriteDescriptor = ReadModifyWriteDescriptor.FetchAndBitwiseOpDescriptor(
+                operand = getValueID(location, operand.opaque()),
+                op = op,
             )
         )
     }

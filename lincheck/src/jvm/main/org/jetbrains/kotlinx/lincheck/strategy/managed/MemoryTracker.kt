@@ -28,6 +28,9 @@ import org.jetbrains.lincheck.util.isAtomic
 import org.jetbrains.lincheck.util.isAtomicArray
 import org.jetbrains.lincheck.util.isUnsafe
 
+/** The bitwise operation of a `getAndBitwiseAnd/Or/Xor`-style read-modify-write. */
+enum class BitwiseOp { AND, OR, XOR }
+
 /**
  * Tracks memory operations with shared variables.
  */
@@ -47,6 +50,8 @@ interface MemoryTracker {
     fun beforeGetAndAdd(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, delta: Number)
 
     fun beforeAddAndGet(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, delta: Number)
+
+    fun beforeGetAndBitwiseOp(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, operand: Any, op: BitwiseOp)
 
     fun interceptReadResult(iThread: Int): Any?
 
@@ -127,6 +132,21 @@ internal fun MemoryTracker.trackAtomicMethodMemoryAccess(
         }
         AtomicMethodKind.DECREMENT_AND_GET -> {
             beforeAddAndGet(iThread, codeLocation, location, methodDescriptor.ordering, delta = (-1).convert(location.type))
+        }
+        AtomicMethodKind.GET_AND_BITWISE_AND -> {
+            beforeGetAndBitwiseOp(iThread, codeLocation, location, methodDescriptor.ordering,
+                operand = params[argOffset]!!, op = BitwiseOp.AND
+            )
+        }
+        AtomicMethodKind.GET_AND_BITWISE_OR -> {
+            beforeGetAndBitwiseOp(iThread, codeLocation, location, methodDescriptor.ordering,
+                operand = params[argOffset]!!, op = BitwiseOp.OR
+            )
+        }
+        AtomicMethodKind.GET_AND_BITWISE_XOR -> {
+            beforeGetAndBitwiseOp(iThread, codeLocation, location, methodDescriptor.ordering,
+                operand = params[argOffset]!!, op = BitwiseOp.XOR
+            )
         }
         AtomicMethodKind.FENCE -> return false
     }

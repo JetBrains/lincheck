@@ -171,6 +171,14 @@ private class ExecutionPrinter(
         is ReadModifyWriteDescriptor.CompareAndExchangeDescriptor ->
             "compareAndExchange(${value(type, descriptor.expectedValue)}, ${value(type, descriptor.newValue)})"
         is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> "fetchAndAdd(${value(type, descriptor.delta)}, ${descriptor.kind})"
+        is ReadModifyWriteDescriptor.FetchAndBitwiseOpDescriptor -> {
+            val opName = when (descriptor.op) {
+                BitwiseOp.AND -> "And"
+                BitwiseOp.OR  -> "Or"
+                BitwiseOp.XOR -> "Xor"
+            }
+            "fetchAndBitwise$opName(${value(type, descriptor.operand)})"
+        }
     }
 
     private fun simpleName(className: String): String = className.substringBefore('/').substringAfterLast('.')

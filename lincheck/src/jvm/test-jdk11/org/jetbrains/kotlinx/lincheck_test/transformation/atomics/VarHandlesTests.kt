@@ -189,6 +189,42 @@ class VarHandleIntegerFieldTest : AbstractLincheckTest() {
     @Operation
     fun getAndAddRelease(delta: Int) =
         varHandle.getAndAddRelease(this, delta) as Int
+
+    @Operation
+    fun getAndBitwiseAnd(mask: Int) =
+        varHandle.getAndBitwiseAnd(this, mask) as Int
+
+    @Operation
+    fun getAndBitwiseAndAcquire(mask: Int) =
+        varHandle.getAndBitwiseAndAcquire(this, mask) as Int
+
+    @Operation
+    fun getAndBitwiseAndRelease(mask: Int) =
+        varHandle.getAndBitwiseAndRelease(this, mask) as Int
+
+    @Operation
+    fun getAndBitwiseOr(mask: Int) =
+        varHandle.getAndBitwiseOr(this, mask) as Int
+
+    @Operation
+    fun getAndBitwiseOrAcquire(mask: Int) =
+        varHandle.getAndBitwiseOrAcquire(this, mask) as Int
+
+    @Operation
+    fun getAndBitwiseOrRelease(mask: Int) =
+        varHandle.getAndBitwiseOrRelease(this, mask) as Int
+
+    @Operation
+    fun getAndBitwiseXor(mask: Int) =
+        varHandle.getAndBitwiseXor(this, mask) as Int
+
+    @Operation
+    fun getAndBitwiseXorAcquire(mask: Int) =
+        varHandle.getAndBitwiseXorAcquire(this, mask) as Int
+
+    @Operation
+    fun getAndBitwiseXorRelease(mask: Int) =
+        varHandle.getAndBitwiseXorRelease(this, mask) as Int
 }
 
 class VarHandleLongFieldTest : AbstractLincheckTest() {
@@ -282,6 +318,42 @@ class VarHandleLongFieldTest : AbstractLincheckTest() {
     @Operation
     fun getAndAddRelease(delta: Long) =
         varHandle.getAndAddRelease(this, delta) as Long
+
+    @Operation
+    fun getAndBitwiseAnd(mask: Long) =
+        varHandle.getAndBitwiseAnd(this, mask) as Long
+
+    @Operation
+    fun getAndBitwiseAndAcquire(mask: Long) =
+        varHandle.getAndBitwiseAndAcquire(this, mask) as Long
+
+    @Operation
+    fun getAndBitwiseAndRelease(mask: Long) =
+        varHandle.getAndBitwiseAndRelease(this, mask) as Long
+
+    @Operation
+    fun getAndBitwiseOr(mask: Long) =
+        varHandle.getAndBitwiseOr(this, mask) as Long
+
+    @Operation
+    fun getAndBitwiseOrAcquire(mask: Long) =
+        varHandle.getAndBitwiseOrAcquire(this, mask) as Long
+
+    @Operation
+    fun getAndBitwiseOrRelease(mask: Long) =
+        varHandle.getAndBitwiseOrRelease(this, mask) as Long
+
+    @Operation
+    fun getAndBitwiseXor(mask: Long) =
+        varHandle.getAndBitwiseXor(this, mask) as Long
+
+    @Operation
+    fun getAndBitwiseXorAcquire(mask: Long) =
+        varHandle.getAndBitwiseXorAcquire(this, mask) as Long
+
+    @Operation
+    fun getAndBitwiseXorRelease(mask: Long) =
+        varHandle.getAndBitwiseXorRelease(this, mask) as Long
 }
 
 class VarHandleByteFieldTest : AbstractLincheckTest() {

@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -19,6 +20,13 @@ class EventStructureExecutionGraphTest : BaseTraceRepresentationTest("event_stru
     private var value = 0
     @Volatile private var published = 0
     private val counter = AtomicInteger(0)
+    private val chars = charArrayOf('\u8003')
+    private val booleans = booleanArrayOf(true)
+
+    companion object {
+        private val charHandle = MethodHandles.arrayElementVarHandle(CharArray::class.java)
+        private val booleanHandle = MethodHandles.arrayElementVarHandle(BooleanArray::class.java)
+    }
 
     override fun operation() {
         value = 7
@@ -28,6 +36,10 @@ class EventStructureExecutionGraphTest : BaseTraceRepresentationTest("event_stru
         check(published == 1)
         check(value == 7)
         check(counter.compareAndSet(0, 2))
+        check(charHandle.getAndBitwiseAnd(chars, 0, '\u8001') as Char == '\u8003')
+        check(chars[0] == '\u8001')
+        check(booleanHandle.getAndBitwiseXor(booleans, 0, true) as Boolean)
+        check(!booleans[0])
     }
 
     override fun ModelCheckingOptions.customize() {
