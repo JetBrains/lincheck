@@ -895,6 +895,10 @@ private val unsafeMethods: Map<String, AtomicMethodDescriptor> = run {
             val descriptor = AtomicMethodDescriptor(SET, UNSAFE, accessMode)
             "put$typeName$accessModeRepr" to descriptor
         }},
+        // putOrdered: the `sun.misc.Unsafe` spelling of a release write (`lazySet`)
+        listOf("Int", "Long", "Object").map { typeName ->
+            "putOrdered$typeName" to AtomicMethodDescriptor(SET, UNSAFE, RELEASE)
+        },
         // getAndSet
         typeNames.flatMap { typeName -> getAndSetAccessModes.map { accessMode ->
             val accessModeRepr = if (accessMode == VOLATILE) "" else accessMode.toString()
