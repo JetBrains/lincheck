@@ -171,9 +171,24 @@ internal fun EventStructureObjectTracker.getValue(type: Types.Type, id: ValueID)
 internal fun EventStructureObjectTracker.getOrRegisterValueID(type: Types.Type, value: OpaqueValue?): ValueID {
     if (value == null) return NULL_OBJECT_NUMBER.toLong()
     return when (type) {
-        Types.LONG_TYPE       -> (value.unwrap() as Long)
-        Types.INT_TYPE        -> (value.unwrap() as Int).toLong()
-        Types.SHORT_TYPE      -> (value.unwrap() as Short).toLong()
+        // A VarHandle/MethodHandle access-mode method called via `invoke` (not `invokeExact`) applies
+        // ordinary method invocation conversions to its arguments, including primitive widening (JLS 5.3):
+        // `VarHandle.set` on a `long` field legally accepts an `int`/`short`/`byte`/`char` argument, so the
+        // boxed value observed here can be narrower than the memory location's declared type.
+        Types.LONG_TYPE       ->
+            (value.unwrap() as? Long)?.toLong() ?:
+            (value.unwrap() as? Int)?.toLong() ?:
+            (value.unwrap() as? Short)?.toLong() ?:
+            (value.unwrap() as? Byte)?.toLong() ?:
+            (value.unwrap() as Char).code.toLong()
+        Types.INT_TYPE        ->
+            (value.unwrap() as? Int)?.toLong() ?:
+            (value.unwrap() as? Short)?.toLong() ?:
+            (value.unwrap() as? Byte)?.toLong() ?:
+            (value.unwrap() as Char).code.toLong()
+        Types.SHORT_TYPE      ->
+            (value.unwrap() as? Short)?.toLong() ?:
+            (value.unwrap() as Byte).toLong()
         Types.CHAR_TYPE       -> (value.unwrap() as Char).code.toLong()
         // sometimes, due to JVM internals, boolean values can be reinterpreted as byte values
         // (e.g., because of BALOAD and BASTORE instructions are used for both boolean and byte arrays);
