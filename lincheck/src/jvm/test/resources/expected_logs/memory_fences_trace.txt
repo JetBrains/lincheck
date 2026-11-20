@@ -1,0 +1,29 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------- |
+|                                                       Thread 1                                                        |
+| --------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                           |
+|   VarHandle.fullFence() at MemoryFencesTraceRepresentationTest.operation(MemoryFencesRepresentationTests.kt:23)       |
+|   VarHandle.acquireFence() at MemoryFencesTraceRepresentationTest.operation(MemoryFencesRepresentationTests.kt:24)    |
+|   VarHandle.releaseFence() at MemoryFencesTraceRepresentationTest.operation(MemoryFencesRepresentationTests.kt:25)    |
+|   VarHandle.loadLoadFence() at MemoryFencesTraceRepresentationTest.operation(MemoryFencesRepresentationTests.kt:26)   |
+|   VarHandle.storeStoreFence() at MemoryFencesTraceRepresentationTest.operation(MemoryFencesRepresentationTests.kt:27) |
+|   unsafe.fullFence() at MemoryFencesTraceRepresentationTest.operation(MemoryFencesRepresentationTests.kt:28)          |
+|   unsafe.loadFence() at MemoryFencesTraceRepresentationTest.operation(MemoryFencesRepresentationTests.kt:29)          |
+|   unsafe.storeFence() at MemoryFencesTraceRepresentationTest.operation(MemoryFencesRepresentationTests.kt:30)         |
+|   result: void                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------- |

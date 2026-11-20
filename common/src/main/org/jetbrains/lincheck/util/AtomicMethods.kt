@@ -866,10 +866,15 @@ private val varHandleMethods = mapOf(
     "getAndAddRelease"  to AtomicMethodDescriptor(GET_AND_ADD, VAR_HANDLE, RELEASE),
 )
 
+// The release and the acquire fence are the weakest fences that are modelled,
+// so `storeStoreFence` and `loadLoadFence` are modelled as these two, respectively,
+// although they do not order a load before the fence with a store after it.
 private val varHandleFenceMethods = mapOf(
-    "fullFence"     to AtomicMethodDescriptor(FENCE, VAR_HANDLE, VOLATILE),
-    "releaseFence"  to AtomicMethodDescriptor(FENCE, VAR_HANDLE, RELEASE),
-    "acquireFence"  to AtomicMethodDescriptor(FENCE, VAR_HANDLE, ACQUIRE),
+    "fullFence"         to AtomicMethodDescriptor(FENCE, VAR_HANDLE, VOLATILE),
+    "releaseFence"      to AtomicMethodDescriptor(FENCE, VAR_HANDLE, RELEASE),
+    "acquireFence"      to AtomicMethodDescriptor(FENCE, VAR_HANDLE, ACQUIRE),
+    "storeStoreFence"   to AtomicMethodDescriptor(FENCE, VAR_HANDLE, RELEASE),
+    "loadLoadFence"     to AtomicMethodDescriptor(FENCE, VAR_HANDLE, ACQUIRE),
 )
 
 private val unsafeMethods: Map<String, AtomicMethodDescriptor> = run {
@@ -934,6 +939,15 @@ private val unsafeMethods: Map<String, AtomicMethodDescriptor> = run {
                 val accessModeRepr = if (accessMode == VOLATILE) "" else accessMode.toString()
                 val descriptor = AtomicMethodDescriptor(GET_AND_ADD, UNSAFE, accessMode)
                 "getAndAdd$typeName$accessModeRepr" to descriptor
-            }}
+            }},
+        // fences: `loadFence` is the acquire fence, `storeFence` is the release fence;
+        // for the other two see `varHandleFenceMethods`
+        listOf(
+            "fullFence"         to AtomicMethodDescriptor(FENCE, UNSAFE, VOLATILE),
+            "storeFence"        to AtomicMethodDescriptor(FENCE, UNSAFE, RELEASE),
+            "loadFence"         to AtomicMethodDescriptor(FENCE, UNSAFE, ACQUIRE),
+            "storeStoreFence"   to AtomicMethodDescriptor(FENCE, UNSAFE, RELEASE),
+            "loadLoadFence"     to AtomicMethodDescriptor(FENCE, UNSAFE, ACQUIRE),
+        ),
     ).flatten().toMap()
 }

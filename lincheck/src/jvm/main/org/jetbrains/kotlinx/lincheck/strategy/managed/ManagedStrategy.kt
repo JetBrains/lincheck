@@ -1640,6 +1640,8 @@ internal abstract class ManagedStrategy(
     ) {
         // Handle atomic access
         if (owner == null || atomicMethodDescriptor == null) return
+        // a fence accesses no memory
+        if (atomicMethodDescriptor.kind == AtomicMethodKind.FENCE) return
         val info = atomicMethodDescriptor.getAtomicAccessInfo(context, owner, params)
         when (val location = info.location) {
             is StaticFieldAccessLocation -> {
@@ -2523,7 +2525,9 @@ internal abstract class ManagedStrategy(
         atomicMethodDescriptor: AtomicMethodDescriptor?,
         callType: MethodCallTracePoint.CallType,
     ): MethodCallTracePoint {
-        val (ownerName, params) = if (atomicMethodDescriptor == null) {
+        // a fence accesses no memory location to name its owner after, so it is named as an ordinary call
+        val isFence = (atomicMethodDescriptor?.kind == AtomicMethodKind.FENCE)
+        val (ownerName, params) = if (atomicMethodDescriptor == null || isFence) {
             findOwnerName(owner, className, codeLocation) to methodParams.asList()
         } else {
             atomicMethodDescriptor.findAtomicOwnerName(owner!!, methodParams, codeLocation)
