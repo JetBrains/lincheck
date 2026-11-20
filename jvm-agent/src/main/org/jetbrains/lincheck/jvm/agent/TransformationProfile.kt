@@ -522,6 +522,13 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
                 wrapInIgnoredSection = true
             }
         }
+        // `java.util.Arrays` is not instrumented, but `Arrays.fill` is a loop of plain array writes,
+        // and the event structure has to see them: it answers later reads of the array from the writes it knows.
+        if (isJavaUtilArraysClass(className) && methodName == "fill") {
+            return config.apply {
+                trackArrayElementWrites = true
+            }
+        }
         if (shouldNotInstrument(className, methodName, descriptor)) {
             return config
         }
