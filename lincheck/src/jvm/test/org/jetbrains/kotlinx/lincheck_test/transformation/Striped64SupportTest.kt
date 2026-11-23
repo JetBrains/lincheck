@@ -34,7 +34,7 @@ class Striped64SupportTest {
     fun test() {
         val failure = ModelCheckingOptions()
             .minimizeFailedScenario(false)
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
         assert(failure is IncorrectResultsFailure) {
             "This test should fail with IncorrectResultsFailure, but another error has been detected:\n$failure"
         }

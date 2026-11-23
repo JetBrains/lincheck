@@ -70,7 +70,7 @@ class MethodReportingTest {
             .iterations(0)
             .addGuarantee(forClasses(this::class.java.name).methods("inc").treatAsAtomic())
             .addGuarantee(forClasses(this::class.java.name).methods("ignored").ignore())
-        val failure = options.checkImpl(this::class.java)
+        val failure = options.detectFailure(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check("uselessIncrements(2) at" in log) { "increments in uselessIncrements method should be compressed" }
@@ -113,7 +113,7 @@ class CaughtExceptionMethodReportingTest {
             }
         }
         .iterations(0)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("method_reporting")
 
 }

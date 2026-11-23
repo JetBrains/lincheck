@@ -34,7 +34,7 @@ class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
     @Operation
     fun poll() = queue.poll()
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         if (this is ModelCheckingOptions) analyzeStdLib(true)
     }
 }

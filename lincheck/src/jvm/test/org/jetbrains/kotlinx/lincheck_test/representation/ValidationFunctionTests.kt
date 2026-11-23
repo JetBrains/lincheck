@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.checkImpl
-import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
+import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.datastructures.ManagedOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Validate
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -62,7 +62,7 @@ class ValidationFunctionCallTest {
             }
         }
     }
-    .checkImpl(this::class.java) { failure ->
+    .detectFailure(this::class.java) { failure ->
         failure.checkLincheckOutput("validation_function_failure")
     }
 
@@ -90,7 +90,7 @@ class IncorrectResultsFailureWithCorrectValidationFunctionTest {
 
     @Test
     fun test() = ModelCheckingOptions()
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("incorrect_results_with_validation_function")
 }
 
@@ -116,8 +116,8 @@ class ValidationFunctionLongLoopTest {
     val loopCount = 1024
 
     init {
-        check(loopCount > ManagedCTestConfiguration.DEFAULT_LOOP_BOUND)
-        check(loopCount < ManagedCTestConfiguration.DEFAULT_LIVELOCK_EVENTS_THRESHOLD)
+        check(loopCount > ManagedOptions.DEFAULT_LOOP_BOUND)
+        check(loopCount < ManagedOptions.DEFAULT_LIVELOCK_EVENTS_THRESHOLD)
     }
 
     @Operation

@@ -35,7 +35,7 @@ class BufferedChannelTest : AbstractLincheckTest() {
     @Operation
     fun poll() = c.tryReceive().getOrNull()
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         // TODO: We ingore for now since event structure strategy does not support coroutines.
         ignoreExperimentalModelChecking()
         sequentialSpecification(SequentialBuffered2IntChannel::class.java)

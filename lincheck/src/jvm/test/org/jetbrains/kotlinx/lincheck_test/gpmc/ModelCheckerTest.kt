@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.jetbrains.lincheck.datastructures.createStrategy
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -76,7 +77,6 @@ private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, std
     ModelCheckingOptions()
         .invocationTimeout(30_000) // 30 sec
         .analyzeStdLib(stdLibAnalysis)
-        .createTestConfigurations(testClass)
         .createStrategy(
             testClass = testClass,
             scenario = scenario,

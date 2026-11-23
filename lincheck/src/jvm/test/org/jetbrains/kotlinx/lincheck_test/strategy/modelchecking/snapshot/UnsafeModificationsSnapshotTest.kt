@@ -51,7 +51,7 @@ class UnsafeModificationsSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(UnsafeModificationsVerifier::class.java)
         iterations(100)
         invocationsPerIteration(1)

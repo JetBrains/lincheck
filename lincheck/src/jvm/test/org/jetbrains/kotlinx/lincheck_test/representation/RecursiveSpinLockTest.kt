@@ -10,8 +10,8 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -58,7 +58,7 @@ class RecursiveSpinLockTest {
             }
         }
         .minimizeFailedScenario(false)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_lock")
 
 }
@@ -106,7 +106,7 @@ class RecursiveSpinWithParamsLockTest {
             }
         }
         .minimizeFailedScenario(false)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_lock_params")
 
 }
@@ -155,7 +155,7 @@ class RecursiveSpinLockWithInnerEventsTest {
             }
         }
         .minimizeFailedScenario(false)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_cycle_inner_events")
 
 }
@@ -208,7 +208,7 @@ class RecursiveSpinLockTwoStepRecursionEventsTest {
             }
         }
         .minimizeFailedScenario(false)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_cycle_two_step")
 
 }
@@ -257,7 +257,7 @@ class RecursiveTwoThreadsSpinLockTest {
     @Test
     fun testWithModelCheckingStrategy() = ModelCheckingOptions()
         .minimizeFailedScenario(true)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_two_threads_spin_lock")
 }
 
@@ -292,6 +292,6 @@ class RecursiveParametersDependentSpinLockTest {
     @Test
     fun test() = ModelCheckingOptions()
         .addCustomScenario { parallel { thread { actor(::actorMethod) } } }
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_lock_param_dependent")
 }

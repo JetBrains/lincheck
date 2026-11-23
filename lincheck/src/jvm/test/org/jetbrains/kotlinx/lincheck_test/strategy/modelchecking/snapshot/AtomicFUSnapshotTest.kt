@@ -84,7 +84,7 @@ class AtomicFUSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(AtomicFUSnapshotVerifier::class.java)
         threads(1)
         iterations(100)
@@ -182,7 +182,7 @@ class ImplicitAtomicFUSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(ImplicitAtomicFUSnapshotVerifier::class.java)
         threads(1)
         iterations(100)

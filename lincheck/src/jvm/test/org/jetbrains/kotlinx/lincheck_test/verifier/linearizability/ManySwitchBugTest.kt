@@ -58,7 +58,7 @@ class ManySwitchBugTest {
             .actorsAfter(0)
             .actorsBefore(0)
             .actorsPerThread(1)
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
         check(failure is IncorrectResultsFailure) { "The test should fail" }
     }
 }

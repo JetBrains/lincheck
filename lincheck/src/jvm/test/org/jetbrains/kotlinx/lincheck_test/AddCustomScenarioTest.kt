@@ -40,7 +40,7 @@ class AddCustomScenarioTest {
                     thread { actor(::t2) }
                 }
             })
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
         assert(failure is IncorrectResultsFailure)
     }
 
@@ -54,7 +54,7 @@ class AddCustomScenarioTest {
                     thread { actor(::t2) }
                 }
             }
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
         assert(failure is IncorrectResultsFailure)
     }
 }

@@ -30,7 +30,7 @@ import java.io.File
  * This happens when the configuration of the test is incorrect.
  * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
-internal inline fun <reified E: Exception> Options<*, *>.checkFailsWithException(testClass: Class<*>, expectedOutputFilePrefix: String) {
+internal inline fun <reified E: Exception> Options<*>.checkFailsWithException(testClass: Class<*>, expectedOutputFilePrefix: String) {
     try {
         @Suppress("DEPRECATION")
         LinChecker(testClass, this).check()

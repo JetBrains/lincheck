@@ -33,7 +33,7 @@ class LockFreeTaskQueueTest : AbstractLincheckTest() {
     @Operation
     fun close() = q.close()
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         actorsBefore(2)
         actorsAfter(2)
         threads(2)

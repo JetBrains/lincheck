@@ -121,7 +121,7 @@ class LocalObjectEscapeConstructorTest {
                     thread { actor(::changeState) }
                 }
             }
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
         // the test should fail
         check(failure is IncorrectResultsFailure)
         // `escapeLocal` function should throw `LocalEscapedException`

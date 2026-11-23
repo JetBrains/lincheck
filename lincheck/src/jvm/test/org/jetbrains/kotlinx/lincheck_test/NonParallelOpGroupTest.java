@@ -29,7 +29,7 @@ public class NonParallelOpGroupTest extends AbstractLincheckTest {
     }
 
     @Override
-    public <O extends Options<@NotNull O, ?>> void customize(@NotNull O $this$customize) {
+    public <O extends Options<@NotNull O>> void customize(@NotNull O $this$customize) {
         // We ignore this as there is a spin loop. Unignore this once loop detector is up and running
         ignoreExperimentalModelChecking($this$customize);
     }

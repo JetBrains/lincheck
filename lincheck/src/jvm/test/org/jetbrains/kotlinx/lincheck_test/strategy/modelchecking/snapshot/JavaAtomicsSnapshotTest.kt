@@ -65,7 +65,7 @@ class JavaAtomicsSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(StaticObjectVerifier::class.java)
         threads(1)
         iterations(100)

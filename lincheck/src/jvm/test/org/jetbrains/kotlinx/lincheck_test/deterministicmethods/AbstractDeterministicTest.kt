@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.deterministicmethods
 
 import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
-import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
@@ -46,7 +46,7 @@ abstract class AbstractDeterministicTest {
                 .invocationTimeout(60_000L)
                 .verifier(FailingVerifier::class.java)
                 .customize()
-                .checkImpl(this::class.java) { lincheckFailure ->
+                .detectFailure(this::class.java) { lincheckFailure ->
                     val results = lincheckFailure?.results?.parallelResults?.flatten()?.takeIf { it.isNotEmpty() }
                     require(results != null) { lincheckFailure.toString() }
                     if (shouldFail()) {

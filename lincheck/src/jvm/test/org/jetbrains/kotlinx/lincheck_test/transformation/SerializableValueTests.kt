@@ -27,7 +27,7 @@ class SerializableResultTest : AbstractLincheckTest() {
     @Operation
     fun getAndSet(key: Int) = counter.getAndSet(ValueHolder(key))
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
@@ -40,7 +40,7 @@ class SerializableJavaUtilResultTest : AbstractLincheckTest() {
     @Operation
     fun operation() = value
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
@@ -56,7 +56,7 @@ class SerializableJavaUtilResultIncorrectTest : AbstractLincheckTest(IncorrectRe
         return value
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
@@ -70,7 +70,7 @@ class SerializableParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: ValueHolder): Int = counter.addAndGet(key.value)
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
@@ -87,7 +87,7 @@ class SerializableParameterIncorrectTest : AbstractLincheckTest(IncorrectResults
         return counter
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
@@ -104,7 +104,7 @@ class SerializableJavaUtilParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: List<Int>): Int = key[0] + key.sum()
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)
@@ -123,7 +123,7 @@ class SerializableNullParameterTest : AbstractLincheckTest() {
     @Operation
     fun operation(@Param(name = "key") key: List<Int>?): Int = key?.sum() ?: 0
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
         actorsBefore(0)
         actorsAfter(0)

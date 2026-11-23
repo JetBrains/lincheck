@@ -10,37 +10,34 @@
 
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.util.AnalysisProfile
 
 /**
  * Options for the managed strategy.
  */
-abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
+sealed class ManagedOptions<OPT : Options<OPT>> : Options<OPT>() {
 
     protected var checkObstructionFreedom =
-        ManagedCTestConfiguration.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
+        DEFAULT_CHECK_OBSTRUCTION_FREEDOM
 
     protected var loopIterationsBeforeThreadSwitch =
-        ManagedCTestConfiguration.DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH
+        DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH
 
     protected var loopBound =
-        ManagedCTestConfiguration.DEFAULT_LOOP_BOUND
+        DEFAULT_LOOP_BOUND
 
     protected var recursionBound =
-        ManagedCTestConfiguration.DEFAULT_RECURSION_BOUND
+        DEFAULT_RECURSION_BOUND
 
     internal var stdLibAnalysisEnabled: Boolean =
-        ManagedCTestConfiguration.DEFAULT_STDLIB_ANALYSIS_ENABLED
+        DEFAULT_STDLIB_ANALYSIS_ENABLED
 
     protected var awaitLoopsAnalysisEnabled: Boolean =
-        ManagedCTestConfiguration.DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED
+        DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED
 
     protected val guarantees: MutableList<ManagedStrategyGuarantee> =
-        ArrayList(ManagedCTestConfiguration.DEFAULT_GUARANTEES)
+        ArrayList(DEFAULT_GUARANTEES)
 
     /**
      * Set to `true` to check the testing algorithm for obstruction-freedom.
@@ -95,7 +92,6 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
         guarantees.add(guarantee)
     }
 
-
     /**
      * Controls whether the strategy should analyze standard library collections.
      * When `false` (default), all library collections are hidden if no thread switch happened in it.
@@ -109,56 +105,6 @@ abstract class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfigurat
         this.stdLibAnalysisEnabled = analyzeStdLib
     }
 
-    companion object {
-        @Suppress("UNCHECKED_CAST")
-        private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> ManagedOptions<OPT, CTEST>.applyAndCast(
-                block: ManagedOptions<OPT, CTEST>.() -> Unit
-        ) = this.apply {
-            block()
-        } as OPT
-    }
-}
-
-/**
- * Configuration for the managed strategy.
- */
-abstract class ManagedCTestConfiguration(
-    testClass: Class<*>,
-    iterations: Int,
-    threads: Int,
-    actorsPerThread: Int,
-    actorsBefore: Int,
-    actorsAfter: Int,
-    generatorClass: Class<out ExecutionGenerator>,
-    verifierClass: Class<out Verifier>,
-    val checkObstructionFreedom: Boolean,
-    val loopIterationsBeforeThreadSwitch: Int,
-    val loopBound: Int,
-    val recursionBound: Int,
-    invocationsPerIteration: Int,
-    val guarantees: List<ManagedStrategyGuarantee>,
-    minimizeFailedScenario: Boolean,
-    sequentialSpecification: Class<*>,
-    timeoutMs: Long,
-    customScenarios: List<ExecutionScenario>,
-    internal val stdLibAnalysisEnabled: Boolean,
-    internal val awaitLoopsAnalysisEnabled: Boolean,
-) : CTestConfiguration(
-    testClass = testClass,
-    iterations = iterations,
-    invocationsPerIteration = invocationsPerIteration,
-    threads = threads,
-    actorsPerThread = actorsPerThread,
-    actorsBefore = actorsBefore,
-    actorsAfter = actorsAfter,
-    generatorClass = generatorClass,
-    verifierClass = verifierClass,
-    minimizeFailedScenario = minimizeFailedScenario,
-    sequentialSpecification = sequentialSpecification,
-    timeoutMs = timeoutMs,
-    customScenarios = customScenarios
-) {
-
     internal fun createSettings(): ManagedStrategySettings =
         ManagedStrategySettings(
             timeoutMs = this.timeoutMs,
@@ -170,14 +116,6 @@ abstract class ManagedCTestConfiguration(
             awaitLoopsAnalysisEnabled = this.awaitLoopsAnalysisEnabled,
             guarantees = this.guarantees.ifEmpty { null },
         )
-
-    // The flag to enable IntelliJ IDEA plugin mode
-    internal var inIdeaPluginReplayMode: Boolean = false
-        private set
-
-    internal fun enableReplayModeForIdeaPlugin() {
-        inIdeaPluginReplayMode = true
-    }
 
     companion object {
         const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
@@ -193,5 +131,13 @@ abstract class ManagedCTestConfiguration(
         const val DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED = true
 
         val DEFAULT_GUARANTEES = listOf<ManagedStrategyGuarantee>()
+
     }
 }
+
+@Suppress("UNCHECKED_CAST")
+private inline fun <OPT : Options<OPT>> ManagedOptions<OPT>.applyAndCast(
+        block: ManagedOptions<OPT>.() -> Unit
+) = this.apply {
+    block()
+} as OPT

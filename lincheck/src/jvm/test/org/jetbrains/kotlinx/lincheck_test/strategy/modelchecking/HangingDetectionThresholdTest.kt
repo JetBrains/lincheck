@@ -48,7 +48,7 @@ class HangingDetectionThresholdTest {
             }
             .iterations(0)
 
-        val failure = options.checkImpl(HangingDetectionThresholdTest::class.java)
+        val failure = options.detectFailure(HangingDetectionThresholdTest::class.java)
         check(failure == null)
     }
 

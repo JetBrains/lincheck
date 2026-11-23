@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
@@ -57,7 +58,7 @@ class ConcurrentLinkedDequeTest {
         }
         .analyzeStdLib(true)
         .iterations(0)
-        .checkImpl(this::class.java) { failure ->
+        .detectFailure(this::class.java) { failure ->
             failure.checkLincheckOutput("concurrent_linked_deque")
         }
 }

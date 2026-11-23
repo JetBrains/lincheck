@@ -75,7 +75,7 @@ class SetSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(SetVerifier::class.java)
     }
 
@@ -132,7 +132,7 @@ class MapSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(MapVerifier::class.java)
     }
 
@@ -187,7 +187,7 @@ class ListSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(ListVerifier::class.java)
     }
 
@@ -242,7 +242,7 @@ class PriorityQueueSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(PriorityQueueVerifier::class.java)
     }
 
@@ -296,7 +296,7 @@ class ConcurrentMapSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(ConcurrentMapVerifier::class.java)
     }
 

@@ -29,7 +29,7 @@ abstract class AbstractArrayAccessTest : AbstractLincheckTest() {
     @Operation
     abstract fun operation()
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(0)
         .addCustomScenario {
             parallel {

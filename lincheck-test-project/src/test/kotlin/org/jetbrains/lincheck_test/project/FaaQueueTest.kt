@@ -26,7 +26,7 @@ class FaaQueueTest {
 
 }
 
-fun Options<*, *>.configure(): Unit {
+fun Options<*>.configure(): Unit {
     this.addCustomScenario {
         initial { actor(FaaQueueTest::dequeue) }
         parallel {

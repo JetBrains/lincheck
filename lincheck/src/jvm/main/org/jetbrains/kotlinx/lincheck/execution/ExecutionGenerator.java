@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck.execution;
 
-import org.jetbrains.lincheck.datastructures.CTestConfiguration;
+import org.jetbrains.lincheck.datastructures.Options;
 import org.jetbrains.kotlinx.lincheck.CTestStructure;
 
 /**
@@ -21,11 +21,11 @@ import org.jetbrains.kotlinx.lincheck.CTestStructure;
  * All implementations should have the same constructor as {@link ExecutionGenerator} has.
  */
 public abstract class ExecutionGenerator {
-    protected final CTestConfiguration testConfiguration;
+    protected final Options<?> options;
     protected final CTestStructure testStructure;
 
-    protected ExecutionGenerator(CTestConfiguration testConfiguration, CTestStructure testStructure) {
-        this.testConfiguration = testConfiguration;
+    protected ExecutionGenerator(Options<?> options, CTestStructure testStructure) {
+        this.options = options;
         this.testStructure = testStructure;
     }
 

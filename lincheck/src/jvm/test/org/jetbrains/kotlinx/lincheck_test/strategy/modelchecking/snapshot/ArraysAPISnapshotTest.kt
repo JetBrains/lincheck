@@ -54,7 +54,7 @@ class ArraysAPISnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(ArraysAPIVerifier::class.java)
         actorsBefore(0)
         actorsAfter(0)

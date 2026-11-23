@@ -29,7 +29,7 @@ class ConstructorArgumentsTrackingTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(ConstructorNotThisModificationVerifier::class.java)
         threads(1)
         invocationsPerIteration(1)

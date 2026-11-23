@@ -32,7 +32,7 @@ class HangingInParallelPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::c
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         addCustomScenario(scenario)
         iterations(0)
         minimizeFailedScenario(false)
@@ -62,7 +62,7 @@ class HangingInInitPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         addCustomScenario(scenario)
         iterations(0)
         minimizeFailedScenario(false)
@@ -92,7 +92,7 @@ class HangingInPostPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         addCustomScenario(scenario)
         iterations(0)
         minimizeFailedScenario(false)

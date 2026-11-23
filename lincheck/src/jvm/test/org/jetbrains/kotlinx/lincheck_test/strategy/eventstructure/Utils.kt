@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
+import org.jetbrains.lincheck.datastructures.createStrategy
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
@@ -124,16 +125,15 @@ internal fun<Outcome> litmusTest(
     }
 }
 
-private fun createConfiguration(testClass: Class<*>, memoryModel: MemoryModel) =
+private fun createOptions(memoryModel: MemoryModel) =
     ModelCheckingOptions()
         .useExperimentalModelChecking()
         .memoryModel(memoryModel)
         // for tests debugging set large timeout
         .invocationTimeout(60 * 60 * 1000)
-        .createTestConfigurations(testClass)
 
 internal fun createStrategy(testClass: Class<*>, memoryModel: MemoryModel, scenario: ExecutionScenario): EventStructureStrategy {
-    return createConfiguration(testClass, memoryModel)
+    return createOptions(memoryModel)
         .createStrategy(
             testClass = testClass,
             scenario = scenario,
@@ -174,7 +174,10 @@ internal fun <T> createStrategy(
     block: () -> T
 ): EventStructureStrategy {
     val runner = LambdaRunner(timeoutMs = timeoutMs, block)
-    return EventStructureStrategy(runner, settings, inIdeaPluginReplayMode, LincheckInstrumentation.context, memoryModel).also {
+    return EventStructureStrategy(
+        runner, settings, LincheckInstrumentation.context, memoryModel,
+        inIdeaPluginReplayMode = inIdeaPluginReplayMode,
+    ).also {
         runner.initializeStrategy(it)
     }
 }
@@ -200,7 +203,6 @@ internal inline fun<reified Outcome> litmusTest(
     noinline checkStats: ((EventStructureStrategy.Stats) -> Unit)? = null,
     noinline block: () -> Outcome,
 ) {
-    val testCfg = options.createTestConfigurations(block::class.java)
     val outcomes: MutableList<Outcome> = mutableListOf()
     val verifier = getResultsVerifier { result ->
         val value = getValue<Outcome>(result.parallelResults[0][0]!!)
@@ -209,7 +211,7 @@ internal inline fun<reified Outcome> litmusTest(
     }
     withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
         ensureObjectIsTransformed(block)
-        createStrategy(testCfg.timeoutMs, testCfg.createSettings(), testCfg.inIdeaPluginReplayMode, memoryModel, block).use { strategy ->
+        createStrategy(options.timeoutMs, options.createSettings(), memoryModel = memoryModel, block = block).use { strategy ->
             val failure = strategy.runIteration(invocations, verifier)
             Assert.assertEquals("Unexpected exploration failure: $failure", expectedFailure, failure?.let { it::class })
             // Probing the next invocation mutates the event structure, so probe once,

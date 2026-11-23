@@ -10,11 +10,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -51,7 +51,7 @@ class AtomicArrayWithCAS2LiveLockTest {
             .iterations(500)
             .invocationsPerIteration(1000)
             .sequentialSpecification(IntAtomicArraySequential::class.java)
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
             .checkLincheckOutput("spin_lock/broken-cas-2-recursive-live-lock")
 }
 

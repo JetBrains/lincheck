@@ -14,7 +14,7 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
-import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
+import org.jetbrains.lincheck.datastructures.ManagedOptions
 
 import java.util.concurrent.atomic.*
 import org.junit.*
@@ -40,7 +40,7 @@ class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTe
     private fun incrementManyTimes() {
         counter.get()
         // repeat exactly the maximum number of times that does not cause obstruction freedom violation
-        repeat(ManagedCTestConfiguration.DEFAULT_LOOP_BOUND) {
+        repeat(ManagedOptions.DEFAULT_LOOP_BOUND) {
             counter.incrementAndGet()
         }
     }
@@ -70,7 +70,7 @@ class ObstructionFreedomSynchronizedRepresentationTest {
             }
         }
         .checkObstructionFreedom(true)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("obstruction_freedom_synchronized")
 
 }

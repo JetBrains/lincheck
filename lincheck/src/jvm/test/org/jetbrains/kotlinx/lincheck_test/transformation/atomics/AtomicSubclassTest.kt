@@ -36,7 +36,7 @@ class AtomicSubclassTest : AbstractLincheckTest(IncorrectResultsFailure::class) 
         atomic.set(42)
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         addCustomScenario {
             parallel {
                 thread {

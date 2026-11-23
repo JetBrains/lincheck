@@ -39,13 +39,22 @@ import sun.nio.ch.lincheck.ThreadDescriptor
 import java.util.Locale
 import org.objectweb.asm.Type as AsmType
 
+/**
+ * Explores executions using an event structure under the selected memory model.
+ *
+ * @param runner executes each invocation of the tested code.
+ * @param settings configures exploration bounds and managed analysis.
+ * @param context provides trace metadata for instrumented execution.
+ * @param memoryModel defines which execution graphs are consistent.
+ * @param inIdeaPluginReplayMode enables replay integration with the IntelliJ plugin.
+ * @param printExecutionGraph appends the failing invocation's execution graph to its report.
+ */
 internal class EventStructureStrategy(
     runner: Runner,
     settings: ManagedStrategySettings,
-    inIdeaPluginReplayMode: Boolean = false,
     private val context: TraceContext,
-    val memoryModel : MemoryModel = MemoryModel.SequentialConsistency,
-    /** Whether to append the execution graph of a failing invocation to the failure report. */
+    val memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
+    inIdeaPluginReplayMode: Boolean = false,
     val printExecutionGraph: Boolean = false,
 ) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode, context) {
 

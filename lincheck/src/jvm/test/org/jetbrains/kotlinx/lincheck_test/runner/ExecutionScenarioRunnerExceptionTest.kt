@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.runner
 
-import org.jetbrains.lincheck.datastructures.CTestConfiguration.Companion.DEFAULT_TIMEOUT_MS
+import org.jetbrains.lincheck.datastructures.Options.Companion.DEFAULT_TIMEOUT_MS
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*

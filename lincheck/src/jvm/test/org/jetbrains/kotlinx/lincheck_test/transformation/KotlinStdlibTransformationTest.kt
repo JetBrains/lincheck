@@ -52,7 +52,7 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
         intProgression.toSet()
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
     }
 }

@@ -34,7 +34,7 @@ class CancellationHandlingTest : AbstractLincheckTest() {
         (cont as CancellableContinuation<Unit>).cancel()
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
         actorsBefore(0)

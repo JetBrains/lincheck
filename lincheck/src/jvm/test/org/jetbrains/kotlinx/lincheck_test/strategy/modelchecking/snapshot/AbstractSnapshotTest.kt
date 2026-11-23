@@ -31,7 +31,7 @@ abstract class AbstractSnapshotTest {
         }
     }
 
-    protected open fun <O : ManagedOptions<O, *>> O.customize() {}
+    protected open fun <O : ManagedOptions<O>> O.customize() {}
 
     @Test
     open fun testModelChecking() = ModelCheckingOptions()

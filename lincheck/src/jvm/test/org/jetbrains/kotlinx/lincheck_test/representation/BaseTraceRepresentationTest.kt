@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
@@ -47,7 +47,7 @@ abstract class BaseTraceRepresentationTest(
         .verifier(FailingVerifier::class.java)
         .iterations(0)
         .apply { customize() }
-        .checkImpl(this::class.java) { failure ->
+        .detectFailure(this::class.java) { failure ->
             failure.checkLincheckOutput(outputFileName, handleOnlyDefaultJdkOutput)
         }
 

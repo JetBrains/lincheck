@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -75,7 +76,7 @@ class TraceReportingTest {
                     }
                 }
             }
-        }.checkImpl(this::class.java)
+        }.detectFailure(this::class.java)
         failure.checkLincheckOutput("trace_reporting")
         checkTraceHasNoLincheckEvents(failure.toString())
     }
@@ -113,7 +114,7 @@ class TraceReportingTest {
                     actor(::enterPost)
                 }
             }
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
         failure.checkLincheckOutput("trace_reporting_init_post_parts")
         checkTraceHasNoLincheckEvents(failure.toString())
     }
@@ -135,7 +136,7 @@ class TraceReportingTest {
                 }
             }
             .sequentialSpecification(EmptySequentialImplementation::class.java)
-            .checkImpl(this::class.java) { failure ->
+            .detectFailure(this::class.java) { failure ->
                 failure.checkLincheckOutput("trace_reporting_empty")
             }
     }

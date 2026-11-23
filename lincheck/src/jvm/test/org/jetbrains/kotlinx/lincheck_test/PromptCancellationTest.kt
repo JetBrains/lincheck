@@ -64,14 +64,14 @@ abstract class AbstractPromptCancellationTest(
         return returnResult
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
         actorsBefore(0)
         threads(2)
         actorsPerThread(1)
         actorsAfter(0)
-        sequentialSpecification?.let { sequentialSpecification(it.java) }
+        this@AbstractPromptCancellationTest.sequentialSpecification?.let { sequentialSpecification(it.java) }
     }
 }
 

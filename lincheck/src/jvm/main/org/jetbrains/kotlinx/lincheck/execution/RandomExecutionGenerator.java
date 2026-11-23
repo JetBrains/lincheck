@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.execution;
 
 import org.jetbrains.kotlinx.lincheck.Actor;
-import org.jetbrains.lincheck.datastructures.CTestConfiguration;
+import org.jetbrains.lincheck.datastructures.Options;
 import org.jetbrains.kotlinx.lincheck.CTestStructure;
 import org.jetbrains.lincheck.datastructures.RandomProvider;
 
@@ -25,8 +25,8 @@ import java.util.stream.Collectors;
 public class RandomExecutionGenerator extends ExecutionGenerator {
     private final Random random;
 
-    public RandomExecutionGenerator(CTestConfiguration testConfiguration, CTestStructure testStructure, RandomProvider randomProvider) {
-        super(testConfiguration, testStructure);
+    public RandomExecutionGenerator(Options<?> options, CTestStructure testStructure, RandomProvider randomProvider) {
+        super(options, testStructure);
         random = randomProvider.createRandom();
     }
 
@@ -36,7 +36,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
         List<ActorGenerator> validActorGeneratorsForInit = testStructure.actorGenerators.stream()
             .filter(ag -> !ag.getUseOnce() && !ag.isSuspendable()).collect(Collectors.toList());
         List<Actor> initExecution = new ArrayList<>();
-        for (int i = 0; i < testConfiguration.getActorsBefore() && !validActorGeneratorsForInit.isEmpty(); i++) {
+        for (int i = 0; i < options.getActorsBefore() && !validActorGeneratorsForInit.isEmpty(); i++) {
             ActorGenerator ag = validActorGeneratorsForInit.get(random.nextInt(validActorGeneratorsForInit.size()));
             initExecution.add(ag.generate(0, random));
         }
@@ -51,9 +51,9 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
 
         List<List<Actor>> parallelExecution = new ArrayList<>();
         List<ThreadGen> threadGens = new ArrayList<>();
-        for (int t = 0; t < testConfiguration.getThreads(); t++) {
+        for (int t = 0; t < options.getThreads(); t++) {
             parallelExecution.add(new ArrayList<>());
-            threadGens.add(new ThreadGen(t, testConfiguration.getActorsPerThread()));
+            threadGens.add(new ThreadGen(t, options.getActorsPerThread()));
         }
         for (int i = 0; i < nonParallelGroups.size(); i++) {
             threadGens.get(i % threadGens.size()).nonParallelActorGenerators
@@ -89,9 +89,9 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
             List<ActorGenerator> leftActorGenerators = new ArrayList<>(parallelGroup);
             for (ThreadGen threadGen : tgs2)
                 leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
-            for (int i = 0; i < testConfiguration.getActorsAfter() && !leftActorGenerators.isEmpty(); i++) {
+            for (int i = 0; i < options.getActorsAfter() && !leftActorGenerators.isEmpty(); i++) {
                 ActorGenerator agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size()));
-                postExecution.add(agen.generate(testConfiguration.getThreads() + 1, random));
+                postExecution.add(agen.generate(options.getThreads() + 1, random));
             }
         } else {
             postExecution = Collections.emptyList();

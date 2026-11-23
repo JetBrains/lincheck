@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.NO_OPERATION_ERROR_MESSAGE
+import org.jetbrains.kotlinx.lincheck.execution.NO_OPERATION_ERROR_MESSAGE
 import org.jetbrains.kotlinx.lincheck.check
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Assert.assertEquals

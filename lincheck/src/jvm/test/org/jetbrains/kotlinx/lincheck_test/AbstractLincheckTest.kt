@@ -22,10 +22,10 @@ import kotlin.reflect.*
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
-    open fun <O: Options<O, *>> O.customize() {}
+    open fun <O: Options<O>> O.customize() {}
 
-    private fun <O : Options<O, *>> O.runInternalTest() {
-        val failure: LincheckFailure? = checkImpl(this@AbstractLincheckTest::class.java)
+    private fun <O : Options<O>> O.runInternalTest() {
+        val failure: LincheckFailure? = detectFailure(this@AbstractLincheckTest::class.java)
         if (failure === null) {
             assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
@@ -66,7 +66,7 @@ abstract class AbstractLincheckTest(
         runInternalTest()
     }
 
-    private fun <O : Options<O, *>> O.commonConfiguration(): Unit = run {
+    private fun <O : Options<O>> O.commonConfiguration(): Unit = run {
         iterations(30)
         actorsBefore(2)
         threads(3)
@@ -77,7 +77,7 @@ abstract class AbstractLincheckTest(
     }
 
     // Util function which allows us to exclude testing with event-structures for test cases that are not supported yet
-    protected fun <O: Options<O, *>> O.ignoreExperimentalModelChecking(): Unit {
+    protected fun <O: Options<O>> O.ignoreExperimentalModelChecking(): Unit {
         assumeTrue(this !is ModelCheckingOptions || !isExperimentalModelCheckingEnabled)
     }
 }

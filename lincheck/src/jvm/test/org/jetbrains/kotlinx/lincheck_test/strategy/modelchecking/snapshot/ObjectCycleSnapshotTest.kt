@@ -40,7 +40,7 @@ class ObjectCycleSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(StaticObjectCycleVerifier::class.java)
     }
 

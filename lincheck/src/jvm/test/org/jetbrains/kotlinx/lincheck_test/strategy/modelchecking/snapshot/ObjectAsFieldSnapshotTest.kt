@@ -44,7 +44,7 @@ class ObjectAsFieldSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(StaticObjectAsFieldVerifier::class.java)
     }
 

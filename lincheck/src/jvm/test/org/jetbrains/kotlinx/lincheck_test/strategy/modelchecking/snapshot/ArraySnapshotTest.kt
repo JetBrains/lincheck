@@ -34,7 +34,7 @@ class StaticIntArraySnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(StaticIntArrayVerifier::class.java)
     }
 
@@ -69,7 +69,7 @@ class StaticObjectArraySnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(StaticObjectArrayVerifier::class.java)
     }
 

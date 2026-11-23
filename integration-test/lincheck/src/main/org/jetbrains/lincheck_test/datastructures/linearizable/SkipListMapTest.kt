@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentSkipListMap
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
 class SkipListMapTest : AbstractLincheckTest() {
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         if (this is ModelCheckingOptions) analyzeStdLib(true)
     }
 

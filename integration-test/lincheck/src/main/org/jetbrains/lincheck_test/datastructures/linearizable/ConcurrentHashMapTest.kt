@@ -31,7 +31,7 @@ class ConcurrentHashMapTest : AbstractLincheckTest() {
     @Operation
     fun remove(@Param(name = "key") key: Int) = map.remove(key)
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         // TODO: This times out, we need to fix performance
         ignoreExperimentalModelChecking()
         // To obtain rare interleaving with `fullAddCount` method

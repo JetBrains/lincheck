@@ -9,7 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
@@ -58,7 +58,7 @@ class RepeatedSuspensionTraceReportingTest {
             }
             .iterations(0)
             .verifier(FailingVerifier::class.java)
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
         // Rendering must not overwrite the suspension results in the collected trace.
         repeat(2) { failure.checkLincheckOutput("repeated_suspension") }
     }

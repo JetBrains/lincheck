@@ -11,88 +11,30 @@
 package org.jetbrains.lincheck.datastructures
 
 import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
 import org.jetbrains.kotlinx.lincheck.runner.UseClocks
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
-import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.STRESS
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
 
 /**
  * Options for the stress strategy.
  */
-open class StressOptions : Options<StressOptions, StressCTestConfiguration>() {
-    override fun createTestConfigurations(testClass: Class<*>): StressCTestConfiguration {
-        return StressCTestConfiguration(
-            testClass = testClass,
-            iterations = iterations,
-            threads = threads,
-            actorsPerThread = actorsPerThread,
-            actorsBefore = actorsBefore,
-            actorsAfter = actorsAfter,
-            generatorClass = executionGenerator,
-            verifierClass = verifier,
-            invocationsPerIteration = invocationsPerIteration,
-            minimizeFailedScenario = minimizeFailedScenario,
-            sequentialSpecification = sequentialSpecification ?: testClass,
-            timeoutMs = timeoutMs,
-            customScenarios = customScenarios
-        )
-    }
-}
+open class StressOptions : Options<StressOptions>()
 
-/**
- * Configuration for the stress strategy.
- */
-class StressCTestConfiguration(
+internal fun StressOptions.createStrategy(
     testClass: Class<*>,
-    iterations: Int,
-    threads: Int,
-    actorsPerThread: Int,
-    actorsBefore: Int,
-    actorsAfter: Int,
-    generatorClass: Class<out ExecutionGenerator>,
-    verifierClass: Class<out Verifier>,
-    invocationsPerIteration: Int,
-    minimizeFailedScenario: Boolean,
-    sequentialSpecification: Class<*>,
-    timeoutMs: Long,
-    customScenarios: List<ExecutionScenario>
-) : CTestConfiguration(
-    testClass = testClass,
-    iterations = iterations,
-    invocationsPerIteration = invocationsPerIteration,
-    threads = threads,
-    actorsPerThread = actorsPerThread,
-    actorsBefore = actorsBefore,
-    actorsAfter = actorsAfter,
-    generatorClass = generatorClass,
-    verifierClass = verifierClass,
-    minimizeFailedScenario = minimizeFailedScenario,
-    sequentialSpecification = sequentialSpecification,
-    timeoutMs = timeoutMs,
-    customScenarios = customScenarios
-) {
-
-    override val instrumentationMode: InstrumentationMode get() = STRESS
-
-    override fun createStrategy(
-        testClass: Class<*>,
-        scenario: ExecutionScenario,
-        validationFunction: Actor?,
-    ): Strategy {
-        val runner = ExecutionScenarioRunner(
-            scenario = scenario,
-            testClass = testClass,
-            validationFunction = validationFunction,
-            timeoutMs = timeoutMs,
-            useClocks = UseClocks.RANDOM
-        )
-        return StressStrategy(runner).also {
-            runner.initializeStrategy(it)
-        }
+    scenario: ExecutionScenario,
+    validationFunction: Actor?,
+): Strategy {
+    val runner = ExecutionScenarioRunner(
+        scenario = scenario,
+        testClass = testClass,
+        validationFunction = validationFunction,
+        timeoutMs = timeoutMs,
+        useClocks = UseClocks.RANDOM
+    )
+    return StressStrategy(runner).also {
+        runner.initializeStrategy(it)
     }
 }

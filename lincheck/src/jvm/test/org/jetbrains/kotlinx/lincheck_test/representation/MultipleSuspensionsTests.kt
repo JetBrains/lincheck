@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -67,7 +67,7 @@ class SingleSuspensionPointTraceRepresentationTest {
                 thread { actor(::operation) }
             }
         }
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("single_suspension_point")
 
 }
@@ -134,7 +134,7 @@ class MultipleSuspensionPointsTraceRepresentationTest {
             forClasses(this::class.java.name).methods("firstStep", "secondStep", "part1", "part2")
                 .treatAsAtomic()
         )
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("multiple_suspension_points")
 
 }
@@ -177,7 +177,7 @@ class MultipleSuspensionPointsChannelsTraceRepresentationTest {
                 thread { actor(::operation2) }
             }
         }
-        .checkImpl(this::class.java) { failure ->
+        .detectFailure(this::class.java) { failure ->
             failure.checkLincheckOutput("multiple_suspension_points_channels")
         }
 }

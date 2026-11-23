@@ -10,9 +10,9 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import kotlinx.coroutines.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
@@ -40,7 +40,7 @@ class CoroutineCancellationTraceReportingTest {
         actorsBefore(0)
         actorsAfter(0)
     }
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("coroutine_cancellation")
 
 }

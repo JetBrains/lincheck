@@ -29,7 +29,7 @@ class FaaQueueTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     @Operation
     fun enqueue(x: Int) = faaQueue.enqueue(x)
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         if (this is StressOptions) {
             invocationsPerIteration(10_000_000)
             iterations(0)

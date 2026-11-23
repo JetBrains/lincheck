@@ -37,7 +37,7 @@ class SwitchAsFirstMethodEventTest {
         actorsBefore(0)
         actorsAfter(0)
     }
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("switch_as_first_method_event")
 }
 
@@ -64,6 +64,6 @@ class SwitchAsFirstNestedMethodEventTest {
             }
         }
         .iterations(0)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("switch_as_first_nested_method_event")
 }

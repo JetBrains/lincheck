@@ -12,21 +12,21 @@ package org.jetbrains.lincheck
 import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.kotlinx.lincheck.runPluginReplay
 import org.jetbrains.lincheck.util.ideaPluginEnabled
-import org.jetbrains.lincheck.datastructures.CTestConfiguration
+import org.jetbrains.lincheck.datastructures.instrumentationMode
+import org.jetbrains.lincheck.datastructures.withIdeaPluginReplayModeEnabled
+import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
-import org.jetbrains.lincheck.datastructures.ManagedCTestConfiguration
-import org.jetbrains.lincheck.datastructures.ModelCheckingCTestConfiguration
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import sun.nio.ch.lincheck.Injections
@@ -76,23 +76,22 @@ object Lincheck {
         if (settings.useExperimentalModelChecking)
             options = options.useExperimentalModelChecking()
 
-        val testCfg = options.createTestConfigurations(block::class.java)
-
-        withLincheckTestContext(testCfg.instrumentationMode) {
+        withLincheckTestContext(options.instrumentationMode) {
             ensureObjectIsTransformed(block)
             val verifier = NoExceptionVerifier()
-            testCfg.createStrategy(block).use { strategy ->
+            options.createStrategy(block).use { strategy ->
                 val failure = strategy.runIteration(invocations, verifier)
                 if (failure != null) {
                     check(strategy is ModelCheckingStrategy)
                     if (ideaPluginEnabled) {
-                        testCfg.enableReplayModeForIdeaPlugin()
-                        runPluginReplay(
-                            failure = failure,
-                            replayStrategy = testCfg.createStrategy(block),
-                            invocations = invocations,
-                            verifier = verifier,
-                        )
+                        options.withIdeaPluginReplayModeEnabled {
+                            runPluginReplay(
+                                failure = failure,
+                                replayStrategy = options.createStrategy(block),
+                                invocations = invocations,
+                                verifier = verifier,
+                            )
+                        }
                     }
                     throw LincheckAssertionError(failure)
                 }
@@ -100,22 +99,23 @@ object Lincheck {
         }
     }
 
-    private fun ModelCheckingCTestConfiguration.createStrategy(block: Runnable): ManagedStrategy {
+    private fun ModelCheckingOptions.createStrategy(block: Runnable): ManagedStrategy {
         val runner = LambdaRunner(timeoutMs = timeoutMs, block)
         if (useExperimentalModelChecking) {
             return EventStructureStrategy(
-                runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context,
+                runner, createSettings(), LincheckInstrumentation.context,
+                inIdeaPluginReplayMode = ideaPluginReplayModeEnabled,
                 printExecutionGraph = printExecutionGraph,
             ).also {
                 runner.initializeStrategy(it)
             }
         }
-        return ModelCheckingStrategy(runner, createSettings(), inIdeaPluginReplayMode, LincheckInstrumentation.context).also {
+        return ModelCheckingStrategy(runner, createSettings(), ideaPluginReplayModeEnabled, LincheckInstrumentation.context).also {
             runner.initializeStrategy(it)
         }
     }
 
-    internal const val DEFAULT_INVOCATIONS = CTestConfiguration.DEFAULT_INVOCATIONS
+    internal const val DEFAULT_INVOCATIONS = Options.DEFAULT_INVOCATIONS
 }
 
 /**

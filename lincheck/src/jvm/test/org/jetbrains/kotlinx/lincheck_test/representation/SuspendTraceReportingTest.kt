@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.representation
 
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.*
@@ -51,7 +51,7 @@ class SuspendTraceReportingTest {
             }
         }
     }
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("suspend_trace_reporting" )
 }
 
@@ -110,7 +110,7 @@ class SuspendTraceResumptionReportingTest {
             }
         }
     }
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("suspend_trace_resumption_reporting_test")
 }
 
@@ -171,6 +171,6 @@ class SuspendTraceResumptionFrameSkippingReportingTest {
             }
         }
     }
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("suspend_trace_resumption_frame_skipping_reporting_test")
 }

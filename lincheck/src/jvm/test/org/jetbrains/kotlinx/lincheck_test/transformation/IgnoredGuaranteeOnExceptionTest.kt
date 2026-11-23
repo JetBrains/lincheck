@@ -35,7 +35,7 @@ class IgnoredGuaranteeOnExceptionTest {
     @Test
     fun test() {
         val options = ModelCheckingOptions().addGuarantee(forClasses(this.javaClass.name).methods("badMethod").ignore())
-        val failure = options.checkImpl(this.javaClass)
+        val failure = options.detectFailure(this.javaClass)
         check(failure != null) { "This test should fail" }
     }
 }

@@ -39,7 +39,7 @@ class ThreadAbortErrorInTryBlockTest {
             .actorsBefore(0)
             .actorsAfter(0)
             .threads(2)
-        val failure = options.checkImpl(this::class.java)
+        val failure = options.detectFailure(this::class.java)
         check(failure != null) { "the test should fail" }
         val threadAbortedErrorName = LincheckAnalysisAbortedError::class.simpleName!!
         check(failure is ManagedLivelockFailure) {

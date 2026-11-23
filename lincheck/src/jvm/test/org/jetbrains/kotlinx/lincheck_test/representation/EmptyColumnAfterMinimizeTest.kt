@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.jetbrains.lincheck.datastructures.*
 import org.junit.Test
@@ -71,7 +71,7 @@ class EmptyColumnAfterMinimizeTest {
         .actorsPerThread(2)
         .actorsAfter(0)
         .checkObstructionFreedom(false)
-        .checkImpl(this::class.java) { failure ->
+        .detectFailure(this::class.java) { failure ->
             failure.checkLincheckOutput("empty_column_after_minimize")
         }
 }

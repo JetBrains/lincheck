@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
@@ -39,7 +39,7 @@ class ExceptionsInOutputTest {
                 thread { actor(::operation2) }
             }
         }
-        .checkImpl(this::class.java) { failure ->
+        .detectFailure(this::class.java) { failure ->
             failure.checkLincheckOutput("exceptions_in_output")
         }
 }

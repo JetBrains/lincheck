@@ -35,7 +35,7 @@ class ExceptionInParallelPartTest : AbstractLincheckTest(IncorrectResultsFailure
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(0)
         addCustomScenario(scenario)
         minimizeFailedScenario(false)
@@ -65,7 +65,7 @@ class ExceptionInInitPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(0)
         addCustomScenario(scenario)
         minimizeFailedScenario(false)
@@ -95,7 +95,7 @@ class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(0)
         addCustomScenario(scenario)
         minimizeFailedScenario(false)
@@ -145,7 +145,7 @@ class EmptyStackTraceExceptionTest : AbstractLincheckTest(IncorrectResultsFailur
     class A
     class B
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         iterations(1)
         threads(1)
         actorsBefore(0)
@@ -183,7 +183,7 @@ class CoroutineResumedWithExceptionTest : AbstractLincheckTest(IncorrectResultsF
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         ignoreExperimentalModelChecking() // NOTE: Coroutines not supported for event-structure
         iterations(0)
         addCustomScenario(scenario)
@@ -203,7 +203,7 @@ class ExceptionInCancellationHandlerTest : AbstractLincheckTest(IncorrectResults
         }
     }
 
-    override fun <O : Options<O, *>> O.customize() {
+    override fun <O : Options<O>> O.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
         iterations(10)

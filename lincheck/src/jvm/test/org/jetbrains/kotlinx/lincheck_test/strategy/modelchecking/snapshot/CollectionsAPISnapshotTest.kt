@@ -48,7 +48,7 @@ class CollectionsAPISnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         verifier(CollectionsAPIVerifier::class.java)
         actorsBefore(0)
         actorsAfter(0)

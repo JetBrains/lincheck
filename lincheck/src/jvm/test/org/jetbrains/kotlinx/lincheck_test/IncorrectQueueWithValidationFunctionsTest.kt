@@ -12,10 +12,10 @@
 
 package org.jetbrains.kotlinx.lincheck_test
 
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
 import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Validate
@@ -62,7 +62,7 @@ class IncorrectQueueWithValidationFunctionsTest {
             .invocationsPerIteration(1_000)
             .checkObstructionFreedom(true)
             .sequentialSpecification(IntQueueSequential::class.java)
-            .checkImpl(this::class.java)
+            .detectFailure(this::class.java)
 
         assertTrue(failure is IncorrectResultsFailure)
     }

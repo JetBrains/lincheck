@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
+import org.jetbrains.lincheck.datastructures.createStrategy
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.ManagedLivelockFailure
@@ -316,7 +317,6 @@ class LoopDetectorTests {
             val config = boundedOptions()
                 .useExperimentalModelChecking()
                 .memoryModel(memoryModel)
-                .createTestConfigurations(ReadOnceMayHang::class.java)
             val completedResults = mutableListOf<Int>()
             val verifier = getResultsVerifier { results ->
                 completedResults.add(getValue(results.parallelResults[0][0]!!))

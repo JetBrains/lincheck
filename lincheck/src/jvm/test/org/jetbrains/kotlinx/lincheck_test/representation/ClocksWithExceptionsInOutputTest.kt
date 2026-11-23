@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.*
 import org.junit.Test
@@ -38,7 +38,7 @@ class ClocksWithExceptionsInOutputTest {
         actorsPerThread(2)
         minimizeFailedScenario(false)
     }
-    .checkImpl(this::class.java) { failure ->
+    .detectFailure(this::class.java) { failure ->
         failure.checkLincheckOutput("clocks_and_exceptions")
     }
 

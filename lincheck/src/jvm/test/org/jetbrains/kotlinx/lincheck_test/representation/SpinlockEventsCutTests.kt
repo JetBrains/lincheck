@@ -17,7 +17,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.datastructures.MSQueueBlocking
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.lincheck.datastructures.CTestConfiguration
+import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.RandomProvider
 import org.junit.Ignore
 import org.junit.Test
@@ -44,7 +44,7 @@ class ObstructionFreedomViolationEventsCutTest {
     @Test
     fun runModelCheckingTest() = ModelCheckingOptions()
         .checkObstructionFreedom(true)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("obstruction_freedom_violation_events_cut")
 }
 
@@ -75,7 +75,6 @@ class SpinlockEventsCutMiddleLengthTest : AbstractSpinLivelockTest() {
 
     override val outputFileName: String
         get() = "spin_lock/spin_lock_events_cut_two_actions_cycle"
-    
 
     override fun meaninglessActions() {
         val x = sharedStateAny.get()
@@ -231,7 +230,6 @@ class SpinlockEventsCutLongCycleActionsTest : AbstractSpinLivelockTest() {
     private val data = AtomicReferenceArray<Int>(7)
     override val outputFileName: String
         get() = "spin_lock/spin_lock_events_cut_long_cycle"
-    
     override fun meaninglessActions() {
         data[0] = 0
         data[1] = 0
@@ -302,7 +300,7 @@ abstract class AbstractSpinLivelockTest {
     @Test
     fun testWithModelCheckingStrategy() = ModelCheckingOptions()
         .minimizeFailedScenario(false)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput(outputFileName)
 }
 
@@ -340,7 +338,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
         .iterations(1)
         .sequentialSpecification(ClocksTestSequential::class.java)
         .minimizeFailedScenario(false)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/spin_lock_in_incorrect_results_failure")
 
 
@@ -349,7 +347,7 @@ class SpinlockInIncorrectResultsWithClocksTest {
      */
     @Suppress("UNUSED_PARAMETER")
     class ClocksTestScenarioGenerator(
-        testCfg: CTestConfiguration,
+        testCfg: Options<*>,
         testStructure: CTestStructure,
         randomProvider: RandomProvider
     ) : ExecutionGenerator(testCfg, testStructure) {
@@ -470,7 +468,7 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
             }
         }
         .minimizeFailedScenario(false)
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/spin_lock_nested_events")
 
 }
@@ -496,7 +494,7 @@ class SingleThreadTopLevelSpinLockTest {
 
     @Test
     fun test() = ModelCheckingOptions()
-        .checkImpl(this::class.java)
+        .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/spin_lock_top_level")
 
 }

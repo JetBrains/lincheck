@@ -34,7 +34,7 @@ class InnerClassConstructorTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O, *>> O.customize() {
+    override fun <O : ManagedOptions<O>> O.customize() {
         iterations(1)
         invocationsPerIteration(1)
         verifier(InnerClassVerifier::class.java)

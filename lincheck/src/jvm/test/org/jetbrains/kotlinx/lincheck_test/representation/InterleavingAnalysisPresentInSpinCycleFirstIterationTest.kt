@@ -13,7 +13,7 @@
 package org.jetbrains.kotlinx.lincheck_test.representation
 
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.checkImpl
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.kotlinx.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
@@ -63,7 +63,7 @@ class InterleavingAnalysisPresentInSpinCycleFirstIterationTest {
                 thread { actor(InterleavingAnalysisPresentInSpinCycleFirstIterationTest::spinLock) }
             }
         }
-        .checkImpl(this::class.java) { failure ->
+        .detectFailure(this::class.java) { failure ->
             failure.checkLincheckOutput("switch_in_the_middle_of_spin_cycle_causes_error")
         }
 }

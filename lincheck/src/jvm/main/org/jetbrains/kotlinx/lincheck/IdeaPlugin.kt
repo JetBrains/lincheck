@@ -477,3 +477,11 @@ private fun createContinuationToThreadIdMap(threads: Array<TestThread>): Array<A
     }
     return array.toTypedArray()
 }
+
+/**
+ * We provide lincheck version to [testFailed] method to the plugin be able to
+ * determine if this version is compatible with the plugin version.
+ */
+internal val lincheckVersion by lazy {
+    LinChecker::class.java.`package`.implementationVersion ?: System.getProperty("lincheck.version")
+}

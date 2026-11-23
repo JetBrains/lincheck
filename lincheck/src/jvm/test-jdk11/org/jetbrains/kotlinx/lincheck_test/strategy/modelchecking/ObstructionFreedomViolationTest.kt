@@ -29,7 +29,7 @@ class ObstructionFreedomViolationTest { // Flaky on JDK 8
         val options = ModelCheckingOptions()
             .checkObstructionFreedom()
             .minimizeFailedScenario(false)
-        val failure = options.checkImpl(ObstructionFreedomViolationTest::class.java)
+        val failure = options.detectFailure(ObstructionFreedomViolationTest::class.java)
         check(failure is ObstructionFreedomViolationFailure)
     }
 }
