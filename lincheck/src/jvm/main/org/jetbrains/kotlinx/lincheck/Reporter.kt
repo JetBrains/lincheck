@@ -811,8 +811,6 @@ internal fun TraceReporter.appendResultNodes(isGeneralPurposeModelCheckingMode: 
 /**
  * Pre-process trace by:
  * - removing the validation section (in case of no validation failure);
- * - moving starting switch points outside of method calls (to make the trace more readable);
- * - moving spin cycle start trace points to the place where the recursive method call trace points are located;
  * - numbering actor exceptions (to make the trace more readable);
  * - removing the GPMC lambda section (in case of GPMC mode).
  */
@@ -822,7 +820,6 @@ private fun LincheckFailure.preprocessTrace(): Trace {
         .run { if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda() else this }
         .run { if (failure !is ValidationFailure) removeValidationSection() else this }
         .removeRedundantSectionDelimiters()
-        .moveStartingSwitchPointsOutOfMethodCalls()
         .numberExceptionResults()
 }
 

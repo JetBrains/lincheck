@@ -1,0 +1,43 @@
+= Invalid execution results =
+| ----------------------------------------- |
+|      Thread 1       |      Thread 2       |
+| ----------------------------------------- |
+| incTwiceAndGet(): 3 | incTwiceAndGet(): 4 |
+| ----------------------------------------- |
+
+The following interleaving leads to the error:
+| -------------------------------------------------------- |
+|      Thread 1       |              Thread 2              |
+| -------------------------------------------------------- |
+|                     | incTwiceAndGet(): 4                |
+|                     |   incAndGet(): 1                   |
+|                     |   incAndGet(): 4                   |
+|                     |     incAndGetImpl(): 4             |
+|                     |       switch                       |
+| incTwiceAndGet(): 3 |                                    |
+|                     |       counter.incrementAndGet(): 4 |
+|                     |   result: 4                        |
+| -------------------------------------------------------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                          Thread 1                                                          |                                                          Thread 2                                                          |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                                                                            | incTwiceAndGet(): 4                                                                                                        |
+|                                                                                                                            |   incAndGet(): 1 at SwitchAsFirstNestedMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:50)                  |
+|                                                                                                                            |     incAndGetImpl(): 1 at SwitchAsFirstNestedMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:54)                 |
+|                                                                                                                            |       counter.incrementAndGet(): 1 at SwitchAsFirstNestedMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:56) |
+|                                                                                                                            |   incAndGet(): 4 at SwitchAsFirstNestedMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:51)                  |
+|                                                                                                                            |     incAndGetImpl(): 4 at SwitchAsFirstNestedMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:54)                 |
+|                                                                                                                            |       switch                                                                                                               |
+| incTwiceAndGet(): 3                                                                                                        |                                                                                                                            |
+|   incAndGet(): 2 at SwitchAsFirstNestedMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:50)                  |                                                                                                                            |
+|     incAndGetImpl(): 2 at SwitchAsFirstNestedMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:54)                 |                                                                                                                            |
+|       counter.incrementAndGet(): 2 at SwitchAsFirstNestedMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:56) |                                                                                                                            |
+|   incAndGet(): 3 at SwitchAsFirstNestedMethodEventTest.incTwiceAndGet(SwitchAsFirstMethodEventTest.kt:51)                  |                                                                                                                            |
+|     incAndGetImpl(): 3 at SwitchAsFirstNestedMethodEventTest.incAndGet(SwitchAsFirstMethodEventTest.kt:54)                 |                                                                                                                            |
+|       counter.incrementAndGet(): 3 at SwitchAsFirstNestedMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:56) |                                                                                                                            |
+|   result: 3                                                                                                                |                                                                                                                            |
+|                                                                                                                            |       counter.incrementAndGet(): 4 at SwitchAsFirstNestedMethodEventTest.incAndGetImpl(SwitchAsFirstMethodEventTest.kt:56) |
+|                                                                                                                            |   result: 4                                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

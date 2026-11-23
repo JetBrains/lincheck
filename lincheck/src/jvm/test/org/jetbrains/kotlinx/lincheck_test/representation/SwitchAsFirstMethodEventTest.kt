@@ -17,35 +17,7 @@ import kotlinx.atomicfu.atomic
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.*
 
-/**
- * This test checks that all switches that are the first events in methods are lifted out of the methods in the trace.
- * E.g, instead of
- *
- * ```
- * actor()
- * operation()
- *   ...
- *   method()
- *      switch
- *      READ
- *      ...
- *   ...
- * ```
- * should be
- *
- * it should be
- *
- * ```
- * actor()
- * operation()
- *   ...
- *   switch
- *   method()
- *      READ
- *      ...
- *   ...
- * ```
- */
+/** Checks switch placement within nested calls using atomicfu instrumentation. */
 class SwitchAsFirstMethodEventTest {
     private val counter = atomic(0)
 
@@ -67,4 +39,31 @@ class SwitchAsFirstMethodEventTest {
     }
         .checkImpl(this::class.java)
         .checkLincheckOutput("switch_as_first_method_event")
+}
+
+/** Checks that a switch before the first atomic access retains the enclosing method calls. */
+class SwitchAsFirstNestedMethodEventTest {
+    private val counter = java.util.concurrent.atomic.AtomicInteger()
+
+    @Operation
+    fun incTwiceAndGet(): Int {
+        incAndGet()
+        return incAndGet()
+    }
+
+    private fun incAndGet(): Int = incAndGetImpl()
+
+    private fun incAndGetImpl(): Int = counter.incrementAndGet()
+
+    @Test
+    fun test() = ModelCheckingOptions()
+        .addCustomScenario {
+            parallel {
+                thread { actor(::incTwiceAndGet) }
+                thread { actor(::incTwiceAndGet) }
+            }
+        }
+        .iterations(0)
+        .checkImpl(this::class.java)
+        .checkLincheckOutput("switch_as_first_nested_method_event")
 }
