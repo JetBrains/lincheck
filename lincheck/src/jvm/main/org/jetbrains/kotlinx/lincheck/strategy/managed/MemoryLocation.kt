@@ -57,16 +57,15 @@ fun ObjectTracker.getFieldAccessMemoryLocation(
         return StaticFieldMemoryLocation(className, fieldName, type, field, isFinal)
     }
     val clazz = obj!!.javaClass
-    // TODO: If this is null then we are in a phantom static object, which is probably not what we expect
-    val id = get(obj)!!.objectNumber
+    // Objects created outside instrumented code may first become visible at a field access.
+    val id = registerObjectIfAbsent(obj).objectNumber
     val field = resolveField(resolveClass(clazz, className), className, fieldName)
     return ObjectFieldMemoryLocation(clazz, id, field.declaringClass.name, fieldName, type, field, isFinal)
 }
 
 fun ObjectTracker.getArrayAccessMemoryLocation(array: Any, index: Int, type: Types.Type): MemoryLocation {
     val clazz = array.javaClass
-    // TODO: can this be null?
-    val id = get(array)!!.objectNumber
+    val id = registerObjectIfAbsent(array).objectNumber
     return ArrayElementMemoryLocation(clazz, id, index, type)
 }
 

@@ -1,0 +1,22 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------ |
+|                                                   Thread 1                                                   |
+| ------------------------------------------------------------------------------------------------------------ |
+| operation()                                                                                                  |
+|   source.clone(): IntArray#2 at ArrayCloneRepresentationTest.operation(ArrayCloneRepresentationTest.java:21) |
+|   result: void                                                                                               |
+| ------------------------------------------------------------------------------------------------------------ |

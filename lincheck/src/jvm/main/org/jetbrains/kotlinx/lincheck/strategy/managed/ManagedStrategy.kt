@@ -1686,9 +1686,9 @@ internal abstract class ManagedStrategy(
             (methodDescriptor.isIntrinsic && methodDescriptor.isArraysCopyOfIntrinsic()) ||
             (methodDescriptor.isIntrinsic && methodDescriptor.isArraysCopyOfRangeIntrinsic()) ||
             methodDescriptor.isArrayNewInstance() ||
-            methodDescriptor.isObjectCloneMethod()
+            methodDescriptor.isCloneMethod()
         ) {
-            // `Arrays.copyOf`/`copyOfRange`, `Array.newInstance`, and `Object.clone()` all produce
+            // `Arrays.copyOf`/`copyOfRange`, `Array.newInstance`, and object/array `clone()` produce
             // their result outside any `NEW` instruction the instrumentation could see;
             // route it through the same path as a regular object allocation.
             // `canonicalName` mirrors what `ObjectCreationTransformer` pushes for static array allocations
