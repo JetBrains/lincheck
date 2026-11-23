@@ -238,7 +238,7 @@ class InitializationLabel(
         get() = objectsAllocations.keys
 
     fun getInitialValue(location: StaticFieldMemoryLocation): ValueID {
-        return  memoryInitializer(location)
+        return staticMemory.computeIfAbsent(location) { memoryInitializer(it) }
     }
 
     fun trackExternalObject(className: String, objID: ObjectNumber) {
