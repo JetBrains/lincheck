@@ -71,13 +71,17 @@ fun readFieldSafely(obj: Any?, field: Field): Result<Any?> {
     }
 
     // Fall back to reflection if the field cannot be read via Unsafe.
-    return field.withAccessible {
-        try {
+    // `setAccessible(true)` itself can throw `InaccessibleObjectException`
+    // (e.g. a JDK-internal capturing lambda, whose hidden class lives in a module
+    // that does not open its package to us) -- treat that failure the same as any
+    // other failed read instead of letting it propagate out of this "safe" read.
+    return try {
+        field.withAccessible {
             Result.success(it.get(obj))
-        } catch (exception: Exception) {
-            Logger.debug(exception) { "Failed to read field ${field.name} via reflection." }
-            Result.failure(exception)
         }
+    } catch (exception: Exception) {
+        Logger.debug(exception) { "Failed to read field ${field.name} via reflection." }
+        Result.failure(exception)
     }
 }
 

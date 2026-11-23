@@ -16,7 +16,12 @@ sourceSets {
     }
 
     test {
+        val jdkToolchainVersion: String by project
+
         java.srcDir("src/test")
+        if (jdkToolchainVersion.toInt() >= 15) {
+            java.srcDir("src/test-jdk15")
+        }
     }
 
     dependencies {

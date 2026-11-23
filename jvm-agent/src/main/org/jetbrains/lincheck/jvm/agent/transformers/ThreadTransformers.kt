@@ -193,8 +193,11 @@ internal class ThreadStartJoinTransformer(
 
     // TODO: add support for thread joins with time limit
     private fun isThreadJoinCall(className: String, methodName: String, desc: String) =
-        // no need to check for thread subclasses here, since join methods are marked as final
-        methodName == "join" && isThreadClass(className.toCanonicalClassName()) && (
+        // `join` is `final` in `Thread` and is never overridden, but javac/kotlinc still emit
+        // the call-site owner as the static type of the receiver expression, which can be a
+        // named `Thread` subclass (e.g. `class MyThread : Thread()`, `val t: MyThread; t.join()`).
+        // Therefore, both `Thread` and its subclasses must be recognized as call-site owners.
+        methodName == "join" && isThreadSubClass(className.toCanonicalClassName()) && (
             desc == VOID_METHOD_DESCRIPTOR || desc == "(J)V" || desc == "(JI)V"
         )
 }
