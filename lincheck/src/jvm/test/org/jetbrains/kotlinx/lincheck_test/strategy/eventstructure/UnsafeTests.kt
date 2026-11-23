@@ -143,6 +143,30 @@ class UnsafeTests {
         }
     }
 
+    // `Unsafe.unpark`'s own parameter is statically typed `Object` (unlike, say, `LockSupport.unpark(Thread)`,
+    // where the local variable passed through to `Unsafe.unpark` happens to already be declared `Thread`).
+    // A call site whose argument keeps that static `Object` type -- e.g. `org.agrona.UnsafeApi.unpark(Object)`,
+    // the real crash the hunt found -- used to make the instrumentation push a value the verifier only knew as
+    // `Object` into a call expecting `Thread`, which the class verifier rejected with a `VerifyError`,
+    // leaving the whole class uninstrumented.
+    class UnparkObjectArgHolder {
+        @Volatile var value = 0
+        fun write() { value = 1 }
+        // Never called: merely being present in the class used to break instrumentation of the whole class.
+        fun wake(target: Any) = U.unpark(target)
+    }
+
+    @Test
+    fun testUnparkWithObjectTypedArgument() {
+        litmusTest(assertSame(setOf(1)), requireExhaustion = true) {
+            val holder = UnparkObjectArgHolder()
+            val before = holder.value
+            val writer = thread { holder.write() }
+            writer.join()
+            before + holder.value
+        }
+    }
+
     private class Cell {
         @JvmField var x = 0
         @JvmField var y = 0

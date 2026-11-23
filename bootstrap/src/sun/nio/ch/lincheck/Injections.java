@@ -630,10 +630,14 @@ public class Injections {
 
     /**
      * Called from the instrumented code instead of `Unsafe.unpark`.
+     *
+     * `Unsafe.unpark`'s own parameter is statically typed `Object` (its contract still requires
+     * a `Thread` at runtime). Keeping the parameter as `Object` avoids a `VerifyError` from the
+     * computed stack map frame; the cast is only needed before forwarding to the event tracker.
      */
-    public static void unpark(ThreadDescriptor descriptor, int codeLocation, Thread thread) {
+    public static void unpark(ThreadDescriptor descriptor, int codeLocation, Object thread) {
         EventTracker tracker = getEventTracker(descriptor);
-        tracker.unpark(descriptor, codeLocation, thread);
+        tracker.unpark(descriptor, codeLocation, (Thread) thread);
     }
 
     /**
