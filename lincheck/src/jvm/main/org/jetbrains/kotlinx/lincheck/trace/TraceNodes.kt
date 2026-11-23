@@ -212,6 +212,18 @@ internal fun Column<TraceNode>.reorder(): Column<TraceNode> =
 internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<TraceNode> {
     val nodes = MutableList<MutableList<TraceNode>>(threadCount) { mutableListOf() }
     val currentNodePerThread = MutableList<TraceNode?>(threadCount) { null }
+    val calls = mutableMapOf<MethodCallTracePoint, CallNode>()
+    val suspendedCalls = List(threadCount) { mutableSetOf<CallNode>() }
+
+    fun currentCall(threadId: Int): CallNode? =
+        generateSequence(currentNodePerThread[threadId]) { it.parent }.filterIsInstance<CallNode>().firstOrNull()
+
+    fun closeCall(threadId: Int, eventNumber: Int) {
+        val call = currentCall(threadId) ?: return
+        call.returnEventNumber = eventNumber
+        currentNodePerThread[threadId] = call.parent
+        suspendedCalls[threadId].remove(call)
+    }
 
     fun addToCurrentContainer(threadId: Int, node: TraceNode) {
         val currNode = currentNodePerThread[threadId]
@@ -228,28 +240,47 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
 
         when (event) {
             is MethodCallTracePoint -> {
-                val newNode = CallNode(event, eventNumber)
+                val suspended = suspendedCalls[currentThreadId]
+                if (event.isRootCall) suspended.clear()
+                val resumedCall = if (event.isSuspend) {
+                    generateSequence(currentNodePerThread[currentThreadId]) { it.parent }
+                        .filterIsInstance<CallNode>()
+                        .firstOrNull {
+                            it in suspended && it.tracePoint.className == event.className &&
+                            it.tracePoint.methodName == event.methodName
+                        }
+                } else null
+                if (resumedCall != null) {
+                    // Tail calls may have no resumption frame, so close them before resuming their caller.
+                    while (currentCall(currentThreadId) !== resumedCall) closeCall(currentThreadId, eventNumber)
+                    suspended.remove(resumedCall)
+                    calls[event] = resumedCall
+                    return@forEachIndexed
+                }
+                // Resumptions update the displayed result without changing the collected invocation's result.
+                val newNode = CallNode(event.deepCopy(HashMap()), eventNumber)
+                calls[event] = newNode
                 addToCurrentContainer(currentThreadId, newNode)
                 currentNodePerThread[currentThreadId] = newNode
             }
 
             is MethodReturnTracePoint -> {
-                // Walk up the stack to find the nearest CallNode, as well as implicitly closing any necessary loops
-                var currentCallNode = currentNodePerThread[currentThreadId]
-
-                if (currentCallNode == null) {
-                    // TODO re-enable later on when the problem with actors will be resolved
-                    // error("Return is not allowed here")
+                val invocation = event.methodTracePoint
+                val call = calls[invocation]
+                if (call != null && invocation.wasSuspended) {
+                    // Keep the logical call chain open across the JVM stack unwinding.
+                    suspendedCalls[currentThreadId].add(call)
+                    generateSequence(call.parent) { it.parent }.filterIsInstance<CallNode>()
+                        .firstOrNull { it.isActor }?.let { suspendedCalls[currentThreadId].add(it) }
+                    return@forEachIndexed
                 }
-
-                while (currentCallNode != null && currentCallNode !is CallNode) {
-                    currentCallNode = currentCallNode.parent
+                if (call != null && !call.isActor) {
+                    call.tracePoint.returnedValue = invocation.returnedValue
+                    call.tracePoint.thrownException = invocation.thrownException
                 }
-
-                if (currentCallNode is CallNode) {
-                    currentCallNode.returnEventNumber = eventNumber
-                    currentNodePerThread[currentThreadId] = currentCallNode.parent
-                }
+                // The runner records the actor's final result after its last resumed invocation returns.
+                if (call?.isActor == true && !invocation.isActor) return@forEachIndexed
+                closeCall(currentThreadId, eventNumber)
             }
 
             is LoopStartTracePoint -> {

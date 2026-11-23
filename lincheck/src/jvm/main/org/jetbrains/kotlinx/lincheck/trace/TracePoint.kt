@@ -605,7 +605,7 @@ internal class MethodReturnTracePoint(
 ): TracePoint(context, eventId, methodTracePoint.iThread, methodTracePoint.actorId) {
     override fun toString(withLocation: Boolean, withValues: Boolean) =  "This trace point is temporary, it should not appear in the logs; method: ${methodTracePoint.methodName}"
     override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        MethodReturnTracePoint(context, eventId, methodTracePoint)
+        MethodReturnTracePoint(context, eventId, methodTracePoint.deepCopy(copiedObjects))
     }
 }
 
@@ -685,7 +685,6 @@ internal fun BlockingReason?.toSwitchReason(iThreadToDisplayNumber: (Int) -> Int
  *
  * @property id unique identifier of the call stack trace element.
  * @property tracePoint the method call trace point corresponding to this call stack element.
- * @property instance the object on which the method was invoked (null in case of static method).
  * @property methodInvocationId identifier of the method invocation;
  *   encompasses the id of the method itself and ids of its parameters (i.e., their hash codes).
  *
@@ -694,7 +693,6 @@ internal fun BlockingReason?.toSwitchReason(iThreadToDisplayNumber: (Int) -> Int
 internal class CallStackTraceElement(
     val id: Int,
     val tracePoint: MethodCallTracePoint,
-    val instance: Any?,
     val methodInvocationId: Int
 ) {
     fun deepCopy(copiedObjects: HashMap<Any, Any>): CallStackTraceElement =
@@ -702,7 +700,6 @@ internal class CallStackTraceElement(
             CallStackTraceElement(
                 id,
                 tracePoint.deepCopy(copiedObjects),
-                instance,
                 methodInvocationId
             )
         }
