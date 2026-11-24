@@ -60,8 +60,6 @@ internal class ModelCheckingStrategy(
     // The interleaving that will be studied on the next invocation.
     private lateinit var currentInterleaving: Interleaving
 
-    private var isReplayingSpinCycle = false
-
     // Tracker of objects' allocations and object graph topology.
     override val objectTracker: ObjectTracker = LocalObjectManager()
 
@@ -74,12 +72,6 @@ internal class ModelCheckingStrategy(
     override val parkingTracker: ParkingTracker = ModelCheckingParkingTracker(allowSpuriousWakeUps = true)
 
     override fun nextInvocation(): Boolean {
-        // if we are in spin-cycle replay mode, then next invocation always exist,
-        // since we just repeat the previous one.
-        if (isReplayingSpinCycle) {
-            return true
-        }
-        replayNumber = 0
         currentInterleaving = root.nextInterleaving()
             ?: return false
         return true
@@ -88,19 +80,11 @@ internal class ModelCheckingStrategy(
     override fun initializeInvocation() {
         super.initializeInvocation()
         currentInterleaving.initialize()
-        isReplayingSpinCycle = false
-        replayNumber++
     }
 
     override fun initializeReplay() {
         super.initializeReplay()
         currentInterleaving = currentInterleaving.copy()
-    }
-
-    override fun enableSpinCycleReplay() {
-        super.enableSpinCycleReplay()
-        currentInterleaving.rollbackAfterSpinCycleFound()
-        isReplayingSpinCycle = true
     }
 
     override fun onSwitchPoint(iThread: Int) {
@@ -270,10 +254,6 @@ internal class ModelCheckingStrategy(
             isInitialized = true
         }
 
-        fun reset() {
-            _choices.clear()
-        }
-
         fun addChoice(choice: Choice) {
             check(isInitialized) {
                 "Node should be initialized."
@@ -351,17 +331,6 @@ internal class ModelCheckingStrategy(
             executionPosition = -1 // the first execution position will be zero
             currentInterleavingPosition = 0
             interleavingFinishingRandom = Random(2) // random with a constant seed
-        }
-
-        fun rollbackAfterSpinCycleFound() {
-            // execution will be replayed due to spin cycles, so we have to drop information about
-            // odd executions that were performed during unnecessary spin cycle iterations
-            currentInterleavingNode.reset()
-            // we will replay this interleaving,
-            // and since we clear out the switch points in the `currentInterleavingNode`
-            // we need to insert them once again, thus, we tell strategy to append switch points
-            shouldAddNewSwitchPoints = true
-            shouldMoveCurrentNode = false
         }
 
         fun chooseThread(iThread: Int): Int {

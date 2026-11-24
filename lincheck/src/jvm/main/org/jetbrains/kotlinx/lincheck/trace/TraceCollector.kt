@@ -17,7 +17,9 @@ internal class TraceCollector {
     private val _trace = mutableListOf<TracePoint>()
     val trace: List<TracePoint> = _trace
 
-    fun addTracePoint(tracePoint: TracePoint) {
+    fun addTracePoint(tracePoint: TracePoint?) {
+        if (tracePoint == null) return
+
         _trace += tracePoint
     }
 }
