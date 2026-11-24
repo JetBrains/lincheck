@@ -11,7 +11,6 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
 import org.jetbrains.lincheck.descriptors.*
-import org.jetbrains.lincheck.analysis.*
 import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.lincheck.jvm.agent.toSimpleClassName
 import org.jetbrains.lincheck.trace.TraceContext
@@ -52,7 +51,7 @@ internal fun findOwnerName(
  *   in case when lookup by the code location fails.
  * @return the determined owner name as a string, or null if no explicit owner name is required.
  */
-fun findOwnerName(
+internal fun findOwnerName(
     context: TraceContext,
     obj: Any?,
     className: String?,

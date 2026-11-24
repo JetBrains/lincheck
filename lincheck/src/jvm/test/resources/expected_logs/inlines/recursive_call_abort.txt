@@ -1,0 +1,33 @@
+= The execution has hung =
+| ------------------- |
+|      Thread 1       |
+| ------------------- |
+| operation(): <hung> |
+| ------------------- |
+
+
+The following interleaving leads to the error:
+| ------------------- |
+|      Thread 1       |
+| ------------------- |
+| operation(): <hung> |
+| ------------------- |
+All unfinished threads are in livelock due to non-terminating loops
+
+Detailed trace:
+| -------------------------------------------------------------------------------------------------------------------------- |
+|                                                          Thread 1                                                          |
+| -------------------------------------------------------------------------------------------------------------------------- |
+| operation(): <hung>                                                                                                        |
+|   recursiveCall() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:21)                     |
+|     inlineCall() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:25)                      |
+|       inlineCall$Lambda() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:29)             |
+|         recursiveCall() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:25)               |
+|           inlineCall() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:25)                |
+|             inlineCall$Lambda() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:29)       |
+|               recursiveCall() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:25)         |
+|                 inlineCall() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:25)          |
+|                   inlineCall$Lambda() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:29) |
+|                     recursiveCall() at InlineRecursiveCallAbortTest.<unknown method>(InlineRecursiveCallAbortTest.kt:25)   |
+| -------------------------------------------------------------------------------------------------------------------------- |
+All unfinished threads are in livelock due to non-terminating loops

@@ -73,8 +73,7 @@ sealed class TracePoint(val context: TraceContext, val eventId: Int, val iThread
     internal abstract fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint
 }
 
-//TODO turn call stack trace into List<MethodCallTracePoint> or codelocationtracepoint
-internal typealias CallStackTrace = List<CallStackTraceElement>
+internal typealias CallStackTrace = List<MethodCallTracePoint>
 internal fun CallStackTrace.deepCopy(copiedObjects: HashMap<Any, Any>): CallStackTrace =
     map { it.deepCopy(copiedObjects) }
 
@@ -677,30 +676,4 @@ internal fun BlockingReason?.toSwitchReason(iThreadToDisplayNumber: (Int) -> Int
     is BlockingReason.Suspended     -> SwitchReason.Suspended
     is BlockingReason.ThreadJoin    -> SwitchReason.ThreadJoinWait(iThreadToDisplayNumber(joinedThreadId))
     else                            -> SwitchReason.StrategySwitch
-}
-
-/**
- * Method call stack trace element info.
- * All method calls are enumerated with unique ids to distinguish different calls of the same method.
- *
- * @property id unique identifier of the call stack trace element.
- * @property tracePoint the method call trace point corresponding to this call stack element.
- * @property methodInvocationId identifier of the method invocation;
- *   encompasses the id of the method itself and ids of its parameters (i.e., their hash codes).
- *
- * @see [org.jetbrains.kotlinx.lincheck.transformation.methodCache].
- */
-internal class CallStackTraceElement(
-    val id: Int,
-    val tracePoint: MethodCallTracePoint,
-    val methodInvocationId: Int
-) {
-    fun deepCopy(copiedObjects: HashMap<Any, Any>): CallStackTraceElement =
-        copiedObjects.mapAndCast (this) {
-            CallStackTraceElement(
-                id,
-                tracePoint.deepCopy(copiedObjects),
-                methodInvocationId
-            )
-        }
 }

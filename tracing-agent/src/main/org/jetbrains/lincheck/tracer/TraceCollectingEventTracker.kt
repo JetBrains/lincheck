@@ -10,7 +10,6 @@
 
 package org.jetbrains.lincheck.tracer
 
-import org.jetbrains.lincheck.analysis.ShadowStackFrame
 import org.jetbrains.lincheck.descriptors.LineCodeLocation
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
 import org.jetbrains.lincheck.descriptors.Types
@@ -33,7 +32,6 @@ private class ThreadData(
 
     data class StackFrame(
         val call: MethodCallTracePoint,
-        val shadow: ShadowStackFrame,
         val loopStack: MutableList<LoopStackElement>, // stack of currently running loops
         val isInline: Boolean,
     )
@@ -78,11 +76,9 @@ private class ThreadData(
         return loopElement.iterations.last()
     }
 
-    fun pushStackFrame(tracePoint: MethodCallTracePoint, instance: Any?, isInline: Boolean) {
-        val stackFrame = ShadowStackFrame(instance)
+    fun pushStackFrame(tracePoint: MethodCallTracePoint, isInline: Boolean) {
         stack.add(StackFrame(
             call = tracePoint,
-            shadow = stackFrame,
             loopStack = mutableListOf(),
             isInline = isInline,
         ))
@@ -292,7 +288,7 @@ class TraceCollectingEventTracker(
                 )
                 rootTracePointCreated(threadData, tracePoint)
                 threadData.setRootCall(tracePoint)
-                threadData.pushStackFrame(tracePoint, thread, isInline = false)
+                threadData.pushStackFrame(tracePoint, isInline = false)
             }
         }
     }
@@ -548,7 +544,7 @@ class TraceCollectingEventTracker(
         )
         tracePointCreated(threadData, tracePoint)
         strategy.openContainerTracePoint(tracePoint)
-        threadData.pushStackFrame(tracePoint, receiver, isInline = false)
+        threadData.pushStackFrame(tracePoint, isInline = false)
         // if the method has certain guarantees, enter the corresponding section
         threadData.enterAnalysisSection(methodSection)
     }
@@ -672,7 +668,7 @@ class TraceCollectingEventTracker(
         )
         tracePointCreated(threadData, tracePoint)
         strategy.openContainerTracePoint(tracePoint)
-        threadData.pushStackFrame(tracePoint, owner, isInline = true)
+        threadData.pushStackFrame(tracePoint, isInline = true)
     }
 
     override fun afterInlineMethodCallReturn(
@@ -968,12 +964,11 @@ class TraceCollectingEventTracker(
             rootTracePointCreated(threadData, tracePoint)
 
             threadData.setRootCall(tracePoint)
-            threadData.pushStackFrame(tracePoint, null, isInline = false)
+            threadData.pushStackFrame(tracePoint, isInline = false)
         }
     }
 
     private fun pushMethodCall(
-        thread: Thread,
         threadData: ThreadData,
         obj: TraceValue,
         className: String,
@@ -999,7 +994,7 @@ class TraceCollectingEventTracker(
         if (threadData.getStack().isEmpty()) {
             threadData.setRootCall(methodCall)
         }
-        threadData.pushStackFrame(methodCall, thread, isInline = false)
+        threadData.pushStackFrame(methodCall, isInline = false)
     }
 
     private fun pushInvokedMethodCalls(
@@ -1013,7 +1008,7 @@ class TraceCollectingEventTracker(
                 analysisProfile.shouldBeHidden(frame.className, frame.methodName)
             ) continue
 
-            pushMethodCall(thread, threadData,
+            pushMethodCall(threadData,
                 obj = TraceNull,
                 className = frame.className,
                 methodName = frame.methodName,

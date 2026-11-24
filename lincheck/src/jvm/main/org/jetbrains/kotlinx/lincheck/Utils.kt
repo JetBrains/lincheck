@@ -84,14 +84,6 @@ private fun Class<out Any>.getMethod(name: String, parameterTypes: Array<Class<o
         method.name == name && method.parameterTypes.map { it.name } == parameterTypes.map { it.name }
     } ?: throw NoSuchMethodException("${getName()}.$name(${parameterTypes.joinToString(",")})")
 
-/**
- * @return hashcode of the unboxed value if [value] represents a boxed primitive, otherwise returns [System.identityHashCode]
- * of the [value].
- */
-internal fun primitiveOrIdentityHashCode(value: Any?): Int {
-    return if (value.isPrimitive) value.hashCode() else System.identityHashCode(value)
-}
-
 inline fun <R> Throwable.catch(vararg exceptions: Class<*>, block: () -> R): R {
     if (exceptions.any { this::class.java.isAssignableFrom(it) }) {
         return block()
