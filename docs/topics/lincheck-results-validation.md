@@ -109,7 +109,7 @@ To understand the difference between the two models, see how a data structure ca
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-lines="34-42,72" }
+   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-lines="34-42,74" }
 
 4. Declare and run a serializability test:
 

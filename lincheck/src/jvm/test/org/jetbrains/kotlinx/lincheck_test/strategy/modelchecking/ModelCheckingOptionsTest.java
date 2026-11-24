@@ -11,14 +11,17 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.modelchecking;
 
 import org.jetbrains.lincheck.util.LoggingLevel;
 import org.jetbrains.lincheck.datastructures.Operation;
+import org.jetbrains.lincheck.datastructures.Options;
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator;
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
 import org.jetbrains.lincheck.datastructures.verifier.LinearizabilityVerifier;
 import org.junit.Test;
+import org.jetbrains.lincheck.datastructures.StressOptions;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.jetbrains.lincheck.datastructures.ManagedStrategyGuaranteeKt.forClasses;
+import static org.junit.Assert.assertEquals;
 
 
 public class ModelCheckingOptionsTest {

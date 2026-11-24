@@ -6,18 +6,11 @@ import org.jetbrains.lincheck.util.LoggingLevel
 import kotlin.test.Test
 
 class Structure {
+    @Operation
     fun noArgsOp() {}
+
+    @Operation
     fun argsOp(value: Int) {}
-}
-
-class CustomScenarioTest {
-    var struct = Structure()
-
-    @Operation
-    fun noArgsOp() = struct.noArgsOp()
-
-    @Operation
-    fun argsOp(value: Int) = struct.argsOp(value)
 
     @Test
     fun test() = StressOptions()

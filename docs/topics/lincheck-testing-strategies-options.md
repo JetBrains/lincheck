@@ -64,7 +64,7 @@ Lincheck uses a [domain-specific language](https://kotlinlang.org/docs/type-safe
 
 ```kotlin
 ```
-{ src="kotlinx-lincheck/CustomScenarioTest.kt" include-symbol="CustomScenarioTest.test" }
+{ src="kotlinx-lincheck/CustomScenarioTest.kt" include-symbol="Structure.test" }
 
 Each scenario consists of three optional sections:
 

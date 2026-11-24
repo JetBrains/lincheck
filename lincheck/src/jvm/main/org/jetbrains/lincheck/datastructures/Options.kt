@@ -26,8 +26,14 @@ import kotlin.reflect.*
 sealed class Options<OPT : Options<OPT>> {
     internal var logLevel = DEFAULT_LOG_LEVEL
 
+    /**
+     * Number of scenarios, defaulting to `lincheck.defaultIterations` when set.
+     */
     var iterations = DEFAULT_ITERATIONS
         protected set
+    /**
+     * Invocations per scenario, defaulting to `lincheck.defaultInvocationsPerIteration` when set.
+     */
     var invocationsPerIteration = DEFAULT_INVOCATIONS
         protected set
 
@@ -208,8 +214,14 @@ sealed class Options<OPT : Options<OPT>> {
     fun check(testClass: KClass<*>) = check(testClass.java)
 
     companion object {
-        const val DEFAULT_ITERATIONS = 100
-        const val DEFAULT_INVOCATIONS = 10_000
+
+        @JvmField
+        val DEFAULT_ITERATIONS: Int =
+            Integer.getInteger("lincheck.defaultIterations", 100)
+
+        @JvmField
+        val DEFAULT_INVOCATIONS: Int =
+            Integer.getInteger("lincheck.defaultInvocationsPerIteration", 10_000)
 
         const val DEFAULT_THREADS = 2
         const val DEFAULT_ACTORS_PER_THREAD = 5

@@ -29,10 +29,10 @@ class ValidationTest {
         .addCustomScenario {
             parallel {
                 thread {
-                    actor(Storage::add)
+                    actor(ValidationTest::add)
                 }
                 thread {
-                    actor(Storage::add)
+                    actor(ValidationTest::add)
                 }
             }
         }

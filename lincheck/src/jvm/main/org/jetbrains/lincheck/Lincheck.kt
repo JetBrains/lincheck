@@ -117,7 +117,7 @@ object Lincheck {
         }
     }
 
-    internal const val DEFAULT_INVOCATIONS = Options.DEFAULT_INVOCATIONS
+    internal val DEFAULT_INVOCATIONS: Int = Options.DEFAULT_INVOCATIONS
 }
 
 /**

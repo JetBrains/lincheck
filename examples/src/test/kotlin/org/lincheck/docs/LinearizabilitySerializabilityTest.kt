@@ -60,6 +60,8 @@ class ConcurrentQueueTest {
 
     @Test
     fun linearizabilityTest() = ModelCheckingOptions()
+        .iterations(100)
+        .invocationsPerIteration(10_000)
         .actorsBefore(0)
         .actorsAfter(0)
         .actorsPerThread(2)
