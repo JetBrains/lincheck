@@ -64,7 +64,7 @@ class TraceReportingTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions().apply {
+        val options = ModelCheckingOptions().apply {
             iterations(0)
             addCustomScenario {
                 parallel {
@@ -76,9 +76,10 @@ class TraceReportingTest {
                     }
                 }
             }
-        }.detectFailure(this::class.java)
+        }
+        val failure = options.detectFailure(this::class.java)
         failure.checkLincheckOutput("trace_reporting")
-        checkTraceHasNoLincheckEvents(failure.toString())
+        checkTraceHasNoLincheckEvents(checkNotNull(failure).toString())
     }
 
     var init = 0
@@ -96,7 +97,7 @@ class TraceReportingTest {
 
     @Test
     fun testInitPostParts() {
-        val failure = ModelCheckingOptions()
+        val options = ModelCheckingOptions()
             .iterations(0)
             .addCustomScenario {
                 initial {
@@ -114,9 +115,9 @@ class TraceReportingTest {
                     actor(::enterPost)
                 }
             }
-            .detectFailure(this::class.java)
+        val failure = options.detectFailure(this::class.java)
         failure.checkLincheckOutput("trace_reporting_init_post_parts")
-        checkTraceHasNoLincheckEvents(failure.toString())
+        checkTraceHasNoLincheckEvents(checkNotNull(failure).toString())
     }
 
     @Operation

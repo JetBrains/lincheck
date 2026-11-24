@@ -10,6 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
+import org.jetbrains.kotlinx.lincheck.LincheckFailure
 import org.jetbrains.lincheck.datastructures.createStrategy
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
@@ -46,7 +47,7 @@ internal fun modelCheckerTest(
             assert(expectedFailure.isInstance(failure))
             return
         }
-        assert(failure == null) { failure.toString() }
+        assert(failure == null) { failure?.toString() ?: "No failure" }
         if (expectedExceptions.isNotEmpty()) {
             // check that all expected exceptions are discovered
             expectedExceptions.forEach { exceptionClass ->

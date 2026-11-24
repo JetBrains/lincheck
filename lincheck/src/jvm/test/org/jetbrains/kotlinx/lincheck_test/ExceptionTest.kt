@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.lincheck.datastructures.Operation

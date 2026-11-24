@@ -9,13 +9,13 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy
 
+import org.jetbrains.lincheck.util.AnalysisProfile
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import org.jetbrains.lincheck.util.AnalysisProfile
 import org.jetbrains.lincheck.util.Logger
 import java.util.concurrent.TimeoutException
 import java.io.Closeable
@@ -28,6 +28,8 @@ import java.io.Closeable
  * without any code change.
  */
 abstract class Strategy : Closeable {
+
+    internal open val analysisProfile: AnalysisProfile = AnalysisProfile.DEFAULT
 
     /**
      * Runner used for executing the test scenario.
@@ -117,7 +119,6 @@ abstract class Strategy : Closeable {
  * @return the failure, if detected, null otherwise.
  */
 fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure? {
-    val scenario = (runner as? ExecutionScenarioRunner)?.scenario ?: emptyScenario()
     var invocationsRun = 0
     try {
         repeat(invocations) {
@@ -125,7 +126,7 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
             val result = runInvocation()
             invocationsRun++
             val failure = try {
-                verify(scenario, result, verifier)
+                verify(result, verifier)
             } finally {
                 // verifier calls `@Operation`s of the class under test which can
                 // modify the static memory; thus, we need to restore initial values
@@ -150,23 +151,22 @@ fun Strategy.runIteration(invocations: Int, verifier: Verifier): LincheckFailure
  *
  * @return failure, if invocation results are incorrect, null otherwise.
  */
-fun Strategy.verify(scenario: ExecutionScenario, result: InvocationResult, verifier: Verifier): LincheckFailure? {
-    val analysisProfile = if (this is ManagedStrategy) this.analysisProfile else AnalysisProfile.DEFAULT
+fun Strategy.verify(result: InvocationResult, verifier: Verifier): LincheckFailure? {
     val failure = when (result) {
-        is InconsistentInvocationResult -> null
         is CompletedInvocationResult ->
-            if (!verifier.verifyResults(scenario, result.results)) {
+            if (!verifier.verifyResults(result.scenario, result.results)) {
                 val (trace, traceResult) = tryCollectTrace(result)
                 IncorrectResultsFailure(
-                    scenario = scenario,
+                    scenario = result.scenario,
                     results = (traceResult as CompletedInvocationResult).results,
                     trace = trace,
-                    analysisProfile = analysisProfile,
+                    analysisProfile = analysisProfile
                 )
             } else null
-        else -> {
+        is FailedInvocationResult -> {
+            if (result.failure is InconsistentExecutionFailure) return null
             val (trace, traceResult) = tryCollectTrace(result)
-            traceResult.toLincheckFailure(scenario, trace, analysisProfile)
+            (traceResult as FailedInvocationResult).failure.also { it.trace = trace }
         }
     }
     // Capture before the strategy is closed or minimization advances to a different execution.
@@ -174,7 +174,7 @@ fun Strategy.verify(scenario: ExecutionScenario, result: InvocationResult, verif
     if (failure != null &&
         this is EventStructureStrategy &&
         printExecutionGraph &&
-        result !is RunnerTimeoutInvocationResult
+        failure !is TimeoutFailure
     ) {
         failure.executionGraph = collectExecutionGraph()
     }

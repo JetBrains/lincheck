@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test.verifier
 
+import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.lincheck.datastructures.Options
 import java.util.concurrent.atomic.*

@@ -9,8 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
-import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.*
+import kotlinx.coroutines.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -338,24 +338,26 @@ internal class ExecutionScenarioRunner(
                 executor.submitAndAwait(validationTask, timeout)
                 val validationResult = validationPart.results.single()
                 if (validationResult is ExceptionResult) {
-                    return ValidationFailureInvocationResult(scenario, validationResult.throwable, collectExecutionResults())
+                    return ValidationFailureInvocationResult(scenario, collectExecutionResults(), validationResult.throwable, strategy.analysisProfile)
                 }
             }
             // Combine the results and convert them for the standard class loader (if they are of non-primitive types).
             // We do not want the transformed code to be reachable outside of the runner and strategy classes.
-            return CompletedInvocationResult(collectExecutionResults())
+            return CompletedInvocationResult(scenario, collectExecutionResults())
         } catch (_: TimeoutException) {
-            return RunnerTimeoutInvocationResult()
+            return TimeoutInvocationResult(scenario, collectExecutionResults(), collectThreadDump(), strategy.analysisProfile)
         } catch (e: ExecutionException) {
             // In case when invocation raised an exception,
             // we need to wait for all user threads to finish before continuing.
             // In case if waiting for threads termination abrupt with the timeout,
-            // we return `RunnerTimeoutInvocationResult`.
-            // Otherwise, we return `UnexpectedExceptionInvocationResult` with the original exception.
+            // we return a timeout failure.
+            // Otherwise, we return an unexpected-exception failure with the original exception.
             runCatching { strategy.awaitUserThreads(timeout) }.onFailure { exception ->
-                if (exception is TimeoutException) return RunnerTimeoutInvocationResult()
+                if (exception is TimeoutException) {
+                    return TimeoutInvocationResult(scenario, collectExecutionResults(), collectThreadDump(), strategy.analysisProfile)
+                }
             }
-            return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults())
+            return UnexpectedExceptionInvocationResult(scenario, collectExecutionResults(), e.cause!!, strategy.analysisProfile)
         } finally {
             resetState()
         }
@@ -371,10 +373,7 @@ internal class ExecutionScenarioRunner(
         postResults = postPartExecution?.results?.toList().orEmpty(),
     )
 
-    private fun RunnerTimeoutInvocationResult(): RunnerTimeoutInvocationResult {
-        val threadDump = collectThreadDump()
-        return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults())
-    }
+
 
     private fun createInitialPartExecution() =
         if (scenario.initExecution.isNotEmpty()) {

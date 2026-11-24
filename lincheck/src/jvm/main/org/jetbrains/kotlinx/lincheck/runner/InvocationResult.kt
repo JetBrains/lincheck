@@ -9,8 +9,9 @@
  */
 package org.jetbrains.kotlinx.lincheck.runner
 
+import org.jetbrains.lincheck.util.AnalysisProfile
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.Inconsistency
 
 /**
@@ -22,66 +23,69 @@ sealed class InvocationResult
  * The invocation completed successfully, the output [results] are provided.
  */
 class CompletedInvocationResult(
-    val results: ExecutionResult
-) : InvocationResult()
-
-/**
- * Indicates that the invocation has run into deadlock found by [ManagedStrategy].
- */
-class ManagedDeadlockInvocationResult(val results: ExecutionResult) : InvocationResult()
-
-/**
- * Indicates that the invocation has run into livelock found by [ManagedStrategy], used by the LoopDetection.
- */
-class ManagedLivelockInvocationResult(val results: ExecutionResult) : InvocationResult()
-
-/**
- * The invocation was not completed after timeout and runner halted the execution.
- */
-class RunnerTimeoutInvocationResult(
-    val threadDump: Map<Thread, Array<StackTraceElement>>,
-    val results: ExecutionResult
-): InvocationResult()
-
-/**
- * The invocation has completed with an unexpected exception.
- */
-class UnexpectedExceptionInvocationResult(
-    val exception: Throwable,
-    val results: ExecutionResult
-) : InvocationResult()
-
-/**
- * The invocation successfully completed, but the
- * [validation function][org.jetbrains.kotlinx.lincheck.annotations.Validate]
- * check failed.
- */
-class ValidationFailureInvocationResult(
     val scenario: ExecutionScenario,
-    val exception: Throwable,
     val results: ExecutionResult
 ) : InvocationResult()
 
 /**
- * Obstruction freedom check is requested,
- * but an invocation that hangs has been found.
+ * The invocation failed with [failure].
  */
-class ObstructionFreedomViolationInvocationResult(
-    val reason: String,
-    val results: ExecutionResult
-) : InvocationResult()
-
-class InconsistentInvocationResult(
-    val inconsistency: Inconsistency
-) : InvocationResult()
+class FailedInvocationResult(val failure: LincheckFailure) : InvocationResult()
 
 fun InvocationResult.isAbortedInvocation(): Boolean =
-    when (this) {
-        is ManagedDeadlockInvocationResult,
-        is RunnerTimeoutInvocationResult,
-        is UnexpectedExceptionInvocationResult,
-        is ObstructionFreedomViolationInvocationResult,
-        is InconsistentInvocationResult
-            -> true
+    this is FailedInvocationResult && when (failure) {
+        is ManagedDeadlockFailure,
+        is TimeoutFailure,
+        is UnexpectedExceptionFailure,
+        is ObstructionFreedomViolationFailure,
+        is InconsistentExecutionFailure
+             -> true
         else -> false
     }
+
+internal fun ManagedDeadlockInvocationResult(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    analysisProfile: AnalysisProfile
+): FailedInvocationResult = FailedInvocationResult(ManagedDeadlockFailure(scenario, results, analysisProfile = analysisProfile))
+
+internal fun ManagedLivelockInvocationResult(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    analysisProfile: AnalysisProfile
+): FailedInvocationResult = FailedInvocationResult(ManagedLivelockFailure(scenario, results, analysisProfile = analysisProfile))
+
+internal fun TimeoutInvocationResult(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    threadDump: Map<Thread, Array<StackTraceElement>>,
+    analysisProfile: AnalysisProfile
+): FailedInvocationResult = FailedInvocationResult(TimeoutFailure(scenario, results, threadDump, analysisProfile = analysisProfile))
+
+internal fun UnexpectedExceptionInvocationResult(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    exception: Throwable,
+    analysisProfile: AnalysisProfile
+): FailedInvocationResult = FailedInvocationResult(UnexpectedExceptionFailure(scenario, results, exception, analysisProfile = analysisProfile))
+
+internal fun ValidationFailureInvocationResult(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    exception: Throwable,
+    analysisProfile: AnalysisProfile
+): FailedInvocationResult = FailedInvocationResult(ValidationFailure(scenario, results, exception, analysisProfile = analysisProfile))
+
+internal fun ObstructionFreedomViolationInvocationResult(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    reason: String,
+    analysisProfile: AnalysisProfile
+): FailedInvocationResult = FailedInvocationResult(ObstructionFreedomViolationFailure(scenario, results, reason, analysisProfile = analysisProfile))
+
+internal fun InconsistentInvocationResult(
+    scenario: ExecutionScenario,
+    results: ExecutionResult,
+    inconsistency: Inconsistency,
+    analysisProfile: AnalysisProfile
+): FailedInvocationResult = FailedInvocationResult(InconsistentExecutionFailure(scenario, results, inconsistency, analysisProfile = analysisProfile))

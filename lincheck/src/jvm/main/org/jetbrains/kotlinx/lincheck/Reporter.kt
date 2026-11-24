@@ -12,7 +12,6 @@ package org.jetbrains.kotlinx.lincheck
 
 import sun.nio.ch.lincheck.TestThread
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
@@ -375,6 +374,7 @@ internal fun Appendable.appendFailure(failure: LincheckFailure): Appendable {
         is ObstructionFreedomViolationFailure -> appendObstructionFreedomViolationFailure(failure, exceptionStackTraces)
         is ManagedDeadlockFailure -> appendManagedDeadlockWithDumpFailure(failure, exceptionStackTraces)
         is ManagedLivelockFailure -> appendManagedDeadlockWithDumpFailure(failure, exceptionStackTraces)
+        is InconsistentExecutionFailure -> error("Inconsistent executions must be filtered before reporting")
     }
     if (failure.trace != null) {
         appendLine()

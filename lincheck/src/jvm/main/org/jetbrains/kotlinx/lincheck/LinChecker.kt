@@ -10,7 +10,6 @@
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenarioChecker
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.datastructures.Options
 import kotlin.reflect.KClass

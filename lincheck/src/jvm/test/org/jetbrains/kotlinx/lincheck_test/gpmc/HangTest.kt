@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.gpmc
 
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.ManagedLivelockFailure
 import kotlin.concurrent.thread
 import org.junit.Test
 

@@ -110,7 +110,9 @@ object Lincheck {
                 runner.initializeStrategy(it)
             }
         }
-        return ModelCheckingStrategy(runner, createSettings(), ideaPluginReplayModeEnabled, LincheckInstrumentation.context).also {
+        return ModelCheckingStrategy(
+            runner, createSettings(), ideaPluginReplayModeEnabled, LincheckInstrumentation.context
+        ).also {
             runner.initializeStrategy(it)
         }
     }

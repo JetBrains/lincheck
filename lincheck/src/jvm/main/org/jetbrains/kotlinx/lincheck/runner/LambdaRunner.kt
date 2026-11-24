@@ -10,8 +10,10 @@
 
 package org.jetbrains.kotlinx.lincheck.runner
 
+import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.util.NoResult
 import org.jetbrains.kotlinx.lincheck.execution.ResultWithClock
+import org.jetbrains.kotlinx.lincheck.execution.emptyScenario
 import org.jetbrains.kotlinx.lincheck.execution.emptyClock
 import org.jetbrains.kotlinx.lincheck.execution.emptyExecutionResult
 import org.jetbrains.kotlinx.lincheck.strategy.Strategy
@@ -68,11 +70,11 @@ internal class LambdaRunner<T> private constructor(
             } finally {
                 timeout -= strategy.awaitUserThreads(timeout)
             }
-            return CompletedInvocationResult(collectExecutionResults(wrapper))
+            return CompletedInvocationResult(emptyScenario(), collectExecutionResults(wrapper))
         } catch (_: TimeoutException) {
-            return RunnerTimeoutInvocationResult(wrapper)
+            return TimeoutInvocationResult(emptyScenario(), collectExecutionResults(wrapper), collectThreadDump(), strategy.analysisProfile)
         } catch (e: ExecutionException) {
-            return UnexpectedExceptionInvocationResult(e.cause!!, collectExecutionResults(wrapper))
+            return UnexpectedExceptionInvocationResult(emptyScenario(), collectExecutionResults(wrapper), e.cause!!, strategy.analysisProfile)
         } finally {
             resetEventTracker()
         }
@@ -131,11 +133,6 @@ internal class LambdaRunner<T> private constructor(
                 ResultWithClock(wrapper.result?.toLincheckResult() ?: NoResult, emptyClock(1))
             ))
         )
-
-    private fun RunnerTimeoutInvocationResult(wrapper: LambdaWrapper<T>): RunnerTimeoutInvocationResult {
-        val threadDump = collectThreadDump()
-        return RunnerTimeoutInvocationResult(threadDump, collectExecutionResults(wrapper))
-    }
 }
 
 internal fun LambdaRunner(timeoutMs: Long, block: Runnable): LambdaRunner<Unit> =

@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck_test.datastructures
 
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options

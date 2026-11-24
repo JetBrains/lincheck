@@ -13,10 +13,11 @@ package org.jetbrains.kotlinx.lincheck_test
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
+import org.jetbrains.kotlinx.lincheck.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
 import kotlin.coroutines.*
 import kotlin.reflect.*
 

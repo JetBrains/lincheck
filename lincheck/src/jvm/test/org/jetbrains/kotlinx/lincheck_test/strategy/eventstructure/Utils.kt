@@ -23,7 +23,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 import org.jetbrains.lincheck.datastructures.createStrategy
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.LincheckFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
@@ -116,7 +116,7 @@ internal fun<Outcome> litmusTest(
     withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
         createStrategy(testClass, memoryModel, testScenario).use { strategy ->
             val failure = strategy.runIteration(invocations, verifier)
-            assert(failure == null) { failure.toString() }
+            assert(failure == null) { failure?.toString() ?: "No failure" }
             val exhausted = !strategy.nextInvocation()
             strategy.checkAndPrintStats(invocations)
             printLitmusOutcomes(memoryModel, exhausted, outcomes)
@@ -213,7 +213,7 @@ internal inline fun<reified Outcome> litmusTest(
         ensureObjectIsTransformed(block)
         createStrategy(options.timeoutMs, options.createSettings(), memoryModel = memoryModel, block = block).use { strategy ->
             val failure = strategy.runIteration(invocations, verifier)
-            Assert.assertEquals("Unexpected exploration failure: $failure", expectedFailure, failure?.let { it::class })
+            Assert.assertEquals("Unexpected exploration failure: ${failure?.toString()}", expectedFailure, failure?.let { it::class })
             // Probing the next invocation mutates the event structure, so probe once,
             // and not after a failure unless exhaustion is asserted.
             val exhausted = if (failure == null || requireExhaustion) !strategy.nextInvocation() else null

@@ -134,7 +134,7 @@ internal class EventStructureStrategy(
     override fun runInvocationImpl(): InvocationResult {
         val (result, inconsistency) = runNextExploration()
         if (inconsistency != null) {
-            val filteredResult = InconsistentInvocationResult(inconsistency)
+            val filteredResult = InconsistentInvocationResult(scenario ?: emptyScenario(), collectExecutionResults(), inconsistency, analysisProfile)
             // ManagedStrategy returns a sudden result in preference to this method's result.
             if (suddenInvocationResult != null) suddenInvocationResult = filteredResult
             return filteredResult
@@ -165,10 +165,10 @@ internal class EventStructureStrategy(
                 eventStructure.abortExploration()
             }
             inconsistency = eventStructure.checkConsistency()
-                ?: (result as? InconsistentInvocationResult)?.inconsistency
+                ?: ((result as? FailedInvocationResult)?.failure as? InconsistentExecutionFailure)?.inconsistency
             if (inconsistency == null && result is CompletedInvocationResult) {
                 val patchedResult = patchResultsClock(eventStructure.execution, result.results)
-                result = CompletedInvocationResult(patchedResult)
+                result = CompletedInvocationResult(result.scenario, patchedResult)
             }
         }
 
@@ -603,7 +603,9 @@ internal class EventStructureStrategy(
     }
 
     private fun onInconsistency(inconsistency: Inconsistency) {
-        abortWithSuddenInvocationResult(InconsistentInvocationResult(inconsistency))
+        abortWithSuddenInvocationResult(
+            InconsistentInvocationResult(scenario ?: emptyScenario(), collectExecutionResults(), inconsistency, analysisProfile)
+        )
     }
 
     private fun getCurrentThreadId(): Int  = threadScheduler.getCurrentThreadId()

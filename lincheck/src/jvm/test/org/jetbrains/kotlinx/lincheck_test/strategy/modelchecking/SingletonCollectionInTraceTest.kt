@@ -41,10 +41,10 @@ class SingletonCollectionInTraceTest {
 
     @Test
     fun modelCheckingTest() {
-        val failure = ModelCheckingOptions()
+        val options = ModelCheckingOptions()
             .iterations(1)
-            .detectFailure(this::class.java)
-        val message = failure.toString()
+        val failure = options.detectFailure(this::class.java)
+        val message = failure?.toString() ?: "null"
         assert("SingletonList" !in message)
         assert("SingletonSet" !in message)
         assert("SingletonMap" !in message)

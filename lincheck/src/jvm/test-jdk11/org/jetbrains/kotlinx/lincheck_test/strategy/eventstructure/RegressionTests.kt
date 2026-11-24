@@ -12,8 +12,8 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedDeadlockFailure
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedLivelockFailure
+import org.jetbrains.kotlinx.lincheck.ManagedDeadlockFailure
+import org.jetbrains.kotlinx.lincheck.ManagedLivelockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.kotlinx.lincheck_test.datastructures.MSQueueBlocking
 import org.jetbrains.lincheck.datastructures.scenario

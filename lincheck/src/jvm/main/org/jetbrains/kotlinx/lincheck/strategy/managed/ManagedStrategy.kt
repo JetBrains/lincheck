@@ -173,7 +173,7 @@ internal abstract class ManagedStrategy(
     // Symbolizes that the `SpinCycleStartTracePoint` was added into the trace.
     private var spinCycleStartAdded = false
 
-    internal val analysisProfile: AnalysisProfile = AnalysisProfile(
+    internal override val analysisProfile: AnalysisProfile = AnalysisProfile(
         analyzeStdLib = settings.analyzeStdLib
     )
 
@@ -247,8 +247,8 @@ internal abstract class ManagedStrategy(
         }
         // In case the runner detects a deadlock, some threads can still manipulate the current strategy,
         // so we're not interested in suddenInvocationResult in this case
-        // and immediately return RunnerTimeoutInvocationResult.
-        if (result is RunnerTimeoutInvocationResult) {
+        // and immediately return the timeout failure.
+        if (result is FailedInvocationResult && result.failure is TimeoutFailure) {
             return result
         }
         // If strategy has not detected a sudden invocation result,
@@ -304,10 +304,10 @@ internal abstract class ManagedStrategy(
         val detectedByStrategy = (suddenInvocationResult != null)
         val canCollectTrace = when {
             result is CompletedInvocationResult -> true
-            result is ValidationFailureInvocationResult -> true
+            result is FailedInvocationResult && result.failure is ValidationFailure -> true
             // Timeout poisons the runner, making it impossible to
             // re-run invocation and collect the trace.
-            result is RunnerTimeoutInvocationResult -> false
+            result is FailedInvocationResult && result.failure is TimeoutFailure -> false
             detectedByStrategy -> true
             else -> false
         }
@@ -324,7 +324,7 @@ internal abstract class ManagedStrategy(
         // In case the runner detects a deadlock, some threads can still be in an active state,
         // simultaneously adding events to the TraceCollector, which leads to an inconsistent trace.
         // Therefore, if the runner detects deadlock, we don't even try to collect trace.
-        if (loggedResults is RunnerTimeoutInvocationResult) return null to result
+        if (loggedResults is FailedInvocationResult && loggedResults.failure is TimeoutFailure) return null to result
 
         val registeredThreads = getRegisteredThreads()
         val threadNames = MutableList((registeredThreads.keys.maxOrNull() ?: -1) + 1) { "" }
@@ -336,7 +336,9 @@ internal abstract class ManagedStrategy(
         }
         val trace = Trace(traceCollector!!.trace, threadNames)
 
-        val sameResultTypes = loggedResults.javaClass == result.javaClass
+        val sameResultTypes = loggedResults.javaClass == result.javaClass &&
+            (loggedResults !is FailedInvocationResult || result !is FailedInvocationResult ||
+                loggedResults.failure.javaClass == result.failure.javaClass)
         val sameResults = (
             loggedResults !is CompletedInvocationResult ||
             result !is CompletedInvocationResult ||
@@ -346,27 +348,32 @@ internal abstract class ManagedStrategy(
             StringBuilder().apply {
                 appendLine("Non-determinism found. Probably caused by non-deterministic code (WeakHashMap, Object.hashCode, etc).")
                 appendLine("== Reporting the first execution without execution trace ==")
-                appendLine(result.toLincheckFailure(scenario ?: emptyScenario(), null, analysisProfile))
+                appendLine(result.failureForReporting().toString())
                 appendLine("== Reporting the second execution ==")
-                appendLine(loggedResults.toLincheckFailure(scenario ?: emptyScenario(), trace, analysisProfile).toString())
+                appendLine(loggedResults.failureForReporting().also { it.trace = trace }.toString())
             }.toString()
         }
 
         return trace to loggedResults
     }
 
+    private fun InvocationResult.failureForReporting(): LincheckFailure = when (this) {
+        is FailedInvocationResult -> failure
+        is CompletedInvocationResult -> IncorrectResultsFailure(scenario, results, analysisProfile = analysisProfile)
+    }
+
     private fun failDueToDeadlock(): Nothing {
-        val result = ManagedDeadlockInvocationResult(collectExecutionResults())
+        val result = ManagedDeadlockInvocationResult(scenario ?: emptyScenario(), collectExecutionResults(), analysisProfile)
         abortWithSuddenInvocationResult(result)
     }
 
     private fun failDueToLivelock(): Nothing {
-        val result = ManagedLivelockInvocationResult(collectExecutionResults())
+        val result = ManagedLivelockInvocationResult(scenario ?: emptyScenario(), collectExecutionResults(), analysisProfile)
         abortWithSuddenInvocationResult(result)
     }
 
     private fun failDueToObstructionFreedomViolation(lazyMessage: () -> String): Nothing {
-        val result = ObstructionFreedomViolationInvocationResult(lazyMessage(), collectExecutionResults())
+        val result = ObstructionFreedomViolationInvocationResult(scenario ?: emptyScenario(), collectExecutionResults(), lazyMessage(), analysisProfile)
         abortWithSuddenInvocationResult(result)
     }
 
@@ -400,7 +407,7 @@ internal abstract class ManagedStrategy(
         return currentActiveActorIds.any { it.causesBlocking }
     }
 
-    private fun collectExecutionResults(): ExecutionResult =
+    protected fun collectExecutionResults(): ExecutionResult =
         (runner as? ExecutionScenarioRunner)?.collectExecutionResults() ?: emptyExecutionResult()
 
     // == THREAD SCHEDULING METHODS ==
@@ -894,10 +901,7 @@ internal abstract class ManagedStrategy(
         // Though the corresponding failure will be detected by the runner,
         // the managed strategy can construct a trace to reproduce this failure.
         // Let's then store the corresponding failing result and construct the trace.
-        suddenInvocationResult = UnexpectedExceptionInvocationResult(
-            exception,
-            collectExecutionResults()
-        )
+        suddenInvocationResult = UnexpectedExceptionInvocationResult(scenario ?: emptyScenario(), collectExecutionResults(), exception, analysisProfile)
         threadScheduler.abortAllThreads()
         throw exception
     }

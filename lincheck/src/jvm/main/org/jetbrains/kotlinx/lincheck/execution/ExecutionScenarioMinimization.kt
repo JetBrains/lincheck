@@ -10,7 +10,7 @@
 package org.jetbrains.kotlinx.lincheck.execution
 
 import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.strategy.LincheckFailure
+import org.jetbrains.kotlinx.lincheck.LincheckFailure
 
 /**
  * Greedily minimizes a failing scenario while preserving a failure.

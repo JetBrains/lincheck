@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck
 
 import sun.nio.ch.lincheck.*
 import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.*
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
@@ -140,7 +140,7 @@ internal fun runPluginReplay(
 internal fun ManagedStrategy.runReplayIfPluginEnabled(failure: LincheckFailure) {
     if (inIdeaPluginReplayMode && failure.trace != null) {
         // Print the failure to the console
-        System.err.println(failure)
+        System.err.println(failure.toString())
         // Extract trace representation in the appropriate view.
         val trace = constructTraceForPlugin(failure)
         // Collect and analyze the exceptions thrown.
@@ -335,6 +335,7 @@ private val LincheckFailure.type: String
         is ValidationFailure -> "VALIDATION_FAILURE"
         is ManagedDeadlockFailure, is TimeoutFailure -> "DEADLOCK"
         is ManagedLivelockFailure -> "LIVELOCK"
+        is InconsistentExecutionFailure -> error("Inconsistent executions must be filtered before reporting")
     }
 
 /**

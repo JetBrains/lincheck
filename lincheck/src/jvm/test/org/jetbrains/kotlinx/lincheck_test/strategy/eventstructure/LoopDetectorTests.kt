@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 import org.jetbrains.lincheck.datastructures.createStrategy
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.strategy.ManagedLivelockFailure
+import org.jetbrains.kotlinx.lincheck.ManagedLivelockFailure
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -326,7 +326,7 @@ class LoopDetectorTests {
                 config.createStrategy(ReadOnceMayHang::class.java, scenario, validationFunction = null).use { strategy ->
                     val failure = strategy.runIteration(1_000, verifier)
                     assertTrue(
-                        "Expected the read-one branch to report a livelock, got $failure",
+                        "Expected the read-one branch to report a livelock, got ${failure?.toString()}",
                         failure is ManagedLivelockFailure,
                     )
                     // The initial read-zero execution must complete before its backward revisit hangs.

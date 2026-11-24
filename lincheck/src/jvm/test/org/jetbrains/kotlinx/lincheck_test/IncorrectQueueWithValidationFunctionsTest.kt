@@ -16,7 +16,7 @@ import org.jetbrains.kotlinx.lincheck.detectFailure
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Validate
 import org.junit.Assert.assertTrue

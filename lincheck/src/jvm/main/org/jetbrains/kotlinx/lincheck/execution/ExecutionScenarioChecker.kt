@@ -106,7 +106,7 @@ internal class ExecutionScenarioChecker(
                     failure = failure,
                     replayStrategy = createStrategy(failure.scenario) as ManagedStrategy,
                     invocations = invocationsPerIteration,
-                    verifier = verifier
+                    verifier = verifier,
                 )
             }
         }

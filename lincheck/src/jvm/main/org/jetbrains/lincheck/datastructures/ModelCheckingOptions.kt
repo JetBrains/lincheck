@@ -80,7 +80,9 @@ internal fun ModelCheckingOptions.createStrategy(
             runner.initializeStrategy(it)
         }
     } else {
-        return ModelCheckingStrategy(runner, createSettings(), ideaPluginReplayModeEnabled, LincheckInstrumentation.context).also {
+        return ModelCheckingStrategy(
+            runner, createSettings(), ideaPluginReplayModeEnabled, LincheckInstrumentation.context
+        ).also {
             runner.initializeStrategy(it)
         }
     }

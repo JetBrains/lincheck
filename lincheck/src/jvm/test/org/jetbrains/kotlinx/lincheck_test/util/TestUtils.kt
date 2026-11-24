@@ -10,13 +10,13 @@
 
 package org.jetbrains.kotlinx.lincheck_test.util
 
+import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.lincheck.datastructures.ParameterGenerator
 import org.jetbrains.lincheck.util.DEFAULT_TEST_JDK_VERSION
 import org.jetbrains.lincheck.util.JdkVersion
 import org.jetbrains.lincheck.util.jdkVersion
-import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.RandomProvider
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
@@ -50,7 +50,10 @@ internal inline fun <reified E: Exception> Options<*>.checkFailsWithException(te
  * @param expectedOutputFilePrefix name of file stored in resources/expected_logs, storing the expected lincheck output.
  * @param handleOnlyDefaultJdkOutput flag which disables comparing and overwriting representation output files for non-default jdks.
  */
-internal fun LincheckFailure?.checkLincheckOutput(expectedOutputFilePrefix: String, handleOnlyDefaultJdkOutput: Boolean = true) {
+internal fun LincheckFailure?.checkLincheckOutput(
+    expectedOutputFilePrefix: String,
+    handleOnlyDefaultJdkOutput: Boolean = true
+) {
     check(this != null) { "The test should fail" }
     // In case we compare and overwrite representation tests only
     // for default jdk, then just return when non-default jdk is provided
@@ -185,7 +188,7 @@ fun checkTraceHasNoLincheckEvents(trace: String) {
 
 fun checkFailureIsNotLincheckInternalBug(failure: LincheckFailure) {
     check("You've caught a bug in Lincheck." !in failure.toString()) {
-        "Internal Lincheck bug was detected\n$failure"
+        "Internal Lincheck bug was detected\n${failure.toString()}"
     }
 }
 

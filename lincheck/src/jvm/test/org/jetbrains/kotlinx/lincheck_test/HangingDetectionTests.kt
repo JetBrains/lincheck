@@ -9,7 +9,8 @@
  */
 package org.jetbrains.kotlinx.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.ManagedLivelockFailure
+import org.jetbrains.kotlinx.lincheck.TimeoutFailure
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.scenario

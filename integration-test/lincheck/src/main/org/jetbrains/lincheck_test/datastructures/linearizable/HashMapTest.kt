@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck_test.datastructures.linearizable
 
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck.strategy.UnexpectedExceptionFailure
+import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.UnexpectedExceptionFailure
 import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.Operation

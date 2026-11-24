@@ -34,7 +34,7 @@ abstract class AbstractLincheckTest(
             checkFailureIsNotLincheckInternalBug(failure)
             checkTraceHasNoLincheckEvents(failure.toString())
             assert(expectedFailures.contains(failure::class)) {
-                "This test has failed with an unexpected error: \n $failure"
+                "This test has failed with an unexpected error: \n ${failure.toString()}"
             }
         }
     }
