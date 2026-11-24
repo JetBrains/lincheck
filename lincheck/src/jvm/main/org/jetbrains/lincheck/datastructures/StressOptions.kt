@@ -8,33 +8,16 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("DEPRECATION")
+
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
-import org.jetbrains.kotlinx.lincheck.runner.UseClocks
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
+import org.jetbrains.lincheck.LincheckSettings
 
 /**
  * Options for the stress strategy.
  */
-open class StressOptions : Options<StressOptions>()
-
-internal fun StressOptions.createStrategy(
-    testClass: Class<*>,
-    scenario: ExecutionScenario,
-    validationFunction: Actor?,
-): Strategy {
-    val runner = ExecutionScenarioRunner(
-        scenario = scenario,
-        testClass = testClass,
-        validationFunction = validationFunction,
-        timeoutMs = timeoutMs,
-        useClocks = UseClocks.RANDOM
-    )
-    return StressStrategy(runner).also {
-        runner.initializeStrategy(it)
-    }
+@Deprecated("Use LincheckSettings and Lincheck.runLincheckTest instead.", level = DeprecationLevel.WARNING)
+open class StressOptions : Options<StressOptions>() {
+    internal fun stressSettings() = LincheckSettings.TestingStrategy.Stress()
 }

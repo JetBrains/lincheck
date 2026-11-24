@@ -17,7 +17,7 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import org.jetbrains.lincheck.Lincheck.runConcurrentTestInternal
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.util.JdkVersion
@@ -45,8 +45,12 @@ abstract class BaseRunConcurrentRepresentationTest<R>(
     @Test
     fun testRunWithModelChecker() {
         val result = runCatching {
-            val settings = LincheckSettings(analyzeStdLib = analyzeStdLib)
-            runConcurrentTestInternal(settings = settings) {
+            val settings = LincheckSettings {
+                strategy = LincheckSettings.TestingStrategy
+                    .ModelChecking()
+                    .analyzeStdLib(analyzeStdLib)
+            }
+            runConcurrentTest(settings = settings) {
                 block()
             }
         }

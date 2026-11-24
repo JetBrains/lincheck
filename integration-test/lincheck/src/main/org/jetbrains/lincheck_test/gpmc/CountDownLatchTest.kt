@@ -16,7 +16,7 @@ import org.junit.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
-import org.jetbrains.lincheck.Lincheck.runConcurrentTestInternal
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.LincheckSettings
 
 class CountDownLatchTest {
@@ -43,9 +43,13 @@ class CountDownLatchTest {
 
     @Ignore("Times out") // TODO: fix loop detector
     @Test
-    fun testBarrierEventStructure() = runConcurrentTestInternal(
+    fun testBarrierEventStructure() = runConcurrentTest(
         10000,
-        LincheckSettings(true, 10, 50, 20, false),
+        LincheckSettings {
+            strategy = LincheckSettings.TestingStrategy
+                .ModelChecking()
+                .analyzeStdLib(true)
+        },
         block
     )
 }

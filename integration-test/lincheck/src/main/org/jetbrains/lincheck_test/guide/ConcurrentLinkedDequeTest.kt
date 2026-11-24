@@ -10,6 +10,9 @@
 
 package org.jetbrains.lincheck_test.guide
 
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.datastructures.*
 import java.util.concurrent.*
 import org.junit.*
@@ -37,12 +40,16 @@ class ConcurrentLinkedDequeTest {
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .check(this::class)
+    fun modelCheckingTest() {
+        val settings = LincheckSettings().strategy(TestingStrategy.ModelChecking())
+        Lincheck.runLincheckTest(settings, this::class)
+    }
 
     @Ignore("Times out")
     @Test(expected = AssertionError::class)
-    fun eventStructureModelCheckingTest() = ModelCheckingOptions()
-        .useExperimentalModelChecking()
-        .check(this::class)
+    fun eventStructureModelCheckingTest() = Lincheck.runLincheckTest(LincheckSettings {
+        strategy = TestingStrategy
+            .ModelChecking()
+            .enablePartialOrderReduction()
+    }, this::class)
 }

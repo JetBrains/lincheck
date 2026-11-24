@@ -12,7 +12,7 @@ package org.jetbrains.lincheck_test.datastructures.linearizable
 
 import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
 import org.jetbrains.kotlinx.lincheck.UnexpectedExceptionFailure
-import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
+import org.jetbrains.lincheck_test.AbstractLincheckIntegrationTest
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Param
@@ -20,7 +20,7 @@ import java.util.HashMap
 import kotlin.collections.get
 
 @Param(name = "key", gen = IntGen::class)
-class HashMapTest : AbstractLincheckTest(IncorrectResultsFailure::class, UnexpectedExceptionFailure::class) {
+class HashMapTest : AbstractLincheckIntegrationTest(IncorrectResultsFailure::class, UnexpectedExceptionFailure::class) {
     private val m = HashMap<Int, Int>()
 
     @Operation

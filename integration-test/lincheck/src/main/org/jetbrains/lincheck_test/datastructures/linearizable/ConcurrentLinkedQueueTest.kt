@@ -10,16 +10,16 @@
 
 package org.jetbrains.lincheck_test.datastructures.linearizable
 
-import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
+import org.jetbrains.lincheck_test.AbstractLincheckIntegrationTest
 import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Param
 import java.util.concurrent.ConcurrentLinkedQueue
 
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
+class ConcurrentLinkedQueueTest : AbstractLincheckIntegrationTest() {
     private val queue = ConcurrentLinkedQueue<Int>()
 
     @Operation
@@ -34,7 +34,7 @@ class ConcurrentLinkedQueueTest : AbstractLincheckTest() {
     @Operation
     fun poll() = queue.poll()
 
-    override fun <O : Options<O>> O.customize() {
-        if (this is ModelCheckingOptions) analyzeStdLib(true)
+    override fun LincheckSettings.customize() {
+        if (strategy is TestingStrategy.ModelChecking) (strategy as TestingStrategy.ModelChecking).analyzeStdLib(true)
     }
 }

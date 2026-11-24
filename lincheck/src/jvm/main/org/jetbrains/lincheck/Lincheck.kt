@@ -12,23 +12,18 @@ package org.jetbrains.lincheck
 import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.kotlinx.lincheck.runPluginReplay
 import org.jetbrains.lincheck.util.ideaPluginEnabled
-import org.jetbrains.lincheck.datastructures.instrumentationMode
-import org.jetbrains.lincheck.datastructures.withIdeaPluginReplayModeEnabled
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenarioChecker
+import kotlin.reflect.KClass
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import sun.nio.ch.lincheck.Injections
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -36,58 +31,50 @@ import kotlin.concurrent.withLock
 object Lincheck {
 
     /**
-     * This method will explore different interleavings of the [block] body and all the threads created within it,
-     * searching for the first raised exception.
-     *
-     * @param invocations number of different interleavings of code in the [block] that should be explored.
-     * @param block lambda which body will be a target for the interleavings exploration.
-     *
-     * @throws LincheckAssertionError if the tets block finished with error in one of the interleavings.
+     * Explores interleavings of [block] and its threads, failing on the first discovered exception.
      */
     @JvmStatic
     @JvmOverloads
-    fun runConcurrentTest(
-        invocations: Int = DEFAULT_INVOCATIONS,
-        block: Runnable
-    ) = runConcurrentTestInternal(invocations, LincheckSettings.DEFAULT, block)
+    fun runConcurrentTest(invocations: Int = DEFAULT_INVOCATIONS, block: Runnable) =
+        runConcurrentTest(invocations, LincheckSettings {
+            strategy = LincheckSettings.TestingStrategy.ModelChecking().analyzeStdLib(true)
+        }, block)
 
     /**
-     * This method will explore different interleavings of the [block] body and all the threads created within it,
-     * searching for the first raised exception.
+     * Runs [block] with the default invocation limit and a copy of [settings].
+     * The [LincheckSettings.scenarioGeneration] group is ignored; stress testing is unsupported.
      *
-     * @param invocations number of different interleavings of code in the [block] that should be explored.
-     * @param settings advanced settings that determine Lincheck behavior.
-     * @param block lambda which body will be a target for the interleavings exploration.
-     *
-     * @throws LincheckAssertionError in case when some exception was discovered.
+     * @throws IllegalArgumentException if the settings are incompatible with lambda testing.
+     * @throws LincheckAssertionError if an invocation fails.
      */
     @JvmStatic
-    internal fun runConcurrentTestInternal(
-        invocations: Int = DEFAULT_INVOCATIONS,
-        settings: LincheckSettings,
-        block: Runnable
-    ) {
-        var options = ModelCheckingOptions()
-            .analyzeStdLib(settings.analyzeStdLib)
-            .loopBound(settings.loopBound)
-            .recursionBound(settings.recursionBound)
-            .loopIterationsBeforeThreadSwitch(settings.loopIterationsBeforeThreadSwitch)
+    fun runConcurrentTest(settings: LincheckSettings, block: Runnable) =
+        runConcurrentTest(DEFAULT_INVOCATIONS, settings, block)
 
-        if (settings.useExperimentalModelChecking)
-            options = options.useExperimentalModelChecking()
-
-        withLincheckTestContext(options.instrumentationMode) {
+    /**
+     * Explores [block] up to [invocations] times using a copy of [settings].
+     * The [LincheckSettings.scenarioGeneration] group is ignored.
+     *
+     * @throws IllegalArgumentException if [invocations] is not positive or the settings are incompatible.
+     * @throws LincheckAssertionError if an invocation fails.
+     */
+    @JvmStatic
+    fun runConcurrentTest(invocations: Int, settings: LincheckSettings, block: Runnable) {
+        require(invocations > 0) { "invocations must be positive" }
+        val configuration = settings.copy(forLambda = true)
+        withLincheckTestContext(configuration.instrumentationMode) {
             ensureObjectIsTransformed(block)
             val verifier = NoExceptionVerifier()
-            options.createStrategy(block).use { strategy ->
+            configuration.createStrategy(LambdaRunner(configuration.effectiveTimeoutMs, block)).use { strategy ->
                 val failure = strategy.runIteration(invocations, verifier)
                 if (failure != null) {
-                    check(strategy is ModelCheckingStrategy)
                     if (ideaPluginEnabled) {
-                        options.withIdeaPluginReplayModeEnabled {
+                        configuration.withIdeaPluginReplayModeEnabled {
                             runPluginReplay(
                                 failure = failure,
-                                replayStrategy = options.createStrategy(block),
+                                replayStrategy = configuration.createStrategy(
+                                    LambdaRunner(configuration.effectiveTimeoutMs, block)
+                                ) as ManagedStrategy,
                                 invocations = invocations,
                                 verifier = verifier,
                             )
@@ -99,31 +86,44 @@ object Lincheck {
         }
     }
 
-    private fun ModelCheckingOptions.createStrategy(block: Runnable): ManagedStrategy {
-        val runner = LambdaRunner(timeoutMs = timeoutMs, block)
-        if (useExperimentalModelChecking) {
-            return EventStructureStrategy(
-                runner, createSettings(), LincheckInstrumentation.context,
-                inIdeaPluginReplayMode = ideaPluginReplayModeEnabled,
-                printExecutionGraph = printExecutionGraph,
-            ).also {
-                runner.initializeStrategy(it)
-            }
-        }
-        return ModelCheckingStrategy(
-            runner, createSettings(), ideaPluginReplayModeEnabled, LincheckInstrumentation.context
-        ).also {
-            runner.initializeStrategy(it)
+    /**
+     * Checks an annotated class using default settings.
+     */
+    @JvmStatic
+    fun runLincheckTest(testClass: Class<*>) = runLincheckTest(LincheckSettings(), testClass)
+
+    /**
+     * Checks an annotated Kotlin class using default settings.
+     */
+    @JvmStatic
+    fun runLincheckTest(testClass: KClass<*>) = runLincheckTest(LincheckSettings(), testClass)
+
+    /**
+     * Checks annotated operations on [testClass] using generated and custom scenarios.
+     *
+     * @throws LincheckAssertionError if a scenario fails verification.
+     */
+    @JvmStatic
+    fun runLincheckTest(settings: LincheckSettings, testClass: Class<*>) {
+        ExecutionScenarioChecker(testClass, settings.copy(forLambda = false)).detectFailure { failure ->
+            if (failure != null) throw LincheckAssertionError(failure)
         }
     }
 
-    internal val DEFAULT_INVOCATIONS: Int = Options.DEFAULT_INVOCATIONS
+    /**
+     * Checks annotated operations on a Kotlin test class.
+     */
+    @JvmStatic
+    fun runLincheckTest(settings: LincheckSettings, testClass: KClass<*>) =
+        runLincheckTest(settings, testClass.java)
+
+    internal val DEFAULT_INVOCATIONS: Int = Integer.getInteger("lincheck.defaultInvocationsPerIteration", 10_000)
 }
 
 /**
- * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTestInternal] does not throw an exception.
+ * [NoExceptionVerifier] checks that the lambda passed into [Lincheck.runConcurrentTest] does not throw an exception.
  */
-internal class NoExceptionVerifier() : Verifier {
+internal class NoExceptionVerifier : Verifier {
     override fun verifyResults(scenario: ExecutionScenario, results: ExecutionResult): Boolean =
         results.parallelResults[0][0] !is ExceptionResult
 }

@@ -1,9 +1,9 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:82)
-	at org.jetbrains.kotlinx.lincheck_test.representation.NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:78)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50)
+	at org.jetbrains.kotlinx.lincheck_test.representation.NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:84)
+	at org.jetbrains.kotlinx.lincheck_test.representation.NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:80)
+	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$2$lambda$1(RunConcurrentRepresentationTests.kt:52)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
@@ -17,8 +17,8 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 |                                                                                   Main Thread                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50) |
-|   block(): threw IllegalStateException at NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:78)                                                 |
-|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:82)             |
+| $this_runCatching.block(): threw IllegalStateException at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$2$lambda$1(RunConcurrentRepresentationTests.kt:52) |
+|   block(): threw IllegalStateException at NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:80)                                                 |
+|     IllegalStateException.<init>("Check failed."): IllegalStateException#1 at NoEventsRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:84)             |
 |   result: IllegalStateException #1                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

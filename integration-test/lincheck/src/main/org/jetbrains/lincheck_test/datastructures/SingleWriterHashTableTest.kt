@@ -10,6 +10,9 @@
 
 package org.jetbrains.lincheck_test.datastructures
 
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.kotlinx.lincheck_test.TIMEOUT
 import org.jetbrains.lincheck.datastructures.*
 import kotlin.reflect.KClass
@@ -35,40 +38,41 @@ class SingleWriterHashTableTest() {
     fun remove(key: Int): Int? = hashTable.remove(key)
 
     @Test(timeout = TIMEOUT, expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .iterations(scenarios)
-        .invocationsPerIteration(10_000)
-        .actorsBefore(actorsBefore)
-        .threads(threads)
-        .actorsPerThread(2)
-        .actorsAfter(0)
-        .checkObstructionFreedom(checkObstructionFreedom)
-        .sequentialSpecification(sequentialSpecification.java)
-        .check(this::class.java)
+    fun modelCheckingTest() {
+        val settings = commonSettings(10_000).strategy(
+            TestingStrategy.ModelChecking().checkObstructionFreedom(checkObstructionFreedom)
+        )
+        Lincheck.runLincheckTest(settings, this::class.java)
+    }
 
     @Test(timeout = TIMEOUT, expected = AssertionError::class)
-    fun eventStructureModelCheckingTest() = ModelCheckingOptions()
-        .useExperimentalModelChecking()
-        .iterations(scenarios)
-        .invocationsPerIteration(10_000)
-        .actorsBefore(actorsBefore)
-        .threads(threads)
-        .actorsPerThread(2)
-        .actorsAfter(0)
-        .checkObstructionFreedom(checkObstructionFreedom)
-        .sequentialSpecification(sequentialSpecification.java)
-        .check(this::class.java)
+    fun eventStructureModelCheckingTest() {
+        val settings = commonSettings(10_000).strategy(
+            TestingStrategy.ModelChecking()
+                .checkObstructionFreedom(checkObstructionFreedom)
+                .enablePartialOrderReduction()
+        )
+        Lincheck.runLincheckTest(settings, this::class.java)
+    }
 
     @Test(timeout = TIMEOUT, expected = AssertionError::class)
-    fun stressTest() = StressOptions()
-        .iterations(scenarios)
-        .invocationsPerIteration(25_000)
-        .actorsBefore(actorsBefore)
-        .threads(threads)
-        .actorsPerThread(2)
-        .actorsAfter(0)
-        .sequentialSpecification(sequentialSpecification.java)
-        .check(this::class.java)
+    fun stressTest() {
+        val settings = commonSettings(25_000).strategy(TestingStrategy.Stress())
+        Lincheck.runLincheckTest(settings, this::class.java)
+    }
+
+    private fun commonSettings(invocations: Int) = LincheckSettings {
+        scenarioGeneration.apply {
+            invocationsPerIteration = invocations
+            sequentialSpecification = this@SingleWriterHashTableTest.sequentialSpecification.java
+            iterations = scenarios
+            actorsBefore = this@SingleWriterHashTableTest.actorsBefore
+            threads = this@SingleWriterHashTableTest.threads
+            actorsPerThread = 2
+            actorsAfter = 0
+        }
+    }
+
 }
 
 internal class SequentialHashTableIntInt {

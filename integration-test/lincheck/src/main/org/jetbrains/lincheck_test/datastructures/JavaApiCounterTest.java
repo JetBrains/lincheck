@@ -10,10 +10,15 @@
 
 package org.jetbrains.lincheck_test.datastructures;
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
+import org.jetbrains.lincheck.Lincheck;
+import org.jetbrains.lincheck.LincheckSettings;
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy;
 import org.jetbrains.lincheck.datastructures.Operation;
-import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.junit.Test;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.assertEquals;
 
 public class JavaApiCounterTest {
     private final Counter counter = new Counter();
@@ -30,17 +35,33 @@ public class JavaApiCounterTest {
 
     @Test(expected = AssertionError.class)
     public void stressTest() {
-        new StressOptions().check(this.getClass());
+        LincheckSettings settings = new LincheckSettings().strategy(new TestingStrategy.Stress());
+        Lincheck.runLincheckTest(settings, getClass());
     }
 
     @Test(expected = AssertionError.class)
     public void modelCheckingTest() {
-        new ModelCheckingOptions().check(this.getClass());
+        LincheckSettings settings = new LincheckSettings().strategy(new TestingStrategy.ModelChecking());
+        Lincheck.runLincheckTest(settings, getClass());
     }
 
     @Test(expected = AssertionError.class)
     public void eventStructureModelCheckingTest() {
-        new ModelCheckingOptions().useExperimentalModelChecking$lincheck().check(this.getClass());
+        LincheckSettings settings = new LincheckSettings()
+            .strategy(new TestingStrategy.ModelChecking().enablePartialOrderReduction());
+        Lincheck.runLincheckTest(settings, getClass());
+    }
+
+    @Test
+    public void configureLambdaWithJavaSetters() {
+        LincheckSettings settings = new LincheckSettings();
+        TestingStrategy.ModelChecking strategy = new TestingStrategy.ModelChecking();
+        strategy.setLoopDetection(new LincheckSettings.LoopDetection().loopBound(100));
+        settings.setStrategy(strategy);
+        Lincheck.runConcurrentTest(10, settings, () -> {
+            AtomicInteger value = new AtomicInteger(1);
+            assertEquals(1, value.get());
+        });
     }
 
 }

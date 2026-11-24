@@ -106,6 +106,8 @@ tasks {
     }
 
     named<KotlinCompile>("compileTestKotlin") {
+        // Unit tests intentionally exercise the legacy API until their separate migration.
+        compilerOptions.freeCompilerArgs.add("-Xwarning-level=DEPRECATION:disabled")
         setupKotlinToolchain(project)
     }
 

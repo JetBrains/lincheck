@@ -11,7 +11,7 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.litmus
 
 import org.jetbrains.kotlinx.lincheck.detectFailure
-import org.jetbrains.kotlinx.lincheck.strategy.IncorrectResultsFailure
+import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.Assert.assertTrue

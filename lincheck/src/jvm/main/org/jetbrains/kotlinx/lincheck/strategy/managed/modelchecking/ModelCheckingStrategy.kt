@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.kotlinx.lincheck.runner.Runner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
@@ -39,7 +40,7 @@ import kotlin.random.Random
  */
 internal class ModelCheckingStrategy(
     runner: Runner,
-    settings: ManagedStrategySettings,
+    settings: LincheckSettings.TestingStrategy.ModelChecking,
     // The flag to enable IntelliJ IDEA plugin mode
     inIdeaPluginReplayMode: Boolean = false,
     context: TraceContext

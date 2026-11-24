@@ -11,15 +11,15 @@
 package org.jetbrains.lincheck_test.datastructures
 
 import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
-import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
+import org.jetbrains.lincheck_test.AbstractLincheckIntegrationTest
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
-import org.jetbrains.lincheck.datastructures.StressOptions
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 
 /**
  * Should fail with invalid execution results.
  */
-class FaaQueueTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
+class FaaQueueTest : AbstractLincheckIntegrationTest(IncorrectResultsFailure::class) {
 
     private val faaQueue = FAAQueue<Int>()
 
@@ -29,12 +29,12 @@ class FaaQueueTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     @Operation
     fun enqueue(x: Int) = faaQueue.enqueue(x)
 
-    override fun <O : Options<O>> O.customize() {
-        if (this is StressOptions) {
-            invocationsPerIteration(10_000_000)
-            iterations(0)
+    override fun LincheckSettings.customize() {
+        if (strategy is TestingStrategy.Stress) {
+            scenarioGeneration.invocationsPerIteration(10_000_000)
+            scenarioGeneration.iterations(0)
         }
-        addCustomScenario {
+        scenarioGeneration.addCustomScenario {
             initial { actor(FaaQueueTest::dequeue) }
             parallel {
                 thread {

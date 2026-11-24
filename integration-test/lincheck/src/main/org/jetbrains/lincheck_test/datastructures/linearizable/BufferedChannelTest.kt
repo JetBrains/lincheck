@@ -9,21 +9,18 @@
  */
 package org.jetbrains.lincheck_test.datastructures.linearizable
 
+import org.jetbrains.lincheck_test.AbstractLincheckIntegrationTest
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.kotlinx.lincheck_test.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.datastructures.SequentialIntChannel
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Param
-import org.junit.Assume.assumeTrue
-import org.junit.Ignore
 
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-class BufferedChannelTest : AbstractLincheckTest() {
+class BufferedChannelTest : AbstractLincheckIntegrationTest() {
     private val c = Channel<Int>(2)
 
     @Operation(cancellableOnSuspension = false)
@@ -35,10 +32,10 @@ class BufferedChannelTest : AbstractLincheckTest() {
     @Operation
     fun poll() = c.tryReceive().getOrNull()
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // TODO: We ingore for now since event structure strategy does not support coroutines.
         ignoreExperimentalModelChecking()
-        sequentialSpecification(SequentialBuffered2IntChannel::class.java)
+        scenarioGeneration.sequentialSpecification(SequentialBuffered2IntChannel::class.java)
     }
 }
 

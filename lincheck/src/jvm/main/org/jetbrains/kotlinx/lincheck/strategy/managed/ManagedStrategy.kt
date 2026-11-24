@@ -9,6 +9,7 @@
  */
 package org.jetbrains.kotlinx.lincheck.strategy.managed
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
 import org.jetbrains.kotlinx.lincheck.execution.*
@@ -47,7 +48,7 @@ import org.objectweb.asm.commons.Method.getMethod as getAsmMethod
  */
 internal abstract class ManagedStrategy(
     final override val runner: Runner,
-    internal val settings: ManagedStrategySettings,
+    internal val settings: LincheckSettings.TestingStrategy.ModelChecking,
     // The flag to enable IntelliJ IDEA plugin mode
     val inIdeaPluginReplayMode: Boolean = false,
     private val context: TraceContext
@@ -79,10 +80,10 @@ internal abstract class ManagedStrategy(
 
     // Detector of loops or hangs (i.e. active locks).
     internal val loopDetector: LoopDetector = BoundedLoopDetector(
-        iterationsBeforeThreadSwitch = settings.loopIterationsBeforeThreadSwitch,
-        iterationsBound = settings.loopBound,
-        recursiveCallsBound = settings.recursionBound,
-        awaitLoopsAnalysisEnabled = settings.awaitLoopsAnalysisEnabled,
+        iterationsBeforeThreadSwitch = settings.loopDetection.loopIterationsBeforeThreadSwitch,
+        iterationsBound = settings.loopDetection.loopBound,
+        recursiveCallsBound = settings.loopDetection.recursionBound,
+        awaitLoopsAnalysisEnabled = settings.loopDetection.awaitLoopsAnalysisEnabled,
     )
 
     // Current execution part, if defined by the runner, `PARALLEL` otherwise
@@ -149,7 +150,7 @@ internal abstract class ManagedStrategy(
     private var lastCoroutineCancellationTracePoint = mutableThreadMapOf<CoroutineCancellationTracePoint?>()
 
     // User-specified guarantees on specific function, which can be considered as atomic or ignored.
-    private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = settings.guarantees
+    private val userDefinedGuarantees: List<ManagedStrategyGuarantee>? = settings.guarantees.ifEmpty { null }
 
     // Stores current event id
     private var currentEventId = -1

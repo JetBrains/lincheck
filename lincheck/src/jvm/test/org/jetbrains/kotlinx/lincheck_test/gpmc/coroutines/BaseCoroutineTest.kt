@@ -26,10 +26,13 @@ abstract class BaseCoroutineTest(
 
     protected fun executeCoroutineTest(block: (CoroutineDispatcher) -> Unit) {
         val result = runCatching {
-            val settings = LincheckSettings(
-                loopBound = 200,
-            )
-            Lincheck.runConcurrentTestInternal(invocations, settings) {
+            val settings = LincheckSettings {
+                strategy = LincheckSettings.TestingStrategy.ModelChecking().apply {
+                    analyzeStdLib = true
+                    loopDetection.loopBound = 200
+                }
+            }
+            Lincheck.runConcurrentTest(invocations, settings) {
                 createDispatcher().let { dispatcher ->
                     try {
                         block(dispatcher)

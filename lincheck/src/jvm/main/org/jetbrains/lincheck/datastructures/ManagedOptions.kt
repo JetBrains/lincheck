@@ -8,14 +8,16 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("DEPRECATION")
+
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
-import org.jetbrains.lincheck.util.AnalysisProfile
+import org.jetbrains.lincheck.LincheckSettings
 
 /**
  * Options for the managed strategy.
  */
+@Deprecated("Use LincheckSettings and Lincheck.runLincheckTest instead.", level = DeprecationLevel.WARNING)
 sealed class ManagedOptions<OPT : Options<OPT>> : Options<OPT>() {
 
     protected var checkObstructionFreedom =
@@ -105,32 +107,33 @@ sealed class ManagedOptions<OPT : Options<OPT>> : Options<OPT>() {
         this.stdLibAnalysisEnabled = analyzeStdLib
     }
 
-    internal fun createSettings(): ManagedStrategySettings =
-        ManagedStrategySettings(
-            timeoutMs = this.timeoutMs,
-            loopIterationsBeforeThreadSwitch = this.loopIterationsBeforeThreadSwitch,
-            loopBound = this.loopBound,
-            recursionBound = this.recursionBound,
-            checkObstructionFreedom = this.checkObstructionFreedom,
-            analyzeStdLib = this.stdLibAnalysisEnabled,
-            awaitLoopsAnalysisEnabled = this.awaitLoopsAnalysisEnabled,
-            guarantees = this.guarantees.ifEmpty { null },
-        )
+    internal fun createSettings() = toSettings().strategy as LincheckSettings.TestingStrategy.ModelChecking
+
+    internal fun managedSettings() = LincheckSettings.TestingStrategy.ModelChecking().also {
+        it.analyzeStdLib = stdLibAnalysisEnabled
+        it.checkObstructionFreedom = checkObstructionFreedom
+        it.loopDetection.loopIterationsBeforeThreadSwitch = loopIterationsBeforeThreadSwitch
+        it.loopDetection.loopBound = loopBound
+        it.loopDetection.recursionBound = recursionBound
+        it.loopDetection.awaitLoopsAnalysisEnabled = awaitLoopsAnalysisEnabled
+        guarantees.forEach(it::addGuarantee)
+    }
 
     companion object {
-        const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM = false
+        const val DEFAULT_CHECK_OBSTRUCTION_FREEDOM =
+            LincheckSettings.TestingStrategy.ModelChecking.DEFAULT_CHECK_OBSTRUCTION_FREEDOM
 
-        const val DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH = 10
-        const val DEFAULT_LOOP_BOUND = 50
-        const val DEFAULT_RECURSION_BOUND = 20
+        const val DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH = LincheckSettings.LoopDetection.DEFAULT_LOOP_ITERATIONS_BEFORE_THREAD_SWITCH
+        const val DEFAULT_LOOP_BOUND = LincheckSettings.LoopDetection.DEFAULT_LOOP_BOUND
+        const val DEFAULT_RECURSION_BOUND = LincheckSettings.LoopDetection.DEFAULT_RECURSION_BOUND
 
-        const val DEFAULT_LIVELOCK_EVENTS_THRESHOLD = 10001
+        const val DEFAULT_LIVELOCK_EVENTS_THRESHOLD = LincheckSettings.LoopDetection.DEFAULT_LIVELOCK_EVENTS_THRESHOLD
 
-        val DEFAULT_STDLIB_ANALYSIS_ENABLED = AnalysisProfile.DEFAULT.analyzeStdLib
+        val DEFAULT_STDLIB_ANALYSIS_ENABLED = LincheckSettings.TestingStrategy.ModelChecking.DEFAULT_STDLIB_ANALYSIS_ENABLED
 
-        const val DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED = true
+        const val DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED = LincheckSettings.LoopDetection.DEFAULT_AWAIT_LOOPS_ANALYSIS_ENABLED
 
-        val DEFAULT_GUARANTEES = listOf<ManagedStrategyGuarantee>()
+        val DEFAULT_GUARANTEES = LincheckSettings.TestingStrategy.ModelChecking.DEFAULT_GUARANTEES
 
     }
 }

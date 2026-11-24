@@ -40,9 +40,9 @@ Detailed trace:
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 |                                                                                     Main Thread                                                                                      |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$1$lambda$0(RunConcurrentRepresentationTests.kt:50)                                   |
-|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:107)                                                                         |
-|     ArrayBlockingQueue.<init>(1): ArrayBlockingQueue#1 at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:111) [recursive call x 2 times] |
+| $this_runCatching.block() at BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$2$lambda$1(RunConcurrentRepresentationTests.kt:52)                                   |
+|   block() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:109)                                                                         |
+|     ArrayBlockingQueue.<init>(1): ArrayBlockingQueue#1 at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:113) [recursive call x 2 times] |
 |       AbstractQueue.<init>(): ArrayBlockingQueue#1 at ArrayBlockingQueue.<init>(ArrayBlockingQueue.java:270)                                                                         |
 |         AbstractCollection.<init>(): ArrayBlockingQueue#1 at AbstractQueue.<init>(AbstractQueue.java:71)                                                                             |
 |           Object.<init>(): ArrayBlockingQueue#1 at AbstractCollection.<init>(AbstractCollection.java:68)                                                                             |
@@ -61,7 +61,7 @@ Detailed trace:
 |         sync.newCondition(): ConditionObject#2 at ReentrantLock.newCondition(ReentrantLock.java:537)                                                                                 |
 |           AbstractQueuedSynchronizer.ConditionObject.<init>(NonfairSync#1): ConditionObject#2 at ReentrantLock.Sync.newCondition(ReentrantLock.java:190)                             |
 |             Object.<init>(): ConditionObject#2 at AbstractQueuedSynchronizer.ConditionObject.<init>(AbstractQueuedSynchronizer.java:1441)                                            |
-|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:112)                                                                      |
+|     q.take() at MainThreadBlockedRunConcurrentRepresentationTest.block(RunConcurrentRepresentationTests.kt:114)                                                                      |
 |       lock.lockInterruptibly() at ArrayBlockingQueue.take(ArrayBlockingQueue.java:417)                                                                                               |
 |         sync.lockInterruptibly() at ReentrantLock.lockInterruptibly(ReentrantLock.java:372)                                                                                          |
 |           Thread.interrupted(): false at ReentrantLock.Sync.lockInterruptibly(ReentrantLock.java:158)                                                                                |

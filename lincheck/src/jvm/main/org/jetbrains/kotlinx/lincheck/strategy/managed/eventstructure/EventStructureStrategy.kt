@@ -20,6 +20,7 @@
 
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
@@ -51,7 +52,7 @@ import org.objectweb.asm.Type as AsmType
  */
 internal class EventStructureStrategy(
     runner: Runner,
-    settings: ManagedStrategySettings,
+    settings: LincheckSettings.TestingStrategy.ModelChecking,
     private val context: TraceContext,
     val memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
     inIdeaPluginReplayMode: Boolean = false,

@@ -10,17 +10,17 @@
 
 package org.jetbrains.lincheck_test.datastructures.quiescent
 
-import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
+import org.jetbrains.lincheck_test.AbstractLincheckIntegrationTest
 import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Param
 import org.jetbrains.lincheck.datastructures.verifier.QuiescentConsistencyVerifier
 import org.jetbrains.lincheck.datastructures.verifier.QuiescentConsistent
 import org.jetbrains.lincheck_test.datastructures.LockFreeTaskQueue
 
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
-class LockFreeTaskQueueTest : AbstractLincheckTest() {
+class LockFreeTaskQueueTest : AbstractLincheckIntegrationTest() {
     private val q = LockFreeTaskQueue<Int>(true)
 
     @Operation
@@ -33,11 +33,11 @@ class LockFreeTaskQueueTest : AbstractLincheckTest() {
     @Operation
     fun close() = q.close()
 
-    override fun <O : Options<O>> O.customize() {
-        actorsBefore(2)
-        actorsAfter(2)
-        threads(2)
-        actorsPerThread(3)
-        verifier(QuiescentConsistencyVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration.actorsBefore(2)
+        scenarioGeneration.actorsAfter(2)
+        scenarioGeneration.threads(2)
+        scenarioGeneration.actorsPerThread(3)
+        scenarioGeneration.verifier(QuiescentConsistencyVerifier::class.java)
     }
 }

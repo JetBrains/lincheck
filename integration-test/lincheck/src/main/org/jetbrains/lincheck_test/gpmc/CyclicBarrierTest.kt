@@ -11,7 +11,6 @@
 package org.jetbrains.lincheck_test.gpmc
 
 import org.jetbrains.lincheck.Lincheck.runConcurrentTest
-import org.jetbrains.lincheck.Lincheck.runConcurrentTestInternal
 import org.jetbrains.lincheck.LincheckSettings
 import org.junit.Ignore
 import org.junit.Test
@@ -39,9 +38,14 @@ class CyclicBarrierTest {
 
     @Ignore("Times out") // TODO: fix loop detector
     @Test
-    fun testBarrierEventStructure() = runConcurrentTestInternal(
+    fun testBarrierEventStructure() = runConcurrentTest(
         10000,
-        LincheckSettings(true, 10, 50, 20, true),
+        LincheckSettings {
+            strategy = LincheckSettings.TestingStrategy
+                .ModelChecking()
+                .analyzeStdLib(true)
+                .enablePartialOrderReduction()
+        },
         block
     )
 }

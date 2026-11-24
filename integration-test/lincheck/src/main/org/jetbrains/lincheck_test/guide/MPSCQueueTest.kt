@@ -10,10 +10,11 @@
 
 package org.jetbrains.lincheck_test.guide
 
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.StressOptions
 import org.junit.Ignore
 import org.junit.Test
 
@@ -30,12 +31,21 @@ class MPSCQueueTest {
     public fun peek(): Int? = queue.peek()
 
     @Test
-    fun stressTest() = StressOptions().check(this::class)
+    fun stressTest() = Lincheck.runLincheckTest(LincheckSettings {
+        strategy = TestingStrategy.Stress()
+    }, this::class)
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions().check(this::class)
+    fun modelCheckingTest() {
+        val settings = LincheckSettings().strategy(TestingStrategy.ModelChecking())
+        Lincheck.runLincheckTest(settings, this::class)
+    }
 
     @Ignore("We need to support loop detection for this test")
     @Test
-    fun eventStructureModelCheckingTest() = ModelCheckingOptions().useExperimentalModelChecking().check(this::class)
+    fun eventStructureModelCheckingTest() = Lincheck.runLincheckTest(LincheckSettings {
+        strategy = TestingStrategy
+            .ModelChecking()
+            .enablePartialOrderReduction()
+    }, this::class)
 }

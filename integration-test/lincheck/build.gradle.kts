@@ -8,8 +8,7 @@ sourceSets {
         val jctoolsVersion: String by project
 
         implementation(project(":lincheck"))
-        // Lincheck integration tests depend on `AbstractLincheckTest`
-        // which is defined in lincheck module's 'test' source set
+        // Shared coroutine fixtures and failure/trace checks still live in the framework's test source set.
         implementation(project.project(":lincheck").extensions.getByType(SourceSetContainer::class)["test"].output)
         implementation("junit:junit:$junitVersion")
         implementation("org.jctools:jctools-core:$jctoolsVersion")

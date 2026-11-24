@@ -9,19 +9,19 @@
  */
 package org.jetbrains.lincheck_test.datastructures.linearizable
 
+import org.jetbrains.lincheck_test.AbstractLincheckIntegrationTest
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.*
 import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.kotlinx.lincheck_test.*
 import org.jetbrains.lincheck_test.datastructures.SequentialIntChannel
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Param
 
 @ExperimentalCoroutinesApi
 @InternalCoroutinesApi
 @Param(name = "value", gen = IntGen::class, conf = "1:5")
-class RendezvousChannelTest : AbstractLincheckTest() {
+class RendezvousChannelTest : AbstractLincheckIntegrationTest() {
     private val ch = Channel<Int>()
 
     @Operation
@@ -36,11 +36,11 @@ class RendezvousChannelTest : AbstractLincheckTest() {
     @Operation
     fun close() = ch.close()
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // TODO: We ingore for now since event structure strategy does not support coroutines.
         ignoreExperimentalModelChecking()
-        sequentialSpecification(SequentialRendezvousIntChannel::class.java)
-        iterations(10)
+        scenarioGeneration.sequentialSpecification(SequentialRendezvousIntChannel::class.java)
+        scenarioGeneration.iterations(10)
     }
 }
 

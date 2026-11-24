@@ -8,13 +8,14 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("DEPRECATION")
+
 package org.jetbrains.lincheck.datastructures
 
 import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.lincheck.LincheckAssertionError
+import org.jetbrains.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.lincheck.jvm.agent.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.lincheck.util.LoggingLevel
@@ -23,6 +24,7 @@ import kotlin.reflect.*
 /**
  * Abstract class for test options.
  */
+@Deprecated("Use LincheckSettings and Lincheck.runLincheckTest instead.", level = DeprecationLevel.WARNING)
 sealed class Options<OPT : Options<OPT>> {
     internal var logLevel = DEFAULT_LOG_LEVEL
 
@@ -150,17 +152,6 @@ sealed class Options<OPT : Options<OPT>> {
         this.minimizeFailedScenario = minimizeFailedScenario
     }
 
-    internal var ideaPluginReplayModeEnabled: Boolean = false
-        private set
-
-    internal fun enableIdeaPluginReplayMode() {
-        ideaPluginReplayModeEnabled = true
-    }
-
-    internal fun disableIdeaPluginReplayMode() {
-        ideaPluginReplayModeEnabled = false
-    }
-
     /**
      * Set logging level, [DEFAULT_LOG_LEVEL] is used by default.
      */
@@ -214,31 +205,24 @@ sealed class Options<OPT : Options<OPT>> {
     fun check(testClass: KClass<*>) = check(testClass.java)
 
     companion object {
-
         @JvmField
-        val DEFAULT_ITERATIONS: Int =
-            Integer.getInteger("lincheck.defaultIterations", 100)
-
+        val DEFAULT_ITERATIONS: Int = LincheckSettings.ScenarioGeneration.DEFAULT_ITERATIONS
         @JvmField
-        val DEFAULT_INVOCATIONS: Int =
-            Integer.getInteger("lincheck.defaultInvocationsPerIteration", 10_000)
+        val DEFAULT_INVOCATIONS: Int = LincheckSettings.ScenarioGeneration.DEFAULT_INVOCATIONS_PER_ITERATION
 
-        const val DEFAULT_THREADS = 2
-        const val DEFAULT_ACTORS_PER_THREAD = 5
-        const val DEFAULT_ACTORS_BEFORE = 5
-        const val DEFAULT_ACTORS_AFTER = 5
+        const val DEFAULT_THREADS = LincheckSettings.ScenarioGeneration.DEFAULT_THREADS
+        const val DEFAULT_ACTORS_PER_THREAD = LincheckSettings.ScenarioGeneration.DEFAULT_ACTORS_PER_THREAD
+        const val DEFAULT_ACTORS_BEFORE = LincheckSettings.ScenarioGeneration.DEFAULT_ACTORS_BEFORE
+        const val DEFAULT_ACTORS_AFTER = LincheckSettings.ScenarioGeneration.DEFAULT_ACTORS_AFTER
 
-        const val DEFAULT_MINIMIZE_ERROR = true
-        const val DEFAULT_TIMEOUT_MS: Long = 30_000 // 30 sec
+        const val DEFAULT_MINIMIZE_ERROR = LincheckSettings.ScenarioGeneration.DEFAULT_MINIMIZE_ERROR
+        const val DEFAULT_TIMEOUT_MS: Long = LincheckSettings.DEFAULT_TIMEOUT_MS
 
-        val DEFAULT_EXECUTION_GENERATOR: Class<out ExecutionGenerator?> = RandomExecutionGenerator::class.java
-        val DEFAULT_VERIFIER: Class<out Verifier> = LinearizabilityVerifier::class.java
+        val DEFAULT_EXECUTION_GENERATOR: Class<out ExecutionGenerator?> = LincheckSettings.ScenarioGeneration.DEFAULT_EXECUTION_GENERATOR
+        val DEFAULT_VERIFIER: Class<out Verifier> = LincheckSettings.ScenarioGeneration.DEFAULT_VERIFIER
 
     }
 }
-
-internal fun Options<*>.createVerifier(testClass: Class<*>) =
-    verifier.getConstructor(Class::class.java).newInstance(sequentialSpecification ?: testClass)
 
 @Suppress("UNCHECKED_CAST")
 private inline fun <OPT : Options<OPT>> Options<OPT>.applyAndCast(
@@ -247,31 +231,48 @@ private inline fun <OPT : Options<OPT>> Options<OPT>.applyAndCast(
     block()
 } as OPT
 
-internal val Options<*>.instrumentationMode: InstrumentationMode
-    get() = when (this) {
-        is ModelCheckingOptions ->
-            if (useExperimentalModelChecking) InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING
-            else InstrumentationMode.MODEL_CHECKING
-        is StressOptions -> InstrumentationMode.STRESS
-    }
-
+// Compatibility bridge for legacy tests and clients; execution consumes only LincheckSettings.
 internal fun Options<*>.createStrategy(
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunction: Actor?,
-): Strategy = when (this) {
-    is ModelCheckingOptions -> createStrategy(testClass, scenario, validationFunction)
-    is StressOptions -> createStrategy(testClass, scenario, validationFunction)
-}
+): Strategy = toSettings().createStrategy(testClass, scenario, validationFunction)
 
-/**
- * Enables plugin replay for [block] and disables it when the block exits.
- */
-internal inline fun <T> Options<*>.withIdeaPluginReplayModeEnabled(block: () -> T): T {
-    enableIdeaPluginReplayMode()
-    try {
-        return block()
-    } finally {
-        disableIdeaPluginReplayMode()
+@JvmName("toSettings")
+internal fun Options<*>.toSettings(): LincheckSettings = LincheckSettings().also { settings ->
+
+    settings.timeoutMs = timeoutMs
+    settings.logLevel = logLevel
+    settings.scenarioGeneration.also {
+        it.invocationsPerIteration = invocationsPerIteration
+        it.iterations = iterations
+        it.threads = threads
+        it.actorsPerThread = actorsPerThread
+        it.actorsBefore = actorsBefore
+        it.actorsAfter = actorsAfter
+        it.executionGenerator = executionGenerator
+    }
+
+    settings.scenarioGeneration.verifier = verifier
+    settings.scenarioGeneration.sequentialSpecification = sequentialSpecification
+    settings.scenarioGeneration.minimizeFailedScenario = minimizeFailedScenario
+    customScenarios.forEach(settings.scenarioGeneration::addCustomScenario)
+    settings.strategy = when (this) {
+        is StressOptions -> stressSettings()
+        is ModelCheckingOptions -> modelCheckingSettings()
+    }
+
+    // Older custom generators declare an Options constructor.
+    // Keep reflection at the legacy boundary.
+    val legacyConstructor = runCatching {
+        executionGenerator.getConstructor(Options::class.java, CTestStructure::class.java, RandomProvider::class.java)
+    }.getOrNull()
+    val hasSettingsConstructor = runCatching {
+        executionGenerator.getConstructor(LincheckSettings::class.java, CTestStructure::class.java, RandomProvider::class.java)
+    }.isSuccess
+    if (!hasSettingsConstructor && legacyConstructor != null) {
+        settings.legacyExecutionGeneratorFactory = { structure, random ->
+            legacyConstructor.newInstance(this, structure, random)
+        }
     }
 }

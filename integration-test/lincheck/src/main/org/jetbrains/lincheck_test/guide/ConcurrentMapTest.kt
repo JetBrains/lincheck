@@ -10,7 +10,9 @@
 
 package org.jetbrains.lincheck_test.guide
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.Ignore
 import org.junit.Test
@@ -25,13 +27,17 @@ class ConcurrentHashMapTest {
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .actorsBefore(1)
-        .actorsPerThread(1)
-        .actorsAfter(0)
-        .minimizeFailedScenario(false)
-        .checkObstructionFreedom(true)
-        .check(this::class)
+    fun modelCheckingTest() = Lincheck.runLincheckTest(LincheckSettings {
+        scenarioGeneration.minimizeFailedScenario = false
+        scenarioGeneration.apply {
+            actorsBefore = 1
+            actorsPerThread = 1
+            actorsAfter = 0
+        }
+        strategy = TestingStrategy.ModelChecking().apply {
+            checkObstructionFreedom = true
+        }
+    }, this::class)
 }
 
 class ConcurrentSkipListMapTest {
@@ -41,18 +47,21 @@ class ConcurrentSkipListMapTest {
     public fun put(key: Int, value: Int) = map.put(key, value)
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .loopIterationsBeforeThreadSwitch(20)
-        .analyzeStdLib(true)
-        .check(this::class)
+    fun modelCheckingTest() {
+        val settings = LincheckSettings().strategy(modelCheckingSettings())
+        Lincheck.runLincheckTest(settings, this::class)
+    }
 
     @Ignore("Times out")
     @Test
-    fun eventStrcutureModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .useExperimentalModelChecking()
-        .loopIterationsBeforeThreadSwitch(20)
-        .analyzeStdLib(true)
-        .check(this::class)
+    fun eventStrcutureModelCheckingTest() {
+        val settings = LincheckSettings().strategy(modelCheckingSettings().enablePartialOrderReduction())
+        Lincheck.runLincheckTest(settings, this::class)
+    }
+
+    private fun modelCheckingSettings() = TestingStrategy.ModelChecking().apply {
+        analyzeStdLib = true
+        checkObstructionFreedom = true
+        loopDetection.loopIterationsBeforeThreadSwitch = 20
+    }
 }

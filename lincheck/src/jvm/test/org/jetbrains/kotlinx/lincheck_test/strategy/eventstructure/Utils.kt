@@ -20,11 +20,11 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.ModelChecking
 import org.jetbrains.lincheck.datastructures.createStrategy
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.LincheckFailure
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategySettings
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
@@ -168,7 +168,7 @@ internal fun getResultsVerifier(verify: (ExecutionResult) -> Boolean): Verifier 
 
 internal fun <T> createStrategy(
     timeoutMs: Long,
-    settings: ManagedStrategySettings,
+    settings: ModelChecking,
     inIdeaPluginReplayMode: Boolean = false,
     memoryModel: MemoryModel,
     block: () -> T

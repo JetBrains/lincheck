@@ -10,8 +10,10 @@
 
 package org.jetbrains.lincheck_test.guide
 
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.StressOptions
 import org.junit.Test
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -26,9 +28,10 @@ class ConcurrentLinkedQueueTest {
     fun poll(): Int? = s.poll()
 
     @Test
-    fun stressTest() = StressOptions()
-        .sequentialSpecification(SequentialQueue::class.java)
-        .check(this::class)
+    fun stressTest() = Lincheck.runLincheckTest(LincheckSettings {
+        scenarioGeneration.sequentialSpecification = SequentialQueue::class.java
+        strategy = TestingStrategy.Stress()
+    }, this::class)
 }
 
 class SequentialQueue {

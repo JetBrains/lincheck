@@ -8,21 +8,16 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
+@file:Suppress("DEPRECATION")
+
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
-import org.jetbrains.kotlinx.lincheck.runner.UseClocks
-import org.jetbrains.kotlinx.lincheck.strategy.Strategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 
 /**
  * Options for the model checking strategy.
  */
+@Deprecated("Use LincheckSettings and Lincheck.runLincheckTest instead.", level = DeprecationLevel.WARNING)
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions>() {
 
     private var experimentalModelChecking = false
@@ -55,44 +50,14 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions>() {
         return this
     }
 
+    internal fun modelCheckingSettings() = managedSettings().also {
+        if (useExperimentalModelChecking) {
+            it.enablePartialOrderReduction()
+        }
+        it.memoryModel = memoryModel
+        it.printExecutionGraph = printExecutionGraph
+    }
+
     internal val useExperimentalModelChecking get() =
         experimentalModelChecking || System.getProperty("lincheck.useExperimentalModelChecking")?.toBoolean() ?: false
 }
-
-internal fun ModelCheckingOptions.createStrategy(
-    testClass: Class<*>,
-    scenario: ExecutionScenario,
-    validationFunction: Actor?,
-): Strategy {
-    val runner = ExecutionScenarioRunner(
-        scenario = scenario,
-        testClass = testClass,
-        validationFunction = validationFunction,
-        timeoutMs = getTimeOutMs(ideaPluginReplayModeEnabled, timeoutMs),
-        useClocks = UseClocks.ALWAYS
-    )
-    if (useExperimentalModelChecking) {
-        return EventStructureStrategy(
-            runner, createSettings(), LincheckInstrumentation.context, memoryModel,
-            inIdeaPluginReplayMode = ideaPluginReplayModeEnabled,
-            printExecutionGraph = printExecutionGraph,
-        ).also {
-            runner.initializeStrategy(it)
-        }
-    } else {
-        return ModelCheckingStrategy(
-            runner, createSettings(), ideaPluginReplayModeEnabled, LincheckInstrumentation.context
-        ).also {
-            runner.initializeStrategy(it)
-        }
-    }
-}
-
-internal fun getTimeOutMs(inIdeaPluginReplayMode: Boolean, defaultTimeOutMs: Long): Long =
-    if (inIdeaPluginReplayMode) INFINITE_TIMEOUT else defaultTimeOutMs
-
-/**
- * With idea plugin enabled, we should not use default Lincheck timeout
- * as debugging may take more time than default timeout.
- */
-private const val INFINITE_TIMEOUT = 1000L * 60 * 60 * 24 * 365

@@ -7,11 +7,14 @@
  * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+@file:Suppress("DEPRECATION")
+
 package org.jetbrains.kotlinx.lincheck
 
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenarioChecker
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.datastructures.toSettings
 import kotlin.reflect.KClass
 
 /**
@@ -20,7 +23,7 @@ import kotlin.reflect.KClass
 class LinChecker
 @Deprecated(
     level = DeprecationLevel.WARNING,
-    message = "Use StressOptions.check() or ModelCheckingOptions.check() instead.",
+    message = "Use Lincheck.runLincheckTest with LincheckSettings instead.",
 )
 constructor(private val testClass: Class<*>, private val options: Options<*>?) {
 
@@ -40,7 +43,7 @@ constructor(private val testClass: Class<*>, private val options: Options<*>?) {
          * @throws AssertionError if any of the tests fails.
          */
         @Deprecated(
-            "Use StressOptions.check() or ModelCheckingOptions.check() instead.",
+            "Use Lincheck.runLincheckTest with LincheckSettings instead.",
             level = DeprecationLevel.WARNING
         )
         @JvmOverloads
@@ -59,7 +62,7 @@ constructor(private val testClass: Class<*>, private val options: Options<*>?) {
  *  LinChecker.check(testClass, options)
  * ```
  */
-@Deprecated("Use StressOptions.check() or ModelCheckingOptions.check() instead.", level = DeprecationLevel.ERROR)
+@Deprecated("Use Lincheck.runLincheckTest with LincheckSettings instead.", level = DeprecationLevel.ERROR)
 fun <O : Options<O>> O.check(testClass: Class<*>) = check(testClass)
 
 /**
@@ -69,14 +72,14 @@ fun <O : Options<O>> O.check(testClass: Class<*>) = check(testClass)
  *  LinChecker.check(testClass.java, options)
  * ```
  */
-@Deprecated("Use StressOptions.check() or ModelCheckingOptions.check() instead.", level = DeprecationLevel.ERROR)
+@Deprecated("Use Lincheck.runLincheckTest with LincheckSettings instead.", level = DeprecationLevel.ERROR)
 fun <O : Options<O>> O.check(testClass: KClass<*>) = check(testClass)
 
 /**
  * Runs the configured scenarios and returns the first failure, or null if none is found.
  */
 internal fun Options<*>.detectFailure(testClass: Class<*>): LincheckFailure? =
-    ExecutionScenarioChecker(testClass, this).detectFailure()
+    ExecutionScenarioChecker(testClass, toSettings().copy(forLambda = false)).detectFailure()
 
 /**
  * Runs Lincheck to check the tested class under given configurations.
@@ -95,5 +98,5 @@ internal fun Options<*>.detectFailure(testClass: Class<*>): LincheckFailure? =
  *   The continuation is run in the context when Lincheck java-agent is still attached.
  */
 internal fun Options<*>.detectFailure(testClass: Class<*>, cont: (LincheckFailure?) -> Unit) {
-    ExecutionScenarioChecker(testClass, this).detectFailure(cont)
+    ExecutionScenarioChecker(testClass, toSettings().copy(forLambda = false)).detectFailure(cont)
 }

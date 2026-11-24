@@ -10,16 +10,16 @@
 
 package org.jetbrains.lincheck_test.datastructures.linearizable
 
-import org.jetbrains.kotlinx.lincheck_test.AbstractLincheckTest
+import org.jetbrains.lincheck_test.AbstractLincheckIntegrationTest
 import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Param
 import java.util.concurrent.ConcurrentHashMap
 
 @Param(name = "key", gen = IntGen::class, conf = "1:5")
-class ConcurrentHashMapTest : AbstractLincheckTest() {
+class ConcurrentHashMapTest : AbstractLincheckIntegrationTest() {
     private val map = ConcurrentHashMap<Int, Int>()
 
     @Operation
@@ -31,13 +31,13 @@ class ConcurrentHashMapTest : AbstractLincheckTest() {
     @Operation
     fun remove(@Param(name = "key") key: Int) = map.remove(key)
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // TODO: This times out, we need to fix performance
         ignoreExperimentalModelChecking()
         // To obtain rare interleaving with `fullAddCount` method
-        if (this is ModelCheckingOptions) {
-            invocationsPerIteration(10000)
-            analyzeStdLib(true)
+        if (strategy is TestingStrategy.ModelChecking) {
+            scenarioGeneration.invocationsPerIteration(10000)
+            (strategy as TestingStrategy.ModelChecking).analyzeStdLib(true)
         }
     }
 }
