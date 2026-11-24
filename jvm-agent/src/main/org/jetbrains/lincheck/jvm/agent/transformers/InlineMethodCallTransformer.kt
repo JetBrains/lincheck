@@ -296,7 +296,7 @@ internal class InlineMethodCallTransformer(
                 push(methodId)
                 loadLocal(exLocal)
                 // STACK: exception, descriptor, methodId, exception
-                invokeStatic(Injections::onInlineMethodCallException)
+                invokeStatic(Injections::afterInlineMethodCallException)
                 // STACK: exception
             }
         )
@@ -328,7 +328,7 @@ internal class InlineMethodCallTransformer(
             box(owner.type)
         }
         // STACK: descriptor, codeLocation, methodId, owner
-        invokeStatic(Injections::onInlineMethodCall)
+        invokeStatic(Injections::beforeInlineMethodCall)
         invokeBeforeEventIfPluginEnabled("inline method call $inlineMethodName in $methodName")
         // STACK: <empty>
     }
@@ -338,7 +338,7 @@ internal class InlineMethodCallTransformer(
         invokeStatic(ThreadDescriptor::getCurrentThreadDescriptor)
         push(methodId)
         // STACK: descriptor, methodId
-        invokeStatic(Injections::onInlineMethodCallReturn)
+        invokeStatic(Injections::afterInlineMethodCallReturn)
     }
 
     private fun registerInlineMethod(possibleClassName: String, inlineMethodName: String): Int =

@@ -138,10 +138,10 @@ internal class LincheckClassVisitor(
         // sits DEEPER in the transformer chain. The last transformer added becomes the outermost
         // wrapper and receives original bytecode first, so for an INVOKESPECIAL `<init>` the
         // emitted order at runtime is:
-        //   onMethodCall(<init>)          <-- MethodCallTransformer (outer) preamble
-        //   <init>(...)                   <-- original instruction
-        //   afterObjectConstructor(obj)   <-- ObjectCreationTransformer (inner) postamble
-        //   onMethodCallReturn(<init>)    <-- MethodCallTransformer (outer) postamble
+        //   beforeMethodCall(<init>)       <-- MethodCallTransformer (outer) preamble
+        //   <init>(...)                    <-- original instruction
+        //   afterObjectConstructor(obj)    <-- ObjectCreationTransformer (inner) postamble
+        //   afterMethodCallReturn(<init>)  <-- MethodCallTransformer (outer) postamble
         // i.e., the object-creation event reaches the strategy BEFORE the `<init>` method-return event.
         // Swapping the order would register the constructed object only AFTER the surrounding `<init>` return,
         // breaking strategies that look up the object on return.

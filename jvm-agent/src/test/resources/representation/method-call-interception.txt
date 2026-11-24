@@ -1,0 +1,9 @@
+before intResult
+return intResult: 1
+caller: 42
+before voidResult
+return voidResult: void
+caller: IllegalArgumentException(void replacement)
+before throwingResult
+exception throwingResult: RuntimeException(original)
+caller: IllegalStateException(replacement)

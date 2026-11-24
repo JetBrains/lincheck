@@ -17,8 +17,8 @@ package sun.nio.ch.lincheck;
  * Result interceptor works in tandem with the instrumentation and the {@link EventTracker} class.
  * When method call interception instrumentation is enabled, the event tracker may use
  * the interceptor object passed to method call tracking injections to intercept the result of the method call.
- * In that case, instead of performing an actual method call,
- * the code will use the intercepted object or exception will be used as a result of the method call.
+ * Interception before a call skips its execution; interception after a call replaces its outcome.
+ * The result might be intercepted only once (either before or after the call).
  * Similar mechanism can be used to intercept other operations, such as field access or array access.
  * <br>
  *
@@ -27,8 +27,8 @@ package sun.nio.ch.lincheck;
  * (to model different relaxed memory consistency effects).
  * <br>
  *
- * See {@link Injections#onMethodCall}, {@link Injections#onMethodCallReturn},
- * and {@link Injections#onMethodCallException} for details on result interception protocol.
+ * See {@link Injections#beforeMethodCall}, {@link Injections#afterMethodCallReturn},
+ * and {@link Injections#afterMethodCallException} for details on result interception protocol.
  */
 public class ResultInterceptor {
     private Object interceptedResult = null;

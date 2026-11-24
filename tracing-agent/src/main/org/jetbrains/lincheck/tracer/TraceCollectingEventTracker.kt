@@ -518,7 +518,7 @@ class TraceCollectingEventTracker(
         tracePointCreated(threadData, tracePoint)
     }
 
-    override fun onMethodCall(
+    override fun beforeMethodCall(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         methodId: Int,
@@ -553,7 +553,7 @@ class TraceCollectingEventTracker(
         threadData.enterAnalysisSection(methodSection)
     }
 
-    override fun onMethodCallReturn(
+    override fun afterMethodCallReturn(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         receiver: Any?,
@@ -586,7 +586,7 @@ class TraceCollectingEventTracker(
                 " due to return from method $methodId "                         +
                 "${methodDescriptor.className}.${methodDescriptor.methodName}"
             }
-            onInlineMethodCallReturn(threadDescriptor, inlineTracePoint.methodId)
+            afterInlineMethodCallReturn(threadDescriptor, inlineTracePoint.methodId)
         }
 
         val tracePoint = threadData.popStackFrame()
@@ -603,7 +603,7 @@ class TraceCollectingEventTracker(
         threadData.leaveAnalysisSection(methodSection)
     }
 
-    override fun onMethodCallException(
+    override fun afterMethodCallException(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         receiver: Any?,
@@ -636,7 +636,7 @@ class TraceCollectingEventTracker(
                 " due to exception in method $methodId "                        +
                 "${methodDescriptor.className}.${methodDescriptor.methodName}"
             }
-            onInlineMethodCallException(threadDescriptor, inlineTracePoint.methodId, t)
+            afterInlineMethodCallException(threadDescriptor, inlineTracePoint.methodId, t)
         }
 
         processSuperConstructorCallsOnException(threadData, t)
@@ -654,7 +654,7 @@ class TraceCollectingEventTracker(
         threadData.leaveAnalysisSection(methodSection)
     }
 
-    override fun onInlineMethodCall(
+    override fun beforeInlineMethodCall(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         methodId: Int,
@@ -675,7 +675,7 @@ class TraceCollectingEventTracker(
         threadData.pushStackFrame(tracePoint, owner, isInline = true)
     }
 
-    override fun onInlineMethodCallReturn(
+    override fun afterInlineMethodCallReturn(
         threadDescriptor: ThreadDescriptor,
         methodId: Int
     ): Unit = threadDescriptor.runInsideInjectedCode {
@@ -693,7 +693,7 @@ class TraceCollectingEventTracker(
         strategy.completeContainerTracePoint(Thread.currentThread(), tracePoint, resultTracePoint)
     }
 
-    override fun onInlineMethodCallException(
+    override fun afterInlineMethodCallException(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         t: Throwable
@@ -1053,7 +1053,7 @@ class TraceCollectingEventTracker(
     }
 
     /**
-     * Process super constructor calls manually on [onMethodCallException] and [onInlineMethodCallException]
+     * Process super constructor calls manually on [afterMethodCallException] and [afterInlineMethodCallException]
      * because tracking exceptions thrown from them directly is not possible due to instrumentation limitations.
      */
     private fun processSuperConstructorCallsOnException(threadData: ThreadData, t: Throwable) {

@@ -43,7 +43,7 @@ where a `TransformationProfile` decides per method which events are tracked
 under the active `InstrumentationMode`.
 
 The transformers inject static calls to `sun.nio.ch.lincheck.Injections`
-(e.g. `Injections::onMethodCall`, `Injections::onMethodCallReturn`).
+(e.g. `Injections::beforeMethodCall`, `Injections::afterMethodCallReturn`).
 `Injections` lives in the [`bootstrap`](../bootstrap) module whose jar the wrapper appends to the bootstrap classloader,
 so the injected calls resolve from every classloader, including classes of `java.base`.
 

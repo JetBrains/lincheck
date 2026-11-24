@@ -1712,7 +1712,7 @@ internal abstract class ManagedStrategy(
         interceptor: ResultInterceptor,
     ) {}
 
-    override fun onMethodCall(
+    override fun beforeMethodCall(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         methodId: Int,
@@ -1834,7 +1834,7 @@ internal abstract class ManagedStrategy(
         enterAnalysisSection(threadId, methodSection)
     }
 
-    override fun onMethodCallReturn(
+    override fun afterMethodCallReturn(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         receiver: Any?,
@@ -1901,7 +1901,7 @@ internal abstract class ManagedStrategy(
         leaveAnalysisSection(threadId, methodSection)
     }
 
-    override fun onMethodCallException(
+    override fun afterMethodCallException(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         receiver: Any?,
@@ -1961,7 +1961,7 @@ internal abstract class ManagedStrategy(
         breakpointId: Int,
     ) {}
 
-    override fun onInlineMethodCall(
+    override fun beforeInlineMethodCall(
         threadDescriptor: ThreadDescriptor,
         codeLocation: Int,
         methodId: Int,
@@ -2000,7 +2000,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun onInlineMethodCallReturn(
+    override fun afterInlineMethodCallReturn(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
     ) = threadDescriptor.runInsideIgnoredSection {
@@ -2024,7 +2024,7 @@ internal abstract class ManagedStrategy(
         }
     }
 
-    override fun onInlineMethodCallException(
+    override fun afterInlineMethodCallException(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
         throwable: Throwable

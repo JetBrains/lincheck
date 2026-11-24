@@ -785,10 +785,22 @@ public class Injections {
      * it does not perform the original method call but instead uses the result from the interceptor object.
      * <br>
      *
+     * If configured, the result might also be interecepted after the call,
+     * see {@link #afterMethodCallReturnOrIntercepted} and {@link #afterMethodCallExceptionOrIntercepted}.
+     * When the result is intercepted after the call,
+     * a successful call can be substituted by a normal result or an exception;
+     * a failed call can only become another exception.
+     * <br>
+     *
      * Note that a single interceptor object is created per each method call, and it is passed to both
-     * {@link #onMethodCall} and {@link #onMethodCallReturn}/{@link #onMethodCallException} methods.
-     * This allows the {@link #onMethodCall} to assign some meta-data to the interceptor object,
-     * so that later {@link #onMethodCallReturn} or {@link #onMethodCallException} can use this metadata.
+     * {@link #beforeMethodCall} and {@link #afterMethodCallReturn}/{@link #afterMethodCallException} methods.
+     * This allows the {@link #beforeMethodCall} to assign some meta-data to the interceptor object,
+     * so that later {@link #afterMethodCallReturn} or {@link #afterMethodCallException} can use this metadata.
+     * <br>
+     *
+     * A successful call can become a normal result or an exception; a failed call can only become another exception.
+     * <br>
+     *
      * For instance, this can be used to implement record-replay debugging,
      * where on the first run the method is called normally and its result is recorded in some persistent storage,
      * and on the second run the method call is intercepted and the recorded result is used instead of calling the method.
@@ -801,10 +813,10 @@ public class Injections {
      * @param interceptor The interceptor object that can be used to intercept the result of the method call.
      *                    Equals to `null` if the result interception is disabled for the given method.
      */
-    public static void onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) {
+    public static void beforeMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (descriptor == null || eventTracker == null) return;
-        eventTracker.onMethodCall(descriptor, codeLocation, methodId, receiver, params, interceptor);
+        eventTracker.beforeMethodCall(descriptor, codeLocation, methodId, receiver, params, interceptor);
     }
 
     /**
@@ -817,19 +829,52 @@ public class Injections {
      * @param result The result of the method call.
      * @param interceptor The interceptor object.
      */
-    public static void onMethodCallReturn(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Object result, ResultInterceptor interceptor) {
+    public static void afterMethodCallReturn(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Object result, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
-        eventTracker.onMethodCallReturn(descriptor, methodId, receiver, params, result, interceptor);
-        recycleResultInterceptor(descriptor, interceptor);
+        try {
+            eventTracker.afterMethodCallReturn(descriptor, methodId, receiver, params, result, interceptor);
+        } finally {
+            recycleResultInterceptor(descriptor, interceptor);
+        }
     }
 
     /**
      * Called from the instrumented code after any successful (i.e., without any exception) method call returning void.
-     * See {@link #onMethodCallReturn} for details.
+     * See {@link #afterMethodCallReturn} for details.
      */
-    public static void onMethodCallReturnVoid(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) {
-        onMethodCallReturn(descriptor, methodId, receiver, params, VOID_RESULT, interceptor);
+    public static void afterMethodCallReturnVoid(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) {
+        afterMethodCallReturn(descriptor, methodId, receiver, params, VOID_RESULT, interceptor);
+    }
+
+    /**
+     * Called from the instrumented code after any successful (i.e., without any exception) method call.
+     * May substitute the result of the method call with the one stored in the interceptor;
+     * in case if the interceptor stores an exception, throws it instead of returning.
+     * <p>
+     *
+     * See {@link #afterMethodCallReturn} for details.
+     */
+    public static Object afterMethodCallReturnOrIntercepted(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Object result, ResultInterceptor interceptor) throws Throwable {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return result;
+        try {
+            eventTracker.afterMethodCallReturn(descriptor, methodId, receiver, params, result, interceptor);
+            return isResultOrExceptionIntercepted(interceptor) ? getOrThrowInterceptedResult(interceptor) : result;
+        } finally {
+            recycleResultInterceptor(descriptor, interceptor);
+        }
+    }
+
+    /**
+     * Called from the instrumented code after any successful (i.e., without any exception) method call returning void.
+     * May substitute the result of the method call by instead throwing an exception stored in the interceptor.
+     * <p>
+     *
+     * See {@link #afterMethodCallReturn} for details.
+     */
+    public static void afterMethodCallReturnVoidOrIntercepted(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor) throws Throwable {
+        afterMethodCallReturnOrIntercepted(descriptor, methodId, receiver, params, VOID_RESULT, interceptor);
     }
 
     /**
@@ -842,11 +887,36 @@ public class Injections {
      * @param exception Thrown exception.
      * @param interceptor The interceptor object.
      */
-    public static void onMethodCallException(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Throwable exception, ResultInterceptor interceptor) {
+    public static void afterMethodCallException(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Throwable exception, ResultInterceptor interceptor) {
         EventTracker eventTracker = getEventTracker(descriptor);
         if (eventTracker == null || descriptor == null) return;
-        eventTracker.onMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
-        recycleResultInterceptor(descriptor, interceptor);
+        try {
+            eventTracker.afterMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
+        } finally {
+            recycleResultInterceptor(descriptor, interceptor);
+        }
+    }
+
+    /**
+     * Called from the instrumented code after any method call threw an exception.
+     * May substitute the exception with the one stored in the interceptor.
+     * <p>
+     *
+     * See {@link #afterMethodCallException} for details.
+     */
+    public static Throwable afterMethodCallExceptionOrIntercepted(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Throwable exception, ResultInterceptor interceptor) {
+        EventTracker eventTracker = getEventTracker(descriptor);
+        if (descriptor == null || eventTracker == null) return exception;
+        try {
+            eventTracker.afterMethodCallException(descriptor, methodId, receiver, params, exception, interceptor);
+            if (interceptor == null) return exception;
+            if (interceptor.isResultIntercepted()) {
+                throw new IllegalStateException("A method call exception cannot be intercepted with a normal result");
+            }
+            return interceptor.isExceptionIntercepted() ? interceptor.getInterceptedException() : exception;
+        } finally {
+            recycleResultInterceptor(descriptor, interceptor);
+        }
     }
 
     /**
@@ -1010,25 +1080,25 @@ public class Injections {
     /**
      * Called from the instrumented code before any kotlin inlined method call.
      */
-    public static void onInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner) {
+    public static void beforeInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.onInlineMethodCall(descriptor, codeLocation, methodId, owner);
+        eventTracker.beforeInlineMethodCall(descriptor, codeLocation, methodId, owner);
     }
 
     /**
      * Called from the instrumented code after any kotlin inline method successful call, i.e., without any exception.
      */
-    public static void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId) {
+    public static void afterInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.onInlineMethodCallReturn(descriptor, methodId);
+        eventTracker.afterInlineMethodCallReturn(descriptor, methodId);
     }
 
     /**
      * Called from the instrumented code after any kotlin inline method throws exception
      */
-    public static void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t) {
+    public static void afterInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t) {
         EventTracker eventTracker = getEventTracker(descriptor);
-        eventTracker.onInlineMethodCallException(descriptor, methodId, t);
+        eventTracker.afterInlineMethodCallException(descriptor, methodId, t);
     }
 
     /**

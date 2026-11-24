@@ -54,13 +54,13 @@ public interface EventTracker {
     void afterLocalRead(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
     void afterLocalWrite(ThreadDescriptor descriptor, int codeLocation, int variableId, Object value);
 
-    void onMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor);
-    void onMethodCallReturn(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Object result, ResultInterceptor interceptor);
-    void onMethodCallException(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Throwable t, ResultInterceptor interceptor);
+    void beforeMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object receiver, Object[] params, ResultInterceptor interceptor);
+    void afterMethodCallReturn(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Object result, ResultInterceptor interceptor);
+    void afterMethodCallException(ThreadDescriptor descriptor, int methodId, Object receiver, Object[] params, Throwable t, ResultInterceptor interceptor);
 
-    void onInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner);
-    void onInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId);
-    void onInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t);
+    void beforeInlineMethodCall(ThreadDescriptor descriptor, int codeLocation, int methodId, Object owner);
+    void afterInlineMethodCallReturn(ThreadDescriptor descriptor, int methodId);
+    void afterInlineMethodCallException(ThreadDescriptor descriptor, int methodId, Throwable t);
     
     void onSnapshotLineBreakpoint(ThreadDescriptor descriptor, int codeLocation, Object[] locals, Object[] watches, String traceId, int breakpointId);
 

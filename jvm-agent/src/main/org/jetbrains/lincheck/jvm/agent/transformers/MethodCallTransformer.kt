@@ -120,7 +120,7 @@ internal class MethodCallTransformer(
         val resultInterceptorLocal = newLocal(OBJECT_TYPE).also {
             pushResultInterceptor(
                 threadDescriptorLocal,
-                shouldIntercept = configuration.interceptMethodCallResults && !isConstructorCall
+                shouldIntercept = shouldInterceptResult(isConstructorCall),
             )
             storeLocal(it)
         }
@@ -138,54 +138,48 @@ internal class MethodCallTransformer(
         )
         // STACK: <empty>
         if (isUninitThisCall) {
-            // Cannot wrap super()/this() in try-catch: an exception handler frame cannot carry
-            // flagThisUninit, so ASM would generate a frame the JVM verifier rejects.
-            // Skipping exception tracking is safe — if super()/this() throws, construction
-            // is already aborted and the partially-constructed receiver is unreachable.
-            processMethodCallAndReturn(opcode, owner, name, desc, itf,
-                methodId,
-                returnType,
-                receiverLocal,
-                argumentLocals,
-                argumentsArrayLocal,
-                threadDescriptorLocal,
-                resultInterceptorLocal,
-                isUninitThisCall = true,
-                isConstructorCall = isConstructorCall
-            )
-            // STACK: result?
+            // An exception handler cannot carry UNINITIALIZED_THIS in its frame.
+            invokeMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
         } else {
             tryCatchFinally(
                 tryBlock = {
-                    processMethodCallAndReturn(opcode, owner, name, desc, itf,
-                        methodId,
+                    processMethodCall(opcode, owner, name, desc, itf,
                         returnType,
                         receiverLocal,
                         argumentLocals,
-                        argumentsArrayLocal,
-                        threadDescriptorLocal,
                         resultInterceptorLocal,
-                        isUninitThisCall = false,
-                        isConstructorCall = isConstructorCall,
+                        isConstructorCall,
                     )
                     // STACK: result?
                 },
                 catchBlock = {
                     // STACK: exception
-                    dup()
-                    // STACK: exception, exception
                     processMethodCallException(
                         methodId,
                         receiverLocal,
                         argumentsArrayLocal,
                         threadDescriptorLocal,
                         resultInterceptorLocal,
+                        isConstructorCall,
                     )
                     // STACK: exception
                     throwException()
                 }
             )
         }
+        // A return callback may substitute an exception after completing the call's tracking state.
+        // Keep it outside the handler so it does not also trigger the exception callback.
+        processMethodCallReturn(
+            returnType,
+            methodId,
+            receiverLocal,
+            argumentsArrayLocal,
+            threadDescriptorLocal,
+            resultInterceptorLocal,
+            isUninitThisCall,
+            isConstructorCall,
+        )
+        // STACK: result?
     }
 
     /**
@@ -222,7 +216,7 @@ internal class MethodCallTransformer(
         loadLocal(argumentsArrayLocal)
         loadLocal(resultInterceptorLocal)
         // STACK: descriptor, codeLocation, methodId, receiver?, argumentsArray, interceptor?
-        invokeStatic(Injections::onMethodCall)
+        invokeStatic(Injections::beforeMethodCall)
         // STACK: <empty>
         invokeBeforeEventIfPluginEnabled("method call ${this@MethodCallTransformer.methodName}")
     }
@@ -237,14 +231,13 @@ internal class MethodCallTransformer(
         receiverLocal: Int?,
         argumentLocals: IntArray,
         resultInterceptorLocal: Int,
-        isUninitThisCall: Boolean = false,
-        isConstructorCall: Boolean = false,
+        isConstructorCall: Boolean,
     ) {
         // Result interception is not applicable to constructors:
         //  - for super()/this() calls, INVOKESPECIAL leaves the stack empty;
         //  - for NEW/<init> pairs, skipping the constructor would leave an uninitialized value.
-        if (!configuration.interceptMethodCallResults || isConstructorCall || isUninitThisCall) {
-            runMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
+        if (!shouldInterceptResultBeforeMethodCall(isConstructorCall)) {
+            invokeMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
             return
         }
 
@@ -256,7 +249,7 @@ internal class MethodCallTransformer(
                 getOrThrowInterceptedResult(resultInterceptorLocal, returnType)
             },
             elseClause = {
-                runMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
+                invokeMethod(opcode, owner, name, desc, itf, receiverLocal, argumentLocals)
             },
         )
     }
@@ -268,7 +261,8 @@ internal class MethodCallTransformer(
         argumentsArrayLocal: Int,
         threadDescriptorLocal: Int,
         resultInterceptorLocal: Int,
-        isUninitThisCall: Boolean = false,
+        isUninitThisCall: Boolean,
+        isConstructorCall: Boolean,
     ) {
         // STACK: result?
         val resultLocal = when {
@@ -297,54 +291,29 @@ internal class MethodCallTransformer(
             isUninitThisCall -> {
                 // Report `this` as the result but do NOT push it onto the stack — the original
                 // super()/this() call is void from the caller's perspective.
-                invokeStatic(Injections::onMethodCallReturn)
+                invokeStatic(Injections::afterMethodCallReturn)
                 // STACK: <empty>
             }
+            shouldInterceptResultAfterMethodCall(isConstructorCall) -> {
+                if (returnType == VOID_TYPE) {
+                    invokeStatic(Injections::afterMethodCallReturnVoidOrIntercepted)
+                } else {
+                    invokeStatic(Injections::afterMethodCallReturnOrIntercepted)
+                    unbox(returnType)
+                }
+                // STACK: result?
+            }
             returnType == VOID_TYPE -> {
-                invokeStatic(Injections::onMethodCallReturnVoid)
+                invokeStatic(Injections::afterMethodCallReturnVoid)
                 // STACK: <empty>
             }
             else -> {
-                invokeStatic(Injections::onMethodCallReturn)
+                invokeStatic(Injections::afterMethodCallReturn)
                 // STACK: <empty>
                 loadLocal(resultLocal!!)
                 // STACK: result
             }
         }
-        // STACK: result?
-    }
-
-    private fun GeneratorAdapter.processMethodCallAndReturn(
-        opcode: Int, owner: String, name: String, desc: String, itf: Boolean,
-        methodId: Int,
-        returnType: Type,
-        receiverLocal: Int?,
-        argumentLocals: IntArray,
-        argumentsArrayLocal: Int,
-        threadDescriptorLocal: Int,
-        resultInterceptorLocal: Int,
-        isUninitThisCall: Boolean,
-        isConstructorCall: Boolean,
-    ) {
-        // Stack <empty>
-        processMethodCall(opcode, owner, name, desc, itf,
-            returnType,
-            receiverLocal,
-            argumentLocals,
-            resultInterceptorLocal,
-            isUninitThisCall,
-            isConstructorCall,
-        )
-        // STACK: result?
-        processMethodCallReturn(
-            returnType,
-            methodId,
-            receiverLocal,
-            argumentsArrayLocal,
-            threadDescriptorLocal,
-            resultInterceptorLocal,
-            isUninitThisCall,
-        )
         // STACK: result?
     }
 
@@ -354,6 +323,7 @@ internal class MethodCallTransformer(
         argumentsArrayLocal: Int,
         threadDescriptorLocal: Int,
         resultInterceptorLocal: Int,
+        isConstructorCall: Boolean,
     ) {
         // STACK: exception
         val exceptionLocal = newLocal(THROWABLE_TYPE)
@@ -361,17 +331,25 @@ internal class MethodCallTransformer(
         // STACK: <empty>
         loadLocal(threadDescriptorLocal)
         push(methodId)
-        pushReceiver(receiverLocal, isUninitThisCall = false /* exception handling is not applicable for the super(...) calls */)
+        pushReceiver(
+            receiverLocal,
+            isUninitThisCall = false /* exception handling is not applicable for the super(...) calls */
+        )
         loadLocal(argumentsArrayLocal)
         loadLocal(exceptionLocal)
         loadLocal(resultInterceptorLocal)
 
         // STACK: descriptor, methodId, receiver, params, exception, interceptor?
-        invokeStatic(Injections::onMethodCallException)
-        // STACK: <empty>
+        if (shouldInterceptResultAfterMethodCall(isConstructorCall)) {
+            invokeStatic(Injections::afterMethodCallExceptionOrIntercepted)
+        } else {
+            invokeStatic(Injections::afterMethodCallException)
+            loadLocal(exceptionLocal)
+        }
+        // STACK: exception
     }
 
-    private fun GeneratorAdapter.runMethod(
+    private fun GeneratorAdapter.invokeMethod(
         opcode: Int,
         owner: String,
         name: String,
@@ -432,6 +410,16 @@ internal class MethodCallTransformer(
         if (isThreadLocalRandomCurrent(className, methodName)) return false
         return true
     }
+
+    private fun shouldInterceptResult(isConstructorCall: Boolean): Boolean =
+        shouldInterceptResultBeforeMethodCall(isConstructorCall) ||
+        shouldInterceptResultAfterMethodCall(isConstructorCall)
+
+    private fun shouldInterceptResultBeforeMethodCall(isConstructorCall: Boolean): Boolean =
+        configuration.interceptMethodCallResults && !isConstructorCall
+
+    private fun shouldInterceptResultAfterMethodCall(isConstructorCall: Boolean): Boolean =
+        configuration.interceptMethodCallResultsAfterInvocation && !isConstructorCall
 
     private fun isIgnoredClass(className: String) =
         isInLincheckPackage(className.toCanonicalClassName()) ||

@@ -39,9 +39,11 @@ class TransformationConfiguration(
     var trackArrayElementWrites: Boolean = false,
 
     var trackMethodCalls: Boolean = false,
-    var interceptMethodCallResults: Boolean = false,
     var trackConstructorCalls: Boolean = false,
     var trackInlineMethodCalls: Boolean = false,
+
+    var interceptMethodCallResults: Boolean = false,
+    val interceptMethodCallResultsAfterInvocation: Boolean = false,
 
     var trackThreadRun: Boolean = false,
     var trackThreadStart: Boolean = false,
