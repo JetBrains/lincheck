@@ -699,10 +699,14 @@ private class EventStructureMemoryTracker(
     private fun getValue(type: Types.Type, valueID: ValueID) =
         eventStructureObjectTracker.getValue(type, valueID)
 
+    override fun trackInitialValue(location: MemoryLocation) {
+        eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
+    }
+
     private fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, value: OpaqueValue?,
                               rmwWriteDescriptor: ReadModifyWriteDescriptor? = null) {
         // force evaluation of initial value (before possibly overwriting it)
-        eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
+        trackInitialValue(location)
         eventStructure.addWriteEvent(iThread, codeLocation, location, memoryOrder, getValueID(location, value), rmwWriteDescriptor)
     }
 

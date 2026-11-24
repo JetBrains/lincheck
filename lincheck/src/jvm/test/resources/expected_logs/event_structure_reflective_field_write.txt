@@ -1,0 +1,44 @@
+= Invalid execution results =
+| ----------------- |
+|     Thread 1      |
+| ----------------- |
+| operation(): void |
+| ----------------- |
+
+Execution graph:
+Events in each thread are in program order; Tn:position identifies an event.
+rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).
+Thread -1:
+  T-1:0: Init
+Thread 0:
+  T0:0: ThreadStart^req T0
+  T0:1: ThreadStart^rsp T0
+    senders: T-1:0
+    hb: T-1:0
+  T0:2: Alloc EventStructureReflectiveFieldWriteTest#1
+    hb: T-1:0
+  T0:3: Actor Start operation()
+    hb: T-1:0
+  T0:4: Write Volatile EventStructureReflectiveFieldWriteTest#1.value write=2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureReflectiveFieldWriteTest.<unknown method>(EventStructureReflectiveFieldWriteTest.kt:25)
+    hb: T-1:0
+  T0:5: Read^req Volatile EventStructureReflectiveFieldWriteTest#1.value at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureReflectiveFieldWriteTest.<unknown method>(EventStructureReflectiveFieldWriteTest.kt:26)
+    hb: T-1:0
+  T0:6: Read^rsp Volatile EventStructureReflectiveFieldWriteTest#1.value read=2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureReflectiveFieldWriteTest.<unknown method>(EventStructureReflectiveFieldWriteTest.kt:26)
+    rf: T0:4
+    hb: T-1:0
+  T0:7: Read^req Volatile EventStructureReflectiveFieldWriteTest#1.value at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureReflectiveFieldWriteTest.<unknown method>(EventStructureReflectiveFieldWriteTest.kt:27)
+    hb: T-1:0
+  T0:8: Read^rsp Volatile EventStructureReflectiveFieldWriteTest#1.value read=2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureReflectiveFieldWriteTest.<unknown method>(EventStructureReflectiveFieldWriteTest.kt:27)
+    rf: T0:4
+    hb: T-1:0
+  T0:9: Read^req Volatile EventStructureReflectiveFieldWriteTest#1.value at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureReflectiveFieldWriteTest.<unknown method>(EventStructureReflectiveFieldWriteTest.kt:28)
+    hb: T-1:0
+  T0:10: Read^rsp Volatile EventStructureReflectiveFieldWriteTest#1.value read=2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureReflectiveFieldWriteTest.<unknown method>(EventStructureReflectiveFieldWriteTest.kt:28)
+    rf: T0:4
+    hb: T-1:0
+  T0:11: Actor End operation()
+    hb: T-1:0
+  T0:12: ThreadFinish [0]
+    hb: T-1:0
+Coherence (adjacent atomic writes, including initialization):
+  EventStructureReflectiveFieldWriteTest#1.value: T0:2 -> T0:4

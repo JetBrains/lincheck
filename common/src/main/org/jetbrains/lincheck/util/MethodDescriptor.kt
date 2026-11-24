@@ -60,6 +60,28 @@ fun MethodDescriptor.isSystemArrayCopy() : Boolean {
 fun MethodDescriptor.isCloneMethod(): Boolean =
     methodName == "clone" && (className == "java.lang.Object" || className.startsWith("["))
 
+/**
+ * Whether this is a call to one of `java.lang.reflect.Field`'s setter methods
+ * (`set`, `setInt`, `setLong`, etc.), which write to an existing object's field
+ * without going through the instrumented `putfield`/`putstatic` bytecode.
+ */
+fun MethodDescriptor.isFieldReflectiveSet(): Boolean {
+    return className == "java.lang.reflect.Field" && methodName in FIELD_SETTER_METHOD_NAMES
+}
+
+/** Whether this call reads a field through the reflection API. */
+fun MethodDescriptor.isFieldReflectiveGet(): Boolean {
+    return className == "java.lang.reflect.Field" && methodName in FIELD_GETTER_METHOD_NAMES
+}
+
+private val FIELD_GETTER_METHOD_NAMES = setOf(
+    "get", "getBoolean", "getByte", "getChar", "getShort", "getInt", "getLong", "getFloat", "getDouble",
+)
+
+private val FIELD_SETTER_METHOD_NAMES = setOf(
+    "set", "setBoolean", "setByte", "setChar", "setShort", "setInt", "setLong", "setFloat", "setDouble",
+)
+
 // TODO: java 8 does not have `@HotSpotIntrinsicCandidate`/`@IntrinsicCandidate` annotations
 //  add all tracked intrinsics here
 fun MethodDescriptor.isTrackedIntrinsic(): Boolean =

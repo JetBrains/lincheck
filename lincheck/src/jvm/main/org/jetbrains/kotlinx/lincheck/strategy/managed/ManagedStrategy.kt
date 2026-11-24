@@ -28,6 +28,8 @@ import org.jetbrains.lincheck.util.*
 import org.objectweb.asm.*
 import sun.nio.ch.lincheck.*
 import java.lang.invoke.*
+import java.lang.reflect.Field
+import java.lang.reflect.Modifier
 import java.util.*
 import java.util.concurrent.*
 import kotlin.coroutines.*
@@ -1558,9 +1560,12 @@ internal abstract class ManagedStrategy(
     private fun shouldTrackArrayAccess(obj: Any?): Boolean = objectTracker.shouldTrackObjectAccess(obj)
 
     private fun shouldTrackFieldAccess(obj: Any?, fieldDescriptor: FieldDescriptor): Boolean =
+        shouldTrackFieldAccess(obj, fieldDescriptor.fieldName, fieldDescriptor.isFinal)
+
+    private fun shouldTrackFieldAccess(obj: Any?, fieldName: String, isFinal: Boolean): Boolean =
         objectTracker.shouldTrackObjectAccess(obj) &&
-        (trackFinalFields || !fieldDescriptor.isFinal) &&
-        !isStackRecoveryFieldAccess(obj, fieldDescriptor.fieldName)
+        (trackFinalFields || !isFinal) &&
+        !isStackRecoveryFieldAccess(obj, fieldName)
 
     private fun isStackRecoveryFieldAccess(obj: Any?, fieldName: String?): Boolean =
         obj is Continuation<*> && (fieldName == "label" || fieldName?.startsWith("L$") == true)
@@ -1638,7 +1643,6 @@ internal abstract class ManagedStrategy(
             else -> {}
         }
         // TODO: System.arraycopy
-        // TODO: reflection
     }
 
     /**
@@ -1668,7 +1672,10 @@ internal abstract class ManagedStrategy(
     private fun processMethodEffects(
         threadDescriptor: ThreadDescriptor,
         methodId: Int,
+        receiver: Any?,
+        params: Array<Any?>,
         result: Any?,
+        interceptor: ResultInterceptor?,
     ) {
         val methodDescriptor = context.methodPool[methodId]
 
@@ -1686,6 +1693,86 @@ internal abstract class ManagedStrategy(
             result?.let {
                 afterObjectConstructor(threadDescriptor, it, it.javaClass.canonicalName ?: it.javaClass.name)
             }
+        }
+
+        if (receiver is Field && (methodDescriptor.isFieldReflectiveSet() || methodDescriptor.isFieldReflectiveGet())) {
+            processReflectiveFieldAccess(receiver, params, methodDescriptor, interceptor)
+        }
+    }
+
+    private data class ReflectiveFieldAccess(val codeLocation: Int)
+
+    // Record only successful accesses, preserving the real call's access checks and argument validation.
+    private fun processReflectiveFieldAccess(
+        field: Field,
+        params: Array<Any?>,
+        methodDescriptor: MethodDescriptor,
+        interceptor: ResultInterceptor?,
+    ) {
+        val isStatic = Modifier.isStatic(field.modifiers)
+        val isFinal = Modifier.isFinal(field.modifiers)
+        val isWrite = methodDescriptor.isFieldReflectiveSet()
+
+        val obj = if (isStatic) null else params[0]
+        val type = Types.convertAsmTypeName(Type.getType(field.type))
+        val value = if (isWrite) widenReflectiveValue(params[1], type) else null
+
+        if (isWrite) {
+            objectTracker.registerObjectLink(fromObject = obj, toObject = value)
+        }
+        if (!shouldTrackFieldAccess(obj, field.name, isFinal)) return
+
+        val tracker = memoryTracker ?: return
+        val threadId = threadScheduler.getCurrentThreadId()
+        val codeLocation = (interceptor?.eventTrackerData as? ReflectiveFieldAccess)?.codeLocation ?: UNKNOWN_CODE_LOCATION
+        val location = getReflectiveFieldMemoryLocation(field, obj)
+        val ordering = if (Modifier.isVolatile(field.modifiers)) MemoryOrdering.VOLATILE else MemoryOrdering.PLAIN
+
+        if (isWrite) {
+            tracker.beforeWrite(threadId, codeLocation, location, ordering, value)
+        } else {
+            tracker.beforeRead(threadId, codeLocation, location, ordering)
+            // intercept read result
+            val readValue = tracker.interceptReadResult(threadId)
+            interceptor?.interceptResult(widenReflectiveValue(readValue, methodDescriptor.returnType))
+        }
+    }
+
+    private fun beforeReflectiveFieldAccess(field: Field, target: Any?, codeLocation: Int) {
+        val isStatic = Modifier.isStatic(field.modifiers)
+        val obj = if (isStatic) null else target
+        if (!isStatic && !field.declaringClass.isInstance(obj)) return
+
+        updateSnapshotOnFieldAccess(obj, field.declaringClass.name, field.name)
+        if (isStatic) {
+            LincheckInstrumentation.ensureClassHierarchyIsTransformed(field.declaringClass.name)
+        }
+        if (!shouldTrackFieldAccess(obj, field.name, Modifier.isFinal(field.modifiers))) return
+
+        memoryTracker?.trackInitialValue(getReflectiveFieldMemoryLocation(field, obj))
+        newSwitchPoint(threadScheduler.getCurrentThreadId(), codeLocation)
+    }
+
+    private fun getReflectiveFieldMemoryLocation(field: Field, obj: Any?): MemoryLocation =
+        objectTracker.getFieldAccessMemoryLocation(obj,
+            className = field.declaringClass.name,
+            fieldName = field.name,
+            type = Types.convertAsmTypeName(Type.getType(field.type)),
+            isStatic = Modifier.isStatic(field.modifiers),
+            isFinal = Modifier.isFinal(field.modifiers),
+        )
+
+    // Field.getLong/getFloat/etc. widen the field value to their return type;
+    // Field.set* widens the supplied value to the field type.
+    private fun widenReflectiveValue(value: Any?, type: Types.Type): Any? {
+        val number = if (value is Char) value.code else value as? Number
+        return when (type) {
+            Types.SHORT_TYPE -> number!!.toShort()
+            Types.INT_TYPE -> number!!.toInt()
+            Types.LONG_TYPE -> number!!.toLong()
+            Types.FLOAT_TYPE -> number!!.toFloat()
+            Types.DOUBLE_TYPE -> number!!.toDouble()
+            else -> value
         }
     }
 
@@ -1734,6 +1821,11 @@ internal abstract class ManagedStrategy(
         // re-throw abort error if the thread was aborted
         if (threadScheduler.isAborted(threadId)) {
             threadScheduler.abortCurrentThread()
+        }
+
+        if (receiver is Field && (methodDescriptor.isFieldReflectiveSet() || methodDescriptor.isFieldReflectiveGet())) {
+            beforeReflectiveFieldAccess(receiver, params[0], codeLocation)
+            interceptor?.eventTrackerData = ReflectiveFieldAccess(codeLocation)
         }
 
         // Handle array copy
@@ -1849,7 +1941,7 @@ internal abstract class ManagedStrategy(
         val methodDescriptor = context.methodPool[methodId]
 
         // process effects of intrisic/reflection methods
-        processMethodEffects(threadDescriptor, methodId, result)
+        processMethodEffects(threadDescriptor, methodId, receiver, params, result, interceptor)
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
         if (deterministicMethodDescriptor != null) {
@@ -1881,12 +1973,13 @@ internal abstract class ManagedStrategy(
             deterministicMethodDescriptor,
         )
         if (collectTrace && methodSection != AnalysisSectionType.IGNORED) {
+            val returnedResult = if (interceptor?.isResultIntercepted == true) interceptor.interceptedResult else result
             if (callStackTrace[threadId]!!.isNotEmpty()) {
                 val tracePoint = callStackTrace[threadId]!!.last().tracePoint
                 when {
-                    result === Unit -> tracePoint.initializeVoidReturnedValue()
-                    result === Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
-                    result === COROUTINE_SUSPENDED && isSuspendFunction(
+                    returnedResult === Unit -> tracePoint.initializeVoidReturnedValue()
+                    returnedResult === Injections.VOID_RESULT -> tracePoint.initializeVoidReturnedValue()
+                    returnedResult === COROUTINE_SUSPENDED && isSuspendFunction(
                         methodDescriptor.className,
                         methodDescriptor.methodName,
                         params.asList()
@@ -1894,8 +1987,8 @@ internal abstract class ManagedStrategy(
                         tracePoint.initializeCoroutineSuspendedResult()
 
                     else -> tracePoint.initializeReturnedValue(
-                        objectTracker.getObjectRepresentation(result),
-                        objectFqTypeName(result)
+                        objectTracker.getObjectRepresentation(returnedResult),
+                        objectFqTypeName(returnedResult)
                     )
                 }
                 afterMethodCall(threadId, tracePoint)
@@ -1914,14 +2007,12 @@ internal abstract class ManagedStrategy(
         interceptor: ResultInterceptor?,
     ) = threadDescriptor.runInsideIgnoredSection {
         val methodDescriptor = context.methodPool[methodId]
+        val threadId = threadScheduler.getCurrentThreadId()
 
         val deterministicMethodDescriptor = interceptor?.getDeterministicMethodDescriptor()
         if (deterministicMethodDescriptor != null) {
             deterministicMethodDescriptor.processDeterministicMethodException(receiver, params, throwable, interceptor)
         }
-
-        val threadId = threadScheduler.getCurrentThreadId()
-
 
         // TODO: check what result to pass
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {

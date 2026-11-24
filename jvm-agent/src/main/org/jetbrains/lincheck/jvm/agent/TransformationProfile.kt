@@ -43,7 +43,7 @@ class TransformationConfiguration(
     var trackInlineMethodCalls: Boolean = false,
 
     var interceptMethodCallResults: Boolean = false,
-    val interceptMethodCallResultsAfterInvocation: Boolean = false,
+    var interceptMethodCallResultsAfterInvocation: Boolean = false,
 
     var trackThreadRun: Boolean = false,
     var trackThreadStart: Boolean = false,
@@ -590,6 +590,10 @@ object ExperimentalModelCheckingTransformationProfile : TransformationProfile {
             trackMethodCalls = true
             trackInlineMethodCalls = true
             interceptMethodCallResults = true
+            // Reflective field reads are replayed from the event structure only after the real
+            // `Field.get*` call has performed its access checks, so their result is substituted
+            // after the invocation rather than instead of it.
+            interceptMethodCallResultsAfterInvocation = true
 
             trackAllThreadsOperations = true
             trackAllSynchronizationOperations = true

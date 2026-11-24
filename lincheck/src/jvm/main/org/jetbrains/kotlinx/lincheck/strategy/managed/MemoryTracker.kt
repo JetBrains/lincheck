@@ -36,6 +36,9 @@ enum class BitwiseOp { AND, OR, XOR }
  */
 interface MemoryTracker {
 
+    /** Preserves the initial value before an access whose effect is recorded after the real call. */
+    fun trackInitialValue(location: MemoryLocation)
+
     fun beforeWrite(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, value: Any?)
 
     fun beforeRead(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering)
