@@ -109,14 +109,44 @@ class LincheckSettingsApiTest {
     }
 
     @Test
-    fun lambdaFailureIsReportedByBothAlgorithms() {
-        for (algorithm in Algorithm.entries) {
-            val settings = LincheckSettings().strategy(TestingStrategy.ModelChecking().algorithm(algorithm))
+    fun lambdaFailureIsReportedByEveryStrategy() {
+        val strategies = listOf(TestingStrategy.Stress()) +
+            Algorithm.entries.map { TestingStrategy.ModelChecking().algorithm(it) }
+        for (strategy in strategies) {
+            val settings = LincheckSettings().strategy(strategy)
             val failure = assertThrows(LincheckAssertionError::class.java) {
                 Lincheck.runConcurrentTest(settings) { error("public API failure") }
             }
             assertTrue(failure.message.orEmpty().contains("public API failure"))
         }
+    }
+
+    @Test
+    fun stressIsDefaultWhileInvocationShorthandKeepsModelChecking() {
+        assertTrue(LincheckSettings().strategy is TestingStrategy.Stress)
+        assertTrue(LincheckSettings().copy().strategy is TestingStrategy.Stress)
+        val stressRuns = AtomicInteger()
+        Lincheck.runConcurrentTest(25, LincheckSettings()) { stressRuns.incrementAndGet() }
+        assertEquals(25, stressRuns.get())
+        // Unlike stress, model checking stops once it has explored this single-threaded block.
+        val modelCheckingRuns = AtomicInteger()
+        Lincheck.runConcurrentTest(25) { modelCheckingRuns.incrementAndGet() }
+        assertTrue(modelCheckingRuns.get() < 25)
+    }
+
+    @Test
+    fun stressLambdaRunsEveryInvocation() {
+        val runs = AtomicInteger()
+        Lincheck.runConcurrentTest(25, LincheckSettings().strategy(TestingStrategy.Stress())) {
+            val counter = AtomicInteger()
+            val first = thread { counter.incrementAndGet() }
+            val second = thread { counter.incrementAndGet() }
+            first.join()
+            second.join()
+            check(counter.get() == 2)
+            runs.incrementAndGet()
+        }
+        assertEquals(25, runs.get())
     }
 
     @Test
@@ -175,6 +205,7 @@ class LincheckSettingsApiTest {
         assertThrows(IllegalArgumentException::class.java) {
             Lincheck.runConcurrentTest(0, settings) { fail("Must not execute") }
         }
+        Lincheck.runConcurrentTest(10, settings.strategy(TestingStrategy.Stress())) { check(AtomicInteger(1).get() == 1) }
     }
 
     @Test

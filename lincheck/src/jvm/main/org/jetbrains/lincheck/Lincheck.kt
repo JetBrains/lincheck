@@ -31,7 +31,8 @@ import kotlin.concurrent.withLock
 object Lincheck {
 
     /**
-     * Explores interleavings of [block] and its threads, failing on the first discovered exception.
+     * Explores interleavings of [block] and the threads it starts, failing on the first discovered exception.
+     * Uses the model checking to explore interleavings.
      */
     @JvmStatic
     @JvmOverloads
@@ -41,6 +42,11 @@ object Lincheck {
     /**
      * Runs [block] with the default invocation limit with given [settings].
      *
+     * When [LincheckSettings.TestingStrategy.Stress] strategy is used,
+     * runs [block] repeatedly under the JVM scheduler;
+     * when [LincheckSettings.TestingStrategy.ModelChecking] is used,
+     * explores interleavings of [block] and the threads it starts.
+     *
      * @throws IllegalArgumentException if the settings are incompatible with lambda testing.
      * @throws LincheckAssertionError if an invocation fails.
      */
@@ -49,7 +55,12 @@ object Lincheck {
         runConcurrentTest(DEFAULT_INVOCATIONS, settings, block)
 
     /**
-     * Explores [block] up to [invocations] times with given [settings].
+     * Runs [block] up to [invocations] times with given [settings].
+     *
+     * When [LincheckSettings.TestingStrategy.Stress] strategy is used,
+     * runs [block] repeatedly under the JVM scheduler;
+     * when [LincheckSettings.TestingStrategy.ModelChecking] is used,
+     * explores interleavings of [block] and the threads it starts.
      *
      * @throws IllegalArgumentException if [invocations] is not positive or the settings are incompatible.
      * @throws LincheckAssertionError if an invocation fails.
@@ -64,7 +75,8 @@ object Lincheck {
             configuration.createStrategy(LambdaRunner(configuration.effectiveTimeoutMs, block)).use { strategy ->
                 val failure = strategy.runIteration(invocations, verifier)
                 if (failure != null) {
-                    if (ideaPluginEnabled) {
+                    // Only managed strategies can replay a failing interleaving in the IDE.
+                    if (ideaPluginEnabled && strategy is ManagedStrategy) {
                         configuration.withIdeaPluginReplayModeEnabled {
                             runPluginReplay(
                                 failure = failure,
@@ -83,10 +95,7 @@ object Lincheck {
     }
 
     /**
-     * Checks the annotated operations of [testClass] using default settings.
-     *
-     * Data-structure-based counterpart of the lambda-based `runConcurrentTest(block)`:
-     * the overloads taking a test class check generated and custom scenarios against a sequential specification.
+     * Checks the annotated operations of [testClass] using the stress strategy by default.
      */
     @JvmStatic
     fun runConcurrentTest(testClass: Class<*>) = runConcurrentTest(LincheckSettings(), testClass)

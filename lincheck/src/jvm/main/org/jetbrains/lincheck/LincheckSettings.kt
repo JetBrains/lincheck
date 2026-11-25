@@ -447,9 +447,9 @@ class LincheckSettings() {
      * - [TestingStrategy.ModelChecking] --- model-checking strategy systematically explores
      *     different thread interleavings under a controlled environment and a cooperative thread scheduler.
      *
-     * Lambda-based API currently supports only [TestingStrategy.ModelChecking].
+     * By default, [TestingStrategy.Stress] is used.
      */
-    var strategy: TestingStrategy = TestingStrategy.ModelChecking()
+    var strategy: TestingStrategy = TestingStrategy.Stress()
 
     /**
      * Configures the testing strategy.
@@ -912,12 +912,9 @@ class LincheckSettings() {
         it.legacyExecutionGeneratorFactory = legacyExecutionGeneratorFactory
     }
 
+    // A per-run snapshot; resolving the model-checking algorithm validates it before execution.
     internal fun copy(forLambda: Boolean): LincheckSettings {
         if (forLambda) {
-            require(strategy is TestingStrategy.ModelChecking) {
-                "Lambda-based runConcurrentTest currently supports only model checking; " +
-                "select it with modelChecking { } or strategy(TestingStrategy.ModelChecking())"
-            }
             val nonDefaultScenarioSettings = scenarioGeneration.nonDefaultSettings()
             require(nonDefaultScenarioSettings.isEmpty()) {
                 "Lambda-based runConcurrentTest does not support scenario generation settings; " +
