@@ -9,6 +9,8 @@
  */
 package org.jetbrains.lincheck_test.verifier
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.verifier.EpsilonVerifier
@@ -21,7 +23,8 @@ class EpsilonVerifierTest {
     fun incAndGet() = i++ // non-atomic!
 
     @Test
-    fun test() = StressOptions()
-        .verifier(EpsilonVerifier::class.java)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        stress()
+        scenarioGeneration { verifier = EpsilonVerifier::class.java }
+    }, this::class)
 }

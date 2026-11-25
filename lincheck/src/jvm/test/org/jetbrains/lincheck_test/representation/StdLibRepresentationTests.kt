@@ -10,11 +10,11 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.datastructures.forClasses
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 import java.util.concurrent.ConcurrentHashMap
 
@@ -89,18 +89,20 @@ class UnsafeCollectionSwitchPointTest {
     fun put2() = hm.put(1, 2)
     
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::put1) }
-                thread { actor(::put2) }
+    fun test() = LincheckSettings {
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::put1) }
+                    thread { actor(::put2) }
+                }
             }
+            randomScenarios = 0
         }
-        .iterations(0)
-        .analyzeStdLib(false)
-        .detectFailure(this::class.java) { failure ->
-            failure.checkLincheckOutput("unsafe_collection_switch_point")
-        }
+        modelChecking { analyzeStdLib = false }
+    }.detectFailure(this::class.java) { failure ->
+        failure.checkLincheckOutput("unsafe_collection_switch_point")
+    }
     
 }
 
@@ -115,17 +117,19 @@ class UnsafeCollectionNoSwitchPointTest {
     fun put2() = hm.put(1, 2)
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::put1) }
-                thread { actor(::put2) }
+    fun test() = LincheckSettings {
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::put1) }
+                    thread { actor(::put2) }
+                }
             }
         }
-        .addGuarantee(forClasses("java.util.Map", "java.util.HashMap").allMethods().mute())
-        .iterations(0)
-        .analyzeStdLib(false)
-        .detectFailure(this::class.java) { failure ->
-            check(failure == null) { "Test should pass" }
-        }
+        modelChecking { addGuarantee(forClasses("java.util.Map", "java.util.HashMap").allMethods().mute()) }
+        scenarioGeneration { randomScenarios = 0 }
+        modelChecking { analyzeStdLib = false }
+    }.detectFailure(this::class.java) { failure ->
+        check(failure == null) { "Test should pass" }
+    }
 }

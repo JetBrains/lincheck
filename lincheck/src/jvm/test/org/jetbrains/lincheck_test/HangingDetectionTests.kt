@@ -9,10 +9,10 @@
  */
 package org.jetbrains.lincheck_test
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.ManagedLivelockFailure
 import org.jetbrains.lincheck.TimeoutFailure
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.scenario
 
 class HangingInParallelPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedLivelockFailure::class) {
@@ -33,11 +33,13 @@ class HangingInParallelPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::c
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
-        addCustomScenario(scenario)
-        iterations(0)
-        minimizeFailedScenario(false)
-        invocationTimeout(100)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            addCustomScenario(scenario)
+            randomScenarios = 0
+            minimizeFailedScenario = false
+        }
+        invocationTimeoutMs = 100
     }
 
 }
@@ -63,11 +65,13 @@ class HangingInInitPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
-        addCustomScenario(scenario)
-        iterations(0)
-        minimizeFailedScenario(false)
-        invocationTimeout(100)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            addCustomScenario(scenario)
+            randomScenarios = 0
+            minimizeFailedScenario = false
+        }
+        invocationTimeoutMs = 100
     }
 
 }
@@ -93,11 +97,13 @@ class HangingInPostPartIsolatedTest : AbstractLincheckTest(TimeoutFailure::class
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
-        addCustomScenario(scenario)
-        iterations(0)
-        minimizeFailedScenario(false)
-        invocationTimeout(100)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            addCustomScenario(scenario)
+            randomScenarios = 0
+            minimizeFailedScenario = false
+        }
+        invocationTimeoutMs = 100
     }
 
 }

@@ -10,10 +10,9 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 
 @Suppress("UNUSED_PARAMETER")
@@ -42,9 +41,11 @@ class SingletonCollectionInTraceTest {
 
     @Test
     fun modelCheckingTest() {
-        val options = ModelCheckingOptions()
-            .iterations(1)
-        val failure = options.detectFailure(this::class.java)
+        val settings = LincheckSettings {
+            modelChecking()
+            scenarioGeneration { randomScenarios = 1 }
+        }
+        val failure = settings.detectFailure(this::class.java)
         val message = failure?.toString() ?: "null"
         assert("SingletonList" !in message)
         assert("SingletonSet" !in message)

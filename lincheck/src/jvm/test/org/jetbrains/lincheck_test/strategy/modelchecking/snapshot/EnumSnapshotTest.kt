@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 
 
 private enum class Values {
@@ -40,8 +40,8 @@ class EnumSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(StaticEnumVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { verifier = StaticEnumVerifier::class.java }
     }
 
     @Operation

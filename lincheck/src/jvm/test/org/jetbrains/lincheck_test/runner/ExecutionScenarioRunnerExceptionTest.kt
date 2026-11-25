@@ -9,19 +9,19 @@
  */
 package org.jetbrains.lincheck_test.runner
 
-import org.jetbrains.lincheck.datastructures.Options.Companion.DEFAULT_TIMEOUT_MS
+import org.jetbrains.lincheck.LincheckSettings.Companion.DEFAULT_INVOCATION_TIMEOUT_MS
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.scenario.*
+import org.jetbrains.lincheck.datastructures.actor
+import org.jetbrains.lincheck.datastructures.scenario
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.runner.*
 import org.jetbrains.lincheck.runner.UseClocks.*
+import org.jetbrains.lincheck.scenario.*
 import org.jetbrains.lincheck.strategy.*
 import org.jetbrains.lincheck.util.ExceptionResult
 import org.jetbrains.lincheck.util.VoidResult
-import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.jetbrains.lincheck_test.verifier.*
-import org.jetbrains.lincheck.datastructures.actor
-import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.*
 import org.junit.Assert.*
 import java.util.concurrent.atomic.*
@@ -105,7 +105,7 @@ class ExecutionScenarioRunnerExceptionTest {
             scenario = scenario,
             testClass = testClass,
             validationFunction = null,
-            timeoutMs = DEFAULT_TIMEOUT_MS,
+            timeoutMs = DEFAULT_INVOCATION_TIMEOUT_MS,
             useClocks = RANDOM,
         ).use { runner ->
             runner.initializeStrategy(mockStrategy())
@@ -133,7 +133,7 @@ class ExecutionScenarioRunnerExceptionTest {
             scenario = scenario,
             testClass = testClass,
             validationFunction = null,
-            timeoutMs = DEFAULT_TIMEOUT_MS,
+            timeoutMs = DEFAULT_INVOCATION_TIMEOUT_MS,
             useClocks = RANDOM,
         ).use { runner ->
             runner.initializeStrategy(mockStrategy())
@@ -155,7 +155,7 @@ class ExecutionScenarioRunnerExceptionTest {
             scenario = scenario,
             testClass = testClass,
             validationFunction = null,
-            timeoutMs = DEFAULT_TIMEOUT_MS,
+            timeoutMs = DEFAULT_INVOCATION_TIMEOUT_MS,
             useClocks = RANDOM,
         ).use { runner ->
             runner.initializeStrategy(mockStrategy())
@@ -177,7 +177,7 @@ class ExecutionScenarioRunnerExceptionsTest {
             scenario = scenario,
             testClass = this::class.java,
             validationFunction = null,
-            timeoutMs = DEFAULT_TIMEOUT_MS,
+            timeoutMs = DEFAULT_INVOCATION_TIMEOUT_MS,
             useClocks = RANDOM,
         ).use { runner ->
             runner.initializeStrategy(mockStrategy())

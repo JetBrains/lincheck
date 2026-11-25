@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicIntegerArray
 import java.util.concurrent.atomic.AtomicReference
@@ -65,12 +65,14 @@ class JavaAtomicsSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(StaticObjectVerifier::class.java)
-        threads(1)
-        iterations(100)
-        invocationsPerIteration(1)
-        actorsPerThread(10)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            verifier = StaticObjectVerifier::class.java
+            threads = 1
+            randomScenarios = 100
+            invocationsPerScenario = 1
+            operationsPerThread = 10
+        }
     }
 
     @Operation

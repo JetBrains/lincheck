@@ -9,11 +9,10 @@
  */
 package org.jetbrains.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.forClasses
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 
 /**
@@ -35,8 +34,10 @@ class IgnoredGuaranteeOnExceptionTest {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions().addGuarantee(forClasses(this.javaClass.name).methods("badMethod").ignore())
-        val failure = options.detectFailure(this.javaClass)
+        val settings = LincheckSettings {
+            modelChecking { addGuarantee(forClasses(IgnoredGuaranteeOnExceptionTest::class).methods("badMethod").ignore()) }
+        }
+        val failure = settings.detectFailure(this.javaClass)
         check(failure != null) { "This test should fail" }
     }
 }

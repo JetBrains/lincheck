@@ -9,10 +9,10 @@
  */
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.*
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 import kotlin.coroutines.*
 import kotlinx.coroutines.sync.*
@@ -43,15 +43,17 @@ class SuspendTraceReportingTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        addCustomScenario {
-            parallel {
-                thread { actor(::foo) }
-                thread { actor(::bar) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::foo) }
+                    thread { actor(::bar) }
+                }
             }
         }
-    }
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("suspend_trace_reporting" )
 }
 
@@ -102,15 +104,17 @@ class SuspendTraceResumptionReportingTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        addCustomScenario {
-            parallel {
-                thread { actor(::foo) }
-                thread { actor(::bar) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::foo) }
+                    thread { actor(::bar) }
+                }
             }
         }
-    }
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("suspend_trace_resumption_reporting_test")
 }
 
@@ -163,14 +167,16 @@ class SuspendTraceResumptionFrameSkippingReportingTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        addCustomScenario {
-            parallel {
-                thread { actor(::foo) }
-                thread { actor(::bar) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::foo) }
+                    thread { actor(::bar) }
+                }
             }
         }
-    }
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("suspend_trace_resumption_frame_skipping_reporting_test")
 }

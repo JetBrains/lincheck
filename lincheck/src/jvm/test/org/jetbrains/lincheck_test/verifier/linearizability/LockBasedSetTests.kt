@@ -9,11 +9,11 @@
  */
 package org.jetbrains.lincheck_test.verifier.linearizability
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.lincheck_test.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Param
+import org.jetbrains.lincheck_test.*
 import java.util.concurrent.atomic.*
 import java.util.concurrent.locks.*
 import kotlin.concurrent.*
@@ -31,13 +31,13 @@ abstract class AbstractSetTest(private val set: Set) : AbstractLincheckTest() {
 }
 
 class SpinLockSetTest : AbstractSetTest(SpinLockBasedSet()) {
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // TODO: Ignored as we need to turn on the loop detector
         ignoreExperimentalModelChecking()
     }
 }
 class ReentrantLockSetTest : AbstractSetTest(ReentrantLockBasedSet()) {
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // TODO: This is a failing test, investigate
         ignoreExperimentalModelChecking()
     }

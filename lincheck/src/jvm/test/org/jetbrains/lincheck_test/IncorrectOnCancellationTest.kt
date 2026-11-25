@@ -10,11 +10,11 @@
 
 package org.jetbrains.lincheck_test
 
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import kotlinx.coroutines.*
 import org.jetbrains.lincheck.IncorrectResultsFailure
-import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.StressOptions
 
 class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
     @Volatile
@@ -34,11 +34,11 @@ class IncorrectOnCancellationTest : AbstractLincheckTest(IncorrectResultsFailure
         return 0
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
-        if (this is StressOptions) {
-            invocationsPerIteration(10_000)
+        if (strategy is TestingStrategy.Stress) {
+            scenarioGeneration { invocationsPerScenario = 10_000 }
         }
     }
 }

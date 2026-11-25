@@ -10,10 +10,13 @@
 
 package org.jetbrains.lincheck_test;
 
+import org.jetbrains.lincheck.Lincheck;
+import org.jetbrains.lincheck.LincheckSettings;
+import org.jetbrains.lincheck.LincheckSettings.ScenarioGeneration;
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.Stress;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.jetbrains.lincheck.datastructures.Param;
 import org.jetbrains.lincheck.datastructures.IntGen;
-import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.junit.Test;
 
 public class ResultAsParameterTest {
@@ -40,12 +43,15 @@ public class ResultAsParameterTest {
 
     @Test
     public void test() {
-        new StressOptions()
-            .iterations(5)
-            .actorsBefore(0)
-            .actorsPerThread(2)
-            .actorsAfter(0)
-            .check(ResultAsParameterTest.class);
+        LincheckSettings settings = new LincheckSettings()
+            .strategy(new Stress())
+            .scenarioGeneration(new ScenarioGeneration()
+                .randomScenarios(5)
+                .operationsBefore(0)
+                .operationsPerThread(2)
+                .operationsAfter(0)
+            );
+        Lincheck.runConcurrentTest(settings, ResultAsParameterTest.class);
     }
 
     private static class Stack {

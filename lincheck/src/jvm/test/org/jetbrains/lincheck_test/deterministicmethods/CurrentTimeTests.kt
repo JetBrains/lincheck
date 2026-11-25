@@ -10,14 +10,15 @@
 
 package org.jetbrains.lincheck_test.deterministicmethods
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Ignore
 
 @Ignore
 abstract class CurrentTimeTest : AbstractDeterministicTest() {
-    override fun ModelCheckingOptions.customize(): ModelCheckingOptions = this
-        .invocationTimeout(30_000) // 30 sec
+    override fun LincheckSettings.customize() {
+        invocationTimeoutMs = 30_000
+    }
 }
 
 @Ignore

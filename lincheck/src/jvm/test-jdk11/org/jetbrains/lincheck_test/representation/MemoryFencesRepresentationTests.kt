@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.util.UnsafeHolder
 import java.lang.invoke.VarHandle
 
@@ -49,9 +49,11 @@ class MemoryFencesExecutionGraphTest : BaseTraceRepresentationTest("memory_fence
         unsafe.fullFence()
     }
 
-    override fun ModelCheckingOptions.customize() {
-        useExperimentalModelChecking()
-        memoryModel(MemoryModel.RelaxedJava)
-        printExecutionGraph(true)
+    override fun LincheckSettings.customize() {
+        modelChecking {
+            enablePartialOrderReduction()
+            memoryModel = MemoryModel.RelaxedJava
+            printExecutionGraph = true
+        }
     }
 }

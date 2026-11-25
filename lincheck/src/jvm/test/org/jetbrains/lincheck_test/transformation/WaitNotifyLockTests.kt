@@ -10,8 +10,9 @@
 
 package org.jetbrains.lincheck_test.transformation
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Test
 
 // tests wait/notify support in model checking strategy
@@ -24,9 +25,11 @@ class WaitNotifyLockTest {
 
     @Test
     fun test() {
-        val opts = ModelCheckingOptions()
-            .iterations(30)
-        opts.check(this::class)
+        val settings = LincheckSettings {
+            modelChecking()
+            scenarioGeneration { randomScenarios = 30 }
+        }
+        runConcurrentTest(settings, this::class)
     }
 }
 
@@ -40,9 +43,11 @@ class NestedWaitNotifyLockTest {
 
     @Test
     fun test() {
-        val opts = ModelCheckingOptions()
-            .iterations(30)
-        opts.check(this::class)
+        val settings = LincheckSettings {
+            modelChecking()
+            scenarioGeneration { randomScenarios = 30 }
+        }
+        runConcurrentTest(settings, this::class)
     }
 }
 

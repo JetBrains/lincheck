@@ -20,14 +20,10 @@ import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.ModelChecking.Algorithm
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.RandomProvider
-import org.jetbrains.lincheck.datastructures.toSettings
 import org.jetbrains.lincheck.datastructures.verifier.SerializabilityVerifier
-import org.jetbrains.lincheck.util.LoggingLevel
 import org.junit.Assert.*
 import org.junit.Test
 import java.io.ByteArrayOutputStream
@@ -96,24 +92,6 @@ class LincheckSettingsApiTest {
             smallScenarios()
         }, AtomicCounter::class)
         Lincheck.runConcurrentTest(LincheckSettings { modelChecking() }) { check(AtomicInteger(1).get() == 1) }
-    }
-
-    @Test
-    fun legacyOptionsAndSettingsShareDefaults() {
-        val settings = LincheckSettings()
-        val strategy = TestingStrategy.ModelChecking()
-        val options = ModelCheckingOptions()
-        assertSame(options, options.logLevel(LoggingLevel.OFF))
-        val legacy = options.toSettings()
-        val legacyStrategy = legacy.strategy as TestingStrategy.ModelChecking
-        assertEquals(settings.invocationTimeoutMs, legacy.invocationTimeoutMs)
-        assertTrue(legacy.scenarioGeneration.printExecutionScenarios)
-        assertEquals(settings.scenarioGeneration.randomScenarios, legacy.scenarioGeneration.randomScenarios)
-        assertEquals(settings.scenarioGeneration.invocationsPerScenario, legacy.scenarioGeneration.invocationsPerScenario)
-        assertEquals(strategy.analyzeStdLib, legacyStrategy.analyzeStdLib)
-        assertEquals(strategy.checkObstructionFreedom, legacyStrategy.checkObstructionFreedom)
-        assertEquals(strategy.loopDetection.loopBound, legacyStrategy.loopDetection.loopBound)
-        assertEquals(strategy.loopDetection.recursionBound, legacyStrategy.loopDetection.recursionBound)
     }
 
     @Test
@@ -337,19 +315,9 @@ class LincheckSettingsApiTest {
             LincheckSettings.ScenarioGeneration().executionGenerator = LegacySettingsGenerator::class.java
         }
         assertTrue(viaSettings.message!!.contains("(LincheckSettings, CTestStructure, RandomProvider)"))
-        val viaOptions = assertThrows(IllegalArgumentException::class.java) {
-            ModelCheckingOptions().executionGenerator(LegacyOptionsGenerator::class.java).toSettings()
-        }
-        assertTrue(viaOptions.message!!.contains("(Options, CTestStructure, RandomProvider)"))
     }
 
-    // Mirror generators compiled against the old API; only their constructor signatures matter.
-    @Suppress("UNUSED_PARAMETER")
-    internal class LegacyOptionsGenerator(options: Options<*>, structure: CTestStructure, random: RandomProvider) :
-        ExecutionGenerator(LincheckSettings(), null) {
-        override fun nextExecution() = throw UnsupportedOperationException()
-    }
-
+    // Mirror a generator compiled against the old API; only its constructor signature matters.
     @Suppress("UNUSED_PARAMETER")
     internal class LegacySettingsGenerator(settings: LincheckSettings, structure: CTestStructure, random: RandomProvider) :
         ExecutionGenerator(settings, null) {

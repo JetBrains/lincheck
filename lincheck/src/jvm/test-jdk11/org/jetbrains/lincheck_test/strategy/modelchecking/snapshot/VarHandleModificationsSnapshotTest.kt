@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 import kotlin.random.Random
@@ -55,12 +55,14 @@ class VarHandleModificationsSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(VarHandleModificationsVerifier::class.java)
-        iterations(100)
-        invocationsPerIteration(1)
-        threads(1)
-        actorsPerThread(10)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            verifier = VarHandleModificationsVerifier::class.java
+            randomScenarios = 100
+            invocationsPerScenario = 1
+            threads = 1
+            operationsPerThread = 10
+        }
     }
 
     @Operation

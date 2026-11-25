@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck_test.util.detectFailure
 import kotlinx.coroutines.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.*
 import org.junit.*
 
@@ -35,12 +35,14 @@ class CoroutineCancellationTraceReportingTest {
     fun isAbsurd(): Boolean = correct && !correct
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
-    }
-        .detectFailure(this::class.java)
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            operationsPerThread = 1
+            operationsBefore = 0
+            operationsAfter = 0
+        }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("coroutine_cancellation")
 
 }

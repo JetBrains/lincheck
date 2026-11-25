@@ -10,10 +10,9 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.*
+import org.jetbrains.lincheck_test.util.detectFailure
 import kotlinx.atomicfu.atomic
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.*
@@ -33,12 +32,14 @@ class SwitchAsFirstMethodEventTest {
     private fun incAndGetImpl() = counter.incrementAndGet()
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        actorsPerThread(1)
-        actorsBefore(0)
-        actorsAfter(0)
-    }
-        .detectFailure(this::class.java)
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            operationsPerThread = 1
+            operationsBefore = 0
+            operationsAfter = 0
+        }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("switch_as_first_method_event")
 }
 
@@ -57,14 +58,17 @@ class SwitchAsFirstNestedMethodEventTest {
     private fun incAndGetImpl(): Int = counter.incrementAndGet()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::incTwiceAndGet) }
-                thread { actor(::incTwiceAndGet) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::incTwiceAndGet) }
+                    thread { actor(::incTwiceAndGet) }
+                }
             }
+            randomScenarios = 0
         }
-        .iterations(0)
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("switch_as_first_nested_method_event")
 }

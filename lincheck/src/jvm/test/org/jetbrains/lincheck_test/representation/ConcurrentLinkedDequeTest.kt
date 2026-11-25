@@ -10,11 +10,10 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck_test.util.*
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck_test.util.*
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 import java.util.concurrent.*
 
@@ -40,25 +39,27 @@ class ConcurrentLinkedDequeTest {
     fun peekLast() = deque.peekLast()
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        // The custom scenario is to fix the scenario to have the same interleaving caught for both JDK8 and JDK11+.
-        .addCustomScenario {
-            initial {
-                actor(ConcurrentLinkedDequeTest::addLast, 1)
-            }
-            parallel {
-                thread {
-                    actor(::pollFirst)
+    fun modelCheckingTest() = LincheckSettings {
+        scenarioGeneration {
+            // The custom scenario is to fix the scenario to have the same interleaving caught for both JDK8 and JDK11+.
+            addCustomScenario {
+                initial {
+                    actor(ConcurrentLinkedDequeTest::addLast, 1)
                 }
-                thread {
-                    actor(ConcurrentLinkedDequeTest::addFirst, 0)
-                    actor(::peekLast)
+                parallel {
+                    thread {
+                        actor(::pollFirst)
+                    }
+                    thread {
+                        actor(ConcurrentLinkedDequeTest::addFirst, 0)
+                        actor(::peekLast)
+                    }
                 }
             }
         }
-        .analyzeStdLib(true)
-        .iterations(0)
-        .detectFailure(this::class.java) { failure ->
-            failure.checkLincheckOutput("concurrent_linked_deque")
-        }
+        modelChecking { analyzeStdLib = true }
+        scenarioGeneration { randomScenarios = 0 }
+    }.detectFailure(this::class.java) { failure ->
+        failure.checkLincheckOutput("concurrent_linked_deque")
+    }
 }

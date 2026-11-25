@@ -10,7 +10,8 @@
 
 package org.jetbrains.lincheck_test.representation;
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
+import org.jetbrains.lincheck.LincheckSettings;
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.ModelChecking;
 import java.util.HashMap;
 
 public class JavaLambdaRepresentationTest extends BaseTraceRepresentationTest {
@@ -26,7 +27,7 @@ public class JavaLambdaRepresentationTest extends BaseTraceRepresentationTest {
     }
 
     @Override
-    public void customize(ModelCheckingOptions $this$customize) {
-        $this$customize.analyzeStdLib$lincheck(false);
+    public void customize(LincheckSettings settings) {
+        ((ModelChecking) settings.getStrategy()).setAnalyzeStdLib(false);
     }
 }

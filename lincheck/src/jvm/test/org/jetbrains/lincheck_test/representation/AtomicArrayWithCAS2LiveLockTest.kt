@@ -10,12 +10,12 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck_test.util.detectFailure
 import kotlinx.atomicfu.AtomicArray
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
 import org.junit.Test
 
@@ -41,17 +41,20 @@ class AtomicArrayWithCAS2LiveLockTest {
 
     @Test
     fun modelCheckingTest() =
-        ModelCheckingOptions()
-            .addCustomScenario {
-                parallel {
-                    thread { actor(AtomicArrayWithCAS2LiveLockTest::cas2_0, 0, 0, 2, 1, 0, 3) }
-                    thread { actor(AtomicArrayWithCAS2LiveLockTest::cas2_1, 0, 0, 4, 1, 0, 5) }
+        LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                addCustomScenario {
+                    parallel {
+                        thread { actor(AtomicArrayWithCAS2LiveLockTest::cas2_0, 0, 0, 2, 1, 0, 3) }
+                        thread { actor(AtomicArrayWithCAS2LiveLockTest::cas2_1, 0, 0, 4, 1, 0, 5) }
+                    }
                 }
+                randomScenarios = 500
+                invocationsPerScenario = 1000
+                sequentialSpecification = IntAtomicArraySequential::class.java
             }
-            .iterations(500)
-            .invocationsPerIteration(1000)
-            .sequentialSpecification(IntAtomicArraySequential::class.java)
-            .detectFailure(this::class.java)
+        }.detectFailure(this::class.java)
             .checkLincheckOutput("spin_lock/broken-cas-2-recursive-live-lock")
 }
 

@@ -9,11 +9,10 @@
  */
 package org.jetbrains.lincheck_test.verifier.linearizability
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.strategy.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.strategy.*
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 
 /**
@@ -55,11 +54,14 @@ class ManySwitchBugTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions()
-            .actorsAfter(0)
-            .actorsBefore(0)
-            .actorsPerThread(1)
-            .detectFailure(this::class.java)
+        val failure = LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                operationsAfter = 0
+                operationsBefore = 0
+                operationsPerThread = 1
+            }
+        }.detectFailure(this::class.java)
         check(failure is IncorrectResultsFailure) { "The test should fail" }
     }
 }

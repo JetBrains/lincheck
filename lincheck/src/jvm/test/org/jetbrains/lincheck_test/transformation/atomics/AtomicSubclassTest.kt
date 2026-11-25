@@ -10,9 +10,9 @@
 
 package org.jetbrains.lincheck_test.transformation.atomics
 
-import org.jetbrains.lincheck.datastructures.Options
-import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.IncorrectResultsFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck_test.AbstractLincheckTest
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -36,14 +36,16 @@ class AtomicSubclassTest : AbstractLincheckTest(IncorrectResultsFailure::class) 
         atomic.set(42)
     }
 
-    override fun <O : Options<O>> O.customize() {
-        addCustomScenario {
-            parallel {
-                thread {
-                    actor(::reads)
-                }
-                thread {
-                    actor(::write)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread {
+                        actor(::reads)
+                    }
+                    thread {
+                        actor(::write)
+                    }
                 }
             }
         }

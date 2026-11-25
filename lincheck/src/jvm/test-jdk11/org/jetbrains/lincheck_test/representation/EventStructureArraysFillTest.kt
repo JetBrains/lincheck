@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.LincheckSettings
 import java.util.Arrays
 
 /**
@@ -24,7 +24,7 @@ class EventStructureArraysFillTest : BaseTraceRepresentationTest("event_structur
         Arrays.fill(array, 2)
     }
 
-    override fun ModelCheckingOptions.customize() {
-        useExperimentalModelChecking()
+    override fun LincheckSettings.customize() {
+        modelChecking { enablePartialOrderReduction() }
     }
 }

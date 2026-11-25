@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.LincheckSettings
 
 private class EventStructureObjectCloneTestBox(var value: Int) : Cloneable {
     public override fun clone(): EventStructureObjectCloneTestBox = super.clone() as EventStructureObjectCloneTestBox
@@ -27,7 +27,7 @@ class EventStructureObjectCloneTest : BaseTraceRepresentationTest("event_structu
         clone.value = 2
     }
 
-    override fun ModelCheckingOptions.customize() {
-        useExperimentalModelChecking()
+    override fun LincheckSettings.customize() {
+        modelChecking { enablePartialOrderReduction() }
     }
 }

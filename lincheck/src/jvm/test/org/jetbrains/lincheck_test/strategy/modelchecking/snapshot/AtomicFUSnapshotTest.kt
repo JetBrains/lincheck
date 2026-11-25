@@ -10,13 +10,13 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import kotlinx.atomicfu.AtomicIntArray
 import kotlinx.atomicfu.atomic
 import kotlinx.atomicfu.atomicArrayOfNulls
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 import kotlin.random.Random
 import kotlin.ranges.until
 
@@ -84,12 +84,14 @@ class AtomicFUSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(AtomicFUSnapshotVerifier::class.java)
-        threads(1)
-        iterations(100)
-        invocationsPerIteration(1)
-        actorsPerThread(10)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            verifier = AtomicFUSnapshotVerifier::class.java
+            threads = 1
+            randomScenarios = 100
+            invocationsPerScenario = 1
+            operationsPerThread = 10
+        }
     }
 
     @Operation
@@ -182,12 +184,14 @@ class ImplicitAtomicFUSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(ImplicitAtomicFUSnapshotVerifier::class.java)
-        threads(1)
-        iterations(100)
-        invocationsPerIteration(1)
-        actorsPerThread(10)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            verifier = ImplicitAtomicFUSnapshotVerifier::class.java
+            threads = 1
+            randomScenarios = 100
+            invocationsPerScenario = 1
+            operationsPerThread = 10
+        }
     }
 
     @Operation

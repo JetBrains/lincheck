@@ -11,18 +11,19 @@
 
 package org.jetbrains.lincheck_test.generator
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.LincheckAssertionError
-import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Param
-import org.jetbrains.lincheck.scenario.*
-import org.jetbrains.lincheck.util.ExceptionResult
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import org.jetbrains.lincheck_test.verifier.linearizability.SpinLockBasedSet
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.EnumGen
 import org.jetbrains.lincheck.datastructures.IntGen
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Param
 import org.jetbrains.lincheck.datastructures.RandomProvider
 import org.jetbrains.lincheck.datastructures.StringGen
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.scenario.*
+import org.jetbrains.lincheck.util.ExceptionResult
+import org.jetbrains.lincheck_test.verifier.linearizability.SpinLockBasedSet
 import kotlin.math.pow
 import org.junit.Assert.*
 import org.junit.Test
@@ -47,7 +48,7 @@ class GeneratorSeedTest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions().check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
 
 }
 
@@ -62,9 +63,10 @@ class MethodParameterGenerationTestWithBothParametersAnnotated {
         throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .configureInternalExceptionVerifier()
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        configureInternalExceptionVerifier()
+    }, this::class)
 
 }
 
@@ -80,9 +82,10 @@ class MethodParameterGenerationTestWithFirstParameterAnnotated {
         throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .configureInternalExceptionVerifier()
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        configureInternalExceptionVerifier()
+    }, this::class)
 
 }
 
@@ -97,9 +100,10 @@ class MethodParameterGenerationTestWithSecondParameterAnnotated {
         throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .configureInternalExceptionVerifier()
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        configureInternalExceptionVerifier()
+    }, this::class)
 
 }
 
@@ -112,9 +116,10 @@ class MethodParameterGenerationTest {
         throwInternalExceptionIfParamsNotEquals(first, second)
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .configureInternalExceptionVerifier()
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        configureInternalExceptionVerifier()
+    }, this::class)
 
 }
 
@@ -131,12 +136,15 @@ class InternalExceptionVerifier(sequentialSpecification: Class<*>) : Verifier {
     }
 }
 
-private fun ModelCheckingOptions.configureInternalExceptionVerifier(): ModelCheckingOptions = this
-    .threads(1)
-    .actorsPerThread(1)
-    .actorsBefore(0)
-    .actorsAfter(0)
-    .verifier(InternalExceptionVerifier::class.java)
+private fun LincheckSettings.configureInternalExceptionVerifier() {
+    scenarioGeneration {
+        threads = 1
+        operationsPerThread = 1
+        operationsBefore = 0
+        operationsAfter = 0
+        verifier = InternalExceptionVerifier::class.java
+    }
+}
 
 @Suppress("JavaIoSerializableObjectMustHaveReadResolve")
 private object InternalException : Exception()
@@ -181,11 +189,14 @@ class ParamGeneratorResetBetweenScenariosTest {
 
     @Test
     fun test() {
-        ModelCheckingOptions()
-            .threads(2)
-            .actorsPerThread(5)
-            .iterations(30)
-            .check(this::class)
+        runConcurrentTest(LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                threads = 2
+                operationsPerThread = 5
+                randomScenarios = 30
+            }
+        }, this::class)
     }
 
     @Operation
@@ -274,10 +285,10 @@ class NamedEnumParamGeneratorTest {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .minimizeFailedScenario(false)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking { checkObstructionFreedom = true }
+        scenarioGeneration { minimizeFailedScenario = false }
+    }, this::class)
 
     enum class OperationType {
         ADD,
@@ -303,10 +314,10 @@ class UnnamedEnumParamGeneratorTest() {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .minimizeFailedScenario(false)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking { checkObstructionFreedom = true }
+        scenarioGeneration { minimizeFailedScenario = false }
+    }, this::class)
 
     enum class OperationType {
         ADD,
@@ -327,10 +338,10 @@ class EnumParamWithoutAnnotationGeneratorTest: BaseEnumSetTest() {
     }
 
     @Test(expected = LincheckAssertionError::class)
-    fun test() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .minimizeFailedScenario(false)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking { checkObstructionFreedom = true }
+        scenarioGeneration { minimizeFailedScenario = false }
+    }, this::class)
 }
 
 abstract class BaseEnumSetTest {
@@ -362,7 +373,9 @@ class MultipleTypesAssociatedWithNamedEnumParameterGeneratorTest {
 
     @Test
     fun test() {
-        val exception = assertThrows(IllegalStateException::class.java) { ModelCheckingOptions().check(this::class) }
+        val exception = assertThrows(IllegalStateException::class.java) {
+            runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
+        }
         assertEquals(
             "Enum param gen with name type can't be associated with two different types: FirstEnum and SecondEnum",
             exception.message
@@ -386,7 +399,7 @@ class EnumsWithWhitespacesInNameConfigurationTest {
     fun operation(@Param(name = "type") param: WeirdEnum) = 0
 
     @Test
-    fun test() = ModelCheckingOptions().check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
 
     enum class WeirdEnum {
         `FIRST OPTION`,

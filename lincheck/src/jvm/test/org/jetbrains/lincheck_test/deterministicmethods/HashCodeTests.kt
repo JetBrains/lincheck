@@ -10,8 +10,9 @@
 
 package org.jetbrains.lincheck_test.deterministicmethods
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Ignore
 import org.junit.Test
 import java.util.*
@@ -190,10 +191,13 @@ class IdentityHashCodeDiffersTest() {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .iterations(1)
-        .threads(1)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 1
+            threads = 1
+        }
+    }, this::class)
 }
 
 @Ignore

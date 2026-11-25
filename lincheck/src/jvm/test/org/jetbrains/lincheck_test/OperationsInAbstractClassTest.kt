@@ -9,16 +9,20 @@
  */
 package org.jetbrains.lincheck_test
 
-import org.jetbrains.lincheck.datastructures.StressOptions
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.*
 
 class OperationsInAbstractClassTest : AbstractTestClass() {
     @Test
-    fun test(): Unit = StressOptions()
-        .iterations(1)
-        .minimizeFailedScenario(false)
-        .check(this::class)
+    fun test(): Unit = runConcurrentTest(LincheckSettings {
+        stress()
+        scenarioGeneration {
+            randomScenarios = 1
+            minimizeFailedScenario = false
+        }
+    }, this::class)
 }
 
 open class AbstractTestClass {

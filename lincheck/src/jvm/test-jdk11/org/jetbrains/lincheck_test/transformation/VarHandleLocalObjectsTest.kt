@@ -10,8 +10,9 @@
 
 package org.jetbrains.lincheck_test.transformation
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Test
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
@@ -112,149 +113,188 @@ class VarHandleLocalObjectsTest {
     }
 
     @Test
-    fun testSetWithVarHandle() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::setWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testSetWithVarHandle() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::setWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     @Test
-    fun testSetVolatileWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::setVolatileWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testSetVolatileWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::setVolatileWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     @Test
-    fun testSetReleaseWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::setReleaseWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testSetReleaseWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::setReleaseWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     @Test
-    fun testSetOpaqueWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::setOpaqueWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testSetOpaqueWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::setOpaqueWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     @Test
-    fun testGetAndSetWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::getAndSetWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testGetAndSetWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::getAndSetWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
-
-
-    @Test
-    fun testCompareAndSetWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::compareAndSetWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
-            }
-        }
-        .check(this::class)
-
-    @Test
-    fun testCompareAndExchangeWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::compareAndExchangeWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
-            }
-        }
-        .check(this::class)
-
-    @Test
-    fun testWeakCompareAndSetWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::weakCompareAndSetWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
-            }
-        }
-        .check(this::class)
+    }, this::class)
 
 
     @Test
-    fun testWeakCompareAndSetAcquireWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::weakCompareAndSetAcquireWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testCompareAndSetWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::compareAndSetWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     @Test
-    fun testWeakCompareAndSetReleaseWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::weakCompareAndSetReleaseWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testCompareAndExchangeWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::compareAndExchangeWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     @Test
-    fun testWeakCompareAndSetPlainWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::weakCompareAndSetPlainWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testWeakCompareAndSetWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::weakCompareAndSetWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
+
 
     @Test
-    fun testCompareAndExchangeAcquireWithVarHandleWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::compareAndExchangeAcquireWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testWeakCompareAndSetAcquireWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::weakCompareAndSetAcquireWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     @Test
-    fun testCompareAndExchangeReleaseWithVarHandleWithVarHandleWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::compareAndExchangeReleaseWithVarHandle) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testWeakCompareAndSetReleaseWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::weakCompareAndSetReleaseWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
+
+    @Test
+    fun testWeakCompareAndSetPlainWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::weakCompareAndSetPlainWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
+            }
+        }
+    }, this::class)
+
+    @Test
+    fun testCompareAndExchangeAcquireWithVarHandleWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::compareAndExchangeAcquireWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
+            }
+        }
+    }, this::class)
+
+    @Test
+    fun testCompareAndExchangeReleaseWithVarHandleWithVarHandleWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::compareAndExchangeReleaseWithVarHandle) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
+            }
+        }
+    }, this::class)
 
     private inline fun updateNode(updateAction: (Node) -> Unit) {
         val nextNode = Node(1)

@@ -11,10 +11,10 @@
 package org.jetbrains.lincheck_test
 
 import org.jetbrains.lincheck.IncorrectResultsFailure
+import org.jetbrains.lincheck.LincheckSettings
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
 import org.jetbrains.lincheck.datastructures.scenario
 
 class ExceptionInParallelPartTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
@@ -35,11 +35,13 @@ class ExceptionInParallelPartTest : AbstractLincheckTest(IncorrectResultsFailure
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
-        iterations(0)
-        addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            randomScenarios = 0
+            addCustomScenario(scenario)
+            minimizeFailedScenario = false
+            sequentialSpecification = ExceptionTestSequentialImplementation::class.java
+        }
     }
 
 }
@@ -65,11 +67,13 @@ class ExceptionInInitPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
-        iterations(0)
-        addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            randomScenarios = 0
+            addCustomScenario(scenario)
+            minimizeFailedScenario = false
+            sequentialSpecification = ExceptionTestSequentialImplementation::class.java
+        }
     }
 
 }
@@ -95,11 +99,13 @@ class ExceptionInPostPartTest : AbstractLincheckTest(IncorrectResultsFailure::cl
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
-        iterations(0)
-        addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            randomScenarios = 0
+            addCustomScenario(scenario)
+            minimizeFailedScenario = false
+            sequentialSpecification = ExceptionTestSequentialImplementation::class.java
+        }
     }
 
 }
@@ -145,14 +151,16 @@ class EmptyStackTraceExceptionTest : AbstractLincheckTest(IncorrectResultsFailur
     class A
     class B
 
-    override fun <O : Options<O>> O.customize() {
-        iterations(1)
-        threads(1)
-        actorsBefore(0)
-        actorsAfter(0)
-        actorsPerThread(200)
-        minimizeFailedScenario(true)
-        sequentialSpecification(ExceptionTestSequentialImplementation::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            randomScenarios = 1
+            threads = 1
+            operationsBefore = 0
+            operationsAfter = 0
+            operationsPerThread = 200
+            minimizeFailedScenario = true
+            sequentialSpecification = ExceptionTestSequentialImplementation::class.java
+        }
     }
 
 }
@@ -183,12 +191,14 @@ class CoroutineResumedWithExceptionTest : AbstractLincheckTest(IncorrectResultsF
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         ignoreExperimentalModelChecking() // NOTE: Coroutines not supported for event-structure
-        iterations(0)
-        addCustomScenario(scenario)
-        minimizeFailedScenario(false)
-        sequentialSpecification(CoroutineExceptionTestSequentialImplementation::class.java)
+        scenarioGeneration {
+            randomScenarios = 0
+            addCustomScenario(scenario)
+            minimizeFailedScenario = false
+            sequentialSpecification = CoroutineExceptionTestSequentialImplementation::class.java
+        }
     }
 }
 
@@ -203,11 +213,13 @@ class ExceptionInCancellationHandlerTest : AbstractLincheckTest(IncorrectResults
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
-        iterations(10)
-        sequentialSpecification(CoroutineExceptionTestSequentialImplementation::class.java)
+        scenarioGeneration {
+            randomScenarios = 10
+            sequentialSpecification = CoroutineExceptionTestSequentialImplementation::class.java
+        }
     }
 }
 

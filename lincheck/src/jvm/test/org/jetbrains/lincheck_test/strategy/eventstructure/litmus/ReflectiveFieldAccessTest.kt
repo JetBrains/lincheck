@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.strategy.eventstructure.litmus
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.IncorrectResultsFailure
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Assert.assertTrue
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.lincheck_test.strategy.eventstructure.assertSame
@@ -36,15 +36,18 @@ class ReflectiveFieldAccessTest {
 
     @Test
     fun schedulingFindsLostUpdate() {
-        val failure = ModelCheckingOptions()
-            .iterations(0)
-            .addCustomScenario {
-                parallel {
-                    thread { actor(Counter::increment) }
-                    thread { actor(Counter::increment) }
+        val failure = LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                randomScenarios = 0
+                addCustomScenario {
+                    parallel {
+                        thread { actor(Counter::increment) }
+                        thread { actor(Counter::increment) }
+                    }
                 }
             }
-            .detectFailure(Counter::class.java)
+        }.detectFailure(Counter::class.java)
         assertTrue(failure.toString(), failure is IncorrectResultsFailure)
     }
 

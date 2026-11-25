@@ -10,9 +10,9 @@
 package org.jetbrains.lincheck_test
 
 import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.StressOptions
 import org.junit.*
 import org.junit.Assert.*
 import java.util.concurrent.atomic.AtomicInteger
@@ -29,15 +29,19 @@ class MinimizationTest {
      */
     @Test
     fun testWithoutMinimization() {
-        val options = StressOptions()
-            .threads(4)
-            .actorsPerThread(4)
-            .actorsBefore(4)
-            .actorsAfter(4)
-            .invocationsPerIteration(INVOCATIONS_COUNT)
-            .minimizeFailedScenario(false)
+        val settings = LincheckSettings {
+            stress()
+            scenarioGeneration {
+                threads = 4
+                operationsPerThread = 4
+                operationsBefore = 4
+                operationsAfter = 4
+                invocationsPerScenario = INVOCATIONS_COUNT
+                minimizeFailedScenario = false
+            }
+        }
         try {
-            options.check(this::class)
+            runConcurrentTest(settings, this::class)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -55,14 +59,18 @@ class MinimizationTest {
      */
     @Test
     fun testWithMinimization() {
-        val options = StressOptions()
-            .threads(4)
-            .actorsPerThread(4)
-            .actorsBefore(4)
-            .actorsAfter(4)
-            .invocationsPerIteration(INVOCATIONS_COUNT)
+        val settings = LincheckSettings {
+            stress()
+            scenarioGeneration {
+                threads = 4
+                operationsPerThread = 4
+                operationsBefore = 4
+                operationsAfter = 4
+                invocationsPerScenario = INVOCATIONS_COUNT
+            }
+        }
         try {
-            options.check(this::class)
+            runConcurrentTest(settings, this::class)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -88,14 +96,18 @@ class MinimizationWithExceptionTest {
      */
     @Test
     fun testWithExpectedException() {
-        val options = StressOptions()
-            .threads(4)
-            .actorsPerThread(4)
-            .actorsBefore(4)
-            .actorsAfter(4)
-            .invocationsPerIteration(INVOCATIONS_COUNT)
+        val settings = LincheckSettings {
+            stress()
+            scenarioGeneration {
+                threads = 4
+                operationsPerThread = 4
+                operationsBefore = 4
+                operationsAfter = 4
+                invocationsPerScenario = INVOCATIONS_COUNT
+            }
+        }
         try {
-            options.check(IncorrectImplementationWithException::class)
+            runConcurrentTest(settings, IncorrectImplementationWithException::class)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario
@@ -119,15 +131,19 @@ class MinimizationWithExceptionTest {
      */
     @Test
     fun testWithUnexpectedException() {
-        val options = StressOptions()
-            .threads(4)
-            .actorsPerThread(4)
-            .actorsBefore(4)
-            .actorsAfter(4)
-            .invocationsPerIteration(INVOCATIONS_COUNT)
-            .sequentialSpecification(SequentialImplementation::class.java)
+        val settings = LincheckSettings {
+            stress()
+            scenarioGeneration {
+                threads = 4
+                operationsPerThread = 4
+                operationsBefore = 4
+                operationsAfter = 4
+                invocationsPerScenario = INVOCATIONS_COUNT
+                sequentialSpecification = SequentialImplementation::class.java
+            }
+        }
         try {
-            options.check(CorrectImplementationWithException::class)
+            runConcurrentTest(settings, CorrectImplementationWithException::class)
             fail("Should fail with LincheckAssertionError")
         } catch (error: LincheckAssertionError) {
             val failedScenario = error.failure.scenario

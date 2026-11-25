@@ -10,8 +10,8 @@
 package org.jetbrains.lincheck_test.transformation
 
 import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.*
 
 /**
@@ -42,9 +42,12 @@ class TimeStubTest {
 
     @Test
     fun test() {
-        ModelCheckingOptions()
-            .iterations(30)
-            .invocationsPerIteration(1000)
-            .check(this::class)
+        runConcurrentTest(LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                randomScenarios = 30
+                invocationsPerScenario = 1000
+            }
+        }, this::class)
     }
 }

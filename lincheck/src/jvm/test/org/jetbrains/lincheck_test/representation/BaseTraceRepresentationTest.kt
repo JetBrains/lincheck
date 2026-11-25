@@ -10,12 +10,12 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.detectFailure
-import org.jetbrains.lincheck.scenario.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.scenario.*
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 
 /**
@@ -37,21 +37,24 @@ abstract class BaseTraceRepresentationTest(
     abstract fun operation()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::operation) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::operation) }
+                }
             }
+            // to trigger the lincheck failure, we use the always failing verifier
+            verifier = FailingVerifier::class.java
+            randomScenarios = 0
         }
-        // to trigger the lincheck failure, we use the always failing verifier
-        .verifier(FailingVerifier::class.java)
-        .iterations(0)
-        .apply { customize() }
-        .detectFailure(this::class.java) { failure ->
-            failure.checkLincheckOutput(outputFileName, handleOnlyDefaultJdkOutput)
-        }
+        customize()
+    }.detectFailure(this::class.java) { failure ->
+        failure.checkLincheckOutput(outputFileName, handleOnlyDefaultJdkOutput)
+    }
 
-    open fun ModelCheckingOptions.customize() {}
+    open fun LincheckSettings.customize() {}
 
 }
 

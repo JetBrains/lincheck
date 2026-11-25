@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.IntUnaryOperator
 
@@ -26,9 +26,11 @@ class EventStructureAtomicUpdateFunctionTest : BaseTraceRepresentationTest("even
         check(counter.get() == 1)
     }
 
-    override fun ModelCheckingOptions.customize() {
-        useExperimentalModelChecking()
-        memoryModel(MemoryModel.RelaxedJava)
+    override fun LincheckSettings.customize() {
+        modelChecking {
+            enablePartialOrderReduction()
+            memoryModel = MemoryModel.RelaxedJava
+        }
     }
 
     // Use a named object to keep its representation stable between runs.

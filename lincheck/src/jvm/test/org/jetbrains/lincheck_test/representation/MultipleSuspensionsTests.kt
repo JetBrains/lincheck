@@ -10,11 +10,11 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.forClasses
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck_test.util.detectFailure
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -60,14 +60,17 @@ class SingleSuspensionPointTraceRepresentationTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::triggerAndCheck) }
-                thread { actor(::operation) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::triggerAndCheck) }
+                    thread { actor(::operation) }
+                }
             }
         }
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("single_suspension_point")
 
 }
@@ -123,18 +126,22 @@ class MultipleSuspensionPointsTraceRepresentationTest {
     }
 
     @Test
-    fun test(): Unit = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::trigger) }
-                thread { actor(::operation) }
+    fun test(): Unit = LincheckSettings {
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::trigger) }
+                    thread { actor(::operation) }
+                }
             }
         }
-        .addGuarantee(
-            forClasses(this::class.java.name).methods("firstStep", "secondStep", "part1", "part2")
-                .treatAsAtomic()
-        )
-        .detectFailure(this::class.java)
+        modelChecking {
+            addGuarantee(
+                forClasses(MultipleSuspensionPointsTraceRepresentationTest::class).methods("firstStep", "secondStep", "part1", "part2")
+                    .treatAsAtomic()
+            )
+        }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("multiple_suspension_points")
 
 }
@@ -170,14 +177,17 @@ class MultipleSuspensionPointsChannelsTraceRepresentationTest {
     }
 
     @Test
-    fun test(): Unit = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::operation1) }
-                thread { actor(::operation2) }
+    fun test(): Unit = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::operation1) }
+                    thread { actor(::operation2) }
+                }
             }
         }
-        .detectFailure(this::class.java) { failure ->
-            failure.checkLincheckOutput("multiple_suspension_points_channels")
-        }
+    }.detectFailure(this::class.java) { failure ->
+        failure.checkLincheckOutput("multiple_suspension_points_channels")
+    }
 }

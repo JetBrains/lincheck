@@ -12,12 +12,12 @@
 
 package org.jetbrains.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck_test.util.detectFailure
 import kotlinx.atomicfu.AtomicRef
 import kotlinx.atomicfu.atomic
-import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.IncorrectResultsFailure
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Validate
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -45,24 +45,26 @@ class IncorrectQueueWithValidationFunctionsTest {
 
     @Test
     fun modelCheckingTest() {
-        val failure = ModelCheckingOptions()
-            .addCustomScenario {
-                parallel {
-                    thread { }
-                    thread {
-                        actor(IncorrectQueueWithValidationFunctionsTest::enqueue, 0)
+        val failure = LincheckSettings {
+            scenarioGeneration {
+                addCustomScenario {
+                    parallel {
+                        thread { }
+                        thread {
+                            actor(IncorrectQueueWithValidationFunctionsTest::enqueue, 0)
+                        }
+                    }
+                    post {
+                        actor(IncorrectQueueWithValidationFunctionsTest::remove, 0)
+                        actor(IncorrectQueueWithValidationFunctionsTest::enqueue, 2)
                     }
                 }
-                post {
-                    actor(IncorrectQueueWithValidationFunctionsTest::remove, 0)
-                    actor(IncorrectQueueWithValidationFunctionsTest::enqueue, 2)
-                }
+                randomScenarios = 50
+                invocationsPerScenario = 1_000
             }
-            .iterations(50)
-            .invocationsPerIteration(1_000)
-            .checkObstructionFreedom(true)
-            .sequentialSpecification(IntQueueSequential::class.java)
-            .detectFailure(this::class.java)
+            modelChecking { checkObstructionFreedom = true }
+            scenarioGeneration { sequentialSpecification = IntQueueSequential::class.java }
+        }.detectFailure(this::class.java)
 
         assertTrue(failure is IncorrectResultsFailure)
     }

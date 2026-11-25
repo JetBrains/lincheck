@@ -10,9 +10,10 @@
 
 package org.jetbrains.lincheck_test
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import kotlinx.atomicfu.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.EpsilonVerifier
 import org.junit.*
 
@@ -21,12 +22,14 @@ class BlockingOperationTest {
     fun blocking(): Unit = synchronized(this) {}
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .checkObstructionFreedom()
-        .verifier(EpsilonVerifier::class.java)
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking { checkObstructionFreedom = true }
+        scenarioGeneration {
+            verifier = EpsilonVerifier::class.java
+            operationsBefore = 0
+            operationsAfter = 0
+        }
+    }, this::class)
 }
 
 class CausesBlockingOperationTest {
@@ -44,11 +47,13 @@ class CausesBlockingOperationTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .checkObstructionFreedom()
-        .verifier(EpsilonVerifier::class.java)
-        .iterations(20)
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking { checkObstructionFreedom = true }
+        scenarioGeneration {
+            verifier = EpsilonVerifier::class.java
+            randomScenarios = 20
+            operationsBefore = 0
+            operationsAfter = 0
+        }
+    }, this::class)
 }

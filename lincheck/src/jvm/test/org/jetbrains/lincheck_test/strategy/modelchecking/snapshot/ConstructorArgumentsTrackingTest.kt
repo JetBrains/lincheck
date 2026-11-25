@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 
 
 class ConstructorArgumentsTrackingTest : AbstractSnapshotTest() {
@@ -29,11 +29,13 @@ class ConstructorArgumentsTrackingTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(ConstructorNotThisModificationVerifier::class.java)
-        threads(1)
-        invocationsPerIteration(1)
-        actorsPerThread(1)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            verifier = ConstructorNotThisModificationVerifier::class.java
+            threads = 1
+            invocationsPerScenario = 1
+            operationsPerThread = 1
+        }
     }
 
     open class Node(var a: Int) {

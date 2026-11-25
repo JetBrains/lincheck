@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 import java.util.Collections
 import kotlin.random.Random
 
@@ -48,14 +48,16 @@ class CollectionsAPISnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(CollectionsAPIVerifier::class.java)
-        actorsBefore(0)
-        actorsAfter(0)
-        iterations(100)
-        invocationsPerIteration(1)
-        threads(1)
-        actorsPerThread(1)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            verifier = CollectionsAPIVerifier::class.java
+            operationsBefore = 0
+            operationsAfter = 0
+            randomScenarios = 100
+            invocationsPerScenario = 1
+            threads = 1
+            operationsPerThread = 1
+        }
     }
 
     @Operation

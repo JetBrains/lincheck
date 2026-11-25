@@ -10,11 +10,11 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.PriorityQueue
 import java.util.Queue
 import java.util.concurrent.ConcurrentHashMap
@@ -23,16 +23,18 @@ import kotlin.random.Random
 
 abstract class CollectionSnapshotTest : AbstractSnapshotTest() {
 
-    override fun testModelChecking() = ModelCheckingOptions()
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .iterations(100)
-        .invocationsPerIteration(1)
-        .threads(1)
-        .actorsPerThread(10)
-        .analyzeStdLib(true)
-        .apply { customize() }
-        .check(this::class)
+    override fun testModelChecking() = runConcurrentTest(LincheckSettings {
+        scenarioGeneration {
+            operationsBefore = 0
+            operationsAfter = 0
+            randomScenarios = 100
+            invocationsPerScenario = 1
+            threads = 1
+            operationsPerThread = 10
+        }
+        modelChecking { analyzeStdLib = true }
+        customize()
+    }, this::class)
 
     @Operation
     open fun addElement() {}
@@ -75,8 +77,8 @@ class SetSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(SetVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { verifier = SetVerifier::class.java }
     }
 
     @Operation
@@ -132,8 +134,8 @@ class MapSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(MapVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { verifier = MapVerifier::class.java }
     }
 
     @Operation
@@ -187,8 +189,8 @@ class ListSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(ListVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { verifier = ListVerifier::class.java }
     }
 
     @Operation
@@ -242,8 +244,8 @@ class PriorityQueueSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(PriorityQueueVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { verifier = PriorityQueueVerifier::class.java }
     }
 
     @Operation
@@ -296,8 +298,8 @@ class ConcurrentMapSnapshotTest : CollectionSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(ConcurrentMapVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { verifier = ConcurrentMapVerifier::class.java }
     }
 
     @Operation

@@ -10,8 +10,9 @@
 
 package org.jetbrains.lincheck_test.runner
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.StressOptions
 import org.junit.Test
 
 class OuterClass {
@@ -29,17 +30,23 @@ class OuterClass {
 class InnerClassTest {
     @Test
     fun testInnerClass() {
-        StressOptions()
-            .invocationsPerIteration(1)
-            .iterations(1)
-            .check(OuterClass.InnerClass::class)
+        runConcurrentTest(LincheckSettings {
+            stress()
+            scenarioGeneration {
+                invocationsPerScenario = 1
+                randomScenarios = 1
+            }
+        }, OuterClass.InnerClass::class)
     }
 
     @Test
     fun testNestedClass() {
-        StressOptions()
-            .invocationsPerIteration(1)
-            .iterations(1)
-            .check(OuterClass.NestedClass::class)
+        runConcurrentTest(LincheckSettings {
+            stress()
+            scenarioGeneration {
+                invocationsPerScenario = 1
+                randomScenarios = 1
+            }
+        }, OuterClass.NestedClass::class)
     }
 }

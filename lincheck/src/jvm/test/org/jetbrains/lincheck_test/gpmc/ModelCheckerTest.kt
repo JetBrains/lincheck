@@ -11,18 +11,18 @@
 package org.jetbrains.lincheck_test.gpmc
 
 import org.jetbrains.lincheck.LincheckFailure
-import org.jetbrains.lincheck.datastructures.createStrategy
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.createStrategy
+import org.jetbrains.lincheck.datastructures.scenario
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.scenario.*
-import org.jetbrains.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.strategy.*
+import org.jetbrains.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.lincheck.util.ExceptionResult
 import org.jetbrains.lincheck.util.ValueResult
 import org.jetbrains.lincheck.util.VoidResult
-import org.jetbrains.lincheck.jvm.agent.InstrumentationMode.MODEL_CHECKING
 import org.jetbrains.lincheck.withLincheckTestContext
-import org.jetbrains.lincheck.datastructures.scenario
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import kotlin.reflect.*
 import org.junit.Assert
 
@@ -75,9 +75,10 @@ internal fun modelCheckerTest(
 }
 
 private fun createStrategy(testClass: Class<*>, scenario: ExecutionScenario, stdLibAnalysis: Boolean): ModelCheckingStrategy =
-    ModelCheckingOptions()
-        .invocationTimeout(30_000) // 30 sec
-        .analyzeStdLib(stdLibAnalysis)
+    LincheckSettings {
+        invocationTimeoutMs = 30_000 // 30 sec
+        modelChecking { analyzeStdLib = stdLibAnalysis }
+    }
         .createStrategy(
             testClass = testClass,
             scenario = scenario,

@@ -10,20 +10,26 @@
 
 package org.jetbrains.lincheck_test.util
 
-import org.jetbrains.lincheck.datastructures.Options
-import org.jetbrains.kotlinx.lincheck.LinChecker
 import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.strategy.*
 import org.jetbrains.lincheck.datastructures.ParameterGenerator
+import org.jetbrains.lincheck.datastructures.RandomProvider
+import org.jetbrains.lincheck.scenario.ExecutionScenarioChecker
+import org.jetbrains.lincheck.strategy.*
 import org.jetbrains.lincheck.util.DEFAULT_TEST_JDK_VERSION
 import org.jetbrains.lincheck.util.JdkVersion
 import org.jetbrains.lincheck.util.jdkVersion
-import org.jetbrains.lincheck.datastructures.RandomProvider
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Assert.*
 import java.io.File
 
+
+internal fun LincheckSettings.detectFailure(testClass: Class<*>): LincheckFailure? =
+    ExecutionScenarioChecker(testClass, copy(forLambda = false)).detectFailure()
+
+internal fun LincheckSettings.detectFailure(testClass: Class<*>, checkFailure: (LincheckFailure?) -> Unit) {
+    ExecutionScenarioChecker(testClass, copy(forLambda = false)).detectFailure(checkFailure)
+}
 
 /**
  * Checks output when Lincheck run fails with an exception and don't return [LincheckFailure]
@@ -31,10 +37,9 @@ import java.io.File
  * This happens when the configuration of the test is incorrect.
  * @param expectedOutputFile name of file stored in resources/expected_logs, storing the expected lincheck output.
  */
-internal inline fun <reified E: Exception> Options<*>.checkFailsWithException(testClass: Class<*>, expectedOutputFilePrefix: String) {
+internal inline fun <reified E: Exception> LincheckSettings.checkFailsWithException(testClass: Class<*>, expectedOutputFilePrefix: String) {
     try {
-        @Suppress("DEPRECATION")
-        LinChecker(testClass, this).check()
+        Lincheck.runConcurrentTest(this, testClass)
     } catch (e: Exception) {
         assertTrue(
             "Exception of type ${E::class.simpleName} expected, but ${e::class.simpleName} was thrown.\n $e",

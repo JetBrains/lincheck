@@ -9,8 +9,9 @@
  */
 package org.jetbrains.lincheck_test.transformation
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.*
 import java.util.*
 import java.util.concurrent.*
@@ -45,11 +46,14 @@ abstract class AbstractRandomTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .iterations(1)
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .threads(3)
-        .actorsPerThread(1)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 1
+            operationsBefore = 0
+            operationsAfter = 0
+            threads = 3
+            operationsPerThread = 1
+        }
+    }, this::class)
 }

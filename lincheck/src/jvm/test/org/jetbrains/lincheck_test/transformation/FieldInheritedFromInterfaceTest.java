@@ -10,7 +10,10 @@
 
 package org.jetbrains.lincheck_test.transformation;
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions;
+import org.jetbrains.lincheck.Lincheck;
+import org.jetbrains.lincheck.LincheckSettings;
+import org.jetbrains.lincheck.LincheckSettings.ScenarioGeneration;
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.ModelChecking;
 import org.jetbrains.lincheck.datastructures.Operation;
 import org.junit.Test;
 
@@ -20,9 +23,12 @@ public class FieldInheritedFromInterfaceTest implements InterfaceWithField {
 
     @Test
     public void test() {
-        new ModelCheckingOptions()
-            .iterations(1)
-            .check(FieldInheritedFromInterfaceTest.class);
+        LincheckSettings settings = new LincheckSettings()
+            .strategy(new ModelChecking())
+            .scenarioGeneration(new ScenarioGeneration()
+                .randomScenarios(1)
+            );
+        Lincheck.runConcurrentTest(settings, FieldInheritedFromInterfaceTest.class);
     }
 }
 

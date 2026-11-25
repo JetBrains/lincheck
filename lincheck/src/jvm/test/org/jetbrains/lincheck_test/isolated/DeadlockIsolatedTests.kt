@@ -12,7 +12,6 @@ package org.jetbrains.lincheck_test.isolated
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck_test.AbstractLincheckTest
-import org.jetbrains.lincheck.datastructures.Options
 import java.util.concurrent.atomic.AtomicBoolean
 
 class DeadlockOnSynchronizedIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, ManagedDeadlockFailure::class) {
@@ -38,11 +37,11 @@ class DeadlockOnSynchronizedIsolatedTest : AbstractLincheckTest(TimeoutFailure::
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // TODO: We ignore this test with EventStructure for now, as we need to actually report the deadlock, instead of crashing
         ignoreExperimentalModelChecking()
-        minimizeFailedScenario(false)
-        invocationTimeout(200)
+        scenarioGeneration { minimizeFailedScenario = false }
+        invocationTimeoutMs = 200
     }
 }
 
@@ -56,12 +55,14 @@ class DeadlockOnSynchronizedWaitIsolatedTest : AbstractLincheckTest(TimeoutFailu
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // TODO: We ignore this test with EventStructure for now, as we need to actually report the deadlock, instead of crashing
         ignoreExperimentalModelChecking()
-        actorsBefore(0)
-        minimizeFailedScenario(false)
-        invocationTimeout(200)
+        scenarioGeneration {
+            operationsBefore = 0
+            minimizeFailedScenario = false
+        }
+        invocationTimeoutMs = 200
     }
 }
 
@@ -84,11 +85,11 @@ class LiveLockIsolatedTest : AbstractLincheckTest(TimeoutFailure::class, Managed
             }
         }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // TODO: We ignore this test with EventStructure for now, as we need to turn on the loop detector
         ignoreExperimentalModelChecking()
-        minimizeFailedScenario(false)
-        invocationTimeout(200)
+        scenarioGeneration { minimizeFailedScenario = false }
+        invocationTimeoutMs = 200
     }
 
     private fun AtomicBoolean.withSpinLock(block: () -> Int): Int {

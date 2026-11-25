@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.LincheckSettings
 
 /**
  * Checks how a `java.lang.reflect.Field.set` write appears in an event-structure trace.
@@ -28,7 +28,7 @@ class EventStructureReflectiveFieldWriteTest : BaseTraceRepresentationTest("even
         check(value == 2)
     }
 
-    override fun ModelCheckingOptions.customize() {
-        useExperimentalModelChecking()
+    override fun LincheckSettings.customize() {
+        modelChecking { enablePartialOrderReduction() }
     }
 }

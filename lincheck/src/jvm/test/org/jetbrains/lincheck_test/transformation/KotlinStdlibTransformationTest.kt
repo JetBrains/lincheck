@@ -9,7 +9,7 @@
  */
 package org.jetbrains.lincheck_test.transformation
 
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck_test.AbstractLincheckTest
 
@@ -52,7 +52,7 @@ class KotlinStdlibTransformationTest : AbstractLincheckTest() {
         intProgression.toSet()
     }
 
-    override fun <O : Options<O>> O.customize() {
-        iterations(1)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { randomScenarios = 1 }
     }
 }

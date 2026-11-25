@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 
 private class A(var b: B)
 private class B(var a: A? = null)
@@ -40,8 +40,8 @@ class ObjectCycleSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(StaticObjectCycleVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { verifier = StaticObjectCycleVerifier::class.java }
     }
 
     @Operation

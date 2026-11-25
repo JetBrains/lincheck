@@ -10,8 +10,9 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.scenario.NO_OPERATION_ERROR_MESSAGE
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -24,7 +25,7 @@ class NoOperationsDefinedTest {
     @Test
     fun test() {
         val exception = assertThrows(IllegalStateException::class.java) {
-            ModelCheckingOptions().check(this::class)
+            runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
         }
         assertEquals(NO_OPERATION_ERROR_MESSAGE, exception.message)
     }

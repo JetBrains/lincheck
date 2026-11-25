@@ -11,8 +11,8 @@
 package org.jetbrains.lincheck_test.transformation
 
 import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Test
 
@@ -26,7 +26,10 @@ class StaticInitializationDuringAnalysisTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().iterations(1).check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration { randomScenarios = 1 }
+    }, this::class)
 }
 
 private object LoadedDuringAnalysisClass {

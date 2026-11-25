@@ -9,12 +9,11 @@
  */
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck_test.util.*
 import org.jetbrains.lincheck.datastructures.forClasses
+import org.jetbrains.lincheck_test.util.*
+import org.jetbrains.lincheck_test.util.detectFailure
 
 import org.junit.*
 
@@ -61,17 +60,22 @@ class MethodReportingTest {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions()
-            .addCustomScenario {
-                parallel {
-                    thread { actor(::operation) }
-                    thread { actor(::operation) }
+        val settings = LincheckSettings {
+            scenarioGeneration {
+                addCustomScenario {
+                    parallel {
+                        thread { actor(::operation) }
+                        thread { actor(::operation) }
+                    }
                 }
+                randomScenarios = 0
             }
-            .iterations(0)
-            .addGuarantee(forClasses(this::class.java.name).methods("inc").treatAsAtomic())
-            .addGuarantee(forClasses(this::class.java.name).methods("ignored").ignore())
-        val failure = options.detectFailure(this::class.java)
+            modelChecking {
+                addGuarantee(forClasses(MethodReportingTest::class).methods("inc").treatAsAtomic())
+                addGuarantee(forClasses(MethodReportingTest::class).methods("ignored").ignore())
+            }
+        }
+        val failure = settings.detectFailure(this::class.java)
         check(failure != null) { "the test should fail" }
         val log = StringBuilder().appendFailure(failure).toString()
         check("uselessIncrements(2) at" in log) { "increments in uselessIncrements method should be compressed" }
@@ -106,15 +110,18 @@ class CaughtExceptionMethodReportingTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::operation) }
-                thread { actor(::operation) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::operation) }
+                    thread { actor(::operation) }
+                }
             }
+            randomScenarios = 0
         }
-        .iterations(0)
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("method_reporting")
 
 }

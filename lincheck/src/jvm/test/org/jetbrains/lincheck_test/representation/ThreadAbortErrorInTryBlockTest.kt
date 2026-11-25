@@ -10,12 +10,11 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck_test.util.detectFailure
 import kotlinx.atomicfu.*
 import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.strategy.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.strategy.*
 import org.jetbrains.lincheck.util.*
 import org.junit.*
 import org.junit.Assert.*
@@ -35,12 +34,16 @@ class ThreadAbortErrorInTryBlockTest {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions()
-            .actorsPerThread(1)
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .threads(2)
-        val failure = options.detectFailure(this::class.java)
+        val settings = LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                operationsPerThread = 1
+                operationsBefore = 0
+                operationsAfter = 0
+                threads = 2
+            }
+        }
+        val failure = settings.detectFailure(this::class.java)
         check(failure != null) { "the test should fail" }
         val threadAbortedErrorName = LincheckAnalysisAbortedError::class.simpleName!!
         check(failure is ManagedLivelockFailure) {

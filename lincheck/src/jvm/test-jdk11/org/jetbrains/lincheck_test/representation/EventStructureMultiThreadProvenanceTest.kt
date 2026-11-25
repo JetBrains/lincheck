@@ -10,16 +10,16 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
 import org.jetbrains.lincheck.scenario.parallelResults
 import org.jetbrains.lincheck_test.strategy.eventstructure.getValue
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -56,22 +56,26 @@ open class MultiThreadProvenanceFixture {
 class EventStructureMultiThreadProvenanceTest : MultiThreadProvenanceFixture() {
     @Test
     fun multipleSourcesAcrossFourThreads() {
-        val failure = ModelCheckingOptions()
-            .useExperimentalModelChecking()
-            .memoryModel(MemoryModel.RelaxedJava)
-            .iterations(0)
-            .invocationsPerIteration(10_000)
-            .minimizeFailedScenario(false)
-            .addCustomScenario {
-                parallel {
-                    thread { actor(::writeLeft) }
-                    thread { actor(::writeRight) }
-                    thread { actor(::readValues) }
-                    thread { actor(::readValues) }
-                }
+        val failure = LincheckSettings {
+            modelChecking {
+                enablePartialOrderReduction()
+                memoryModel = MemoryModel.RelaxedJava
             }
-            .verifier(MultipleReadSourcesVerifier::class.java)
-            .detectFailure(this::class.java)
+            scenarioGeneration {
+                randomScenarios = 0
+                invocationsPerScenario = 10_000
+                minimizeFailedScenario = false
+                addCustomScenario {
+                    parallel {
+                        thread { actor(::writeLeft) }
+                        thread { actor(::writeRight) }
+                        thread { actor(::readValues) }
+                        thread { actor(::readValues) }
+                    }
+                }
+                verifier = MultipleReadSourcesVerifier::class.java
+            }
+        }.detectFailure(this::class.java)
         val trace = checkNotNull(failure?.trace).trace
         val reads = trace.filter { it.dependency >= 0 }
         val writes = trace.filter { it.isDependency }

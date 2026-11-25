@@ -10,11 +10,10 @@
 
 package org.jetbrains.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.strategy.*
-import org.jetbrains.lincheck.datastructures.StressOptions
 import org.jetbrains.lincheck.datastructures.scenario
+import org.jetbrains.lincheck.strategy.*
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 
 class AddCustomScenarioTest {
@@ -33,29 +32,35 @@ class AddCustomScenarioTest {
 
     @Test
     fun stressTest1() {
-        val failure = StressOptions()
-            .iterations(0)
-            .addCustomScenario(scenario {
-                parallel {
-                    thread { actor(::t1) }
-                    thread { actor(::t2) }
-                }
-            })
-            .detectFailure(this::class.java)
+        val failure = LincheckSettings {
+            stress()
+            scenarioGeneration {
+                randomScenarios = 0
+                addCustomScenario(scenario {
+                    parallel {
+                        thread { actor(::t1) }
+                        thread { actor(::t2) }
+                    }
+                })
+            }
+        }.detectFailure(this::class.java)
         assert(failure is IncorrectResultsFailure)
     }
 
     @Test
     fun stressTest2() {
-        val failure = StressOptions()
-            .iterations(0)
-            .addCustomScenario {
-                parallel {
-                    thread { actor(::t1) }
-                    thread { actor(::t2) }
+        val failure = LincheckSettings {
+            stress()
+            scenarioGeneration {
+                randomScenarios = 0
+                addCustomScenario {
+                    parallel {
+                        thread { actor(::t1) }
+                        thread { actor(::t2) }
+                    }
                 }
             }
-            .detectFailure(this::class.java)
+        }.detectFailure(this::class.java)
         assert(failure is IncorrectResultsFailure)
     }
 }

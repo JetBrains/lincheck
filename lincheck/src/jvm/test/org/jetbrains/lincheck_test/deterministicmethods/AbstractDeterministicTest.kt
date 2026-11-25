@@ -10,13 +10,13 @@
 
 package org.jetbrains.lincheck_test.deterministicmethods
 
-import org.jetbrains.lincheck.util.ExceptionResult
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
 import org.jetbrains.lincheck.scenario.parallelResults
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.util.ExceptionResult
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
@@ -36,28 +36,31 @@ abstract class AbstractDeterministicTest {
         System.setOut(myStdOut)
         System.setErr(myStdErr)
         try {
-            ModelCheckingOptions()
-                .actorsBefore(0)
-                .actorsAfter(0)
-                .iterations(30)
-                .threads(2)
-                .minimizeFailedScenario(false)
-                .actorsPerThread(1)
-                .invocationTimeout(60_000L)
-                .verifier(FailingVerifier::class.java)
-                .customize()
-                .detectFailure(this::class.java) { lincheckFailure ->
-                    // The failure report is no longer printed by the framework;
-                    // print it here so the forbidden-string check below still sees it.
-                    lincheckFailure?.let(::println)
-                    val results = lincheckFailure?.results?.parallelResults?.flatten()?.takeIf { it.isNotEmpty() }
-                    require(results != null) { lincheckFailure.toString() }
-                    if (shouldFail()) {
-                        require(results.all { it is ExceptionResult }) { lincheckFailure.toString() }
-                    } else {
-                        require(results.none { it is ExceptionResult }) { lincheckFailure.toString() }
-                    }
+            LincheckSettings {
+                modelChecking()
+                scenarioGeneration {
+                    operationsBefore = 0
+                    operationsAfter = 0
+                    randomScenarios = 30
+                    threads = 2
+                    minimizeFailedScenario = false
+                    operationsPerThread = 1
                 }
+                invocationTimeoutMs = 60_000L
+                scenarioGeneration { verifier = FailingVerifier::class.java }
+                customize()
+            }.detectFailure(this::class.java) { lincheckFailure ->
+                // The failure report is no longer printed by the framework;
+                // print it here so the forbidden-string check below still sees it.
+                lincheckFailure?.let(::println)
+                val results = lincheckFailure?.results?.parallelResults?.flatten()?.takeIf { it.isNotEmpty() }
+                require(results != null) { lincheckFailure.toString() }
+                if (shouldFail()) {
+                    require(results.all { it is ExceptionResult }) { lincheckFailure.toString() }
+                } else {
+                    require(results.none { it is ExceptionResult }) { lincheckFailure.toString() }
+                }
+            }
         } finally {
             val forbiddenString = "Non-determinism found."
             System.setOut(oldStdOut)
@@ -75,7 +78,7 @@ abstract class AbstractDeterministicTest {
     @Test
     fun test() = testTraceDebugger()
     
-    open fun ModelCheckingOptions.customize(): ModelCheckingOptions = this
+    open fun LincheckSettings.customize() {}
 }
 
 @Suppress("UNUSED_PARAMETER")

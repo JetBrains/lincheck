@@ -1,8 +1,8 @@
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.*
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 
 
 private class Outer {
@@ -34,10 +34,12 @@ class InnerClassConstructorTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        iterations(1)
-        invocationsPerIteration(1)
-        verifier(InnerClassVerifier::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            randomScenarios = 1
+            invocationsPerScenario = 1
+            verifier = InnerClassVerifier::class.java
+        }
     }
 
     @Operation

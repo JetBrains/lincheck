@@ -20,24 +20,24 @@
 
 package org.jetbrains.lincheck_test.strategy.eventstructure
 
-import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.ModelChecking
-import org.jetbrains.lincheck.datastructures.createStrategy
-import org.jetbrains.lincheck.scenario.*
-import org.jetbrains.lincheck.runner.LambdaRunner
 import org.jetbrains.lincheck.LincheckFailure
-import org.jetbrains.lincheck.strategy.managed.eventstructure.*
-import org.jetbrains.lincheck.strategy.runIteration
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.ModelChecking
+import org.jetbrains.lincheck.createStrategy
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
-import org.jetbrains.lincheck.withLincheckTestContext
-import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
+import org.jetbrains.lincheck.runner.LambdaRunner
+import org.jetbrains.lincheck.scenario.*
+import org.jetbrains.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.lincheck.strategy.runIteration
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.withLincheckTestContext
 import org.junit.Assert
 import org.junit.Test
-import org.jetbrains.lincheck.runner.ExecutionScenarioRunner
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
+import org.jetbrains.lincheck.runner.ExecutionScenarioRunner
 import kotlin.reflect.KClass
 
 internal const val UNIQUE = -1
@@ -125,15 +125,18 @@ internal fun<Outcome> litmusTest(
     }
 }
 
-private fun createOptions(memoryModel: MemoryModel) =
-    ModelCheckingOptions()
-        .useExperimentalModelChecking()
-        .memoryModel(memoryModel)
+private fun createSettings(memoryModel: MemoryModel) =
+    LincheckSettings {
+        modelChecking {
+            enablePartialOrderReduction()
+            this.memoryModel = memoryModel
+        }
         // for tests debugging set large timeout
-        .invocationTimeout(60 * 60 * 1000)
+        invocationTimeoutMs = 60 * 60 * 1000
+    }
 
 internal fun createStrategy(testClass: Class<*>, memoryModel: MemoryModel, scenario: ExecutionScenario): EventStructureStrategy {
-    return createOptions(memoryModel)
+    return createSettings(memoryModel)
         .createStrategy(
             testClass = testClass,
             scenario = scenario,
@@ -188,7 +191,7 @@ internal fun <T> createStrategy(
  *
  * @param outcomeVerifier checks outcomes collected before exploration ends or a failure is reported.
  * @param requireExhaustion checks that no unexplored invocation remains after the invocation budget.
- * @param options execution settings, including loop bounds.
+ * @param settings execution settings, including loop bounds.
  * @param expectedFailure requires this failure type instead of successful exploration.
  * @param checkStats inspects the exploration statistics after the outcomes were collected.
  * @param block the block of code that is going to be tested
@@ -198,7 +201,7 @@ internal inline fun<reified Outcome> litmusTest(
     memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
     invocations: Int = INVOCATIONS,
     requireExhaustion: Boolean = false,
-    options: ModelCheckingOptions = ModelCheckingOptions().analyzeStdLib(true),
+    settings: LincheckSettings = LincheckSettings { modelChecking { analyzeStdLib = true } },
     expectedFailure: KClass<out LincheckFailure>? = null,
     noinline checkStats: ((EventStructureStrategy.Stats) -> Unit)? = null,
     noinline block: () -> Outcome,
@@ -211,7 +214,8 @@ internal inline fun<reified Outcome> litmusTest(
     }
     withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
         ensureObjectIsTransformed(block)
-        createStrategy(options.timeoutMs, options.createSettings(), memoryModel = memoryModel, block = block).use { strategy ->
+        val modelChecking = settings.strategy as ModelChecking
+        createStrategy(settings.invocationTimeoutMs, modelChecking, memoryModel = memoryModel, block = block).use { strategy ->
             val failure = strategy.runIteration(invocations, verifier)
             Assert.assertEquals("Unexpected exploration failure: ${failure?.toString()}", expectedFailure, failure?.let { it::class })
             // Probing the next invocation mutates the event structure, so probe once,

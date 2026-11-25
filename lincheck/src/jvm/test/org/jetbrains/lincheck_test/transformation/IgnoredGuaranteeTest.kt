@@ -9,8 +9,9 @@
  */
 package org.jetbrains.lincheck_test.transformation
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.forClasses
 import org.junit.*
 
@@ -36,13 +37,15 @@ class IgnoredGuaranteeTest {
 
     @Test(timeout = 100_000)
     fun test() {
-        ModelCheckingOptions()
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .actorsPerThread(100)
-            .iterations(50)
-            .invocationsPerIteration(Int.MAX_VALUE)
-            .addGuarantee(forClasses(this::class.java.name).methods("inc").ignore())
-            .check(this::class)
+        runConcurrentTest(LincheckSettings {
+            scenarioGeneration {
+                operationsBefore = 0
+                operationsAfter = 0
+                operationsPerThread = 100
+                randomScenarios = 50
+                invocationsPerScenario = Int.MAX_VALUE
+            }
+            modelChecking { addGuarantee(forClasses(IgnoredGuaranteeTest::class).methods("inc").ignore()) }
+        }, this::class)
     }
 }

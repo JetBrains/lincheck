@@ -10,12 +10,11 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.LincheckSettings.LoopDetection
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.*
-import org.jetbrains.lincheck.datastructures.ManagedOptions
+import org.jetbrains.lincheck_test.util.detectFailure
 
 import java.util.concurrent.atomic.*
 import org.junit.*
@@ -41,13 +40,13 @@ class ObstructionFreedomActiveLockRepresentationTest : BaseTraceRepresentationTe
     private fun incrementManyTimes() {
         counter.get()
         // repeat exactly the maximum number of times that does not cause obstruction freedom violation
-        repeat(ManagedOptions.DEFAULT_LOOP_BOUND) {
+        repeat(LoopDetection.DEFAULT_LOOP_BOUND) {
             counter.incrementAndGet()
         }
     }
 
-    override fun ModelCheckingOptions.customize() {
-        checkObstructionFreedom(true)
+    override fun LincheckSettings.customize() {
+        modelChecking { checkObstructionFreedom = true }
     }
 
 }
@@ -63,15 +62,17 @@ class ObstructionFreedomSynchronizedRepresentationTest {
     fun operation(): Int = synchronized(this) { counter++ }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::operation) }
-                thread { actor(::operation) }
+    fun test() = LincheckSettings {
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::operation) }
+                    thread { actor(::operation) }
+                }
             }
         }
-        .checkObstructionFreedom(true)
-        .detectFailure(this::class.java)
+        modelChecking { checkObstructionFreedom = true }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("obstruction_freedom_synchronized")
 
 }

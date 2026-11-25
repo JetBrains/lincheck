@@ -10,16 +10,16 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
 import org.jetbrains.lincheck.scenario.parallelResults
 import org.jetbrains.lincheck_test.strategy.eventstructure.getValue
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
@@ -144,26 +144,28 @@ class EventStructureReadProvenanceTest : ReadProvenanceFixture() {
         rejectFirst: Boolean = false,
         postWrite: Boolean = false,
     ) {
-        val failure = ModelCheckingOptions()
-            .apply {
+        val failure = LincheckSettings {
+            modelChecking {
                 if (memoryModel != null) {
-                    useExperimentalModelChecking()
-                    memoryModel(memoryModel)
+                    enablePartialOrderReduction()
+                    this.memoryModel = memoryModel
                 }
             }
-            .iterations(0)
-            .minimizeFailedScenario(false)
-            .addCustomScenario {
-                parallel {
-                    thread { actor(write) }
-                    thread { actor(read) }
+            scenarioGeneration {
+                randomScenarios = 0
+                minimizeFailedScenario = false
+                addCustomScenario {
+                    parallel {
+                        thread { actor(write) }
+                        thread { actor(read) }
+                    }
+                    if (postWrite) {
+                        post { actor(write) }
+                    }
                 }
-                if (postWrite) {
-                    post { actor(write) }
-                }
+                verifier = if (rejectFirst) FailingVerifier::class.java else ReadOneVerifier::class.java
             }
-            .verifier(if (rejectFirst) FailingVerifier::class.java else ReadOneVerifier::class.java)
-            .detectFailure(this::class.java)
+        }.detectFailure(this::class.java)
         val trace = checkNotNull(failure?.trace).trace
         val reads = trace.filter { it.dependency >= 0 }
         val writes = trace.filter { it.isDependency }

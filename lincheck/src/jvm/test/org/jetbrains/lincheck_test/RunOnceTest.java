@@ -10,8 +10,11 @@
 
 package org.jetbrains.lincheck_test;
 
+import org.jetbrains.lincheck.Lincheck;
+import org.jetbrains.lincheck.LincheckSettings;
+import org.jetbrains.lincheck.LincheckSettings.ScenarioGeneration;
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.Stress;
 import org.jetbrains.lincheck.datastructures.Operation;
-import org.jetbrains.lincheck.datastructures.StressOptions;
 import org.junit.Test;
 
 public class RunOnceTest {
@@ -29,11 +32,14 @@ public class RunOnceTest {
 
     @Test
     public void test() {
-        new StressOptions()
-            .threads(3)
-            .iterations(10)
-            .invocationsPerIteration(10)
-            .check(RunOnceTest.class);
+        LincheckSettings settings = new LincheckSettings()
+            .strategy(new Stress())
+            .scenarioGeneration(new ScenarioGeneration()
+                .threads(3)
+                .randomScenarios(10)
+                .invocationsPerScenario(10)
+            );
+        Lincheck.runConcurrentTest(settings, RunOnceTest.class);
     }
 
     class A {

@@ -11,14 +11,14 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.RandomProvider
 import org.jetbrains.lincheck.scenario.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.datastructures.MSQueueBlocking
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.lincheck.datastructures.RandomProvider
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Ignore
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
@@ -42,9 +42,9 @@ class ObstructionFreedomViolationEventsCutTest {
     fun dequeue(): Int? = q.dequeue()
 
     @Test
-    fun runModelCheckingTest() = ModelCheckingOptions()
-        .checkObstructionFreedom(true)
-        .detectFailure(this::class.java)
+    fun runModelCheckingTest() = LincheckSettings {
+        modelChecking { checkObstructionFreedom = true }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("obstruction_freedom_violation_events_cut")
 }
 
@@ -298,9 +298,10 @@ abstract class AbstractSpinLivelockTest {
     abstract fun meaninglessActions()
 
     @Test
-    fun testWithModelCheckingStrategy() = ModelCheckingOptions()
-        .minimizeFailedScenario(false)
-        .detectFailure(this::class.java)
+    fun testWithModelCheckingStrategy() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration { minimizeFailedScenario = false }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput(outputFileName)
 }
 
@@ -333,12 +334,15 @@ class SpinlockInIncorrectResultsWithClocksTest {
     fun d(): Int = 0 // cannot return 0, should fail
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .executionGenerator(ClocksTestScenarioGenerator::class.java)
-        .iterations(1)
-        .sequentialSpecification(ClocksTestSequential::class.java)
-        .minimizeFailedScenario(false)
-        .detectFailure(this::class.java)
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            executionGenerator = ClocksTestScenarioGenerator::class.java
+            randomScenarios = 1
+            sequentialSpecification = ClocksTestSequential::class.java
+            minimizeFailedScenario = false
+        }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/spin_lock_in_incorrect_results_failure")
 
 
@@ -412,16 +416,19 @@ class SpinCycleWithSideEffectsTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(SpinCycleWithSideEffectsTest::spinLockCause) }
-                thread { actor(SpinCycleWithSideEffectsTest::spinLock) }
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(SpinCycleWithSideEffectsTest::spinLockCause) }
+                    thread { actor(SpinCycleWithSideEffectsTest::spinLock) }
+                }
             }
+            invocationsPerScenario = 100
+            randomScenarios = 100
         }
-        .invocationsPerIteration(100)
-        .iterations(100)
-        .check(this::class)
+    }, this::class)
 
 }
 
@@ -460,15 +467,18 @@ class SpinLockWithAllEventsWrappedInMethodsTest {
     private fun action(value: Boolean) = someUselessSharedState.compareAndSet(value, !value)
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(RecursiveSpinLockTest::trigger) }
-                thread { actor(RecursiveSpinLockTest::causesSpinLock) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(RecursiveSpinLockTest::trigger) }
+                    thread { actor(RecursiveSpinLockTest::causesSpinLock) }
+                }
             }
+            minimizeFailedScenario = false
         }
-        .minimizeFailedScenario(false)
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/spin_lock_nested_events")
 
 }
@@ -493,7 +503,7 @@ class SingleThreadTopLevelSpinLockTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
+    fun test() = LincheckSettings { modelChecking() }
         .detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/spin_lock_top_level")
 

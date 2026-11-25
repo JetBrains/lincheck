@@ -11,9 +11,10 @@
 package org.jetbrains.lincheck_test.generator
 
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.forClasses
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Test
 import java.lang.AssertionError
 
@@ -28,20 +29,27 @@ class CustomAtomicGuaranteeTest {
     fun increment(): Int = value.increment()
 
     @Test(expected = AssertionError::class)
-    fun `test without guarantees`() =  modelCheckingConfiguration().check(this::class.java)
+    fun `test without guarantees`() = runConcurrentTest(modelCheckingConfiguration(), this::class.java)
     @Test
-    fun `test with guarantees`() = modelCheckingConfiguration()
-        .addGuarantee(forClasses(NonAtomicCounter::class).allMethods().treatAsAtomic())
-        .check(this::class.java)
-
-    private fun modelCheckingConfiguration() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(CustomAtomicGuaranteeTest::increment) }
-                thread { actor(CustomAtomicGuaranteeTest::increment) }
-            }
+    fun `test with guarantees`() {
+        val settings = modelCheckingConfiguration().apply {
+            modelChecking { addGuarantee(forClasses(NonAtomicCounter::class).allMethods().treatAsAtomic()) }
         }
-        .iterations(0)
+        runConcurrentTest(settings, this::class.java)
+    }
+
+    private fun modelCheckingConfiguration() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(CustomAtomicGuaranteeTest::increment) }
+                    thread { actor(CustomAtomicGuaranteeTest::increment) }
+                }
+            }
+            randomScenarios = 0
+        }
+    }
 
     class NonAtomicCounter {
         @Volatile
@@ -63,12 +71,14 @@ class CustomAtomicGuaranteeWithInheritanceTest {
     fun increment(): Int = value.increment()
 
     @Test(expected = AssertionError::class)
-    fun `test without guarantees`() = modelCheckingConfiguration()
-        .check(this::class.java)
+    fun `test without guarantees`() = runConcurrentTest(modelCheckingConfiguration(), this::class.java)
     @Test
-    fun `test with guarantees`() = modelCheckingConfiguration()
-        .addGuarantee(forClasses(ChildNonAtomicCounter::class).allMethods().treatAsAtomic())
-        .check(this::class.java)
+    fun `test with guarantees`() {
+        val settings = modelCheckingConfiguration().apply {
+            modelChecking { addGuarantee(forClasses(ChildNonAtomicCounter::class).allMethods().treatAsAtomic()) }
+        }
+        runConcurrentTest(settings, this::class.java)
+    }
 
     open class BaseNonAtomicCounter {
         @Volatile
@@ -79,12 +89,16 @@ class CustomAtomicGuaranteeWithInheritanceTest {
 
     class ChildNonAtomicCounter: BaseNonAtomicCounter()
 
-    private fun modelCheckingConfiguration() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(CustomAtomicGuaranteeWithInheritanceTest::increment) }
-                thread { actor(CustomAtomicGuaranteeWithInheritanceTest::increment) }
+    private fun modelCheckingConfiguration() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(CustomAtomicGuaranteeWithInheritanceTest::increment) }
+                    thread { actor(CustomAtomicGuaranteeWithInheritanceTest::increment) }
+                }
             }
+            randomScenarios = 0
         }
-        .iterations(0)
+    }
 }

@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck_test.util.detectFailure
 import kotlinx.coroutines.channels.Channel
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.*
 import org.junit.Test
 
@@ -40,14 +40,17 @@ class SuspendedNotAwokeTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::trigger) }
-                thread { actor(::operation) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::trigger) }
+                    thread { actor(::operation) }
+                }
             }
         }
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("suspended_not_awoke")
 
 }

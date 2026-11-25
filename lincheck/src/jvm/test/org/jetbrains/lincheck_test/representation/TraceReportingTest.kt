@@ -9,11 +9,10 @@
  */
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.*
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 
 /**
@@ -64,20 +63,23 @@ class TraceReportingTest {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions().apply {
-            iterations(0)
-            addCustomScenario {
-                parallel {
-                    thread {
-                        actor(::foo)
-                    }
-                    thread {
-                        actor(::bar)
+        val settings = LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                randomScenarios = 0
+                addCustomScenario {
+                    parallel {
+                        thread {
+                            actor(::foo)
+                        }
+                        thread {
+                            actor(::bar)
+                        }
                     }
                 }
             }
         }
-        val failure = options.detectFailure(this::class.java)
+        val failure = settings.detectFailure(this::class.java)
         failure.checkLincheckOutput("trace_reporting")
         checkTraceHasNoLincheckEvents(checkNotNull(failure).toString())
     }
@@ -97,25 +99,29 @@ class TraceReportingTest {
 
     @Test
     fun testInitPostParts() {
-        val options = ModelCheckingOptions()
-            .iterations(0)
-            .addCustomScenario {
-                initial {
-                    actor(::enterInit)
-                }
-                parallel {
-                    thread {
-                        actor(::foo)
+        val settings = LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                randomScenarios = 0
+                addCustomScenario {
+                    initial {
+                        actor(::enterInit)
                     }
-                    thread {
-                        actor(::bar)
+                    parallel {
+                        thread {
+                            actor(::foo)
+                        }
+                        thread {
+                            actor(::bar)
+                        }
                     }
-                }
-                post {
-                    actor(::enterPost)
+                    post {
+                        actor(::enterPost)
+                    }
                 }
             }
-        val failure = options.detectFailure(this::class.java)
+        }
+        val failure = settings.detectFailure(this::class.java)
         failure.checkLincheckOutput("trace_reporting_init_post_parts")
         checkTraceHasNoLincheckEvents(checkNotNull(failure).toString())
     }
@@ -127,19 +133,22 @@ class TraceReportingTest {
 
     @Test
     fun testEmptyTrace() {
-        ModelCheckingOptions()
-            .iterations(0)
-            .addCustomScenario {
-                parallel {
-                    thread {
-                        actor(::notImplemented)
+        LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                randomScenarios = 0
+                addCustomScenario {
+                    parallel {
+                        thread {
+                            actor(::notImplemented)
+                        }
                     }
                 }
+                sequentialSpecification = EmptySequentialImplementation::class.java
             }
-            .sequentialSpecification(EmptySequentialImplementation::class.java)
-            .detectFailure(this::class.java) { failure ->
-                failure.checkLincheckOutput("trace_reporting_empty")
-            }
+        }.detectFailure(this::class.java) { failure ->
+            failure.checkLincheckOutput("trace_reporting_empty")
+        }
     }
 
     class EmptySequentialImplementation {

@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.util.UnsafeHolder
 
 /**
@@ -27,9 +27,11 @@ class EventStructureUnsafePutOrderedTest : BaseTraceRepresentationTest("event_st
         check(value == 1)
     }
 
-    override fun ModelCheckingOptions.customize() {
-        useExperimentalModelChecking()
-        memoryModel(MemoryModel.RelaxedJava)
+    override fun LincheckSettings.customize() {
+        modelChecking {
+            enablePartialOrderReduction()
+            memoryModel = MemoryModel.RelaxedJava
+        }
     }
 
     companion object {

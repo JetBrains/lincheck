@@ -10,15 +10,15 @@
 
 package org.jetbrains.lincheck_test.strategy.eventstructure
 
-import org.jetbrains.lincheck.datastructures.createStrategy
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.createStrategy
 import org.jctools.queues.atomic.MpscLinkedAtomicQueue
-import org.jetbrains.lincheck.scenario.parallelResults
-import org.jetbrains.lincheck.ManagedLivelockFailure
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.lincheck.strategy.runIteration
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.ManagedLivelockFailure
 import org.jetbrains.lincheck.datastructures.scenario
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.scenario.parallelResults
+import org.jetbrains.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.withLincheckTestContext
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -211,7 +211,7 @@ class LoopDetectorTests {
             for (prefixUnlock in listOf(false, true)) {
                 litmusTest(
                     assertSame(outcomes, UNKNOWN), memoryModel,
-                    invocations = 10_000, requireExhaustion = true, options = boundedOptions(),
+                    invocations = 10_000, requireExhaustion = true, settings = boundedSettings(),
                 ) {
                     val monitor = Any()
                     var value = 0
@@ -314,9 +314,12 @@ class LoopDetectorTests {
             }
         }
         for (memoryModel in listOf(MemoryModel.SequentialConsistency, MemoryModel.RelaxedJava)) {
-            val config = boundedOptions()
-                .useExperimentalModelChecking()
-                .memoryModel(memoryModel)
+            val config = boundedSettings().apply {
+                modelChecking {
+                    enablePartialOrderReduction()
+                    this.memoryModel = memoryModel
+                }
+            }
             val completedResults = mutableListOf<Int>()
             val verifier = getResultsVerifier { results ->
                 completedResults.add(getValue(results.parallelResults[0][0]!!))
@@ -336,8 +339,13 @@ class LoopDetectorTests {
         }
     }
 
-    private fun boundedOptions() = ModelCheckingOptions()
-        .analyzeStdLib(true)
-        .loopIterationsBeforeThreadSwitch(2)
-        .loopBound(5)
+    private fun boundedSettings() = LincheckSettings {
+        modelChecking {
+            analyzeStdLib = true
+            loopDetection {
+                loopIterationsBeforeThreadSwitch = 2
+                loopBound = 5
+            }
+        }
+    }
 }

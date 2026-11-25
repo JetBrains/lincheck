@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.detectFailure
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.*
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 
 @Suppress("UNUSED")
@@ -32,14 +32,17 @@ class ExceptionsInOutputTest {
     fun operation2() = check(!canEnterForbiddenSection) { "Violating exception" }
 
     @Test
-    fun `should add stackTrace to output`() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(::operation1) }
-                thread { actor(::operation2) }
+    fun `should add stackTrace to output`() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(::operation1) }
+                    thread { actor(::operation2) }
+                }
             }
         }
-        .detectFailure(this::class.java) { failure ->
-            failure.checkLincheckOutput("exceptions_in_output")
-        }
+    }.detectFailure(this::class.java) { failure ->
+        failure.checkLincheckOutput("exceptions_in_output")
+    }
 }

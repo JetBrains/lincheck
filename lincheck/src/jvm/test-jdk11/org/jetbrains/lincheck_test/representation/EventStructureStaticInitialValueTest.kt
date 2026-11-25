@@ -10,15 +10,15 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
 import org.jetbrains.lincheck.scenario.parallelResults
 import org.jetbrains.lincheck_test.strategy.eventstructure.getValue
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 
 class EventStructureStaticInitialValueTest {
@@ -35,19 +35,21 @@ class EventStructureStaticInitialValueTest {
     @Test
     fun test() {
         State.value = 7
-        ModelCheckingOptions()
-            .useExperimentalModelChecking()
-            .iterations(0)
-            .addCustomScenario {
-                parallel {
-                    thread { actor(::write) }
-                    thread { actor(::read) }
+        LincheckSettings {
+            modelChecking { enablePartialOrderReduction() }
+            scenarioGeneration {
+                randomScenarios = 0
+                addCustomScenario {
+                    parallel {
+                        thread { actor(::write) }
+                        thread { actor(::read) }
+                    }
                 }
+                verifier = InitialValueVerifier::class.java
             }
-            .verifier(InitialValueVerifier::class.java)
-            .detectFailure(this::class.java) { failure ->
-                failure.checkLincheckOutput("event_structure_static_initial_value")
-            }
+        }.detectFailure(this::class.java) { failure ->
+            failure.checkLincheckOutput("event_structure_static_initial_value")
+        }
     }
 }
 

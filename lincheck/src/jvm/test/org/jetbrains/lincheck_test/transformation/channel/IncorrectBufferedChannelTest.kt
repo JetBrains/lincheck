@@ -10,12 +10,13 @@
 
 package org.jetbrains.lincheck_test.transformation.channel
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Test
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -42,29 +43,32 @@ class IncorrectBufferedChannelTest {
     }
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .iterations(1)
-        .sequentialSpecification(SequentialBufferedChannel::class.java)
-        .addCustomScenario {
-            parallel {
-                thread {
-                    actor(::send, 3)
-                    actor(::send, 2)
-                    actor(::send, 1)
-                }
-                thread {
-                    actor(::receive)
-                    actor(::send, 3)
-                    actor(::receive)
-                }
-                thread {
-                    actor(::receive)
-                    actor(::send, 3)
-                    actor(::send, 3)
+    fun modelCheckingTest() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 1
+            sequentialSpecification = SequentialBufferedChannel::class.java
+            addCustomScenario {
+                parallel {
+                    thread {
+                        actor(::send, 3)
+                        actor(::send, 2)
+                        actor(::send, 1)
+                    }
+                    thread {
+                        actor(::receive)
+                        actor(::send, 3)
+                        actor(::receive)
+                    }
+                    thread {
+                        actor(::receive)
+                        actor(::send, 3)
+                        actor(::send, 3)
+                    }
                 }
             }
         }
-        .check(this::class)
+    }, this::class)
 }
 
 private class NumberedCancellationException(number: Int) : CancellationException() {

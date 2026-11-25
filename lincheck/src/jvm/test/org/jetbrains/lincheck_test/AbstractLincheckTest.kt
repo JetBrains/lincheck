@@ -9,13 +9,11 @@
  */
 package org.jetbrains.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
-import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.strategy.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.StressOptions
+import org.jetbrains.lincheck.LincheckFailure
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck_test.util.*
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 import org.junit.Assume.assumeTrue
 import kotlin.reflect.*
@@ -23,10 +21,10 @@ import kotlin.reflect.*
 abstract class AbstractLincheckTest(
     private vararg val expectedFailures: KClass<out LincheckFailure>
 ) {
-    open fun <O: Options<O>> O.customize() {}
+    open fun LincheckSettings.customize() {}
 
-    private fun <O : Options<O>> O.runInternalTest() {
-        val failure: LincheckFailure? = detectFailure(this@AbstractLincheckTest::class.java)
+    private fun LincheckSettings.runInternalTest() {
+        val failure = detectFailure(this@AbstractLincheckTest::class.java)
         if (failure === null) {
             assert(expectedFailures.isEmpty()) {
                 "This test should fail, but no error has been occurred (see the logs for details)"
@@ -35,17 +33,17 @@ abstract class AbstractLincheckTest(
             checkFailureIsNotLincheckInternalBug(failure)
             checkTraceHasNoLincheckEvents(failure.toString())
             assert(expectedFailures.contains(failure::class)) {
-                "This test has failed with an unexpected error: \n ${failure.toString()}"
+                "This test has failed with an unexpected error: \n $failure"
             }
         }
     }
 
     @Test(timeout = TIMEOUT)
-    fun testWithStressStrategy(): Unit = StressOptions().run {
-        invocationsPerIteration(5_000)
+    fun testWithStressStrategy(): Unit = LincheckSettings {
+        stress()
+        scenarioGeneration { invocationsPerScenario = 5_000 }
         commonConfiguration()
-        runInternalTest()
-    }
+    }.runInternalTest()
 
     @Test(timeout = TIMEOUT)
     // NOTE: please do not rename - the name is used to filter tests on CI in the "single-CPU" configuration:
@@ -53,33 +51,36 @@ abstract class AbstractLincheckTest(
     // We use this configuration to check the Lincheck's behavior on machines with a single CPU available.
     // We want to run only model checking tests in this configuration, because stress tests when run on
     // a single CPU might not detect any bugs.
-    fun testWithModelCheckingStrategy(): Unit = ModelCheckingOptions().run {
-        invocationsPerIteration(1_000)
+    fun testWithModelCheckingStrategy(): Unit = LincheckSettings {
+        modelChecking()
+        scenarioGeneration { invocationsPerScenario = 1_000 }
         commonConfiguration()
-        runInternalTest()
-    }
+    }.runInternalTest()
 
     @Test(timeout = TIMEOUT)
-    fun testWithEventStructureStrategy() : Unit = ModelCheckingOptions().run {
-        invocationsPerIteration(1_000)
-        useExperimentalModelChecking()
+    fun testWithEventStructureStrategy(): Unit = LincheckSettings {
+        modelChecking { enablePartialOrderReduction() }
+        scenarioGeneration { invocationsPerScenario = 1_000 }
         commonConfiguration()
-        runInternalTest()
-    }
+    }.runInternalTest()
 
-    private fun <O : Options<O>> O.commonConfiguration(): Unit = run {
-        iterations(30)
-        actorsBefore(2)
-        threads(3)
-        actorsPerThread(2)
-        actorsAfter(2)
-        minimizeFailedScenario(false)
+    private fun LincheckSettings.commonConfiguration() {
+        scenarioGeneration {
+            randomScenarios = 30
+            operationsBefore = 2
+            threads = 3
+            operationsPerThread = 2
+            operationsAfter = 2
+            minimizeFailedScenario = false
+        }
         customize()
     }
 
     // Util function which allows us to exclude testing with event-structures for test cases that are not supported yet
-    protected fun <O: Options<O>> O.ignoreExperimentalModelChecking(): Unit {
-        assumeTrue(this !is ModelCheckingOptions || !isExperimentalModelCheckingEnabled)
+    protected fun LincheckSettings.ignoreExperimentalModelChecking(): Unit {
+        // The legacy guard skipped fixtures that opted in through their own configuration.
+        val modelChecking = strategy as? TestingStrategy.ModelChecking
+        assumeTrue(modelChecking?.partialOrderReduction != true)
     }
 }
 

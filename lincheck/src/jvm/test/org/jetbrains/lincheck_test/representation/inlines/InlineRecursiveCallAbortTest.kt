@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck_test.representation.inlines
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck_test.representation.BaseTraceRepresentationTest
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 
 /**
  * Aborting recursive method entry must preserve the trace while regular and inline frames unwind.
@@ -29,7 +29,7 @@ class InlineRecursiveCallAbortTest : BaseTraceRepresentationTest("inlines/recurs
         block()
     }
 
-    override fun ModelCheckingOptions.customize() {
-        recursionBound(3)
+    override fun LincheckSettings.customize() {
+        modelChecking { loopDetection { recursionBound = 3 } }
     }
 }

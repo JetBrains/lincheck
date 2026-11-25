@@ -10,9 +10,9 @@
 package org.jetbrains.lincheck_test.verifier
 
 import org.jetbrains.lincheck.IncorrectResultsFailure
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck_test.*
-import org.jetbrains.lincheck.datastructures.Options
 import java.util.concurrent.atomic.*
 
 class SequentialSpecificationTest : AbstractLincheckTest(IncorrectResultsFailure::class) {
@@ -24,8 +24,8 @@ class SequentialSpecificationTest : AbstractLincheckTest(IncorrectResultsFailure
     @Operation
     fun get() = c.get() + 1
 
-    override fun <O : Options<O>> O.customize() {
-        sequentialSpecification(CorrectCounter::class.java)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration { sequentialSpecification = CorrectCounter::class.java }
     }
 }
 

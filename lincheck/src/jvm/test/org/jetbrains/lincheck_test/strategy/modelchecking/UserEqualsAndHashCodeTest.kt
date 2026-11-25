@@ -10,7 +10,8 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
@@ -31,19 +32,18 @@ class UserEqualsAndHashCodeTest {
     fun get(): Int = counter.get()
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .configure()
-        .check(this::class)
+    fun modelCheckingTest() = runConcurrentTest(settings(partialOrderReduction = false), this::class)
 
     @Test
-    fun experimentalModelCheckingTest() = ModelCheckingOptions()
-        .useExperimentalModelChecking()
-        .configure()
-        .check(this::class)
+    fun experimentalModelCheckingTest() = runConcurrentTest(settings(partialOrderReduction = true), this::class)
 
-    private fun ModelCheckingOptions.configure() = this
-        .iterations(10)
-        .invocationsPerIteration(500)
+    private fun settings(partialOrderReduction: Boolean) = LincheckSettings {
+        modelChecking { enablePartialOrderReduction(partialOrderReduction) }
+        scenarioGeneration {
+            randomScenarios = 10
+            invocationsPerScenario = 500
+        }
+    }
 
     private class Counter {
         private val value = AtomicInteger()

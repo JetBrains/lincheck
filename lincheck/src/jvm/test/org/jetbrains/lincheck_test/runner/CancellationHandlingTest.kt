@@ -9,10 +9,10 @@
  */
 package org.jetbrains.lincheck_test.runner
 
+import org.jetbrains.lincheck.LincheckSettings
 import kotlinx.coroutines.*
-import org.jetbrains.lincheck_test.AbstractLincheckTest
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck_test.AbstractLincheckTest
 import java.util.concurrent.atomic.*
 
 class CancellationHandlingTest : AbstractLincheckTest() {
@@ -34,12 +34,14 @@ class CancellationHandlingTest : AbstractLincheckTest() {
         (cont as CancellableContinuation<Unit>).cancel()
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
-        actorsBefore(0)
-        actorsAfter(0)
-        iterations(1)
+        scenarioGeneration {
+            operationsBefore = 0
+            operationsAfter = 0
+            randomScenarios = 1
+        }
     }
 }
 

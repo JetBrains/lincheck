@@ -9,10 +9,9 @@
  */
 package org.jetbrains.lincheck_test.isolated
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.strategy.*
-import org.jetbrains.lincheck.datastructures.StressOptions
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 
 /**
@@ -22,12 +21,16 @@ class ThreadDumpIsolatedTest {
     @Test
     fun test() {
         repeat(30) {
-            val options = StressOptions()
-                .minimizeFailedScenario(false)
-                .iterations(1)
-                .invocationsPerIteration(100_000)
-                .invocationTimeout(100)
-            val failure = options.detectFailure(DeadlockOnSynchronizedIsolatedTest::class.java)
+            val settings = LincheckSettings {
+                stress()
+                scenarioGeneration {
+                    minimizeFailedScenario = false
+                    randomScenarios = 1
+                    invocationsPerScenario = 100_000
+                }
+                invocationTimeoutMs = 100
+            }
+            val failure = settings.detectFailure(DeadlockOnSynchronizedIsolatedTest::class.java)
             check(failure is TimeoutFailure) { "${ManagedDeadlockFailure::class.simpleName} was expected but ${failure?.javaClass} was obtained" }
             check(failure.threadDump.size == 2) { "thread dump for 2 threads expected, but for ${failure.threadDump.size} threads was detected" }
         }

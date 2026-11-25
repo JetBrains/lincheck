@@ -9,12 +9,12 @@
  */
 package org.jetbrains.lincheck_test.verifier
 
+import org.jetbrains.lincheck.LincheckSettings
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck_test.*
-import org.jetbrains.lincheck.datastructures.Options
 import java.util.concurrent.atomic.*
 
 class AllowExtraSuspensionCorrectTest : AbstractLincheckTest() {
@@ -29,10 +29,10 @@ class AllowExtraSuspensionCorrectTest : AbstractLincheckTest() {
     @Operation
     suspend fun dec() = counter.getAndDecrement()
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
-        sequentialSpecification(CounterSequential::class.java)
+        scenarioGeneration { sequentialSpecification = CounterSequential::class.java }
     }
 }
 
@@ -48,10 +48,10 @@ class AllowExtraSuspensionIncorrectTest : AbstractLincheckTest() {
     @Operation
     suspend fun dec() = counter.getAndDecrement()
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
-        sequentialSpecification(CounterSequential::class.java)
+        scenarioGeneration { sequentialSpecification = CounterSequential::class.java }
     }
 }
 
@@ -75,14 +75,16 @@ class OnlyExtraSuspensionsHaveToBeAtomicTest : AbstractLincheckTest() {
         suspendCancellableCoroutine<Unit> {  }
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
-        iterations(10)
-        actorsBefore(0)
-        threads(2)
-        actorsPerThread(3)
-        actorsAfter(0)
+        scenarioGeneration {
+            randomScenarios = 10
+            operationsBefore = 0
+            threads = 2
+            operationsPerThread = 3
+            operationsAfter = 0
+        }
     }
 }
 

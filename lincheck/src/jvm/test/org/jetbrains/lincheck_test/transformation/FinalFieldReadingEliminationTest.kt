@@ -9,8 +9,9 @@
  */
 package org.jetbrains.lincheck_test.transformation
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Test
 import java.io.Serializable
 
@@ -33,14 +34,18 @@ class FinalFieldReadingEliminationTest {
 
     @Test(timeout = 100_000)
     fun test() {
-        val opts = ModelCheckingOptions()
-            .actorsBefore(0)
-            .actorsAfter(0)
-            .actorsPerThread(50)
-            .invocationsPerIteration(Int.MAX_VALUE)
-            .iterations(50)
-            .minimizeFailedScenario(false)
-        opts.check(this::class)
+        val settings = LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                operationsBefore = 0
+                operationsAfter = 0
+                operationsPerThread = 50
+                invocationsPerScenario = Int.MAX_VALUE
+                randomScenarios = 50
+                minimizeFailedScenario = false
+            }
+        }
+        runConcurrentTest(settings, this::class)
     }
 
     data class ValueHolder(val value: Int) : Serializable

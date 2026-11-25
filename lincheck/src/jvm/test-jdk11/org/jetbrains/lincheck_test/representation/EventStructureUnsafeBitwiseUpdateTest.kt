@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.concurrent.locks.ReentrantLock
 
 /**
@@ -32,8 +32,10 @@ class EventStructureUnsafeBitwiseUpdateTest : BaseTraceRepresentationTest("event
         }
     }
 
-    override fun ModelCheckingOptions.customize() {
-        useExperimentalModelChecking()
-        memoryModel(MemoryModel.RelaxedJava)
+    override fun LincheckSettings.customize() {
+        modelChecking {
+            enablePartialOrderReduction()
+            memoryModel = MemoryModel.RelaxedJava
+        }
     }
 }

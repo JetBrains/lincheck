@@ -9,11 +9,10 @@
  */
 package org.jetbrains.lincheck_test.strategy.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.strategy.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 
 class ObstructionFreedomViolationTest { // Flaky on JDK 8
@@ -27,10 +26,11 @@ class ObstructionFreedomViolationTest { // Flaky on JDK 8
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions()
-            .checkObstructionFreedom()
-            .minimizeFailedScenario(false)
-        val failure = options.detectFailure(ObstructionFreedomViolationTest::class.java)
+        val settings = LincheckSettings {
+            modelChecking { checkObstructionFreedom = true }
+            scenarioGeneration { minimizeFailedScenario = false }
+        }
+        val failure = settings.detectFailure(ObstructionFreedomViolationTest::class.java)
         check(failure is ObstructionFreedomViolationFailure)
     }
 }

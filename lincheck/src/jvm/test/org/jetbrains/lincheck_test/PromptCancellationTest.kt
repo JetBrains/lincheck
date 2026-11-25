@@ -10,14 +10,14 @@
 
 package org.jetbrains.lincheck_test
 
+import org.jetbrains.lincheck.LincheckSettings
 import kotlinx.atomicfu.*
 import kotlinx.coroutines.*
-import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.lincheck.datastructures.Options
-import org.jetbrains.lincheck.datastructures.Param
-import org.jetbrains.lincheck.LincheckFailure
 import org.jetbrains.lincheck.IncorrectResultsFailure
+import org.jetbrains.lincheck.LincheckFailure
+import org.jetbrains.lincheck.datastructures.IntGen
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.Param
 import kotlin.coroutines.*
 import kotlin.reflect.*
 
@@ -65,14 +65,16 @@ abstract class AbstractPromptCancellationTest(
         return returnResult
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
-        actorsBefore(0)
-        threads(2)
-        actorsPerThread(1)
-        actorsAfter(0)
-        this@AbstractPromptCancellationTest.sequentialSpecification?.let { sequentialSpecification(it.java) }
+        scenarioGeneration {
+            operationsBefore = 0
+            threads = 2
+            operationsPerThread = 1
+            operationsAfter = 0
+            sequentialSpecification = this@AbstractPromptCancellationTest.sequentialSpecification?.java
+        }
     }
 }
 

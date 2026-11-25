@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -25,10 +25,14 @@ class IncorrectArgumentsCountInCustomScenarioActorTest {
     @Test
     fun testTooFew() {
         val exception = Assert.assertThrows(IllegalArgumentException::class.java) {
-            ModelCheckingOptions()
-                .addCustomScenario {
-                    parallel { thread { actor(::operation) } }
+            LincheckSettings {
+                modelChecking()
+                scenarioGeneration {
+                    addCustomScenario {
+                        parallel { thread { actor(::operation) } }
+                    }
                 }
+            }
         }
         assertEquals("Invalid number of the operation operation parameters: 1 expected, 0 provided.", exception.message)
     }
@@ -36,10 +40,14 @@ class IncorrectArgumentsCountInCustomScenarioActorTest {
     @Test
     fun testTooMany() {
         val exception = Assert.assertThrows(IllegalArgumentException::class.java) {
-            ModelCheckingOptions()
-                .addCustomScenario {
-                    parallel { thread { actor(::operation, 1, 2) } }
+            LincheckSettings {
+                modelChecking()
+                scenarioGeneration {
+                    addCustomScenario {
+                        parallel { thread { actor(::operation, 1, 2) } }
+                    }
                 }
+            }
         }
         assertEquals("Invalid number of the operation operation parameters: 1 expected, 2 provided.", exception.message)
     }

@@ -9,13 +9,13 @@
  */
 package org.jetbrains.lincheck_test.transformation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
-import org.jetbrains.lincheck.strategy.*
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.parallelResults
+import org.jetbrains.lincheck.strategy.*
 import org.jetbrains.lincheck.util.ExceptionResult
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 import sun.misc.Unsafe
 import java.util.concurrent.atomic.*
@@ -60,13 +60,16 @@ class LocalObjectEliminationTest {
     }
 
     @Test(timeout = 100_000)
-    fun test() = ModelCheckingOptions()
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .actorsPerThread(50)
-        .invocationsPerIteration(Int.MAX_VALUE)
-        .iterations(50)
-        .check(this::class)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            operationsBefore = 0
+            operationsAfter = 0
+            operationsPerThread = 50
+            invocationsPerScenario = Int.MAX_VALUE
+            randomScenarios = 50
+        }
+    }, this::class)
 
     private data class A(var value: Int, var any: Any, val array: IntArray)
 
@@ -114,15 +117,18 @@ class LocalObjectEscapeConstructorTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions()
-            .iterations(0) // we will run only custom scenarios
-            .addCustomScenario {
-                parallel {
-                    thread { actor(::escapeLocal) }
-                    thread { actor(::changeState) }
+        val failure = LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                randomScenarios = 0 // we will run only custom scenarios
+                addCustomScenario {
+                    parallel {
+                        thread { actor(::escapeLocal) }
+                        thread { actor(::changeState) }
+                    }
                 }
             }
-            .detectFailure(this::class.java)
+        }.detectFailure(this::class.java)
         // the test should fail
         check(failure is IncorrectResultsFailure)
         // `escapeLocal` function should throw `LocalEscapedException`
@@ -199,15 +205,18 @@ class AtomicReferenceLocalObjectsTest {
     @Test
     fun testAtomicReferenceWeakCompareAndSet() = testWithUpdate(::weakCompareAndSetWithAtomicReference)
 
-    private fun testWithUpdate(operation: KFunction<*>) = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(operation) }
-                thread { actor(::checkWithSpinCycle) }
+    private fun testWithUpdate(operation: KFunction<*>) = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(operation) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     private inline fun updateNode(updateAction: (Node) -> Unit) {
         val nextNode = Node(1)
@@ -288,15 +297,18 @@ class AtomicArrayLocalObjectsTest {
     @Test
     fun testAtomicArrayWeakCompareAndSet() = testWithUpdate(::weakCompareAndSetWithAtomicArray)
 
-    private fun testWithUpdate(operation: KFunction<*>) = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(operation) }
-                thread { actor(::checkWithSpinCycle) }
+    private fun testWithUpdate(operation: KFunction<*>) = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(operation) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     private inline fun updateNode(updateAction: (Node) -> Unit) {
         val nextNode = Node(1)
@@ -383,15 +395,18 @@ class AtomicUpdaterLocalObjectsTest {
     @Test
     fun testAtomicUpdaterCompareAndSet() = testWithUpdate(::compareAndSetWithAtomicUpdater)
 
-    private fun testWithUpdate(operation: KFunction<*>) = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(operation) }
-                thread { actor(::checkWithSpinCycle) }
+    private fun testWithUpdate(operation: KFunction<*>) = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(operation) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     private inline fun updateNode(updateAction: (Node) -> Unit) {
         val nextNode = Node(1)
@@ -453,26 +468,32 @@ class UnsafeLocalObjectsTest {
     }
 
     @Test
-    fun testCompareAndSetWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::compareAndSetWithUnsafe) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testCompareAndSetWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::compareAndSetWithUnsafe) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     @Test
-    fun testGetAndSetWithUnsafe() = ModelCheckingOptions()
-        .iterations(0) // we will run only custom scenarios
-        .addCustomScenario {
-            parallel {
-                thread { actor(::getAndSetWithUnsafe) }
-                thread { actor(::checkWithSpinCycle) }
+    fun testGetAndSetWithUnsafe() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 0 // we will run only custom scenarios
+            addCustomScenario {
+                parallel {
+                    thread { actor(::getAndSetWithUnsafe) }
+                    thread { actor(::checkWithSpinCycle) }
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 
     private inline fun updateNode(updateAction: (Node) -> Unit) {
         val nextNode = Node(1)

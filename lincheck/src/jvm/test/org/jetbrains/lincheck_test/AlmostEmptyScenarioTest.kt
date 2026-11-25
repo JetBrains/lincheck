@@ -9,9 +9,10 @@
  */
 package org.jetbrains.lincheck_test
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
 import org.jetbrains.lincheck.LincheckAssertionError
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.StressOptions
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.ThreadLocalRandom
@@ -26,12 +27,15 @@ class AlmostEmptyScenarioTest {
     @Test
     fun test() {
         try {
-            StressOptions()
-                .iterations(1)
-                .actorsBefore(1)
-                .actorsAfter(1)
-                .threads(3)
-                .check(this::class)
+            runConcurrentTest(LincheckSettings {
+                stress()
+                scenarioGeneration {
+                    randomScenarios = 1
+                    operationsBefore = 1
+                    operationsAfter = 1
+                    threads = 3
+                }
+            }, this::class)
             fail("Should fail with LincheckAssertionError")
         } catch (e: LincheckAssertionError) {
             val failedScenario = e.failure.scenario

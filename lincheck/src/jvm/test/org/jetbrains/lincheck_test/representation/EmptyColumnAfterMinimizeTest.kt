@@ -10,9 +10,10 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
-import org.jetbrains.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.*
+import org.jetbrains.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -63,15 +64,17 @@ class EmptyColumnAfterMinimizeTest {
     class Number { var value: Long = 0 }
     
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .iterations(50)
-        .invocationsPerIteration(50)
-        .actorsBefore(1)
-        .threads(3)
-        .actorsPerThread(2)
-        .actorsAfter(0)
-        .checkObstructionFreedom(false)
-        .detectFailure(this::class.java) { failure ->
-            failure.checkLincheckOutput("empty_column_after_minimize")
+    fun modelCheckingTest() = LincheckSettings {
+        scenarioGeneration {
+            randomScenarios = 50
+            invocationsPerScenario = 50
+            operationsBefore = 1
+            threads = 3
+            operationsPerThread = 2
+            operationsAfter = 0
         }
+        modelChecking { checkObstructionFreedom = false }
+    }.detectFailure(this::class.java) { failure ->
+        failure.checkLincheckOutput("empty_column_after_minimize")
+    }
 }

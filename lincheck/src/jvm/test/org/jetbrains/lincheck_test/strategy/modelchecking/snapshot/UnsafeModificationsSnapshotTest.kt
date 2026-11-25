@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.ExecutionScenario
-import org.jetbrains.lincheck.datastructures.ManagedOptions
 import org.jetbrains.lincheck.util.UnsafeHolder
 import org.jetbrains.lincheck.util.getArrayElementOffsetViaUnsafe
 import org.jetbrains.lincheck.util.getFieldOffsetViaUnsafe
@@ -51,12 +51,14 @@ class UnsafeModificationsSnapshotTest : AbstractSnapshotTest() {
         }
     }
 
-    override fun <O : ManagedOptions<O>> O.customize() {
-        verifier(UnsafeModificationsVerifier::class.java)
-        iterations(100)
-        invocationsPerIteration(1)
-        threads(1)
-        actorsPerThread(10)
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            verifier = UnsafeModificationsVerifier::class.java
+            randomScenarios = 100
+            invocationsPerScenario = 1
+            threads = 1
+            operationsPerThread = 10
+        }
     }
 
     @Operation

@@ -9,12 +9,13 @@
  */
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
-import org.jetbrains.lincheck.datastructures.ManagedOptions
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.LoopDetection
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Validate
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.*
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.*
 import java.lang.IllegalStateException
 
@@ -44,25 +45,27 @@ class ValidationFunctionCallTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions().apply {
-        addCustomScenario {
-            initial {
-                actor(::operation)
-            }
-            parallel {
-                thread {
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                initial {
                     actor(::operation)
                 }
-                thread {
+                parallel {
+                    thread {
+                        actor(::operation)
+                    }
+                    thread {
+                        actor(::operation)
+                    }
+                }
+                post {
                     actor(::operation)
                 }
-            }
-            post {
-                actor(::operation)
             }
         }
-    }
-    .detectFailure(this::class.java) { failure ->
+    }.detectFailure(this::class.java) { failure ->
         failure.checkLincheckOutput("validation_function_failure")
     }
 
@@ -89,7 +92,7 @@ class IncorrectResultsFailureWithCorrectValidationFunctionTest {
     fun validate() = check(counter >= 0)
 
     @Test
-    fun test() = ModelCheckingOptions()
+    fun test() = LincheckSettings { modelChecking() }
         .detectFailure(this::class.java)
         .checkLincheckOutput("incorrect_results_with_validation_function")
 }
@@ -106,7 +109,7 @@ class MoreThenOneValidationFunctionFailureTest {
     fun secondCheck() {}
 
     @Test
-    fun test() = ModelCheckingOptions()
+    fun test() = LincheckSettings { modelChecking() }
         .checkFailsWithException<IllegalStateException>(this::class.java, "two_validation_functions_exception")
 }
 
@@ -116,8 +119,8 @@ class ValidationFunctionLongLoopTest {
     val loopCount = 1024
 
     init {
-        check(loopCount > ManagedOptions.DEFAULT_LOOP_BOUND)
-        check(loopCount < ManagedOptions.DEFAULT_LIVELOCK_EVENTS_THRESHOLD)
+        check(loopCount > LoopDetection.DEFAULT_LOOP_BOUND)
+        check(loopCount < LoopDetection.DEFAULT_LIVELOCK_EVENTS_THRESHOLD)
     }
 
     @Operation
@@ -135,11 +138,14 @@ class ValidationFunctionLongLoopTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .iterations(1)
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .actorsPerThread(1)
-        .minimizeFailedScenario(false)
-        .check(this::class.java)
+    fun test() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 1
+            operationsBefore = 0
+            operationsAfter = 0
+            operationsPerThread = 1
+            minimizeFailedScenario = false
+        }
+    }, this::class.java)
 }

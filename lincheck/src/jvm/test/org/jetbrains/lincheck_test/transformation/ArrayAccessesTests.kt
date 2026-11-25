@@ -20,7 +20,7 @@
 
 package org.jetbrains.lincheck_test.transformation
 
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck_test.AbstractLincheckTest
 
@@ -29,11 +29,13 @@ abstract class AbstractArrayAccessTest : AbstractLincheckTest() {
     @Operation
     abstract fun operation()
 
-    override fun <O : Options<O>> O.customize() {
-        iterations(0)
-        .addCustomScenario {
-            parallel {
-                thread { actor(::operation) }
+    override fun LincheckSettings.customize() {
+        scenarioGeneration {
+            randomScenarios = 0
+            addCustomScenario {
+                parallel {
+                    thread { actor(::operation) }
+                }
             }
         }
     }

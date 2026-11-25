@@ -12,10 +12,10 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.kotlinx.lincheck.detectFailure
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -56,14 +56,17 @@ class InterleavingAnalysisPresentInSpinCycleFirstIterationTest {
     }
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(InterleavingAnalysisPresentInSpinCycleFirstIterationTest::causeSpinLock) }
-                thread { actor(InterleavingAnalysisPresentInSpinCycleFirstIterationTest::spinLock) }
+    fun modelCheckingTest() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(InterleavingAnalysisPresentInSpinCycleFirstIterationTest::causeSpinLock) }
+                    thread { actor(InterleavingAnalysisPresentInSpinCycleFirstIterationTest::spinLock) }
+                }
             }
         }
-        .detectFailure(this::class.java) { failure ->
-            failure.checkLincheckOutput("switch_in_the_middle_of_spin_cycle_causes_error")
-        }
+    }.detectFailure(this::class.java) { failure ->
+        failure.checkLincheckOutput("switch_in_the_middle_of_spin_cycle_causes_error")
+    }
 }

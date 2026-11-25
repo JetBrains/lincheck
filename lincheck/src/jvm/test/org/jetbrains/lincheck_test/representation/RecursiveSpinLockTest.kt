@@ -10,10 +10,10 @@
 
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -50,15 +50,18 @@ class RecursiveSpinLockTest {
     private fun getSharedVariable(): Boolean = someUselessSharedState.get()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(RecursiveSpinLockTest::trigger) }
-                thread { actor(RecursiveSpinLockTest::causesSpinLock) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(RecursiveSpinLockTest::trigger) }
+                    thread { actor(RecursiveSpinLockTest::causesSpinLock) }
+                }
             }
+            minimizeFailedScenario = false
         }
-        .minimizeFailedScenario(false)
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_lock")
 
 }
@@ -98,15 +101,18 @@ class RecursiveSpinWithParamsLockTest {
     private fun getSharedVariable(): Boolean = someUselessSharedState.get()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(RecursiveSpinLockTest::trigger) }
-                thread { actor(RecursiveSpinLockTest::causesSpinLock) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(RecursiveSpinLockTest::trigger) }
+                    thread { actor(RecursiveSpinLockTest::causesSpinLock) }
+                }
             }
+            minimizeFailedScenario = false
         }
-        .minimizeFailedScenario(false)
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_lock_params")
 
 }
@@ -147,15 +153,18 @@ class RecursiveSpinLockWithInnerEventsTest {
     private fun getSharedVariable(): Boolean = someUselessSharedState.get()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(RecursiveSpinLockWithInnerEventsTest::trigger) }
-                thread { actor(RecursiveSpinLockWithInnerEventsTest::causesSpinLock) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(RecursiveSpinLockWithInnerEventsTest::trigger) }
+                    thread { actor(RecursiveSpinLockWithInnerEventsTest::causesSpinLock) }
+                }
             }
+            minimizeFailedScenario = false
         }
-        .minimizeFailedScenario(false)
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_cycle_inner_events")
 
 }
@@ -200,15 +209,18 @@ class RecursiveSpinLockTwoStepRecursionEventsTest {
     private fun getSharedVariable(): Boolean = someUselessSharedState.get()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread { actor(RecursiveSpinLockTwoStepRecursionEventsTest::trigger) }
-                thread { actor(RecursiveSpinLockTwoStepRecursionEventsTest::causesSpinLock) }
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread { actor(RecursiveSpinLockTwoStepRecursionEventsTest::trigger) }
+                    thread { actor(RecursiveSpinLockTwoStepRecursionEventsTest::causesSpinLock) }
+                }
             }
+            minimizeFailedScenario = false
         }
-        .minimizeFailedScenario(false)
-        .detectFailure(this::class.java)
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_cycle_two_step")
 
 }
@@ -255,9 +267,10 @@ class RecursiveTwoThreadsSpinLockTest {
     }
 
     @Test
-    fun testWithModelCheckingStrategy() = ModelCheckingOptions()
-        .minimizeFailedScenario(true)
-        .detectFailure(this::class.java)
+    fun testWithModelCheckingStrategy() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration { minimizeFailedScenario = true }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_two_threads_spin_lock")
 }
 
@@ -290,8 +303,9 @@ class RecursiveParametersDependentSpinLockTest {
     fun c() = value.get()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario { parallel { thread { actor(::actorMethod) } } }
-        .detectFailure(this::class.java)
+    fun test() = LincheckSettings {
+        modelChecking()
+        scenarioGeneration { addCustomScenario { parallel { thread { actor(::actorMethod) } } } }
+    }.detectFailure(this::class.java)
         .checkLincheckOutput("spin_lock/recursive_spin_lock_param_dependent")
 }

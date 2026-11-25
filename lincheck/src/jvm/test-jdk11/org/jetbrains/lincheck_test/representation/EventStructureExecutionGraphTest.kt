@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck_test.representation
 
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.VarHandle
 import java.util.concurrent.atomic.AtomicInteger
@@ -42,9 +42,11 @@ class EventStructureExecutionGraphTest : BaseTraceRepresentationTest("event_stru
         check(!booleans[0])
     }
 
-    override fun ModelCheckingOptions.customize() {
-        useExperimentalModelChecking()
-        memoryModel(MemoryModel.RelaxedJava)
-        printExecutionGraph(true)
+    override fun LincheckSettings.customize() {
+        modelChecking {
+            enablePartialOrderReduction()
+            memoryModel = MemoryModel.RelaxedJava
+            printExecutionGraph = true
+        }
     }
 }

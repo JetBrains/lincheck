@@ -9,10 +9,10 @@
  */
 package org.jetbrains.lincheck_test.representation
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
-import org.jetbrains.lincheck_test.util.checkLincheckOutput
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck_test.util.checkLincheckOutput
+import org.jetbrains.lincheck_test.util.detectFailure
 import org.junit.Test
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
@@ -46,19 +46,22 @@ class RepeatedSuspensionTraceReportingTest {
 
     @Test
     fun test() {
-        val failure = ModelCheckingOptions()
-            .addCustomScenario {
-                parallel {
-                    thread { actor(::operation) }
-                    thread {
-                        actor(::resume)
-                        actor(::resume)
+        val failure = LincheckSettings {
+            modelChecking()
+            scenarioGeneration {
+                addCustomScenario {
+                    parallel {
+                        thread { actor(::operation) }
+                        thread {
+                            actor(::resume)
+                            actor(::resume)
+                        }
                     }
                 }
+                randomScenarios = 0
+                verifier = FailingVerifier::class.java
             }
-            .iterations(0)
-            .verifier(FailingVerifier::class.java)
-            .detectFailure(this::class.java)
+        }.detectFailure(this::class.java)
         // Rendering must not overwrite the suspension results in the collected trace.
         repeat(2) { failure.checkLincheckOutput("repeated_suspension") }
     }

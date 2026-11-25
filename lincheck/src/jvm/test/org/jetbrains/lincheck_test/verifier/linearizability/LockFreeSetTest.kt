@@ -10,8 +10,9 @@
 
 package org.jetbrains.lincheck_test.verifier.linearizability
 
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
 import kotlinx.atomicfu.*
-import org.jetbrains.lincheck.datastructures.StressOptions
 import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.*
 
@@ -40,11 +41,14 @@ class LockFreeSetTest {
             }
         }
 
-        StressOptions()
-            .addCustomScenario(scenario)
-            .invocationsPerIteration(20_000_000)
-            .iterations(0)
-            .check(LockFreeSet::class)
+        runConcurrentTest(LincheckSettings {
+            stress()
+            scenarioGeneration {
+                addCustomScenario(scenario)
+                invocationsPerScenario = 20_000_000
+                randomScenarios = 0
+            }
+        }, LockFreeSet::class)
     }
 }
 

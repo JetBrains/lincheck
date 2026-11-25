@@ -9,10 +9,10 @@
  */
 package org.jetbrains.lincheck_test.runner
 
+import org.jetbrains.lincheck.LincheckSettings
 import kotlinx.coroutines.*
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck_test.AbstractLincheckTest
-import org.jetbrains.lincheck.datastructures.Options
 import kotlin.coroutines.*
 
 class RunBlockingTest : AbstractLincheckTest() {
@@ -30,10 +30,12 @@ class RunBlockingTest : AbstractLincheckTest() {
         }
     }
 
-    override fun <O : Options<O>> O.customize() {
+    override fun LincheckSettings.customize() {
         // We ignore this test with EventStructure for now, as it uses coroutines, which are not currently supported
         ignoreExperimentalModelChecking()
-        minimizeFailedScenario(false)
-        iterations(1)
+        scenarioGeneration {
+            minimizeFailedScenario = false
+            randomScenarios = 1
+        }
     }
 }

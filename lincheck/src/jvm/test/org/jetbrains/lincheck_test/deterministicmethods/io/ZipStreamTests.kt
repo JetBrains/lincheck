@@ -10,9 +10,9 @@
 
 package org.jetbrains.lincheck_test.deterministicmethods.io
 
-import org.jetbrains.lincheck_test.deterministicmethods.AbstractDeterministicTest
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck_test.deterministicmethods.AbstractDeterministicTest
 import org.junit.Ignore
 import java.io.*
 import java.util.zip.*
@@ -27,8 +27,9 @@ class ZipOutputStreamBasicTest : ZipStreamOperationTest() {
     private val zipFile = File("test-zip-output.zip")
     
     // TODO: remove after loop detector bug is fixed (IJTD-153)
-    override fun ModelCheckingOptions.customize(): ModelCheckingOptions =
-        loopBound(1000)
+    override fun LincheckSettings.customize() = modelChecking {
+        loopDetection { loopBound = 1000 }
+    }
 
     @Operation
     fun operation(): String {
@@ -65,8 +66,9 @@ class ZipOutputStreamWithCompressionTest : ZipStreamOperationTest() {
     private val zipFile = File("test-zip-compression.zip")
 
     // TODO: remove after loop detector bug is fixed (IJTD-153)
-    override fun ModelCheckingOptions.customize(): ModelCheckingOptions =
-        loopBound(1000)
+    override fun LincheckSettings.customize() = modelChecking {
+        loopDetection { loopBound = 1000 }
+    }
     
     @Operation
     fun operation(): Map<String, Int> {
@@ -116,8 +118,9 @@ class ZipInputStreamTest : ZipStreamOperationTest() {
     private val zipFile = File("test-zip-input.zip")
     
     // TODO: remove after loop detector bug is fixed (IJTD-153)
-    override fun ModelCheckingOptions.customize(): ModelCheckingOptions =
-        loopBound(1000)
+    override fun LincheckSettings.customize() = modelChecking {
+        loopDetection { loopBound = 1000 }
+    }
 
     @Operation
     fun operation(): String {
@@ -164,8 +167,9 @@ class ZipStreamRoundTripTest : ZipStreamOperationTest() {
     private val zipFile = File("test-zip-round-trip.zip")
 
     // TODO: remove after loop detector bug is fixed (IJTD-153)
-    override fun ModelCheckingOptions.customize(): ModelCheckingOptions =
-        loopBound(1000)
+    override fun LincheckSettings.customize() = modelChecking {
+        loopDetection { loopBound = 1000 }
+    }
 
     @Operation
     fun operation(): Boolean {

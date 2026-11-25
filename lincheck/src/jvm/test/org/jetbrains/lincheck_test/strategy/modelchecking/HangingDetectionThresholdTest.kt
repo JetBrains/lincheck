@@ -10,10 +10,9 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking
 
-import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck_test.util.detectFailure
 import java.util.concurrent.atomic.AtomicInteger
 import org.junit.Test
 
@@ -33,23 +32,30 @@ class HangingDetectionThresholdTest {
 
     @Test
     fun test() {
-        val options = ModelCheckingOptions()
-            .checkObstructionFreedom()
-            .minimizeFailedScenario(false)
-            // we check that no actor can hit the same code location more than twice;
-            // because `operation` has only two calls to `get`, it should be true
-            .loopBound(2)
-            .addCustomScenario {
-                parallel {
-                    thread {
-                        actor(::operation)
-                        actor(::operation)
-                    }
+        val settings = LincheckSettings {
+            modelChecking { checkObstructionFreedom = true }
+            scenarioGeneration { minimizeFailedScenario = false }
+            modelChecking {
+                loopDetection {
+                    // we check that no actor can hit the same code location more than twice;
+                    // because `operation` has only two calls to `get`, it should be true
+                    loopBound = 2
                 }
             }
-            .iterations(0)
+            scenarioGeneration {
+                addCustomScenario {
+                    parallel {
+                        thread {
+                            actor(::operation)
+                            actor(::operation)
+                        }
+                    }
+                }
+                randomScenarios = 0
+            }
+        }
 
-        val failure = options.detectFailure(HangingDetectionThresholdTest::class.java)
+        val failure = settings.detectFailure(HangingDetectionThresholdTest::class.java)
         check(failure == null)
     }
 

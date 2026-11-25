@@ -10,12 +10,12 @@
 
 package org.jetbrains.lincheck_test.strategy.modelchecking.snapshot
 
-import org.jetbrains.lincheck.util.ExceptionResult
+import org.jetbrains.lincheck.Lincheck.runConcurrentTest
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
 import org.jetbrains.lincheck.scenario.ExecutionResult
 import org.jetbrains.lincheck.scenario.parallelResults
-import org.jetbrains.lincheck.datastructures.ManagedOptions
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
-import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.util.ExceptionResult
 import org.junit.Test
 
 abstract class AbstractSnapshotTest {
@@ -31,14 +31,17 @@ abstract class AbstractSnapshotTest {
         }
     }
 
-    protected open fun <O : ManagedOptions<O>> O.customize() {}
+    protected open fun LincheckSettings.customize() {}
 
     @Test
-    open fun testModelChecking() = ModelCheckingOptions()
-        .iterations(1)
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .actorsPerThread(2)
-        .apply { customize() }
-        .check(this::class)
+    open fun testModelChecking() = runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 1
+            operationsBefore = 0
+            operationsAfter = 0
+            operationsPerThread = 2
+        }
+        customize()
+    }, this::class)
 }
