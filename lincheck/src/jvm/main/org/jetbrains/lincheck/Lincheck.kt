@@ -20,6 +20,7 @@ import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
 import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.runIteration
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
 import org.jetbrains.lincheck.jvm.agent.withLincheckJavaAgent
@@ -38,6 +39,24 @@ object Lincheck {
     @JvmOverloads
     fun runConcurrentTest(invocations: Int = DEFAULT_INVOCATIONS, block: Runnable) =
         runConcurrentTest(invocations, LincheckSettings { modelChecking() }, block)
+
+    /**
+     * Explores interleavings of [block] and its threads under [memoryModel],
+     * failing on the first discovered exception.
+     *
+     * @param memoryModel the memory model the exploration runs under. A model weaker than
+     *   [MemoryModel.SequentialConsistency] selects the event-structure algorithm on its own,
+     *   as it is the only one exploring relaxed executions.
+     * @throws LincheckAssertionError if an invocation fails.
+     */
+    @JvmStatic
+    fun runConcurrentTest(
+        invocations: Int = DEFAULT_INVOCATIONS,
+        memoryModel: MemoryModel,
+        block: Runnable,
+    ) = runConcurrentTest(invocations, LincheckSettings {
+        modelChecking { this.memoryModel = memoryModel }
+    }, block)
 
     /**
      * Runs [block] with the default invocation limit with given [settings].

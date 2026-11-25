@@ -101,6 +101,33 @@ class MemoryModelTest(private val memoryModel: MemoryModel) {
         }
     }
 
+    @Test
+    fun testPlainStoreBuffering() {
+        // Plain (non-volatile) accesses can store-buffer: both reads observe the initial value under the relaxed
+        // model, an outcome sequential consistency forbids. This is the observable effect of selecting the model.
+        val expectedOutcomes: Set<Pair<Int, Int>> = when (memoryModel) {
+            MemoryModel.RelaxedJava -> setOf(0 to 0, 0 to 1, 1 to 0, 1 to 1)
+            else -> setOf(0 to 1, 1 to 0, 1 to 1)
+        }
+        litmusTest(assertSame(expectedOutcomes), memoryModel) {
+            var x = 0
+            var y = 0
+            var r1 = 0
+            var r2 = 0
+            val t1 = thread {
+                x = 1
+                r1 = y
+            }
+            val t2 = thread {
+                y = 1
+                r2 = x
+            }
+            t1.join()
+            t2.join()
+            (r1 to r2)
+        }
+    }
+
     // TODO: Not sure what naming convention we want here
     @Test
     fun testR_WR_W() {
