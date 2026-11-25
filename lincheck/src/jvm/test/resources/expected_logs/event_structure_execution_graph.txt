@@ -52,88 +52,88 @@ Thread 0:
     hb: T-1:0
   T0:3: Actor Start operation()
     hb: T-1:0
-  T0:4: Write Plain EventStructureExecutionGraphTest#1.value write=7 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:32)
+  T0:4: Write Plain EventStructureExecutionGraphTest#1.value write=7 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:32)
     hb: T-1:0
   T0:5: Fence Release
     hb: T-1:0
-  T0:6: Write Volatile EventStructureExecutionGraphTest#1.published write=1 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:34)
+  T0:6: Write Volatile EventStructureExecutionGraphTest#1.published write=1 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:34)
     hb: T-1:0
   T0:7: Fence Acquire
     hb: T-1:0
-  T0:8: Read^req Volatile EventStructureExecutionGraphTest#1.published at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:36)
+  T0:8: Read^req Volatile EventStructureExecutionGraphTest#1.published at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:36)
     hb: T-1:0
-  T0:9: Read^rsp Volatile EventStructureExecutionGraphTest#1.published read=1 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:36)
+  T0:9: Read^rsp Volatile EventStructureExecutionGraphTest#1.published read=1 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:36)
     rf: T0:6
     hb: T-1:0
-  T0:10: Read^req Plain EventStructureExecutionGraphTest#1.value at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:37)
+  T0:10: Read^req Plain EventStructureExecutionGraphTest#1.value at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:37)
     hb: T-1:0
-  T0:11: Read^rsp Plain EventStructureExecutionGraphTest#1.value read=7 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:37)
+  T0:11: Read^rsp Plain EventStructureExecutionGraphTest#1.value read=7 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:37)
     rf: T0:4
     hb: T-1:0
-  T0:12: Read^req Plain EventStructureExecutionGraphTest#1.counter final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
+  T0:12: Read^req Plain EventStructureExecutionGraphTest#1.counter final at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
     hb: T-1:0
-  T0:13: Read^rsp Plain EventStructureExecutionGraphTest#1.counter final read=AtomicInteger#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
+  T0:13: Read^rsp Plain EventStructureExecutionGraphTest#1.counter final read=AtomicInteger#2 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
     rf: T0:2
     hb: T-1:0
-  T0:14: Read^req Volatile AtomicInteger#2.value compareAndSet(0, 2) at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
+  T0:14: Read^req Volatile AtomicInteger#2.value compareAndSet(0, 2) at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
     hb: T-1:0
-  T0:15: Read^rsp Volatile AtomicInteger#2.value read=0 compareAndSet(0, 2) at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
+  T0:15: Read^rsp Volatile AtomicInteger#2.value read=0 compareAndSet(0, 2) at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
     rf: T-1:0
     hb: T-1:0
-  T0:16: Write Volatile AtomicInteger#2.value write=2 compareAndSet(0, 2) at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
+  T0:16: Write Volatile AtomicInteger#2.value write=2 compareAndSet(0, 2) at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)
     hb: T-1:0
-  T0:17: Read^req Plain EventStructureExecutionGraphTest.charHandle final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
+  T0:17: Read^req Plain EventStructureExecutionGraphTest.charHandle final at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
     hb: T-1:0
-  T0:18: Read^rsp Plain EventStructureExecutionGraphTest.charHandle final read=Array#3 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
+  T0:18: Read^rsp Plain EventStructureExecutionGraphTest.charHandle final read=Array#3 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
     rf: T-1:0
     hb: T-1:0
-  T0:19: Read^req Plain EventStructureExecutionGraphTest#1.chars final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
+  T0:19: Read^req Plain EventStructureExecutionGraphTest#1.chars final at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
     hb: T-1:0
-  T0:20: Read^rsp Plain EventStructureExecutionGraphTest#1.chars final read=char[]#4 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
+  T0:20: Read^rsp Plain EventStructureExecutionGraphTest#1.chars final read=char[]#4 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
     rf: T0:2
     hb: T-1:0
-  T0:21: Read^req Volatile char[]#4[0] fetchAndBitwiseAnd('老') at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
+  T0:21: Read^req Volatile char[]#4[0] fetchAndBitwiseAnd('老') at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
     hb: T-1:0
-  T0:22: Read^rsp Volatile char[]#4[0] read='考' fetchAndBitwiseAnd('老') at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
+  T0:22: Read^rsp Volatile char[]#4[0] read='考' fetchAndBitwiseAnd('老') at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
     rf: T-1:0
     hb: T-1:0
-  T0:23: Write Volatile char[]#4[0] write='老' fetchAndBitwiseAnd('老') at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
+  T0:23: Write Volatile char[]#4[0] write='老' fetchAndBitwiseAnd('老') at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)
     hb: T-1:0
-  T0:24: Read^req Plain EventStructureExecutionGraphTest#1.chars final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)
+  T0:24: Read^req Plain EventStructureExecutionGraphTest#1.chars final at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)
     hb: T-1:0
-  T0:25: Read^rsp Plain EventStructureExecutionGraphTest#1.chars final read=char[]#4 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)
+  T0:25: Read^rsp Plain EventStructureExecutionGraphTest#1.chars final read=char[]#4 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)
     rf: T0:2
     hb: T-1:0
-  T0:26: Read^req Plain char[]#4[0] at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)
+  T0:26: Read^req Plain char[]#4[0] at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)
     hb: T-1:0
-  T0:27: Read^rsp Plain char[]#4[0] read='老' at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)
+  T0:27: Read^rsp Plain char[]#4[0] read='老' at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)
     rf: T0:23
     hb: T-1:0
-  T0:28: Read^req Plain EventStructureExecutionGraphTest.booleanHandle final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
+  T0:28: Read^req Plain EventStructureExecutionGraphTest.booleanHandle final at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
     hb: T-1:0
-  T0:29: Read^rsp Plain EventStructureExecutionGraphTest.booleanHandle final read=Array#5 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
+  T0:29: Read^rsp Plain EventStructureExecutionGraphTest.booleanHandle final read=Array#5 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
     rf: T-1:0
     hb: T-1:0
-  T0:30: Read^req Plain EventStructureExecutionGraphTest#1.booleans final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
+  T0:30: Read^req Plain EventStructureExecutionGraphTest#1.booleans final at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
     hb: T-1:0
-  T0:31: Read^rsp Plain EventStructureExecutionGraphTest#1.booleans final read=boolean[]#6 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
+  T0:31: Read^rsp Plain EventStructureExecutionGraphTest#1.booleans final read=boolean[]#6 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
     rf: T0:2
     hb: T-1:0
-  T0:32: Read^req Volatile boolean[]#6[0] fetchAndBitwiseXor(true) at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
+  T0:32: Read^req Volatile boolean[]#6[0] fetchAndBitwiseXor(true) at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
     hb: T-1:0
-  T0:33: Read^rsp Volatile boolean[]#6[0] read=true fetchAndBitwiseXor(true) at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
+  T0:33: Read^rsp Volatile boolean[]#6[0] read=true fetchAndBitwiseXor(true) at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
     rf: T-1:0
     hb: T-1:0
-  T0:34: Write Volatile boolean[]#6[0] write=false fetchAndBitwiseXor(true) at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
+  T0:34: Write Volatile boolean[]#6[0] write=false fetchAndBitwiseXor(true) at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)
     hb: T-1:0
-  T0:35: Read^req Plain EventStructureExecutionGraphTest#1.booleans final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)
+  T0:35: Read^req Plain EventStructureExecutionGraphTest#1.booleans final at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)
     hb: T-1:0
-  T0:36: Read^rsp Plain EventStructureExecutionGraphTest#1.booleans final read=boolean[]#6 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)
+  T0:36: Read^rsp Plain EventStructureExecutionGraphTest#1.booleans final read=boolean[]#6 at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)
     rf: T0:2
     hb: T-1:0
-  T0:37: Read^req Plain boolean[]#6[0] at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)
+  T0:37: Read^req Plain boolean[]#6[0] at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)
     hb: T-1:0
-  T0:38: Read^rsp Plain boolean[]#6[0] read=false at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)
+  T0:38: Read^rsp Plain boolean[]#6[0] read=false at org/jetbrains/lincheck_test/representation/EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)
     rf: T0:34
     hb: T-1:0
   T0:39: Actor End operation()

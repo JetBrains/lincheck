@@ -141,8 +141,8 @@ fun leaveIgnoredSection() {
  * If given [ThreadDescriptor] is null, invokes the block directly.
  *
  * NOTE: this method is intended to be used during runtime,
- * *not* during bytecode instrumentation in the [org.jetbrains.kotlinx.lincheck.transformation] package.
- * In that context, please use [org.jetbrains.kotlinx.lincheck.transformation.invokeInsideIgnoredSection] instead.
+ * *not* during bytecode instrumentation in the [org.jetbrains.lincheck.jvm.agent] package.
+ * In that context, please use [org.jetbrains.lincheck.jvm.agent.invokeInsideIgnoredSection] instead.
  *
  * @param block the code to execute within the ignored section.
  * @return result of the [block] invocation.
@@ -263,8 +263,8 @@ inline fun <R> runOutsideIgnoredSection(block: () -> R): R {
         descriptor == null ||
         descriptor.eventTracker == null ||
         descriptor.eventTracker.javaClass.name !in listOf(
-            "org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy",
-            "org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy"
+            "org.jetbrains.lincheck.strategy.managed.ManagedStrategy",
+            "org.jetbrains.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy"
         )
     ) {
         return block()

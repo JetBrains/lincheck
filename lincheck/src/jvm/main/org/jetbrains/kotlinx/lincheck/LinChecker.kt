@@ -11,10 +11,11 @@
 
 package org.jetbrains.kotlinx.lincheck
 
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenarioChecker
 import org.jetbrains.lincheck.LincheckAssertionError
-import org.jetbrains.lincheck.datastructures.Options
+import org.jetbrains.lincheck.LincheckFailure
+import org.jetbrains.lincheck.scenario.ExecutionScenarioChecker
 import org.jetbrains.lincheck.datastructures.toSettings
+import org.jetbrains.lincheck.datastructures.Options
 import kotlin.reflect.KClass
 
 /**

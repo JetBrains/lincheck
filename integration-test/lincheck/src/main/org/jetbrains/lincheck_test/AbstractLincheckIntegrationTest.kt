@@ -9,11 +9,11 @@
  */
 package org.jetbrains.lincheck_test
 
-import org.jetbrains.kotlinx.lincheck.LincheckFailure
-import org.jetbrains.kotlinx.lincheck_test.util.*
+import org.jetbrains.lincheck.LincheckFailure
+import org.jetbrains.lincheck_test.util.*
 import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenarioChecker
+import org.jetbrains.lincheck.scenario.ExecutionScenarioChecker
 import org.junit.*
 import org.junit.Assume.assumeTrue
 import kotlin.reflect.*

@@ -693,8 +693,8 @@ class SnapshotBreakpointTransformerTest {
 
     private object LiveDebuggerLambdaFixtureClass {
         const val fileName = "LiveDebuggerLambdaFixture.kt"
-        const val outerCanonicalName = "org.jetbrains.kotlinx.lincheck_test.fixtures.LiveDebuggerLambdaFixture"
-        const val outerInternalName = "org/jetbrains/kotlinx/lincheck_test/fixtures/LiveDebuggerLambdaFixture"
+        const val outerCanonicalName = "org.jetbrains.lincheck_test.fixtures.LiveDebuggerLambdaFixture"
+        const val outerInternalName = "org/jetbrains/lincheck_test/fixtures/LiveDebuggerLambdaFixture"
         const val lambdaCanonicalName = "$outerCanonicalName\$run\$1"
         const val lambdaInternalName = "$outerInternalName\$run\$1"
     }

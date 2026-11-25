@@ -10,13 +10,13 @@
 
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.ExpandingRangeIntGenerator.NextExpansionDirection.*
 import java.util.*
 
 /**
  * The implementation of this interface is used to generate parameters
- * for [operation][org.jetbrains.kotlinx.lincheck.annotations.Operation].
+ * for [operation][org.jetbrains.lincheck.datastructures.Operation].
  *
  * Now all successors must have constructor with [RandomProvider] and config [String].
  */
@@ -31,7 +31,7 @@ interface ParameterGenerator<T> {
 }
 
 /**
- * Used only as a default value in [org.jetbrains.kotlinx.lincheck.annotations.Operation] annotation, as it's impossible to use `null` as a default value in Java
+ * Used only as a default value in [org.jetbrains.lincheck.datastructures.Operation] annotation, as it's impossible to use `null` as a default value in Java
  */
 internal object DummyParameterGenerator : ParameterGenerator<Any?> {
     override fun generate() = throw UnsupportedOperationException()

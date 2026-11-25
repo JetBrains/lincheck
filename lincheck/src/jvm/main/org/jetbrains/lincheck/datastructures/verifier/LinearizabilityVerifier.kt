@@ -9,11 +9,10 @@
  */
 package org.jetbrains.lincheck.datastructures.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.util.CancelledResult
-import org.jetbrains.kotlinx.lincheck.util.SuspendedResult
-import org.jetbrains.lincheck.datastructures.verifier.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.scenario.*
+import org.jetbrains.lincheck.util.CancelledResult
+import org.jetbrains.lincheck.util.SuspendedResult
 
 /**
  * This verifier checks that the specified results could happen if the testing operations are linearizable.

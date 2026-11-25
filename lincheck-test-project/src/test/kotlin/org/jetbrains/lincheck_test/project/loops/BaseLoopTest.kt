@@ -3,7 +3,7 @@ package org.jetbrains.lincheck_test.project.loops
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.lincheck.scenario.*
 import kotlin.test.Test
 
 abstract class BaseLoopTest {

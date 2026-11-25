@@ -8,7 +8,7 @@
  * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-import org.jetbrains.kotlinx.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
+import org.jetbrains.lincheck_test.util.OVERWRITE_REPRESENTATION_TESTS_OUTPUT
 import org.jetbrains.lincheck.trace.serialization.LazyTraceReader
 import org.jetbrains.lincheck.trace.TracePoint
 import org.jetbrains.lincheck.trace.tree.compressedView

@@ -11,7 +11,7 @@
 package org.jetbrains.lincheck_test.gpmc.coroutines.channels
 
 import kotlinx.coroutines.CoroutineDispatcher
-import org.jetbrains.kotlinx.lincheck_test.gpmc.coroutines.FixedThreadPoolCoroutineTest
+import org.jetbrains.lincheck_test.gpmc.coroutines.FixedThreadPoolCoroutineTest
 import org.junit.Test
 
 abstract class BaseChannelTest(

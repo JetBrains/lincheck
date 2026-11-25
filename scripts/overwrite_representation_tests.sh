@@ -31,7 +31,7 @@ cd "$script_dir/.."
 # always created at the beginning.
 jdks=("17") # ... "8" "11" "21"
 
-testFilter="org.jetbrains.kotlinx.lincheck_test.representation.*"
+testFilter="org.jetbrains.lincheck_test.representation.*"
 
 for jdk in "${jdks[@]}"
 do

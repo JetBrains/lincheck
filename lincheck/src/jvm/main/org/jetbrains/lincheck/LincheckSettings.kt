@@ -10,14 +10,14 @@
 
 package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.runner.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
-import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
+import org.jetbrains.lincheck.scenario.*
+import org.jetbrains.lincheck.runner.*
+import org.jetbrains.lincheck.strategy.*
+import org.jetbrains.lincheck.strategy.stress.StressStrategy
+import org.jetbrains.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
+import org.jetbrains.lincheck.strategy.managed.eventstructure.EventStructureStrategy
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
@@ -246,9 +246,14 @@ class LincheckSettings() {
 
         /**
          * Scenario generator class.
-         * Must have a constructor accepting [LincheckSettings], [CTestStructure], and [RandomProvider].
+         * Must have a public constructor accepting [LincheckSettings], [ConcurrentTestStructure], and [RandomProvider];
+         * otherwise the setter throws [IllegalArgumentException].
          */
         var executionGenerator: Class<out ExecutionGenerator> = DEFAULT_EXECUTION_GENERATOR
+            set(value) {
+                requireSupportedExecutionGenerator(value)
+                field = value
+            }
 
         /**
          * Configures the scenario generator class.
@@ -894,13 +899,6 @@ class LincheckSettings() {
      */
     internal var ideaPluginReplayModeEnabled: Boolean = false
 
-    /**
-     * A nullable factory function used for creating instances of [ExecutionGenerator]
-     * with legacy [Options]-based configuration classes.
-     */
-    internal var legacyExecutionGeneratorFactory: ((CTestStructure, RandomProvider) -> ExecutionGenerator)? = null
-
-
     // ========================================================
     //   Copying and validation
     // ========================================================
@@ -916,7 +914,6 @@ class LincheckSettings() {
         }
         it.scenarioGeneration = scenarioGeneration.copy()
         it.ideaPluginReplayModeEnabled = ideaPluginReplayModeEnabled
-        it.legacyExecutionGeneratorFactory = legacyExecutionGeneratorFactory
     }
 
     // A per-run snapshot; resolving the model-checking algorithm validates it before execution.
@@ -1010,3 +1007,27 @@ internal inline fun <T> LincheckSettings.withIdeaPluginReplayModeEnabled(block: 
         ideaPluginReplayModeEnabled = previous
     }
 }
+
+@Suppress("DEPRECATION") // only to diagnose generators written against the removed legacy contract
+private fun requireSupportedExecutionGenerator(generator: Class<out ExecutionGenerator>) {
+    val signature = "(LincheckSettings, ConcurrentTestStructure, RandomProvider)"
+    require(generator.hasConstructor(LincheckSettings::class.java, ConcurrentTestStructure::class.java, RandomProvider::class.java)) {
+        val legacySignature = when {
+            generator.hasConstructor(Options::class.java, CTestStructure::class.java, RandomProvider::class.java) ->
+                "(Options, CTestStructure, RandomProvider)"
+            generator.hasConstructor(LincheckSettings::class.java, CTestStructure::class.java, RandomProvider::class.java) ->
+                "(LincheckSettings, CTestStructure, RandomProvider)"
+            else -> null
+        }
+        if (legacySignature != null) {
+            "executionGenerator ${generator.name} declares only the no longer supported $legacySignature constructor; " +
+            "replace it with a public $signature one (CTestStructure was renamed to " +
+            "org.jetbrains.lincheck.scenario.ConcurrentTestStructure)"
+        } else {
+            "executionGenerator ${generator.name} must declare a public $signature constructor"
+        }
+    }
+}
+
+private fun Class<*>.hasConstructor(vararg parameterTypes: Class<*>): Boolean =
+    runCatching { getConstructor(*parameterTypes) }.isSuccess

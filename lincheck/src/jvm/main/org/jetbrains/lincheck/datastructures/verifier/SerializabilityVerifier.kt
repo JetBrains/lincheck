@@ -9,7 +9,7 @@
  */
 package org.jetbrains.lincheck.datastructures.verifier
 
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.lincheck.scenario.*
 
 /**
  * This verifier checks that the specified results could be happen in serializable execution.

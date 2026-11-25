@@ -13,7 +13,7 @@ package org.jetbrains.lincheck_test.datastructures
 import org.jetbrains.lincheck.Lincheck
 import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
-import org.jetbrains.kotlinx.lincheck_test.TIMEOUT
+import org.jetbrains.lincheck_test.TIMEOUT
 import org.jetbrains.lincheck.datastructures.*
 import kotlin.reflect.KClass
 import org.junit.Test

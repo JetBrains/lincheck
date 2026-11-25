@@ -45,28 +45,28 @@ Thread 0:
     hb: T-1:0
   T0:3: Actor Start operation()
     hb: T-1:0
-  T0:4: Read^req Plain UnsafeHolder.INSTANCE final at org/jetbrains/kotlinx/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:39)
+  T0:4: Read^req Plain UnsafeHolder.INSTANCE final at org/jetbrains/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:39)
     hb: T-1:0
-  T0:5: Read^rsp Plain UnsafeHolder.INSTANCE final read=UnsafeHolder#2 at org/jetbrains/kotlinx/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:39)
+  T0:5: Read^rsp Plain UnsafeHolder.INSTANCE final read=UnsafeHolder#2 at org/jetbrains/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:39)
     rf: T-1:0
     hb: T-1:0
-  T0:6: Write Plain MemoryFencesExecutionGraphTest#1.value write=1 at org/jetbrains/kotlinx/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:40)
+  T0:6: Write Plain MemoryFencesExecutionGraphTest#1.value write=1 at org/jetbrains/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:40)
     hb: T-1:0
   T0:7: Fence Release
     hb: T-1:0
-  T0:8: Write Plain MemoryFencesExecutionGraphTest#1.value write=2 at org/jetbrains/kotlinx/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:42)
+  T0:8: Write Plain MemoryFencesExecutionGraphTest#1.value write=2 at org/jetbrains/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:42)
     hb: T-1:0
   T0:9: Fence Acquire
     hb: T-1:0
-  T0:10: Write Plain MemoryFencesExecutionGraphTest#1.value write=3 at org/jetbrains/kotlinx/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:44)
+  T0:10: Write Plain MemoryFencesExecutionGraphTest#1.value write=3 at org/jetbrains/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:44)
     hb: T-1:0
   T0:11: Fence Release
     hb: T-1:0
-  T0:12: Write Plain MemoryFencesExecutionGraphTest#1.value write=4 at org/jetbrains/kotlinx/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:46)
+  T0:12: Write Plain MemoryFencesExecutionGraphTest#1.value write=4 at org/jetbrains/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:46)
     hb: T-1:0
   T0:13: Fence Acquire
     hb: T-1:0
-  T0:14: Write Plain MemoryFencesExecutionGraphTest#1.value write=5 at org/jetbrains/kotlinx/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:48)
+  T0:14: Write Plain MemoryFencesExecutionGraphTest#1.value write=5 at org/jetbrains/lincheck_test/representation/MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:48)
     hb: T-1:0
   T0:15: Fence Volatile
     hb: T-1:0

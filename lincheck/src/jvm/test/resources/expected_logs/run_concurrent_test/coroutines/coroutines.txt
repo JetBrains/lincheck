@@ -1,7 +1,7 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.CoroutinesRunConcurrentRepresentationTest$block$1$1.invokeSuspend(RunConcurrentRepresentationTests.kt:484)
+	at org.jetbrains.lincheck_test.representation.CoroutinesRunConcurrentRepresentationTest$block$1$1.invokeSuspend(RunConcurrentRepresentationTests.kt:484)
 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
 	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:108)
 	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)

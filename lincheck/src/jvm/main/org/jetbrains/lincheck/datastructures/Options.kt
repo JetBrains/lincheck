@@ -12,10 +12,10 @@
 
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.*
+import org.jetbrains.kotlinx.lincheck.detectFailure
 import org.jetbrains.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.lincheck.scenario.*
+import org.jetbrains.lincheck.strategy.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.util.LoggingLevel
 import kotlin.reflect.*
@@ -81,7 +81,7 @@ sealed class Options<OPT : Options<OPT>> {
      * Use the specified number of threads for the parallel part of an execution.
      *
      * Note, that the the actual number of threads can be less due to some restrictions
-     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
+     * like [org.jetbrains.lincheck.datastructures.Operation.runOnce].
      *
      * @see ExecutionScenario.parallelExecution
      */
@@ -93,7 +93,7 @@ sealed class Options<OPT : Options<OPT>> {
      * Generate the specified number of operations for each thread of the parallel part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
+     * like [org.jetbrains.lincheck.datastructures.Operation.runOnce].
      *
      * @see ExecutionScenario.parallelExecution
      */
@@ -105,7 +105,7 @@ sealed class Options<OPT : Options<OPT>> {
      * Generate the specified number of operation for the initial sequential part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
+     * like [org.jetbrains.lincheck.datastructures.Operation.runOnce].
      *
      * @see ExecutionScenario.initExecution
      */
@@ -117,7 +117,7 @@ sealed class Options<OPT : Options<OPT>> {
      * Generate the specified number of operation for the last sequential part of an execution.
      *
      * Note, that the the actual number of operations can be less due to some restrictions
-     * like [org.jetbrains.kotlinx.lincheck.annotations.Operation.runOnce].
+     * like [org.jetbrains.lincheck.datastructures.Operation.runOnce].
      *
      * @see ExecutionScenario.postExecution
      */
@@ -256,19 +256,5 @@ internal fun Options<*>.toSettings(): LincheckSettings = LincheckSettings().also
     settings.strategy = when (this) {
         is StressOptions -> stressSettings()
         is ModelCheckingOptions -> modelCheckingSettings()
-    }
-
-    // Older custom generators declare an Options constructor.
-    // Keep reflection at the legacy boundary.
-    val legacyConstructor = runCatching {
-        executionGenerator.getConstructor(Options::class.java, CTestStructure::class.java, RandomProvider::class.java)
-    }.getOrNull()
-    val hasSettingsConstructor = runCatching {
-        executionGenerator.getConstructor(LincheckSettings::class.java, CTestStructure::class.java, RandomProvider::class.java)
-    }.isSuccess
-    if (!hasSettingsConstructor && legacyConstructor != null) {
-        settings.legacyExecutionGeneratorFactory = { structure, random ->
-            legacyConstructor.newInstance(this, structure, random)
-        }
     }
 }

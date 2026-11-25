@@ -9,7 +9,6 @@
  */
 package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.LincheckFailure
 
 class LincheckAssertionError(
     internal val failure: LincheckFailure

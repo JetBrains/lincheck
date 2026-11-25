@@ -10,7 +10,7 @@
 
 package org.jetbrains.lincheck.datastructures.verifier;
 
-import org.jetbrains.kotlinx.lincheck.execution.*;
+import org.jetbrains.lincheck.scenario.*;
 
 import java.util.*;
 

@@ -9,7 +9,7 @@
  */
 package org.jetbrains.lincheck.datastructures.verifier;
 
-import org.jetbrains.kotlinx.lincheck.execution.*;
+import org.jetbrains.lincheck.scenario.*;
 
 /**
  * This verifier does nothing and could be used for performance benchmarking.

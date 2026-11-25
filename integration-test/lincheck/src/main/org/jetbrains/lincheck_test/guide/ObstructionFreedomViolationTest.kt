@@ -12,7 +12,7 @@ package org.jetbrains.lincheck_test.guide
 
 import org.jetbrains.lincheck.Lincheck
 import org.jetbrains.lincheck.LincheckSettings
-import org.jetbrains.kotlinx.lincheck_test.datastructures.*
+import org.jetbrains.lincheck_test.datastructures.*
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
 import org.junit.*

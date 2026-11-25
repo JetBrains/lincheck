@@ -1,7 +1,7 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: lambda failure
-	at org.jetbrains.kotlinx.lincheck_test.representation.EventStructureLambdaFailureRepresentationTest.exceptionWithoutVisibleEvents$lambda$1$lambda$0(EventStructureLambdaFailureRepresentationTest.kt:33)
+	at org.jetbrains.lincheck_test.representation.EventStructureLambdaFailureRepresentationTest.exceptionWithoutVisibleEvents$lambda$1$lambda$0(EventStructureLambdaFailureRepresentationTest.kt:33)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:

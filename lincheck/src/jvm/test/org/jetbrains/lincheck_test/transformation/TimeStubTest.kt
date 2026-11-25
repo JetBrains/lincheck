@@ -1,0 +1,50 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.jetbrains.lincheck_test.transformation
+
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.datastructures.Operation
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.junit.*
+
+/**
+ * Checks that [System.nanoTime] and [System.currentTimeMillis] are
+ * replaced with deterministic implementations in the model checking mode.
+ */
+class TimeStubTest {
+    @Volatile
+    private var a: Any = Any()
+
+    @Operation
+    fun nanoTime() {
+        if (System.nanoTime() % 3L == 2L) {
+            // just add some code locations
+            a = Any()
+            a = Any()
+        }
+    }
+
+    @Operation
+    fun currentTimeMillis() {
+        if (System.currentTimeMillis() % 3L == 2L) {
+            // just add some code locations
+            a = Any()
+            a = Any()
+        }
+    }
+
+    @Test
+    fun test() {
+        ModelCheckingOptions()
+            .iterations(30)
+            .invocationsPerIteration(1000)
+            .check(this::class)
+    }
+}

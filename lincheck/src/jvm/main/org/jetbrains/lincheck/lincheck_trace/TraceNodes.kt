@@ -1,0 +1,347 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2025 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+
+package org.jetbrains.lincheck.lincheck_trace
+
+/**
+ * Represents a single node in the hierarchical trace structure.
+ *
+ * @property callDepth Indicates the depth of the current call within the trace.
+ * @property eventNumber The sequence number event contained by this node, or contained by the first event descendant.
+ * @property tracePoint The associated trace point.
+ * @property iThread Thread id of the thread that executed this part of the trace.
+ * @property actorId Parent actor id of this trace point.
+ * @property children List of direct children of this node.
+ * @property parent The parent node of this trace node. Can be null if this node is the root.
+ * @property isLast Indicates whether this node is the last node of the actor.
+ */
+internal abstract class TraceNode(val eventNumber: Int, open val tracePoint: TracePoint) {
+    val iThread = tracePoint.iThread
+    val actorId = tracePoint.actorId
+    
+    private val _children = mutableListOf<TraceNode>()
+    val children: List<TraceNode> get() = _children
+    
+    var parent: TraceNode? = null
+        private set
+    
+    val isLast: Boolean get() {
+        if (parent == null) return true
+        return isLastChild && parent?.isLast != false
+    }
+
+    val isLastChild: Boolean get() =
+        this === parent?.children?.last()
+    
+    fun addChild(node: TraceNode) {
+        _children.add(node)
+        node.parent = this
+    }
+
+    internal abstract fun toString(withLocation: Boolean): String
+    override fun toString(): String = toString(withLocation = true)
+
+    fun lastOrNull(predicate: (TraceNode) -> Boolean): TraceNode? {
+        val last = children.mapNotNull { it.lastOrNull(predicate) }.lastOrNull()
+        if (last != null) return last
+        if (predicate(this)) return this
+        return null
+    }
+
+    /**
+     * Checks if the [predicate] holds for the current node or any of its descendants.
+     */
+    fun contains(predicate: (TraceNode) -> Boolean): Boolean =
+        predicate(this) || children.any { it.contains(predicate) }
+
+    /**
+     * Returns the level of the first node satisfying the [predicate], or -1 if no match was found.
+     *
+     * @param depth Maximum depth to check.
+     * @return level at which the first node satisfying the predicate was found,
+     *   or -1 if no match was found
+     */
+    fun findLevelOf(depth: Int, predicate: (TraceNode) -> Boolean): Int {
+        if (depth <  0) return -1
+        if (depth == 0) return if (predicate(this)) 0 else -1
+
+        if (predicate(this)) return 0
+        for (child in children) {
+            val level = child.findLevelOf(depth - 1, predicate)
+            if (level >= 0) return (level + 1)
+        }
+        return -1
+    }
+
+    /**
+     * Returns a flattened list of all nodes in the tree, including this node.
+     */
+    fun flatten(): List<TraceNode> =
+        children.flatMap { it.flatten() } + this
+
+    /**
+     * Shallow copy without children
+     */
+    abstract fun copy(): TraceNode 
+}
+
+internal class EventNode(
+    tracePoint: TracePoint,
+    eventNumber: Int,
+): TraceNode(eventNumber, tracePoint) {
+
+    override fun toString(withLocation: Boolean): String =
+        tracePoint.toString(withLocation, true)
+
+    override fun copy(): TraceNode = EventNode(tracePoint, eventNumber)
+}
+
+internal class CallNode(
+    tracePoint: MethodCallTracePoint,
+    eventNumber: Int,
+): TraceNode(eventNumber, tracePoint) {
+    override val tracePoint: MethodCallTracePoint get() = super.tracePoint as MethodCallTracePoint
+    val isRootCall get() = (parent == null)
+    var returnEventNumber: Int = -1
+
+    var isActor = tracePoint.isActor
+        private set
+
+    fun treatAsActor() {
+        isActor = true
+    }
+
+    override fun toString(withLocation: Boolean): String {
+        return tracePoint.toString(withLocation, withValues = true)
+    }
+
+    override fun copy(): TraceNode = CallNode(tracePoint, eventNumber)
+        .also { it.returnEventNumber = returnEventNumber}
+}
+
+// Is not part of an initial tree, is only added during flattening or for empty GPMC result
+internal class ResultNode(eventNumber: Int, tracePoint: MethodCallTracePoint)
+    : TraceNode(eventNumber, tracePoint) {
+
+    override val tracePoint: MethodCallTracePoint get() = super.tracePoint as MethodCallTracePoint
+
+    val representation: String get() =
+        tracePoint.returnedValue.resultRepresentation(tracePoint.exceptionNumber)
+
+    override fun toString(withLocation: Boolean): String = "result: $representation"
+
+    override fun copy(): TraceNode = ResultNode(eventNumber, tracePoint)
+}
+
+internal class EllipsisNode(
+    tracePoint: TracePoint,
+    eventNumber: Int,
+) : TraceNode(eventNumber, tracePoint) {
+    override fun toString(withLocation: Boolean): String = "..."
+    override fun copy(): TraceNode = EllipsisNode(tracePoint, eventNumber)
+}
+
+internal class LoopNode(
+    tracePoint: LoopStartTracePoint,
+    eventNumber: Int,
+) : TraceNode(eventNumber, tracePoint) {
+    override val tracePoint: LoopStartTracePoint get() = super.tracePoint as LoopStartTracePoint
+    var foldedTotalIterations: Int? = null
+
+    fun totalIterations(): Int =
+        foldedTotalIterations ?: children.sumOf {
+            when (it) {
+                is LoopIterationNode -> it.count
+                else -> 0
+            }
+        }
+
+    override fun toString(withLocation: Boolean): String {
+        val iters = totalIterations()
+        val base = "loop($iters iterations)"
+        return base + tracePoint.locationSuffix()
+    }
+
+    override fun copy(): TraceNode = LoopNode(tracePoint, eventNumber).also {
+        it.foldedTotalIterations = this.totalIterations()
+    }
+}
+
+internal class LoopIterationNode(
+    tracePoint: TracePoint,
+    eventNumber: Int,
+    val from: Int = (tracePoint as? LoopIterationTracePoint)?.iteration ?: 1,
+    val to: Int = (tracePoint as? LoopIterationTracePoint)?.iteration ?: 1
+) : TraceNode(eventNumber, tracePoint) {
+    override val tracePoint: TracePoint get() = super.tracePoint
+
+    val count: Int get() = to - from + 1
+    val isIterationRange: Boolean get() = count > 1
+
+    override fun toString(withLocation: Boolean): String {
+        if (isIterationRange) {
+            val loc = if (withLocation) tracePoint.locationSuffix() else ""
+            return "<iterations $from-$to>$loc"
+        }
+        return tracePoint.toString(withLocation, true)
+    }
+
+    override fun copy(): TraceNode = LoopIterationNode(tracePoint, eventNumber, from, to)
+}
+
+internal class RecursionNode(
+    val node: CallNode,
+    val depth: Int,
+    eventNumber: Int,
+) : TraceNode(eventNumber, node.tracePoint) {
+
+    override fun toString(withLocation: Boolean): String {
+        return "${node.toString(withLocation)} [recursive call x $depth times]"
+    }
+
+    override fun copy(): TraceNode = RecursionNode(node, depth, eventNumber)
+}
+
+// (stable) Sort on eventNumber
+internal fun Column<TraceNode>.reorder(): Column<TraceNode> =
+    sortedBy { it.eventNumber }
+
+internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<TraceNode> {
+    val nodes = MutableList<MutableList<TraceNode>>(threadCount) { mutableListOf() }
+    val currentNodePerThread = MutableList<TraceNode?>(threadCount) { null }
+    val calls = mutableMapOf<Int, Pair<MethodCallTracePoint, CallNode>>()
+    val suspendedCalls = List(threadCount) { mutableSetOf<CallNode>() }
+
+    fun currentCall(threadId: Int): CallNode? =
+        generateSequence(currentNodePerThread[threadId]) { it.parent }.filterIsInstance<CallNode>().firstOrNull()
+
+    fun closeCall(threadId: Int, eventNumber: Int) {
+        val call = currentCall(threadId) ?: return
+        call.returnEventNumber = eventNumber
+        currentNodePerThread[threadId] = call.parent
+        suspendedCalls[threadId].remove(call)
+    }
+
+    fun addToCurrentContainer(threadId: Int, node: TraceNode) {
+        val currNode = currentNodePerThread[threadId]
+        if (currNode != null) {
+            currNode.addChild(node)
+        } else {
+            nodes[threadId].add(node)
+        }
+    }
+
+    // loop over events
+    trace.trace.forEachIndexed { eventNumber, event ->
+        val currentThreadId = event.iThread
+
+        when (event) {
+            is MethodCallTracePoint -> {
+                val suspended = suspendedCalls[currentThreadId]
+                if (event.isRootCall) suspended.clear()
+                val resumedCall = if (event.isSuspend) {
+                    generateSequence(currentNodePerThread[currentThreadId]) { it.parent }
+                        .filterIsInstance<CallNode>()
+                        .firstOrNull {
+                            it in suspended && it.tracePoint.className == event.className &&
+                            it.tracePoint.methodName == event.methodName
+                        }
+                } else null
+                if (resumedCall != null) {
+                    // Tail calls may have no resumption frame, so close them before resuming their caller.
+                    while (currentCall(currentThreadId) !== resumedCall) closeCall(currentThreadId, eventNumber)
+                    suspended.remove(resumedCall)
+                    calls[event.eventId] = event to resumedCall
+                    return@forEachIndexed
+                }
+                // Resumptions update the displayed result without changing the collected invocation's result.
+                val newNode = CallNode(event.copy(), eventNumber)
+                calls[event.eventId] = event to newNode
+                addToCurrentContainer(currentThreadId, newNode)
+                currentNodePerThread[currentThreadId] = newNode
+            }
+
+            is MethodReturnTracePoint -> {
+                val invocationAndCall = calls[event.callEventId]
+                if (invocationAndCall == null) {
+                    closeCall(currentThreadId, eventNumber)
+                    return@forEachIndexed
+                }
+                val (invocation, call) = invocationAndCall
+                if (invocation.wasSuspended) {
+                    // Keep the logical call chain open across the JVM stack unwinding.
+                    suspendedCalls[currentThreadId].add(call)
+                    generateSequence(call.parent) { it.parent }.filterIsInstance<CallNode>()
+                        .firstOrNull { it.isActor }?.let { suspendedCalls[currentThreadId].add(it) }
+                    return@forEachIndexed
+                }
+                if (!call.isActor && call.tracePoint.eventId != invocation.eventId) {
+                    call.tracePoint.updateResultAfterResumption(invocation)
+                }
+                // The runner records the actor's final result after its last resumed invocation returns.
+                if (call.isActor && !invocation.isActor) return@forEachIndexed
+                closeCall(currentThreadId, eventNumber)
+            }
+
+            is LoopStartTracePoint -> {
+                val loopNode = LoopNode(event, eventNumber)
+                addToCurrentContainer(currentThreadId, loopNode)
+                currentNodePerThread[currentThreadId] = loopNode
+            }
+
+            is LoopIterationTracePoint -> {
+                // We expect either LoopNode or IterationNode
+                var curr = currentNodePerThread[currentThreadId]
+
+                // If we are currently inside an iteration, close it by moving up to the LoopNode
+                if (curr is LoopIterationNode) {
+                    curr = curr.parent
+                }
+                // If LoopNode is the current container, add iteration as its child and move into it
+                if (curr is LoopNode) {
+                    val iterNode = LoopIterationNode(event, eventNumber)
+                    curr.addChild(iterNode)
+                    currentNodePerThread[currentThreadId] = iterNode
+                } else {
+                    addToCurrentContainer(currentThreadId, EventNode(event, eventNumber))
+                }
+            }
+
+            is LoopEndTracePoint -> {
+                // Ensure we are at the LoopNode level, then pop to its parent
+                var curr = currentNodePerThread[currentThreadId]
+
+                // If in an iteration, pop up to Loop
+                if (curr is LoopIterationNode) {
+                    curr = curr.parent
+                }
+
+                // If in Loop, pop up to closing node
+                if (curr is LoopNode) {
+                    currentNodePerThread[currentThreadId] = curr.parent
+                }
+            }
+
+            else -> {
+                val eventNode = EventNode(event, eventNumber)
+                addToCurrentContainer(currentThreadId, eventNode)
+            }
+        }
+    }
+
+    // if an actor was finished unexpectedly, the `MethodReturnTracePoint` could be missing
+    for (callNode in currentNodePerThread) {
+        if (callNode is CallNode) {
+            callNode.returnEventNumber = Int.MAX_VALUE
+        }
+    }
+
+    return nodes
+}

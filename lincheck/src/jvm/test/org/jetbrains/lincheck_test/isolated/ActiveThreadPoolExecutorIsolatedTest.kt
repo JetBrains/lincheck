@@ -1,0 +1,88 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2023 JetBrains s.r.o.
+ *
+ * This Source Code Form is subject to the terms of the
+ * Mozilla Public License, v. 2.0. If a copy of the MPL was not distributed
+ * with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ */
+package org.jetbrains.lincheck_test.isolated
+
+import org.jetbrains.lincheck.runner.*
+import org.jetbrains.lincheck.jvm.agent.*
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.withLincheckTestContext
+import org.junit.*
+import sun.nio.ch.lincheck.TestThread
+import java.util.concurrent.*
+
+class ActiveThreadPoolExecutorIsolatedTest {
+    @Test
+    fun testSubmit() = withLincheckTestContext(InstrumentationMode.STRESS) {
+        ActiveThreadPoolExecutor("FixedActiveThreadsExecutorTest.testSubmit", 2).use { executor ->
+            val executed = arrayOf(false, false)
+            val tasks = Array<Pair<ThreadId, Runnable>>(2) { threadId ->
+                threadId to object : Runnable {
+                    override fun run() {
+                        executed[threadId] = true
+                    }
+                }
+            }
+            executor.submitAndAwait(threadMapOf(*tasks), Long.MAX_VALUE / 2)
+            check(executed.all { it })
+        }
+    }
+
+    @Test
+    fun testResubmit() = withLincheckTestContext(InstrumentationMode.STRESS) {
+        ActiveThreadPoolExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2).use { executor ->
+            val executed = arrayOf(false, false)
+            val tasks = Array<Pair<ThreadId, Runnable>>(2) { threadId ->
+                threadId to object : Runnable {
+                    override fun run() {
+                        executed[threadId] = true
+                    }
+                }
+            }
+            executor.submitAndAwait(threadMapOf(*tasks), Long.MAX_VALUE / 2)
+            executed.fill(false)
+            executor.submitAndAwait(threadMapOf(*tasks), Long.MAX_VALUE / 2)
+            check(executed.all { it })
+        }
+    }
+
+    @Test(timeout = 100_000)
+    fun testSubmitTimeout() = withLincheckTestContext(InstrumentationMode.STRESS) {
+        ActiveThreadPoolExecutor(
+            "FixedActiveThreadsExecutorTest.testSubmitTimeout",
+            2
+        ).use { executor ->
+            val tasks = Array<Pair<ThreadId, Runnable>>(2) { threadId ->
+                threadId to object : Runnable {
+                    override fun run() {
+                        if (threadId == 1) while (true);
+                    }
+                }
+            }
+            try {
+                executor.submitAndAwait(threadMapOf(*tasks), 200)
+            } catch (e: TimeoutException) {
+                return // TimeoutException is expected
+            }
+            check(false) { "TimeoutException was expected" }
+        }
+    }
+
+    @Test(timeout = 100_000)
+    fun testShutdown() {
+        // executor with unique runner hash
+        val executor = ActiveThreadPoolExecutor("FixedActiveThreadsExecutorTest.testResubmit", 2)
+            .also { it.close() }
+        while (true) {
+            // check that all test threads are finished
+            if (Thread.getAllStackTraces().keys.all { t -> t !is TestThread || executor.threads.none { it === t } })
+                return
+        }
+    }
+}

@@ -1,0 +1,283 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2022 JetBrains s.r.o.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ *
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ */
+
+package org.jetbrains.lincheck_test.strategy.eventstructure
+
+import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.ModelChecking
+import org.jetbrains.lincheck.datastructures.createStrategy
+import org.jetbrains.lincheck.scenario.*
+import org.jetbrains.lincheck.runner.LambdaRunner
+import org.jetbrains.lincheck.LincheckFailure
+import org.jetbrains.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.lincheck.strategy.runIteration
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
+import org.jetbrains.lincheck.withLincheckTestContext
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed
+import org.junit.Assert
+import org.junit.Test
+import org.jetbrains.lincheck.runner.ExecutionScenarioRunner
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
+import kotlin.reflect.KClass
+
+internal const val UNIQUE = -1
+internal const val UNKNOWN = -2
+
+
+//TODO: Maybe we can make a class out of this, instead of this function nonsense
+fun interface OutcomeVerifier<Outcome> {
+    fun verify(actualOutcomes: List<Outcome>)
+}
+
+internal fun <Outcome> assertNever(forbiddenOutcomes: Set<Outcome>): OutcomeVerifier<Outcome> = OutcomeVerifier { actualOutcomes ->
+    val overlap = forbiddenOutcomes.intersect(actualOutcomes.toSet())
+    Assert.assertTrue("Forbidden outcomes detected: $overlap", overlap.isEmpty())
+}
+
+internal fun <Outcome> assertSometimes(expectedOutcomes: Set<Outcome>): OutcomeVerifier<Outcome> = OutcomeVerifier { actualOutcomes ->
+    val missing = expectedOutcomes - actualOutcomes.toSet()
+    Assert.assertEquals("Some outcomes not detected:\n$missing\nGot:$actualOutcomes", missing.size, 0)
+}
+
+internal fun <Outcome> assertSame(expectedOutcomes: Set<Outcome>, executionCount: Int = UNIQUE): OutcomeVerifier<Outcome> {
+    require(executionCount >= 0 || executionCount == UNIQUE || executionCount == UNKNOWN)
+    return OutcomeVerifier { actualOutcomes ->
+        val missing = expectedOutcomes - actualOutcomes
+        val unexpected = actualOutcomes - expectedOutcomes
+        val msg = "Some outcomes not detected.\nMissing:$missing\nUnexpected:$unexpected:\n"
+        Assert.assertEquals(msg, expectedOutcomes, actualOutcomes.toSet())
+
+        val expectedCount = when (executionCount) {
+            UNIQUE -> expectedOutcomes.size
+            UNKNOWN -> actualOutcomes.size
+            else -> executionCount
+        }
+        Assert.assertEquals(expectedCount, actualOutcomes.size)
+    }
+}
+
+/**
+ * Litmus testing function for [EventStructureStrategy] that uses [ExecutionScenarioRunner].
+ *
+ * @param testClass class that is going to be tested by the execution scenario
+ * @param testScenario the execution scenario that we are going to evaluate with the event structure strategy
+ * @param expectedOutcomes the set of expected outcomes from running the test scenario. It has to match exactly as
+ * the set of outcomes gathered from the execution.
+ * @param executionCount the number of consistent invocations that should be found after running the testScenario
+ *  If it is set to UNIQUE, then this number is equal to the size of [expectedOutcomes].
+ *  If it is set to UNKNOWN, then we do not check the consistent invocations count.
+ *  @param getOutcome the function that extracts the outcome from an [ExecutionResult].
+ */
+internal fun<Outcome> litmusTest(
+    testClass: Class<*>,
+    testScenario: ExecutionScenario,
+    outcomes: Set<Outcome>,
+    memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
+    invocations: Int = INVOCATIONS,
+    getOutcome: (ExecutionResult) -> Outcome,
+) {
+    litmusTest(testClass, testScenario, assertSame(outcomes), memoryModel, invocations, getOutcome)
+}
+
+
+internal fun<Outcome> litmusTest(
+    testClass: Class<*>,
+    testScenario: ExecutionScenario,
+    outcomeVerifier: OutcomeVerifier<Outcome>,
+    memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
+    invocations: Int = INVOCATIONS,
+    getOutcome: (ExecutionResult) -> Outcome,
+) {
+    val outcomes: MutableList<Outcome> = mutableListOf()
+    val verifier = getResultsVerifier { results ->
+        outcomes.add(getOutcome(results))
+        true
+    }
+    withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
+        createStrategy(testClass, memoryModel, testScenario).use { strategy ->
+            val failure = strategy.runIteration(invocations, verifier)
+            assert(failure == null) { failure?.toString() ?: "No failure" }
+            val exhausted = !strategy.nextInvocation()
+            strategy.checkAndPrintStats(invocations)
+            printLitmusOutcomes(memoryModel, exhausted, outcomes)
+            outcomeVerifier.verify(outcomes)
+        }
+    }
+}
+
+private fun createOptions(memoryModel: MemoryModel) =
+    ModelCheckingOptions()
+        .useExperimentalModelChecking()
+        .memoryModel(memoryModel)
+        // for tests debugging set large timeout
+        .invocationTimeout(60 * 60 * 1000)
+
+internal fun createStrategy(testClass: Class<*>, memoryModel: MemoryModel, scenario: ExecutionScenario): EventStructureStrategy {
+    return createOptions(memoryModel)
+        .createStrategy(
+            testClass = testClass,
+            scenario = scenario,
+            validationFunction = null,
+        ) as EventStructureStrategy
+}
+
+internal inline fun<reified T> getValue(result: LincheckResult): T =
+    (result as ValueResult).value as T
+
+internal fun getValueSuspended(result: LincheckResult): Any? = when (result) {
+    is ValueResult -> result.value
+    is ExceptionResult -> result.throwable
+    is SuspendedResult -> result
+    is CancelledResult -> result
+    else -> throw IllegalArgumentException()
+}
+
+internal fun getResultsVerifier(verify: (ExecutionResult) -> Boolean): Verifier =
+    object : Verifier {
+        override fun verifyResults(scenario: ExecutionScenario?, results: ExecutionResult?): Boolean {
+            require(results != null)
+            results.parallelResults.flatten().forEach {
+                if (it is ExceptionResult) {
+                    throw it.throwable
+                }
+            }
+            return verify(results)
+        }
+    }
+
+
+internal fun <T> createStrategy(
+    timeoutMs: Long,
+    settings: ModelChecking,
+    inIdeaPluginReplayMode: Boolean = false,
+    memoryModel: MemoryModel,
+    block: () -> T
+): EventStructureStrategy {
+    val runner = LambdaRunner(timeoutMs = timeoutMs, block)
+    return EventStructureStrategy(
+        runner, settings, LincheckInstrumentation.context, memoryModel,
+        inIdeaPluginReplayMode = inIdeaPluginReplayMode,
+    ).also {
+        runner.initializeStrategy(it)
+    }
+}
+
+//TODO: once using EventStructure model checker with LambdaRunner is more stable, we need to remove the other litmusTest overload
+/**
+ * Alternate litmus testing function for [EventStructureStrategy] that uses [LambdaRunner].
+ *
+ * @param outcomeVerifier checks outcomes collected before exploration ends or a failure is reported.
+ * @param requireExhaustion checks that no unexplored invocation remains after the invocation budget.
+ * @param options execution settings, including loop bounds.
+ * @param expectedFailure requires this failure type instead of successful exploration.
+ * @param checkStats inspects the exploration statistics after the outcomes were collected.
+ * @param block the block of code that is going to be tested
+ */
+internal inline fun<reified Outcome> litmusTest(
+    outcomeVerifier: OutcomeVerifier<Outcome>,
+    memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
+    invocations: Int = INVOCATIONS,
+    requireExhaustion: Boolean = false,
+    options: ModelCheckingOptions = ModelCheckingOptions().analyzeStdLib(true),
+    expectedFailure: KClass<out LincheckFailure>? = null,
+    noinline checkStats: ((EventStructureStrategy.Stats) -> Unit)? = null,
+    noinline block: () -> Outcome,
+) {
+    val outcomes: MutableList<Outcome> = mutableListOf()
+    val verifier = getResultsVerifier { result ->
+        val value = getValue<Outcome>(result.parallelResults[0][0]!!)
+        outcomes.add(value)
+        true
+    }
+    withLincheckTestContext(InstrumentationMode.EXPERIMENTAL_MODEL_CHECKING) {
+        ensureObjectIsTransformed(block)
+        createStrategy(options.timeoutMs, options.createSettings(), memoryModel = memoryModel, block = block).use { strategy ->
+            val failure = strategy.runIteration(invocations, verifier)
+            Assert.assertEquals("Unexpected exploration failure: ${failure?.toString()}", expectedFailure, failure?.let { it::class })
+            // Probing the next invocation mutates the event structure, so probe once,
+            // and not after a failure unless exhaustion is asserted.
+            val exhausted = if (failure == null || requireExhaustion) !strategy.nextInvocation() else null
+            if (requireExhaustion) {
+                Assert.assertTrue("Exploration did not exhaust within $invocations invocations", exhausted == true)
+            }
+            strategy.checkAndPrintStats(invocations)
+            printLitmusOutcomes(memoryModel, exhausted, outcomes)
+            checkStats?.invoke(strategy.stats)
+            outcomeVerifier.verify(outcomes)
+        }
+    }
+}
+
+
+/**
+ * Prints the complete explored outcome set of a litmus test as one machine-readable line,
+ * so that the checker's outcome set stays visible when the verifier checks only a subset of it
+ * ([assertNever], [assertSometimes]) or fails.
+ *
+ * Gradle reports stdout once per test class, so the line names the running `@Test` method itself.
+ *
+ * @param exhausted whether no unexplored invocation remained, or `null` if that was not probed.
+ */
+internal fun printLitmusOutcomes(memoryModel: MemoryModel, exhausted: Boolean?, outcomes: List<*>) {
+    val set = outcomes.map { it.toString() }.distinct().sorted()
+    println(
+        "LITMUS_OUTCOMES test=${currentTestName()} model=$memoryModel exhausted=${exhausted ?: "unknown"} " +
+        "completed=${outcomes.size} outcomes=${set.size} set=$set"
+    )
+}
+
+/** The innermost JUnit `@Test` method on the current stack as `Class.method`, or `unknown` if there is none. */
+private fun currentTestName(): String {
+    val frame = Thread.currentThread().stackTrace.firstOrNull { frame ->
+        frame.className.startsWith("org.jetbrains.lincheck_test.") &&
+            runCatching { Class.forName(frame.className) }.getOrNull()
+                ?.declaredMethods?.any { it.name == frame.methodName && it.isAnnotationPresent(Test::class.java) } == true
+    } ?: return "unknown"
+    return "${frame.className.substringAfterLast('.')}.${frame.methodName}"
+}
+
+/**
+ * Checks the invariants of the exploration statistics and prints them,
+ * so that the number of redundant explorations is visible even for passing tests.
+ *
+ * Every explored execution graph is a sub-graph of the event structure at the end of its exploration,
+ * so the event structure sizes dominate the execution graph sizes.
+ */
+internal fun EventStructureStrategy.checkAndPrintStats(invocations: Int) {
+    println("Stats: $stats")
+    Assert.assertTrue("No explored invocations are counted", stats.totalInvocations in 1..invocations)
+    Assert.assertTrue("Explored execution graphs are empty", stats.executionEventsTotal > 0)
+    Assert.assertTrue(
+        "Event structure is smaller than the explored execution graphs",
+        stats.eventStructureEventsTotal >= stats.executionEventsTotal,
+    )
+    Assert.assertTrue(
+        "Event structure is smaller than the largest explored execution graph",
+        stats.maxEventStructureEvents >= stats.maxExecutionEvents,
+    )
+}
+
+internal const val TIMEOUT = 30 * 1000L // 30 sec
+
+// we expect for all litmus tests to have less than 1000 outcomes
+private const val INVOCATIONS = 1000

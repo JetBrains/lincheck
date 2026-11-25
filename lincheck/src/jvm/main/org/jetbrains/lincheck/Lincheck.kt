@@ -9,17 +9,16 @@
  */
 package org.jetbrains.lincheck
 
-import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
-import org.jetbrains.kotlinx.lincheck.runPluginReplay
+import org.jetbrains.lincheck.util.ExceptionResult
 import org.jetbrains.lincheck.util.ideaPluginEnabled
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenarioChecker
+import org.jetbrains.lincheck.scenario.ExecutionScenarioChecker
 import kotlin.reflect.KClass
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
-import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
-import org.jetbrains.kotlinx.lincheck.execution.parallelResults
-import org.jetbrains.kotlinx.lincheck.runner.LambdaRunner
-import org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.runIteration
+import org.jetbrains.lincheck.scenario.ExecutionResult
+import org.jetbrains.lincheck.scenario.ExecutionScenario
+import org.jetbrains.lincheck.scenario.parallelResults
+import org.jetbrains.lincheck.runner.LambdaRunner
+import org.jetbrains.lincheck.strategy.managed.ManagedStrategy
+import org.jetbrains.lincheck.strategy.runIteration
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTransformed

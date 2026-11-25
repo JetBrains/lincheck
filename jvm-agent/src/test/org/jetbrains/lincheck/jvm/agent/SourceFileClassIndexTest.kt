@@ -237,7 +237,7 @@ class SourceFileClassIndexTest {
         // Loaded normally from the test classpath, never reported to the index by the transformer —
         // like a class loaded before a dynamic agent attach. The installation-time sweep must
         // resolve its source file from the class-file resource of its class loader.
-        val clazz = Class.forName("org.jetbrains.kotlinx.lincheck_test.fixtures.LambdaFixture")
+        val clazz = Class.forName("org.jetbrains.lincheck_test.fixtures.LambdaFixture")
 
         SourceFileClassIndex.indexClasses(listOf(clazz))
 

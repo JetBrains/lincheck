@@ -1,0 +1,1153 @@
+/*
+ * Lincheck
+ *
+ * Copyright (C) 2019 - 2022 JetBrains s.r.o.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Lesser Public License for more details.
+ *
+ * You should have received a copy of the GNU General Lesser Public
+ * License along with this program.  If not, see
+ * <http://www.gnu.org/licenses/lgpl-3.0.html>
+ */
+
+package org.jetbrains.lincheck.strategy.managed.eventstructure
+
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.scenario.*
+import org.jetbrains.lincheck.runner.*
+import org.jetbrains.lincheck.strategy.*
+import org.jetbrains.lincheck.strategy.managed.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.strategy.managed.eventstructure.consistency.*
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
+import org.jetbrains.lincheck.descriptors.Types
+import org.jetbrains.lincheck.descriptors.getArrayElementType
+import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.util.collections.*
+import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
+import org.jetbrains.lincheck.util.MemoryOrdering
+import sun.nio.ch.lincheck.ThreadDescriptor
+import java.util.Locale
+import org.objectweb.asm.Type as AsmType
+
+/**
+ * Explores executions using an event structure under the selected memory model.
+ *
+ * @param runner executes each invocation of the tested code.
+ * @param settings configures exploration bounds and managed analysis.
+ * @param context provides trace metadata for instrumented execution.
+ * @param memoryModel defines which execution graphs are consistent.
+ * @param inIdeaPluginReplayMode enables replay integration with the IntelliJ plugin.
+ * @param printExecutionGraph appends the failing invocation's execution graph to its report.
+ */
+internal class EventStructureStrategy(
+    runner: Runner,
+    settings: LincheckSettings.TestingStrategy.ModelChecking,
+    private val context: TraceContext,
+    val memoryModel: MemoryModel = MemoryModel.SequentialConsistency,
+    inIdeaPluginReplayMode: Boolean = false,
+    val printExecutionGraph: Boolean = false,
+) : ManagedStrategy(runner, settings, inIdeaPluginReplayMode, context) {
+
+    private val memoryInitializer: MemoryInitializer = { location ->
+        runInsideIgnoredSection {
+            location.read(eventStructure.eventStructureObjectTracker::getValue)?.opaque()
+        }
+    }
+
+    val stats = Stats()
+
+    private val eventStructure: EventStructure =
+        EventStructure(
+            memoryModel, memoryInitializer, ::onInconsistency, ::getCurrentThreadId,
+            loopDetector::resetLoopIterations, stats::discardExploration,
+        ) { iThread, reason ->
+            switchCurrentThread(iThread, reason)
+        }
+
+    private var isTestInstanceRegistered = false
+
+    // Tracker of objects.
+    override val objectTracker: ObjectTracker =
+        eventStructure.eventStructureObjectTracker
+    // Tracker of shared memory accesses.
+    override val memoryTracker: MemoryTracker =
+        EventStructureMemoryTracker(eventStructure, objectTracker)
+    // Tracker of monitors operations.
+    override val monitorTracker: MonitorTracker =
+        EventStructureMonitorTracker(eventStructure, eventStructure.eventStructureObjectTracker)
+    // Tracker of thread parking
+    override val parkingTracker: ParkingTracker =
+        EventStructureParkingTracker(eventStructure)
+
+    override val trackFinalFields = true
+
+    override fun afterObjectConstructor(threadDescriptor: ThreadDescriptor, obj: Any, className: String) {
+        super.afterObjectConstructor(threadDescriptor, obj, className)
+        if (memoryModel != MemoryModel.RelaxedJava) return
+        threadDescriptor.runInsideIgnoredSection {
+            val objectID = objectTracker[obj]?.objectNumber ?: return
+            val declaringClass = generateSequence(obj.javaClass) { it.superclass }
+                .firstOrNull { it.name == className } ?: return
+            val locations = declaringClass.declaredFinalInstanceFields
+                .map { field ->
+                    ObjectFieldMemoryLocation(
+                        obj.javaClass,
+                        objectID,
+                        declaringClass.name,
+                        field.name,
+                        Types.convertAsmTypeName(AsmType.getDescriptor(field.type)),
+                        field,
+                        isFinal = true,
+                    )
+                }
+                .toSet()
+            eventStructure.addFreezeEvent(getCurrentThreadId(), objectID, locations)
+        }
+    }
+
+    override fun shouldInvokeBeforeEvent(): Boolean {
+        // TODO: fixme
+        return false
+    }
+
+    override fun nextInvocation(): Boolean {
+        // check that we have the next invocation to explore
+        return eventStructure.startNextExploration()
+    }
+
+    override fun initializeInvocation() {
+        super.initializeInvocation()
+        isTestInstanceRegistered = false
+        eventStructure.initializeExploration()
+    }
+
+    override fun runInvocationImpl(): InvocationResult {
+        val (result, inconsistency) = runNextExploration()
+        if (inconsistency != null) {
+            val filteredResult = InconsistentInvocationResult(scenario ?: emptyScenario(), collectExecutionResults(), inconsistency, analysisProfile)
+            // ManagedStrategy returns a sudden result in preference to this method's result.
+            if (suddenInvocationResult != null) suddenInvocationResult = filteredResult
+            return filteredResult
+        }
+        check(result != null)
+        // TODO: re-verify that it is safe to omit the memory dump at the end;
+        //   it should be safe, because currently in the event-structure based algorithm,
+        //   the intercepted writes are still performed, so the actual state of the memory
+        //   reflects the state modelled by the current execution graph.
+        // runInIgnoredSection {
+        //     memoryTracker.dumpMemory()
+        // }
+        return result
+    }
+
+    // TODO: rename & refactor!
+    fun runNextExploration(): Pair<InvocationResult?, Inconsistency?> {
+        var result: InvocationResult? = null
+        var inconsistency: Inconsistency? = eventStructure.checkConsistency()
+        var executionEvents = eventStructure.execution.size
+        if (inconsistency == null) {
+            eventStructure.addThreadStartEvent(eventStructure.mainThreadId)
+            result = super.runInvocationImpl()
+            // Measure before an abort resets the execution graph to its replayed prefix.
+            executionEvents = eventStructure.execution.size
+            // if invocation was aborted, we also abort the current execution inside event structure
+            if (result.isAbortedInvocation()) {
+                eventStructure.abortExploration()
+            }
+            inconsistency = eventStructure.checkConsistency()
+                ?: ((result as? FailedInvocationResult)?.failure as? InconsistentExecutionFailure)?.inconsistency
+            if (inconsistency == null && result is CompletedInvocationResult) {
+                val patchedResult = patchResultsClock(eventStructure.execution, result.results)
+                result = CompletedInvocationResult(result.scenario, patchedResult)
+            }
+        }
+
+        // Trace collection replays an exploration already counted in the statistics.
+        if (!collectTrace) {
+            stats.update(inconsistency, executionEvents, eventStructure.events.size)
+        }
+        return (result to inconsistency)
+    }
+
+    override fun close() {
+        Logger.info { "Event structure exploration statistics:\n$stats" }
+        super.close()
+    }
+
+    override fun initializeReplay() {
+        super.initializeReplay()
+        eventStructure.initializeReplay()
+    }
+
+    internal fun lastExecutionEvent(iThread: Int): AtomicThreadEvent? =
+        eventStructure.lastPlayedEvent(iThread)
+
+    internal fun readsFromNonLatestWrite(read: AtomicThreadEvent): Boolean =
+        eventStructure.readsFromNonLatestReplayedWrite(read)
+
+    internal fun collectExecutionGraph(): String = eventStructure.execution.toExecutionGraph(context) {
+        eventStructure.eventStructureObjectTracker.getObject(it)?.unwrap()
+    }
+
+    /**
+     * Statistics of the explorations performed by the strategy.
+     */
+    class Stats {
+
+        /** Consistent invocations */
+        var consistentInvocations: Int = 0
+            private set
+
+        /** Blocked invocations */
+        var blockedInvocations: Int = 0
+            private set
+
+        /** Explorations discarded before running, outside of the invocation budget. */
+        var discardedExplorations: Int = 0
+            private set
+
+        /** Sum of the execution graph sizes (in events) over all explored invocations. */
+        var executionEventsTotal: Long = 0
+            private set
+
+        /** Sum of the event structure sizes (in events) over all explored invocations. */
+        var eventStructureEventsTotal: Long = 0
+            private set
+
+        /** Maximal size (in events) of an explored execution graph. */
+        var maxExecutionEvents: Int = 0
+            private set
+
+        /** Maximal size (in events) of the event structure at the end of an exploration. */
+        var maxEventStructureEvents: Int = 0
+            private set
+
+        private var lockConsistencyViolationCount: Int = 0
+
+        private var atomicityInconsistenciesCount: Int = 0
+
+        private var relAcqInconsistenciesCount: Int = 0
+
+        private var finalFieldsViolationsCount: Int = 0
+
+        private var seqCstCoherenceViolationCount: Int = 0
+
+        private var seqCstReplayViolationCount: Int = 0
+
+        private val sequentialConsistencyViolationsCount: Int
+            get() =
+                seqCstCoherenceViolationCount +
+                seqCstReplayViolationCount
+
+        val inconsistentInvocations: Int
+            get() =
+                lockConsistencyViolationCount +
+                atomicityInconsistenciesCount +
+                relAcqInconsistenciesCount +
+                finalFieldsViolationsCount +
+                sequentialConsistencyViolationsCount
+
+        val totalInvocations: Int
+            get() = consistentInvocations + inconsistentInvocations + blockedInvocations
+
+        val averageExecutionEvents: Double
+            get() = if (totalInvocations == 0) 0.0 else executionEventsTotal.toDouble() / totalInvocations
+
+        val averageEventStructureEvents: Double
+            get() = if (totalInvocations == 0) 0.0 else eventStructureEventsTotal.toDouble() / totalInvocations
+
+        /** Ratio of the event structure size to the execution graph size, over all explored invocations. */
+        val eventStructureToExecutionRatio: Double
+            get() = if (executionEventsTotal == 0L) 0.0 else eventStructureEventsTotal.toDouble() / executionEventsTotal
+
+        /**
+         * Records a completed exploration.
+         *
+         * @param inconsistency the inconsistency that aborted the exploration, or null if the execution graph is consistent.
+         * @param executionEvents the number of events in the explored execution graph.
+         * @param eventStructureEvents the number of events in the event structure at the end of the exploration.
+         */
+        fun update(inconsistency: Inconsistency?, executionEvents: Int, eventStructureEvents: Int) {
+            executionEventsTotal += executionEvents
+            eventStructureEventsTotal += eventStructureEvents
+            maxExecutionEvents = maxOf(maxExecutionEvents, executionEvents)
+            maxEventStructureEvents = maxOf(maxEventStructureEvents, eventStructureEvents)
+            if (inconsistency == null) {
+                consistentInvocations++
+                return
+            }
+            when(inconsistency) {
+                is LockConsistencyViolation ->
+                    lockConsistencyViolationCount++
+                is ReadModifyWriteAtomicityViolation ->
+                    atomicityInconsistenciesCount++
+                is ReleaseAcquireInconsistency ->
+                    relAcqInconsistenciesCount++
+                is FinalFieldsViolation ->
+                    finalFieldsViolationsCount++
+                is CoherenceViolation ->
+                    seqCstCoherenceViolationCount++
+                is SequentialConsistencyReplayViolation ->
+                    seqCstReplayViolationCount++
+            }
+        }
+
+        fun discardExploration() {
+            discardedExplorations++
+        }
+
+        override fun toString(): String = """
+            #Total invocations   = $totalInvocations         
+                #consistent      = $consistentInvocations    
+                #inconsistent    = $inconsistentInvocations
+                #blocked         = $blockedInvocations
+            #Discarded early     = $discardedExplorations
+            ----
+            #Lock   violations   = $lockConsistencyViolationCount                
+            #Atom.  violations   = $atomicityInconsistenciesCount
+            #RelAcq violations   = $relAcqInconsistenciesCount
+            #Final  violations   = $finalFieldsViolationsCount
+            #SeqCst violations   = $sequentialConsistencyViolationsCount
+                #coher.  phase   = $seqCstCoherenceViolationCount
+                #replay  phase   = $seqCstReplayViolationCount
+            ----    
+            #Events per exec graph   (avg) = ${"%.2f".format(Locale.ROOT, averageExecutionEvents)}
+            #Events per event struct (avg) = ${"%.2f".format(Locale.ROOT, averageEventStructureEvents)}
+            #Events in exec graph    (max) = $maxExecutionEvents
+            #Events in event struct  (max) = $maxEventStructureEvents
+            #Events ratio (struct / graph) = ${"%.3f".format(Locale.ROOT, eventStructureToExecutionRatio)}
+        """.trimIndent()
+
+    }
+
+    // a hack to reset happens-before clocks computed by scheduler,
+    // because these clocks can be not in sync with with
+    // happens-before relation constructed by the event structure
+    // TODO: refactor this --- we need a more robust solution;
+    //   for example, we can compute happens before relation induced by
+    //   the event structure and pass it on
+    private fun patchResultsClock(execution: Execution<AtomicThreadEvent>, executionResult: ExecutionResult): ExecutionResult {
+        val initPartSize = executionResult.initResults.size
+        val postPartSize = executionResult.postResults.size
+        val hbClockSize = executionResult.parallelResultsWithClock.size
+        val patchedParallelResults = executionResult.parallelResultsWithClock
+            .map { it.map { resultWithClock -> ResultWithClock(resultWithClock.result, resultWithClock.clockOnStart) }}
+        val (actorsExecution, _) = execution.aggregate(ActorAggregator(execution))
+
+        // NOTE: This check is only valid if it is an ExecutionScenarioRunner. If we have a lambda runner then hbClockSize is just 1 (for the main) thread
+        // and extra threads that are forked are not considered
+        check((runner is ExecutionScenarioRunner) implies (actorsExecution.threadIDs.size == hbClockSize + 1))
+        for (tid in patchedParallelResults.indices) {
+            var actorEvents: List<HyperThreadEvent> = actorsExecution[tid]!!
+            // cut init/post part
+            if (tid == 0) {
+                actorEvents = actorEvents.subList(
+                    fromIndex = initPartSize,
+                    toIndex = actorEvents.size - postPartSize,
+                )
+            }
+            val actorResults = patchedParallelResults[tid]
+            actorResults.forEachIndexed { i, result ->
+                val actorEvent = actorEvents.getOrNull(i)
+                val prevHBClock = actorResults.getOrNull(i - 1)?.clockOnStart?.copy()
+                    ?: emptyClock(hbClockSize)
+                val clockSize = result.clockOnStart.clock.size
+                val hbClock = actorEvent?.causalityClock?.toHBClock(clockSize, tid, i)
+                    ?: prevHBClock.apply { clock[tid] = i }
+                // cut init part actors
+                hbClock.clock[0] -= initPartSize
+                check(hbClock[tid] == i)
+                result.clockOnStart.set(hbClock)
+            }
+        }
+        return ExecutionResult(
+            initResults = executionResult.initResults,
+            parallelResultsWithClock = patchedParallelResults,
+            postResults = executionResult.postResults,
+        )
+    }
+
+    var threadToSwitch : ThreadId? = null
+    override fun onSwitchPoint(iThread: ThreadId) {
+        threadToSwitch = iThread
+    }
+
+    override fun shouldSwitch(): Boolean {
+        // TODO: this has changed, see what the new semantics are
+        // If strategy is in replay phase we first need to execute replaying threads
+        // if (eventStructure.inReplayPhase() && !eventStructure.inReplayPhase(iThread)) {
+        //     return ThreadSwitchDecision.MAY
+        // }
+
+        // If strategy is in replay mode for given thread
+        // we should wait until replaying the next event become possible
+        // (i.e. when all the dependencies will be replayed too)
+        if (threadToSwitch != null && eventStructure.inReplayPhase(threadToSwitch!!)) {
+            return if (eventStructure.canReplayNextEvent(threadToSwitch!!))
+                false
+            else
+                true
+        }
+
+        /* For event structure strategy enforcing context switches is not necessary,
+         * because it is guaranteed that the strategy will explore all
+         * executions anyway, no matter of the order of context switches.
+         * Thus, in principle it is possible to explore threads in fixed static order,
+         * (e.g. always return false here).
+         * In practice, however, the order of context switches may influence performance
+         * of the model checking, and time-to-first-bug-discovered metric.
+         * Thus we might want to customize scheduling strategy.
+         * TODO: make scheduling strategy configurable
+         */
+        return false
+    }
+
+    override fun chooseThread(iThread: Int): Int {
+        // see comment in `shouldSwitch` method
+        // TODO: make scheduling strategy configurable
+        return if (currentExecutionPart == ExecutionPart.PARALLEL) {
+            var threads = switchableThreads(iThread)
+            // Spinning threads must not prevent a pending lock acquisition from making progress.
+            if (threads.all { threadScheduler.isLiveLocked(it) } && !eventStructure.inReplayPhase()) {
+                eventStructure.completePendingLockRequests()
+                val completed = threadScheduler.getRegisteredThreadIds().filter { threadId ->
+                    val request = eventStructure.getPendingBlockingRequest(threadId)
+                    request != null && request.label.satisfies<LockLabel> { isRequest && !isReentry } &&
+                        eventStructure.isPendingUnblockedRequest(request)
+                }
+                for (threadId in completed) {
+                    val reason = threadScheduler.getBlockingReason(threadId)
+                    if (reason == BlockingReason.Locked || reason == BlockingReason.Waiting) {
+                        threadScheduler.unblockThread(threadId)
+                    }
+                }
+                threads = switchableThreads(iThread)
+                // The current acquisition has not entered the scheduler's blocked state yet.
+                if (threads.all { threadScheduler.isLiveLocked(it) } && iThread in completed) return iThread
+            }
+            // We prefer to switch to a non-livelocked thread
+            val preferredChoice = threads.firstOrNull { !threadScheduler.isLiveLocked(it) }
+            // If there is no such option, we choose the first livelocked thread instead
+            val choice = threads.firstOrNull()
+            preferredChoice ?: choice ?: -1
+        }
+        else
+            eventStructure.mainThreadId
+    }
+
+    override fun isActive(iThread: Int): Boolean {
+        // Note: We may want to switch to a livelocked thread in case it can be scheduled
+        return (super.isActive(iThread) || threadScheduler.isLiveLocked(iThread)) && (eventStructure.inReplayPhase() implies {
+            eventStructure.inReplayPhase(iThread) && eventStructure.canReplayNextEvent(iThread)
+        })
+    }
+
+    override fun beforePart(part: ExecutionPart) {
+        super.beforePart(part)
+        val forkedThreads = getRegisteredThreads()
+            .mapNotNull {
+                if (it.key == eventStructure.mainThreadId) return@mapNotNull null
+                return@mapNotNull it.key
+            }
+            .toSet()
+        when (part) {
+            ExecutionPart.INIT -> {
+                registerTestInstance()
+            }
+            ExecutionPart.PARALLEL -> {
+                if (!isTestInstanceRegistered) {
+                    registerTestInstance()
+                }
+                if (forkedThreads.isNotEmpty()) {
+                    eventStructure.addThreadForkEvent(eventStructure.mainThreadId, forkedThreads)
+                }
+            }
+            ExecutionPart.POST -> {
+                if (forkedThreads.isNotEmpty()) {
+                    eventStructure.addThreadJoinEvent(eventStructure.mainThreadId, forkedThreads)
+                }
+            }
+            else -> {}
+        }
+    }
+
+    override fun registerThread(thread: Thread, descriptor: ThreadDescriptor): ThreadId {
+        val threadId = super.registerThread(thread, descriptor)
+        eventStructure.registerThread(threadId)
+        return threadId
+    }
+
+    private fun registerTestInstance() {
+        check(!isTestInstanceRegistered)
+        val testInstance = (runner as? ExecutionScenarioRunner)?.testInstance
+        //NOTE: Since the IdentityHashCode of the test instance changes between invocations
+        // we cannot keep it as an external object. Instead, we register it as an "internal"
+        // object on each invocation
+        if (testInstance != null) {
+            (objectTracker as EventStructureObjectTracker).registerNewObject(testInstance)
+        }
+        isTestInstanceRegistered = true
+    }
+
+    override fun onThreadStart(threadId: Int) {
+        super.onThreadStart(threadId)
+        runInsideIgnoredSection {
+            if (threadId != eventStructure.mainThreadId && threadId != eventStructure.initThreadId) {
+                eventStructure.addThreadStartEvent(threadId)
+            }
+        }
+    }
+
+    override fun onThreadJoin(threadDescriptor: ThreadDescriptor, joinedThread: Thread?, withTimeout: Boolean): Unit = runInsideIgnoredSection {
+        super.onThreadJoin(threadDescriptor, joinedThread, withTimeout)
+        val currentThreadId = threadScheduler.getCurrentThreadId()
+        val joinedThreadId = threadScheduler.getThreadId(joinedThread!!)
+        eventStructure.addThreadJoinEvent(currentThreadId, setOf(joinedThreadId))
+    }
+
+
+    override fun beforeThreadStart(
+        threadDescriptor: ThreadDescriptor,
+        startingThread: Thread,
+        startingThreadDescriptor: ThreadDescriptor
+    ) {
+        threadDescriptor.runInsideIgnoredSection {
+            super.beforeThreadStart(threadDescriptor, startingThread, startingThreadDescriptor)
+            val newThreadId = threadScheduler.getThreadId(startingThread)
+            // NOTE: The main thread is a special case, since it is forked from the "initial" thread,
+            //       which is not tracked in Eventstrcuture. Therefore, we want to skip tracking it
+            if (newThreadId != -1 || newThreadId != eventStructure.mainThreadId) {
+                val currentThreadId = threadScheduler.getCurrentThreadId()
+                eventStructure.addThreadForkEvent(currentThreadId, setOf(newThreadId))
+            }
+        }
+    }
+
+    override fun onThreadFinish(threadId: Int) {
+        // TODO: refactor, make `switchCurrentThread` private again in ManagedStrategy,
+        //   call overridden `onStart` and `onFinish` methods only when thread is active
+        //   and the `currentThread` lock is held
+        runInsideIgnoredSection {
+            threadScheduler.awaitTurn(threadId)
+            // TODO: extract this check into a method ?
+            while (eventStructure.inReplayPhase() && !eventStructure.canReplayNextEvent(threadId)) {
+                switchCurrentThread(threadId, null) // TODO: Should not be null, since we would not switch we need another blocking reason
+            }
+            eventStructure.addThreadFinishEvent(threadId)
+        }
+        super.onThreadFinish(threadId)
+    }
+
+    override fun onActorStart(iThread: Int) {
+        super.onActorStart(iThread)
+        // TODO: move ignored section to ManagedStrategyRunner
+        runInsideIgnoredSection {
+            if (threadScheduler.isAborted(iThread)) {
+                disableAnalysis()
+                return
+            }
+            if (currentExecutionPart == ExecutionPart.VALIDATION)
+                return@runInsideIgnoredSection
+            val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
+            eventStructure.addActorStartEvent(iThread, actor)
+        }
+    }
+
+    override fun onActorFinish(iThread: Int) {
+        // TODO: move ignored section to ManagedStrategyRunner
+        runInsideIgnoredSection {
+            if (threadScheduler.isAborted(iThread)) {
+                disableAnalysis()
+                return
+            }
+            if (currentExecutionPart == ExecutionPart.VALIDATION)
+                return@runInsideIgnoredSection
+            val actor = scenario!!.threads[iThread][currentActorId.getOrDefault(iThread, 0)]
+            eventStructure.addActorEndEvent(iThread, actor)
+        }
+        super.onActorFinish(iThread)
+    }
+
+    override fun afterReadField(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        obj: Any?,
+        fieldId: Int,
+        value: Any?
+    ) {
+        threadDescriptor.runInsideIgnoredSection {
+            // In the case of eventstrcutre this object should already be registered
+            if (value !== null && objectTracker.shouldTrackObject(value)) {
+                check(objectTracker.get(value) != null)
+            }
+        }
+        super.afterReadField(threadDescriptor, codeLocation, obj, fieldId, value)
+    }
+
+    override fun afterReadArrayElement(
+        threadDescriptor: ThreadDescriptor,
+        codeLocation: Int,
+        array: Any?,
+        index: Int,
+        value: Any?
+    ) {
+        threadDescriptor.runInsideIgnoredSection {
+            // In the case of eventstrcutre this object should already be registered
+            if (value !== null && objectTracker.shouldTrackObject(value)) {
+                check(objectTracker.get(value) != null)
+            }
+        }
+        super.afterReadArrayElement(threadDescriptor, codeLocation, array, index, value)
+    }
+
+    private fun onInconsistency(inconsistency: Inconsistency) {
+        abortWithSuddenInvocationResult(
+            InconsistentInvocationResult(scenario ?: emptyScenario(), collectExecutionResults(), inconsistency, analysisProfile)
+        )
+    }
+
+    private fun getCurrentThreadId(): Int  = threadScheduler.getCurrentThreadId()
+
+    // NOTE: I guess this should not be final anymore (this has been changed)
+    override fun afterCoroutineSuspended(iThread: Int) {
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId.getOrDefault(iThread, 0))
+        super.afterCoroutineSuspended(iThread)
+    }
+
+    //NOTE: Same as above
+    override fun afterCoroutineResumed(iThread: Int) {
+        super.afterCoroutineResumed(iThread)
+        eventStructure.addCoroutineSuspendResponseEvent(iThread, currentActorId.getOrDefault(iThread, 0))
+    }
+
+    // NOTE: In ManagedStrategy we have two flavours of afterCoroutineCancelletion none of which contain promptCancellation (how do we translate it)
+    override fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationResult: CancellationResult) {
+        super.afterCoroutineCancellation(iThread, promptCancelatioon, cancellationResult)
+        if (cancellationResult == CancellationResult.CANCELLATION_FAILED)
+            return
+
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancelatioon)
+        eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
+    }
+
+    override fun afterCoroutineCancellation(iThread: Int, promptCancelatioon: Boolean, cancellationException: Throwable) {
+        super.afterCoroutineCancellation(iThread, promptCancelatioon, cancellationException)
+        eventStructure.addCoroutineSuspendRequestEvent(iThread, currentActorId[iThread]!!, promptCancelatioon)
+        eventStructure.addCoroutineCancelResponseEvent(iThread, currentActorId[iThread]!!)
+    }
+
+    override fun onCoroutineResumption(iResumedThread: Int, iResumedActor: Int) {
+        super.onCoroutineResumption(iResumedThread, iResumedActor)
+        eventStructure.addCoroutineResumeEvent(threadScheduler.getCurrentThreadId(), iResumedThread, iResumedActor)
+    }
+
+    override fun isCoroutineResumed(iThread: Int, iActor: Int): Boolean {
+        if (!super.isCoroutineResumed(iThread, iActor))
+            return false
+        val resumeEvent = eventStructure.execution.find {
+            it.label.satisfies<CoroutineResumeLabel> { threadId == iThread && actorId == iActor }
+        }
+        return (resumeEvent != null)
+    }
+
+    /**
+     * NOTE: We need a way to combine loop detection with revisit options from the event structure strategy,
+     * Therefore, if the loop detector reports that we are stuck during replay of a backtracking option,
+     * then it means that the revisit option is redundant.
+     */
+    override fun processLoopDetectorDecision(
+        decision: LoopDetector.Decision,
+        threadId: ThreadId,
+        loopId: Int,
+        codeLocation: Int
+    ) {
+        val isReplay = eventStructure.inReplayPhase(threadId)
+        if (!isReplay) {
+            super.processLoopDetectorDecision(decision, threadId, loopId, codeLocation)
+            return
+        }
+
+        // A scheduling hint does not invalidate the saved execution; replay enforces its own event order.
+        if (decision == LoopDetector.Decision.STUCK) {
+            onInconsistency(LoopStuckViolation()) // We stop this backtracking part with an inconsistency.
+        }
+    }
+}
+
+internal typealias ReportInconsistencyCallback = (Inconsistency) -> Unit
+internal typealias CurrentThreadIdCallback = () -> ThreadId
+internal typealias ThreadReplayFinishedCallback = (ThreadId) -> Unit
+internal typealias DiscardedExplorationCallback = () -> Unit
+internal typealias InternalThreadSwitchCallback = (ThreadId, BlockingReason?) -> Unit
+
+private class EventStructureMemoryTracker(
+    private val eventStructure: EventStructure,
+    private val objectTracker: ObjectTracker,
+) : MemoryTracker {
+
+    private val eventStructureObjectTracker: EventStructureObjectTracker
+        get() = eventStructure.eventStructureObjectTracker
+
+    private fun getValueID(location: MemoryLocation, value: OpaqueValue?): ValueID =
+        eventStructureObjectTracker.getOrRegisterValueID(location.type, value)
+
+    private fun getValue(location: MemoryLocation, valueID: ValueID) =
+        eventStructureObjectTracker.getValue(location.type, valueID)
+
+    private fun getValue(type: Types.Type, valueID: ValueID) =
+        eventStructureObjectTracker.getValue(type, valueID)
+
+    override fun trackInitialValue(location: MemoryLocation) {
+        eventStructure.allocationEvent(location.objID)?.label?.asWriteAccessLabel(location)
+    }
+
+    private fun addWriteEvent(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering, value: OpaqueValue?,
+                              rmwWriteDescriptor: ReadModifyWriteDescriptor? = null) {
+        // force evaluation of initial value (before possibly overwriting it)
+        trackInitialValue(location)
+        eventStructure.addWriteEvent(iThread, codeLocation, location, memoryOrder, getValueID(location, value), rmwWriteDescriptor)
+    }
+
+    private fun addReadRequest(iThread: Int, codeLocation: Int, location: MemoryLocation, memoryOrder: MemoryOrdering,
+                               readModifyWriteDescriptor: ReadModifyWriteDescriptor? = null) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder, readModifyWriteDescriptor)
+    }
+
+    private fun addReadResponse(iThread: Int): OpaqueValue? {
+        val event = eventStructure.addReadResponse(iThread)
+        val label = (event.label as ReadAccessLabel)
+        val rmwDescriptor = label.readModifyWriteDescriptor
+        // regular non-RMW read - return the read value
+        if (rmwDescriptor == null) {
+            return getValue(label.location, label.value)
+        }
+        // handle different kinds of RMWs
+        // TODO: perform actual write to memory for successful CAS
+        // The write part's value is determined by the descriptor and the read value (see `writeValue`);
+        // the event structure relies on this to resolve rejected forward RMW choices without executing them.
+        val newValueID = rmwDescriptor.writeValue(label.value)
+        if (newValueID != null) {
+            val newValue = getValue(label.location, newValueID)
+            eventStructure.addWriteEvent(iThread, label.codeLocation, label.location, label.memoryOrdering, newValueID, rmwDescriptor)
+            label.location.write(newValue?.unwrap(), eventStructureObjectTracker::getValue)
+        }
+        return when (rmwDescriptor) {
+            is ReadModifyWriteDescriptor.GetAndSetDescriptor ->
+                getValue(label.location, label.value)
+            is ReadModifyWriteDescriptor.CompareAndSetDescriptor ->
+                getValue(Types.BOOLEAN_TYPE, (newValueID != null).toInt().toLong())
+            is ReadModifyWriteDescriptor.CompareAndExchangeDescriptor ->
+                getValue(label.location, label.value)
+            is ReadModifyWriteDescriptor.FetchAndAddDescriptor -> when (rmwDescriptor.kind) {
+                ReadModifyWriteDescriptor.IncrementKind.Pre  -> getValue(label.location, label.value)
+                ReadModifyWriteDescriptor.IncrementKind.Post -> getValue(label.location, newValueID!!)
+            }
+            is ReadModifyWriteDescriptor.FetchAndBitwiseOpDescriptor ->
+                // `getAndBitwiseAnd/Or/Xor` always return the value prior to the update, like `getAndAdd`.
+                getValue(label.location, label.value)
+        }
+    }
+
+    override fun beforeWrite(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        value: Any?
+    ) {
+        addWriteEvent(iThread, codeLocation, location, memoryOrder, value?.opaque())
+    }
+
+    override fun beforeRead(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering
+    ) {
+        addReadRequest(iThread, codeLocation, location, memoryOrder)
+    }
+
+    override fun beforeGetAndSet(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        newValue: Any?
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
+            readModifyWriteDescriptor = ReadModifyWriteDescriptor.GetAndSetDescriptor(
+                newValue = getValueID(location, newValue?.opaque())
+            )
+        )
+    }
+
+    override fun beforeCompareAndSet(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        expectedValue: Any?,
+        newValue: Any?
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
+            readModifyWriteDescriptor = ReadModifyWriteDescriptor.CompareAndSetDescriptor(
+                expectedValue = getValueID(location, expectedValue?.opaque()),
+                newValue = getValueID(location, newValue?.opaque()),
+            )
+        )
+    }
+
+    override fun beforeCompareAndExchange(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        expectedValue: Any?,
+        newValue: Any?
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
+            readModifyWriteDescriptor = ReadModifyWriteDescriptor.CompareAndExchangeDescriptor(
+                expectedValue = getValueID(location, expectedValue?.opaque()),
+                newValue = getValueID(location, newValue?.opaque()),
+            )
+        )
+    }
+
+    override fun beforeGetAndAdd(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        delta: Number
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
+            readModifyWriteDescriptor = ReadModifyWriteDescriptor.FetchAndAddDescriptor(
+                delta = getValueID(location, delta.opaque()),
+                kind = ReadModifyWriteDescriptor.IncrementKind.Pre,
+            )
+        )
+    }
+
+    override fun beforeAddAndGet(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        delta: Number
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
+            readModifyWriteDescriptor = ReadModifyWriteDescriptor.FetchAndAddDescriptor(
+                delta = getValueID(location, delta.opaque()),
+                kind = ReadModifyWriteDescriptor.IncrementKind.Post,
+            )
+        )
+    }
+
+    override fun beforeGetAndBitwiseOp(
+        iThread: Int,
+        codeLocation: Int,
+        location: MemoryLocation,
+        memoryOrder: MemoryOrdering,
+        operand: Any,
+        op: BitwiseOp,
+    ) {
+        eventStructure.addReadRequest(iThread, codeLocation, location, memoryOrder,
+            readModifyWriteDescriptor = ReadModifyWriteDescriptor.FetchAndBitwiseOpDescriptor(
+                operand = getValueID(location, operand.opaque()),
+                op = op,
+            )
+        )
+    }
+
+    override fun interceptReadResult(iThread: Int): Any? {
+        return addReadResponse(iThread)?.unwrap()?.also {
+            LincheckInstrumentation.ensureObjectIsTransformed(it)
+        }
+    }
+
+    override fun interceptArrayCopy(iThread: Int, codeLocation: Int, srcArray: Any?, srcPos: Int, dstArray: Any?, dstPos: Int, length: Int) {
+        val srcType = srcArray!!.getArrayElementType()
+        val dstType = dstArray!!.getArrayElementType()
+        for (i in 0 until length) {
+            val readLocation  = objectTracker.getArrayAccessMemoryLocation(srcArray, srcPos + i, srcType)
+            val writeLocation = objectTracker.getArrayAccessMemoryLocation(dstArray, dstPos + i, dstType)
+            val value = run {
+                beforeRead(iThread, codeLocation, readLocation, MemoryOrdering.PLAIN)
+                interceptReadResult(iThread)
+            }
+            beforeWrite(iThread, codeLocation, writeLocation, MemoryOrdering.PLAIN, value)
+            writeLocation.write(value, eventStructureObjectTracker::getValue)
+        }
+    }
+
+    override fun beforeFence(iThread: Int, codeLocation: Int, memoryOrder: MemoryOrdering) {
+        eventStructure.addFenceEvent(iThread, memoryOrder)
+    }
+
+
+    override fun reset() {}
+
+}
+
+private class EventStructureMonitorTracker(
+    private val eventStructure: EventStructure,
+    private val eventStructureObjectTracker: EventStructureObjectTracker,
+) : MonitorTracker {
+
+    data class LockWaitData(val mutexID: ObjectNumber, val lockStack: MutableList<AtomicThreadEvent>)
+
+    // for each mutex object acquired by some thread,
+    // this map stores a mapping from the mutex object to the lock-response event;
+    // to handle lock re-entrance, we actually store a stack of lock-response events
+    private val lockStacks = mutableMapOf<ObjectNumber, MutableList<AtomicThreadEvent>>()
+
+    // for threads waiting on the mutex,
+    // stores the lock stack of the current thread for the awaited mutex
+    private val waitLockStack = mutableThreadMapOf<LockWaitData?>()
+
+    // Not sure how to proceed with these (I need to look into it)
+    override fun registerThread(threadId: Int) {}
+
+    override fun acquiringThreads(monitor: Any): List<Int> {
+        val mutexID = eventStructureObjectTracker.getObjectNumber(monitor)
+        return waitLockStack.mapNotNull { if (it.value?.mutexID == mutexID) it.key else null }
+    }
+
+    override fun interruptWait(threadId: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun acquireMonitor(threadId: Int, monitor: Any): Boolean {
+        val mutexID = eventStructureObjectTracker.getObjectNumber(monitor)
+        // issue lock-request event
+        val lockRequest = issueLockRequest(threadId, monitor)
+        // try to add lock-response event
+        val lockResponse = tryCompleteLockResponse(lockRequest)
+        // return true if the lock-response event was created successfully
+        if (lockResponse == null) {
+            waitLockStack[threadId] = LockWaitData(mutexID, mutableListOf())
+            return false
+        }
+
+        waitLockStack[threadId] = null
+        return true
+    }
+
+    // NOTE: This should be a bool?
+    override fun releaseMonitor(threadId: Int, monitor: Any): Boolean {
+        return issueUnlock(threadId, monitor)
+    }
+
+
+    private fun issueLockRequest(iThread: Int, monitor: Any): AtomicThreadEvent {
+        val mutexID = eventStructureObjectTracker.getObjectNumber(monitor)
+        // check if the thread is already blocked on the lock-request
+        val blockingRequest = eventStructure.getPendingBlockingRequest(iThread)
+            ?.ensure { it.label.satisfies<LockLabel> { this.mutexID == mutexID } }
+        if (blockingRequest != null)
+            return blockingRequest
+        // check if it is a re-entrance lock and obtain lock re-entrance depth
+        val lockStack = lockStacks[mutexID]
+            ?.ensure { it.isNotEmpty() }
+            ?.takeIf { it.last().threadId == iThread }
+        val depth = lockStack?.size ?: 0
+        // finally, add the new lock-request
+        return eventStructure.addLockRequestEvent(iThread, monitor,
+            isReentry = depth > 0,
+            reentrancyDepth = 1 + depth,
+        )
+    }
+
+    private fun tryCompleteLockResponse(lockRequest: AtomicThreadEvent): AtomicThreadEvent? {
+        val mutexID = (lockRequest.label as LockLabel).mutexID
+        // Generate alternatives and register pending requests even while another thread owns the monitor.
+        // Check runtime ownership only when taking a response.
+        return eventStructure.addLockResponseEvent(lockRequest)?.also { lockResponse ->
+            // if lock-response was added successfully, then push it to the lock stack
+            lockStacks.updateInplace(mutexID, default = mutableListOf()) {
+                check(isNotEmpty() implies { last().threadId == lockResponse.threadId })
+                add(lockResponse)
+            }
+        }
+    }
+
+    private fun issueUnlock(iThread: Int, monitor: Any): Boolean {
+        val mutexID = eventStructureObjectTracker.getObjectNumber(monitor)
+        // obtain current lock-responses stack, and ensure that
+        // the lock is indeed acquired by the releasing thread
+        val lockStack = lockStacks[mutexID]!!
+            .ensure { it.isNotEmpty() && (it.last().threadId == iThread) }
+        val depth = lockStack.size
+        // add unlock event to the event structure
+        eventStructure.addUnlockEvent(iThread, monitor,
+            isReentry = (depth > 1),
+            reentrancyDepth = depth,
+        )
+        // remove last lock-response event from the stack,
+        // since we just released the lock one time
+        lockStack.removeLast()
+        if (lockStack.isEmpty()) {
+            lockStacks.remove(mutexID)
+        }
+        return lockStack.isEmpty()
+    }
+
+    override fun isWaiting(threadId: Int): Boolean {
+        val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
+            ?.takeIf { (it.label is LockLabel || it.label is WaitLabel) }
+            ?: return false
+        return !eventStructure.isPendingUnblockedRequest(blockingRequest)
+    }
+
+    override fun waitOnMonitor(threadId: Int, monitor: Any): Boolean {
+        val mutexID = eventStructureObjectTracker.getObjectNumber(monitor)
+        // check if the thread is already blocked on wait-request or (synthetic) lock-request
+        val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
+            ?.ensure { it.label.satisfies<MutexLabel> { this.mutexID == mutexID } }
+            ?.ensure { it.label is LockLabel || it.label is WaitLabel }
+        var waitRequest = blockingRequest?.takeIf { it.label is WaitLabel }
+        var lockRequest = blockingRequest?.takeIf { it.label is LockLabel }
+        // if the thread is not blocked yet, issue wait-request event;
+        // this procedure will also add synthetic unlock event
+        if (blockingRequest == null) {
+            check(waitLockStack[threadId] == null)
+            waitRequest = issueWaitRequest(threadId, monitor)
+        }
+        // if the wait-request was already issued, try to complete it by wait-response;
+        // this procedure will also add synthetic lock-request event
+        if (waitRequest != null) {
+            val (_, _lockRequest) = tryCompleteWaitResponse(monitor, waitRequest)
+                ?: return true
+            lockRequest = _lockRequest
+        }
+        // finally, try to complete the lock-request by lock-response
+        check(lockRequest != null)
+        val lockResponse = tryCompleteWaitLockResponse(lockRequest)
+        // exit waiting if the lock response was added successfully
+        return (lockResponse == null)
+    }
+
+    override fun notify(threadId: Int, monitor: Any, notifyAll: Boolean) {
+        issueNotify(threadId, monitor, notifyAll)
+    }
+
+    private fun issueWaitRequest(iThread: Int, monitor: Any): AtomicThreadEvent {
+        val mutexID = eventStructureObjectTracker.getObjectNumber(monitor)
+        // obtain the current lock-responses stack, and ensure that
+        // the lock is indeed acquired by the waiting thread
+        val lockStack = lockStacks[mutexID]!!
+            .ensure { it.isNotEmpty() && (it.last().threadId == iThread) }
+        val depth = lockStack.size
+        // add synthetic unlock event to release the mutex
+        eventStructure.addUnlockEvent(iThread, monitor,
+            isSynthetic = true,
+            isReentry = false,
+            reentrancyDepth = depth,
+        )
+        // save the lock-responses stack to restore it later
+        waitLockStack[iThread] = LockWaitData(mutexID, lockStack)
+        lockStacks.remove(mutexID)
+        // add the new wait-request
+        return eventStructure.addWaitRequestEvent(iThread, monitor)
+    }
+
+    private fun tryCompleteWaitResponse(monitor: Any, waitRequest: AtomicThreadEvent): Pair<AtomicThreadEvent, AtomicThreadEvent>? {
+        require(waitRequest.label.isRequest)
+        require(waitRequest.label is WaitLabel)
+        val mutexID = (waitRequest.label as WaitLabel).mutexID
+        // try to complete wait-response
+        val waitResponse = eventStructure.addWaitResponseEvent(waitRequest)
+            ?: return null
+        val unlockEvent = waitRequest.parent!!
+        check(unlockEvent.label.satisfies<UnlockLabel> {
+            this.mutexID == mutexID && isSynthetic
+        })
+        // issue synthetic lock-request to acquire the mutex back
+        val iThread = waitRequest.threadId
+        val depth = (unlockEvent.label as UnlockLabel).reentrancyDepth
+        val lockRequest = eventStructure.addLockRequestEvent(iThread, monitor,
+            isSynthetic = true,
+            isReentry = false,
+            reentrancyDepth = depth,
+        )
+        return (waitResponse to lockRequest)
+    }
+
+    private fun tryCompleteWaitLockResponse(lockRequest: AtomicThreadEvent): AtomicThreadEvent? {
+        val iThread = lockRequest.threadId
+        val mutexID = (lockRequest.label as LockLabel).mutexID
+        // try to add lock-response event
+        return eventStructure.addLockResponseEvent(lockRequest)?.also {
+            // if lock-response was added successfully, then restore
+            // the lock stack of the acquiring thread
+            val lockStack = waitLockStack[iThread]!!.lockStack
+            lockStacks.put(mutexID, lockStack).ensureNull()
+            waitLockStack.remove(iThread)
+        }
+    }
+
+    private fun issueNotify(iThread: Int, monitor: Any, notifyAll: Boolean) {
+        eventStructure.addNotifyEvent(iThread, monitor, notifyAll)
+    }
+
+    override fun reset() {
+        lockStacks.clear()
+        waitLockStack.clear()
+    }
+
+}
+
+//NOTE: Same as the class above
+private class EventStructureParkingTracker(
+    private val eventStructure: EventStructure,
+) : ParkingTracker {
+
+    override fun registerThread(threadId: Int) {
+        // We should probably not do anything. I assume that the Eventstrcture model does not really care when a new event is added for the parking tracker
+    }
+
+    // NOTE: not sure if we should handle this yet? Should we add a new parking label and event?
+    override fun interruptPark(threadId: Int) {
+        TODO("Not yet implemented")
+    }
+
+    override fun park(threadId: Int) {
+        eventStructure.addParkRequestEvent(threadId)
+    }
+
+    //NOTE: allowSpuriusWakeup has been added and not sure how to use that
+    override fun waitUnpark(threadId: Int, allowSpuriousWakeUp: Boolean): Boolean {
+        val parkRequest = eventStructure.getPendingBlockingRequest(threadId)
+            ?.takeIf { it.label is ParkLabel }
+            ?: return false
+        val parkResponse = eventStructure.addParkResponseEvent(parkRequest)
+        return (parkResponse == null)
+    }
+
+    override fun unpark(threadId: Int, unparkedThreadId: Int) {
+        eventStructure.addUnparkEvent(threadId, unparkedThreadId)
+    }
+
+
+    override fun isParked(threadId: Int): Boolean {
+        val blockingRequest = eventStructure.getPendingBlockingRequest(threadId)
+            ?.takeIf { it.label is ParkLabel }
+            ?: return false
+        return !eventStructure.isPendingUnblockedRequest(blockingRequest)
+    }
+
+    override fun reset() {}
+
+}
+
+class LoopStuckViolation : Inconsistency() {}

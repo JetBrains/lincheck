@@ -582,7 +582,7 @@ public class Injections {
     }
 
     /**
-     * See [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.lock] for the explanation
+     * See [org.jetbrains.lincheck.strategy.managed.ManagedStrategy.lock] for the explanation
      * why we have beforeLock method.
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.
@@ -610,7 +610,7 @@ public class Injections {
     }
 
     /**
-     * See [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.park] for the explanation
+     * See [org.jetbrains.lincheck.strategy.managed.ManagedStrategy.park] for the explanation
      * why we have beforePark method.
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.
@@ -641,7 +641,7 @@ public class Injections {
     }
 
     /**
-     * See [org.jetbrains.kotlinx.lincheck.strategy.managed.ManagedStrategy.wait] for the explanation
+     * See [org.jetbrains.lincheck.strategy.managed.ManagedStrategy.wait] for the explanation
      * why we have beforeWait method.
      *
      * Creates a trace point which is used in the subsequent [beforeEvent] method call.

@@ -9,8 +9,8 @@
  */
 package org.jetbrains.lincheck.datastructures.verifier
 
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.lincheck.*
+import org.jetbrains.lincheck.scenario.*
 import java.util.*
 import kotlin.collections.ArrayList
 

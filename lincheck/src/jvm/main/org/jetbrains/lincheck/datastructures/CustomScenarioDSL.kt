@@ -10,8 +10,8 @@
 
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.Actor
-import org.jetbrains.kotlinx.lincheck.execution.*
+import org.jetbrains.lincheck.scenario.Actor
+import org.jetbrains.lincheck.scenario.*
 import java.lang.IllegalStateException
 import kotlin.reflect.KFunction
 import kotlin.reflect.jvm.javaMethod

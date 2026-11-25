@@ -11,8 +11,9 @@
 package org.jetbrains.lincheck.datastructures.verifier
 
 import kotlinx.coroutines.*
-import org.jetbrains.kotlinx.lincheck.*
-import org.jetbrains.kotlinx.lincheck.util.*
+import org.jetbrains.lincheck.scenario.Actor
+import org.jetbrains.lincheck.scenario.executeActor
+import org.jetbrains.lincheck.util.*
 import org.jetbrains.lincheck.datastructures.verifier.LTS.*
 import org.jetbrains.lincheck.datastructures.verifier.OperationType.*
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation

@@ -1,9 +1,9 @@
 = Concurrent test failed =
 
 java.lang.IllegalStateException: Check failed.
-	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:59)
-	at org.jetbrains.kotlinx.lincheck_test.representation.ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:46)
-	at org.jetbrains.kotlinx.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$2$lambda$1(RunConcurrentRepresentationTests.kt:54)
+	at org.jetbrains.lincheck_test.representation.ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:59)
+	at org.jetbrains.lincheck_test.representation.ThreadSafeCollectionMutedLambdaRepresentationTest.block(StdLibRepresentationTests.kt:46)
+	at org.jetbrains.lincheck_test.representation.BaseRunConcurrentRepresentationTest.testRunWithModelChecker$lambda$2$lambda$1(RunConcurrentRepresentationTests.kt:54)
 	at java.base/java.lang.Thread.run(Thread.java:840)
 
 The following interleaving leads to the error:
