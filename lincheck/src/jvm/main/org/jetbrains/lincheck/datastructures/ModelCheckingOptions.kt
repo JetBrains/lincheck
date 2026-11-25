@@ -25,17 +25,28 @@ class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions>() {
         private set
     internal var printExecutionGraph = false
 
-    internal fun useExperimentalModelChecking(): ModelCheckingOptions {
-        experimentalModelChecking = true
-        return this
+    internal fun useExperimentalModelChecking(): ModelCheckingOptions = enablePartialOrderReduction()
+
+    /**
+     * Enables partial order reduction, reducing the exploration space at the cost of more heavyweight analysis.
+     * Skips interleavings equivalent up to reordering non-conflicting (commutative) events.
+     * Enabling this option selects the event-structure algorithm; disabled by default.
+     */
+    @JvmOverloads
+    fun enablePartialOrderReduction(enabled: Boolean = true): ModelCheckingOptions = apply {
+        experimentalModelChecking = enabled
     }
 
     internal val isExperimentalModelCheckingEnabled: Boolean
         get() = experimentalModelChecking
 
 
-    internal fun memoryModel(model: MemoryModel): ModelCheckingOptions {
-        check(experimentalModelChecking) { "You need to set experimentalModelChecking to use this feature" }
+    /**
+     * Selects the memory model used to explore thread interleavings and shared-memory behavior.
+     * Defaults to [MemoryModel.SequentialConsistency]; [MemoryModel.RelaxedJava] enables relaxed Java semantics.
+     * Any non-sequentially-consistent model automatically selects the event-structure algorithm.
+     */
+    fun memoryModel(model: MemoryModel): ModelCheckingOptions {
         memoryModel = model
         return this
     }
