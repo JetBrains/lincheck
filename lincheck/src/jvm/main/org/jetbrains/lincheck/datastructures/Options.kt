@@ -17,7 +17,6 @@ import org.jetbrains.lincheck.*
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.lincheck.datastructures.verifier.*
-import org.jetbrains.lincheck.util.DEFAULT_LOG_LEVEL
 import org.jetbrains.lincheck.util.LoggingLevel
 import kotlin.reflect.*
 
@@ -26,8 +25,6 @@ import kotlin.reflect.*
  */
 @Deprecated("Use LincheckSettings and Lincheck.runConcurrentTest instead.", level = DeprecationLevel.WARNING)
 sealed class Options<OPT : Options<OPT>> {
-    internal var logLevel = DEFAULT_LOG_LEVEL
-
     /**
      * Number of scenarios, defaulting to `lincheck.defaultRandomScenarios` when set.
      */
@@ -153,11 +150,11 @@ sealed class Options<OPT : Options<OPT>> {
     }
 
     /**
-     * Set logging level, [DEFAULT_LOG_LEVEL] is used by default.
+     * Retained for compatibility and has no effect.
+     * Use [LincheckSettings.printExecutionScenarios] to control scenario output.
      */
-    fun logLevel(logLevel: LoggingLevel): OPT = applyAndCast {
-        this.logLevel = logLevel
-    }
+    @Suppress("UNUSED_PARAMETER")
+    fun logLevel(logLevel: LoggingLevel): OPT = applyAndCast {}
 
     /**
      * The specified class defines the sequential behavior of the testing data structure;
@@ -242,7 +239,6 @@ internal fun Options<*>.createStrategy(
 internal fun Options<*>.toSettings(): LincheckSettings = LincheckSettings().also { settings ->
 
     settings.invocationTimeoutMs = timeoutMs
-    settings.logLevel = logLevel
     settings.scenarioGeneration.also {
         it.invocationsPerScenario = invocationsPerIteration
         it.randomScenarios = iterations

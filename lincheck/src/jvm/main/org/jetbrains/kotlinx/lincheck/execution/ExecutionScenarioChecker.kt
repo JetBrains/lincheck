@@ -26,7 +26,7 @@ internal class ExecutionScenarioChecker(
 ) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
 
-    private val reporter = Reporter(settings.logLevel)
+    private val reporter = Reporter(settings.printExecutionScenarios)
 
     init {
         // Currently, we extract validation functions from the `testClass` structure,
@@ -79,17 +79,19 @@ internal class ExecutionScenarioChecker(
             if ((i + 1) % VERIFIER_REFRESH_CYCLE == 0)
                 verifier = createVerifier(testClass)
             scenario.validate()
-            reporter.logIteration(i + 1, scenariosSize, scenario)
+            reporter.reportScenario(scenario, i + 1, scenariosSize)
             var failure = scenario.run(this, verifier)
             if (failure == null)
                 return@forEachIndexed
             if (generation.minimizeFailedScenario && !isCustomScenario) {
-                reporter.logScenarioMinimization(scenario)
-                failure = failure.minimize { minimizedScenario ->
-                    minimizedScenario.run(this, createVerifier(testClass))
+                reporter.reportScenarioMinimization()
+                var candidateNumber = 0
+                failure = failure.minimize { candidate ->
+                    reporter.reportScenario(candidate, ++candidateNumber)
+                    candidate.run(this, createVerifier(testClass))
                 }
             }
-            reporter.logFailedIteration(failure)
+            reporter.reportFailedScenario(failure)
             runReplayForPlugin(failure, verifier)
             return failure
         }

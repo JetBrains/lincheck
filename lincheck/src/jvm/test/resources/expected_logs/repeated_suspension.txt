@@ -63,9 +63,9 @@ The following interleaving leads to the error:
 
 Exception stack traces:
 #1: java.lang.IllegalStateException: resumed twice
-	at org.jetbrains.kotlinx.lincheck_test.representation.RepeatedSuspensionTraceReportingTest.nested(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck_test.representation.RepeatedSuspensionTraceReportingTest.access$nested(Unknown Source)
-	at org.jetbrains.kotlinx.lincheck_test.representation.RepeatedSuspensionTraceReportingTest$nested$1.invokeSuspend(Unknown Source)
+	at org.jetbrains.kotlinx.lincheck_test.representation.RepeatedSuspensionTraceReportingTest.nested(RepeatedSuspensionTraceReportingTest.kt:36)
+	at org.jetbrains.kotlinx.lincheck_test.representation.RepeatedSuspensionTraceReportingTest.access$nested(RepeatedSuspensionTraceReportingTest.kt:22)
+	at org.jetbrains.kotlinx.lincheck_test.representation.RepeatedSuspensionTraceReportingTest$nested$1.invokeSuspend(RepeatedSuspensionTraceReportingTest.kt)
 	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:33)
 	at java.base/java.lang.Thread.run(Unknown Source)
 

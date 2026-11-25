@@ -4,7 +4,6 @@ import org.jetbrains.lincheck.datastructures.IntGen
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Param
-import org.jetbrains.lincheck.util.LoggingLevel
 import kotlin.test.Test
 import java.util.concurrent.ConcurrentHashMap
 
@@ -36,7 +35,5 @@ class MultiMapTest {
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
-        // Report the scenarios even if the test has not failed
-        .logLevel(LoggingLevel.INFO)
         .check(this::class)
 }

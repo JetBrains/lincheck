@@ -22,7 +22,7 @@ import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
 import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation
-import org.jetbrains.lincheck.util.*
+import org.jetbrains.lincheck.util.AnalysisProfile
 
 /**
  * Configuration of Lincheck tests.
@@ -98,14 +98,15 @@ class LincheckSettings() {
     fun invocationTimeoutMs(value: Long) = apply { invocationTimeoutMs = value }
 
     /**
-     * Controls additional diagnostic output.
+     * Prints each execution scenario and minimization progress in data-structure-based tests.
+     * Enabled by default. When disabled, only the failure report is printed.
      */
-    var logLevel: LoggingLevel = DEFAULT_LOG_LEVEL
+    var printExecutionScenarios: Boolean = true
 
     /**
-     * Configures logging level.
+     * Configures whether to print execution scenarios and minimization progress.
      */
-    fun logLevel(value: LoggingLevel) = apply { logLevel = value }
+    fun printExecutionScenarios(value: Boolean) = apply { printExecutionScenarios = value }
 
 
     // ========================================================
@@ -903,7 +904,7 @@ class LincheckSettings() {
      */
     fun copy(): LincheckSettings = LincheckSettings().also {
         it.invocationTimeoutMs = invocationTimeoutMs
-        it.logLevel = logLevel
+        it.printExecutionScenarios = printExecutionScenarios
         it.strategy = when (val strategy = strategy) {
             is TestingStrategy.Stress -> TestingStrategy.Stress()
             is TestingStrategy.ModelChecking -> strategy.copy()

@@ -25,8 +25,11 @@ import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.RandomProvider
 import org.jetbrains.lincheck.datastructures.toSettings
 import org.jetbrains.lincheck.datastructures.verifier.SerializabilityVerifier
+import org.jetbrains.lincheck.util.LoggingLevel
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
@@ -97,15 +100,49 @@ class LincheckSettingsApiTest {
     fun legacyOptionsAndSettingsShareDefaults() {
         val settings = LincheckSettings()
         val strategy = TestingStrategy.ModelChecking()
-        val legacy = ModelCheckingOptions().toSettings()
+        val options = ModelCheckingOptions()
+        assertSame(options, options.logLevel(LoggingLevel.OFF))
+        val legacy = options.toSettings()
         val legacyStrategy = legacy.strategy as TestingStrategy.ModelChecking
         assertEquals(settings.invocationTimeoutMs, legacy.invocationTimeoutMs)
+        assertTrue(legacy.printExecutionScenarios)
         assertEquals(settings.scenarioGeneration.randomScenarios, legacy.scenarioGeneration.randomScenarios)
         assertEquals(settings.scenarioGeneration.invocationsPerScenario, legacy.scenarioGeneration.invocationsPerScenario)
         assertEquals(strategy.analyzeStdLib, legacyStrategy.analyzeStdLib)
         assertEquals(strategy.checkObstructionFreedom, legacyStrategy.checkObstructionFreedom)
         assertEquals(strategy.loopDetection.loopBound, legacyStrategy.loopDetection.loopBound)
         assertEquals(strategy.loopDetection.recursionBound, legacyStrategy.loopDetection.recursionBound)
+    }
+
+    @Test
+    fun scenarioReportingPrintsRegularScenariosAndMinimizationCandidates() {
+        val settings = smallSettings().apply {
+            scenarioGeneration.sequentialSpecification = ZeroValue::class.java
+        }
+        val output = captureStdout {
+            assertThrows(LincheckAssertionError::class.java) {
+                Lincheck.runConcurrentTest(settings, IncorrectValue::class)
+            }
+        }
+        assertTrue(output, "= Scenario 1 / 2 =" in output)
+        val minimizationStart = output.indexOf("Invalid interleaving found, trying to minimize")
+        assertTrue(output, minimizationStart > output.indexOf("= Scenario 1 / 2 ="))
+        val candidateOutput = output.substring(minimizationStart)
+        assertTrue(candidateOutput, Regex("= Scenario 1 =\\R\\| -+").containsMatchIn(candidateOutput))
+    }
+
+    @Test
+    fun disablingScenarioReportingPrintsOnlyTheFailureReport() {
+        val settings = smallSettings().printExecutionScenarios(false).apply {
+            scenarioGeneration.sequentialSpecification = ZeroValue::class.java
+        }
+        lateinit var failure: LincheckAssertionError
+        val output = captureStdout {
+            failure = assertThrows(LincheckAssertionError::class.java) {
+                Lincheck.runConcurrentTest(settings, IncorrectValue::class)
+            }
+        }
+        assertEquals(failure.message.orEmpty().trim(), output.trim())
     }
 
     @Test
@@ -291,6 +328,29 @@ class LincheckSettingsApiTest {
         fun increment() = value.incrementAndGet()
         @Validate
         fun validate() { check(value.get() >= 0) }
+    }
+
+    class IncorrectValue {
+        @Operation
+        fun read() = 1
+    }
+
+    class ZeroValue {
+        fun read() = 0
+    }
+
+    private fun captureStdout(block: () -> Unit): String {
+        val previous = System.out
+        val bytes = ByteArrayOutputStream()
+        PrintStream(bytes).use { output ->
+            System.setOut(output)
+            try {
+                block()
+            } finally {
+                System.setOut(previous)
+            }
+        }
+        return bytes.toString()
     }
 
     private fun smallSettings() = LincheckSettings {

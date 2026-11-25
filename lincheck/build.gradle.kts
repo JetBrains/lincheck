@@ -74,8 +74,7 @@ sourceSets {
         val atomicfuVersion: String by project
 
         compileOnly(project(":bootstrap"))
-        api(project(":common")) // TODO: `api` is used here in order to allow users of `lincheck` to access `LoggingLevel` enum class stored there,
-                                //  but later this enum will be marked as deprecated and then hidden, after that `api` should be changed to `implementation`
+        api(project(":common")) // Legacy Options.logLevel still accepts LoggingLevel from common.
         implementation(project(":jvm-agent"))
         implementation(project(":trace"))
 

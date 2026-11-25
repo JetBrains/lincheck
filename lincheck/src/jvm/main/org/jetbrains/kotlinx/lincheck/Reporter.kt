@@ -15,35 +15,31 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.*
-import org.jetbrains.lincheck.util.LoggingLevel.*
 import java.io.*
 import kotlin.math.max
 
-class Reporter(private val logLevel: LoggingLevel) {
-    private val out: PrintStream = System.out
-    private val outErr: PrintStream = System.err
-
-    fun logIteration(iteration: Int, maxIterations: Int, scenario: ExecutionScenario) = log(INFO) {
-        appendLine("\n= Iteration $iteration / $maxIterations =")
-        appendExecutionScenario(scenario)
+internal class Reporter(private val printExecutionScenarios: Boolean) {
+    fun reportScenario(scenario: ExecutionScenario, number: Int, total: Int? = null) {
+        if (!printExecutionScenarios) return
+        report(buildString {
+            append("\n= Scenario $number")
+            if (total != null) append(" / $total")
+            appendLine(" =")
+            appendExecutionScenario(scenario)
+        })
     }
 
-    fun logFailedIteration(failure: LincheckFailure, loggingLevel: LoggingLevel = INFO) = log(loggingLevel) {
-        appendFailure(failure)
+    fun reportFailedScenario(failure: LincheckFailure) {
+        report(failure.toString())
     }
 
-    fun logScenarioMinimization(scenario: ExecutionScenario) = log(INFO) {
-        appendLine("\nInvalid interleaving found, trying to minimize the scenario below:")
-        appendExecutionScenario(scenario)
+    fun reportScenarioMinimization() {
+        if (printExecutionScenarios) {
+            report("\nInvalid interleaving found, trying to minimize the scenario.")
+        }
     }
 
-    private inline fun log(logLevel: LoggingLevel, crossinline msg: Appendable.() -> Unit): Unit = synchronized(this) {
-        if (this.logLevel > logLevel) return
-        val sb = StringBuilder()
-        msg(sb)
-        val output = if (logLevel == WARN) outErr else out
-        output.println(sb)
-    }
+    private fun report(message: String) = println(message)
 }
 
 /**

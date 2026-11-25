@@ -12,6 +12,11 @@ To enable an option for a testing strategy, set it in the strategy class:
 ```
 { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.testWithIterations" }
 
+## Scenario output
+
+In data-structure-based tests, Lincheck prints execution scenarios and minimization progress to standard output by default.
+Set `LincheckSettings { printExecutionScenarios = false }` to print only the failure report.
+
 ## Scenario minimization
 
 By default, Lincheck tries to minimize the failed scenario by removing the operations that 

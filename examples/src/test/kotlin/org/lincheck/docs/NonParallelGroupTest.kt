@@ -1,7 +1,6 @@
 package org.lincheck.docs
 
 import org.jetbrains.lincheck.datastructures.*
-import org.jetbrains.lincheck.util.LoggingLevel
 import kotlin.test.Test
 import java.util.concurrent.atomic.AtomicReference
 
@@ -56,7 +55,5 @@ class NonParallelGroupTest {
 
     @Test
     fun modelCheckingTest() = ModelCheckingOptions()
-        // Report the scenarios even if the test has not failed
-        .logLevel(LoggingLevel.INFO)
         .check(this::class)
 }
