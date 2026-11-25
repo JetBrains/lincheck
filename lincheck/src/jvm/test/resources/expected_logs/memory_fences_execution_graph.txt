@@ -5,6 +5,32 @@
 | operation(): void |
 | ----------------- |
 
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------- |
+|                                                          Thread 1                                                           |
+| --------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                 |
+|   UnsafeHolder.INSTANCE ➜ UnsafeHolder#1 at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:39) |
+|   value = 1 at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:40)                              |
+|   VarHandle.storeStoreFence() at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:41)            |
+|   value = 2 at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:42)                              |
+|   VarHandle.loadLoadFence() at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:43)              |
+|   value = 3 at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:44)                              |
+|   unsafe.storeFence() at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:45)                    |
+|   value = 4 at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:46)                              |
+|   unsafe.loadFence() at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:47)                     |
+|   value = 5 at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:48)                              |
+|   unsafe.fullFence() at MemoryFencesExecutionGraphTest.operation(MemoryFencesRepresentationTests.kt:49)                     |
+|   result: void                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------- |
+
 Execution graph:
 Events in each thread are in program order; Tn:position identifies an event.
 rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).

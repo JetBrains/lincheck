@@ -16,6 +16,7 @@ import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.runner.*
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart.*
 import org.jetbrains.kotlinx.lincheck.strategy.*
+import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
 import org.jetbrains.kotlinx.lincheck.strategy.nativecalls.*
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.lincheck.jvm.agent.*
@@ -144,6 +145,11 @@ internal abstract class ManagedStrategy(
     // Stores current event id
     private var currentEventId = -1
 
+    // Graph IDs differ from trace IDs; retain the point as well to mark reads-from sources.
+    // TODO: one day, we might simplify this code and derive trace points directly from events,
+    //   that would make maintaining separate mapping unnecessary
+    private val executionEventTracePoints = mutableMapOf<Int, TracePoint>()
+
     /**
      * For each thread, represents a shadow stack used to reflect the program's actual stack.
      *
@@ -189,6 +195,7 @@ internal abstract class ManagedStrategy(
         monitorTracker.reset()
         parkingTracker.reset()
         currentEventId = -1
+        executionEventTracePoints.clear()
         resetThreads()
 
         // In the case of general-purpose mode, we want to assign
@@ -257,7 +264,7 @@ internal abstract class ManagedStrategy(
                 context = context,eventId = getNextEventId(),
                 executionPart = part,
             )
-            traceCollector?.addTracePoint(tracePoint)
+            addTracePoint(tracePoint)
         }
 
         val nextThread = when (part) {
@@ -632,7 +639,7 @@ internal abstract class ManagedStrategy(
             callType = MethodCallTracePoint.CallType.THREAD_RUN
         )
         shadowStack[currentThreadId]!!.push(testInstance, tracePoint, AnalysisSectionType.NORMAL)
-        traceCollector?.addTracePoint(tracePoint)
+        addTracePoint(tracePoint)
 
         enableAnalysis()
     }
@@ -649,7 +656,7 @@ internal abstract class ManagedStrategy(
         val eventId = getNextEventId()
         val threadRunTracePoint = shadowStack[currentThreadId]?.firstTracePoint
         val threadEndTracePoint = threadRunTracePoint?.let { MethodReturnTracePoint(context, eventId, it) }
-        if (threadEndTracePoint != null) traceCollector?.addTracePoint(threadEndTracePoint)
+        if (threadEndTracePoint != null) addTracePoint(threadEndTracePoint)
         disableAnalysis()
 
         val methodId = context.getThreadRunMethodId()
@@ -914,7 +921,7 @@ internal abstract class ManagedStrategy(
             callType = MethodCallTracePoint.CallType.ACTOR,
         )
         shadowStack[iThread]!!.push(runner.testInstance, tracePoint, AnalysisSectionType.NORMAL)
-        traceCollector?.addTracePoint(tracePoint)
+        addTracePoint(tracePoint)
 
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(iThread)) {
             loopDetector.onMethodEnter(
@@ -988,7 +995,7 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        traceCollector?.addTracePoint(tracePoint)
+        addTracePoint(tracePoint)
     }
 
     /*
@@ -1043,7 +1050,7 @@ internal abstract class ManagedStrategy(
                 actorId = currentActorId[threadId]!!,
                 codeLocation = codeLocation
             )
-            traceCollector!!.addTracePoint(tracePoint)
+            addTracePoint(tracePoint)
         }
     }
 
@@ -1069,7 +1076,7 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        traceCollector?.addTracePoint(tracePoint)
+        addTracePoint(tracePoint)
     }
 
     /*
@@ -1142,7 +1149,7 @@ internal abstract class ManagedStrategy(
                 actorId = currentActorId[threadId]!!,
                 codeLocation = codeLocation
             )
-            traceCollector?.addTracePoint(tracePoint)
+            addTracePoint(tracePoint)
         }
     }
 
@@ -1165,7 +1172,7 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        traceCollector?.addTracePoint(tracePoint)
+        addTracePoint(tracePoint)
     }
 
     /*
@@ -1217,7 +1224,7 @@ internal abstract class ManagedStrategy(
                 actorId = currentActorId[threadId]!!,
                 codeLocation = codeLocation
             )
-            traceCollector?.addTracePoint(tracePoint)
+            addTracePoint(tracePoint)
         }
     }
 
@@ -1353,7 +1360,7 @@ internal abstract class ManagedStrategy(
                     valueRepresentation = valueRepresentation,
                     valueType = typeRepresentation,
                 )
-                traceCollector?.addTracePoint(tracePoint)
+                addTracePoint(tracePoint)
             }
         }
     }
@@ -1386,7 +1393,7 @@ internal abstract class ManagedStrategy(
                     valueRepresentation = valueRepresentation,
                     valueType = typeRepresentation,
                 )
-                traceCollector?.addTracePoint(tracePoint)
+                addTracePoint(tracePoint)
             }
         }
     }
@@ -1429,7 +1436,6 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        traceCollector?.addTracePoint(tracePoint)
         if (memoryTracker != null) {
             val location = objectTracker.getFieldAccessMemoryLocation(obj,
                 className = fieldDescriptor.className,
@@ -1441,6 +1447,7 @@ internal abstract class ManagedStrategy(
             val memoryOrdering = if (fieldDescriptor.isVolatile) MemoryOrdering.VOLATILE else MemoryOrdering.PLAIN
             memoryTracker!!.beforeWrite(threadId, codeLocation, location, memoryOrdering, value)
         }
+        addTracePoint(tracePoint)
     }
 
     override fun beforeWriteArrayElement(
@@ -1483,12 +1490,12 @@ internal abstract class ManagedStrategy(
         } else {
             null
         }
-        traceCollector?.addTracePoint(tracePoint)
         if (memoryTracker != null) {
             val type = array.getArrayElementType()
             val location = objectTracker.getArrayAccessMemoryLocation(array, index, type)
             memoryTracker!!.beforeWrite(threadId, codeLocation, location, MemoryOrdering.PLAIN, value)
         }
+        addTracePoint(tracePoint)
     }
 
     override fun afterWrite(threadDescriptor: ThreadDescriptor) {}
@@ -1884,7 +1891,7 @@ internal abstract class ManagedStrategy(
             callType = MethodCallTracePoint.CallType.NORMAL,
         )
         stack.push(receiver, tracePoint, methodSection)
-        traceCollector?.addTracePoint(tracePoint)
+        addTracePoint(tracePoint)
 
         // TODO: ask whether we should switch here or call failDueToLiveLock
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
@@ -1996,7 +2003,7 @@ internal abstract class ManagedStrategy(
         )
         val stack = shadowStack[threadId]!!
         stack.push(owner, tracePoint, stack.analysisSection)
-        traceCollector?.addTracePoint(tracePoint)
+        addTracePoint(tracePoint)
 
         if (currentExecutionPart !== VALIDATION && !threadScheduler.isAborted(threadId)) {
             loopDetector.onMethodEnter(
@@ -2124,7 +2131,7 @@ internal abstract class ManagedStrategy(
             ) ?: return@runInsideIgnoredSection
 
             if (collectTrace) {
-                traceCollector?.addTracePoint(
+                addTracePoint(
                     LoopEndTracePoint(
                         context = context,
                         eventId = getNextEventId(),
@@ -2146,7 +2153,7 @@ internal abstract class ManagedStrategy(
     ) {
         if (collectTrace) {
             if (started) {
-                traceCollector?.addTracePoint(
+                addTracePoint(
                     LoopStartTracePoint(
                         context = context,
                         eventId = getNextEventId(),
@@ -2159,7 +2166,7 @@ internal abstract class ManagedStrategy(
             }
 
             val iteration = loopDetector.getCurrentLoopIteration(threadId, loopId, codeLocation)
-            traceCollector?.addTracePoint(
+            addTracePoint(
                 LoopIterationTracePoint(
                     context = context,
                     eventId = getNextEventId(),
@@ -2189,7 +2196,7 @@ internal abstract class ManagedStrategy(
 
             LoopDetector.Decision.STUCK -> {
                 if (collectTrace) {
-                    traceCollector?.addTracePoint(
+                    addTracePoint(
                         LoopEndTracePoint(
                             context = context,
                             eventId = getNextEventId(),
@@ -2330,7 +2337,7 @@ internal abstract class ManagedStrategy(
 
     private fun addMethodReturnTracePoint(tracePoint: MethodCallTracePoint) {
         val eventId = getNextEventId()
-        traceCollector?.addTracePoint(MethodReturnTracePoint(context, eventId, tracePoint))
+        addTracePoint(MethodReturnTracePoint(context, eventId, tracePoint))
     }
 
     private fun recordMethodCallResult(
@@ -2341,6 +2348,8 @@ internal abstract class ManagedStrategy(
     ) {
         if (!collectTrace) return
         val tracePoint = shadowStack[threadId]!!.currentFrame.tracePoint ?: return
+        // Reflective accesses add their graph event only after the call succeeds.
+        updateTracePointProvenance(tracePoint)
 
         // The scenario runner sets the actor result after the actor finishes.
         if (!tracePoint.isActor) {
@@ -2400,10 +2409,47 @@ internal abstract class ManagedStrategy(
                 iThread = threadId,
                 actorId = actorId,
             )
-            traceCollector?.addTracePoint(cancellationTracePoint)
+            addTracePoint(cancellationTracePoint)
             return cancellationTracePoint
         }
         return null
+    }
+
+    private fun addTracePoint(tracePoint: TracePoint?) {
+        traceCollector?.addTracePoint(tracePoint)
+        updateTracePointProvenance(tracePoint)
+    }
+
+    private fun latestExecutionEvent(threadId: Int): AtomicThreadEvent? =
+        (this as? EventStructureStrategy)
+            ?.takeIf { it.memoryModel != LincheckSettings.MemoryModel.SequentialConsistency }
+            ?.lastExecutionEvent(threadId)
+
+    private fun updateTracePointProvenance(tracePoint: TracePoint?) {
+        if (tracePoint !is ReadTracePoint &&
+            tracePoint !is WriteTracePoint &&
+            tracePoint !is MethodCallTracePoint
+        ) return
+
+        val event = latestExecutionEvent(tracePoint.iThread) ?: return
+        val label = event.label as? MemoryAccessLabel ?: return
+        if (label.codeLocation != tracePoint.codeLocation) return
+        if (label !is WriteAccessLabel && !(label is ReadAccessLabel && label.isResponse)) return
+        if (executionEventTracePoints.putIfAbsent(event.id, tracePoint) != null) return
+
+        // Successful atomic updates have both a read and a write represented by the same call.
+        val read = if (label.isExclusiveWriteAccess()) event.exclusiveReadPart else event
+        if (read.label !is ReadAccessLabel || !read.label.isResponse) return
+        executionEventTracePoints.putIfAbsent(read.id, tracePoint)
+
+        // for a read event reading from non-latest write in interleaving,
+        // we need to add a dependency on the write event and mark the write event,
+        // so the trace printer later can print a provenance label for the write event
+        // and a reads-from annotation for read event
+        if (!(this as EventStructureStrategy).readsFromNonLatestWrite(read)) return
+        val readsFrom = executionEventTracePoints[read.readsFrom.id] ?: return
+        tracePoint.dependency = readsFrom.eventId
+        readsFrom.isDependency = true
     }
 
     // == TRACE COLLECTOR EXTENSION METHODS ==
@@ -2411,7 +2457,7 @@ internal abstract class ManagedStrategy(
     private fun TraceCollector.newSwitch(reason: SwitchReason) {
         val eventId = getNextEventId()
         val threadId = threadScheduler.getCurrentThreadId()
-        addTracePoint(
+        this@ManagedStrategy.addTracePoint(
             SwitchEventTracePoint(
                 context = context,
                 eventId = eventId,

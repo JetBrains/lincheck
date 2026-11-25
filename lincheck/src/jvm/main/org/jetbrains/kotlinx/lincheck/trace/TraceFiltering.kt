@@ -30,7 +30,7 @@ internal class ShortenTraceFilter : TraceFilter {
         unfoldableNodes[node]?.let { return it }
 
         return node.children.any { child ->
-            when (child) {
+            child.tracePoint.hasProvenance || when (child) {
                 is EventNode -> with(child) {
                     !tracePoint.isVirtual && (
                         tracePoint.isBlocking && isLast ||

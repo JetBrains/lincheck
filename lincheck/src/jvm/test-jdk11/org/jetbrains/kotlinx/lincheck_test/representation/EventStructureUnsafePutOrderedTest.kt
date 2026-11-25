@@ -15,14 +15,14 @@ import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.util.UnsafeHolder
 
 /**
- * Checks that `sun.misc.Unsafe.putOrdered*` is a release write in the execution graph.
+ * Checks how `sun.misc.Unsafe.putOrdered*` calls appear in an event-structure trace.
  */
 class EventStructureUnsafePutOrderedTest : BaseTraceRepresentationTest("event_structure_unsafe_put_ordered") {
     private var value = 0
 
     @Suppress("DEPRECATION")
     override fun operation() {
-        // The offset is not kept in a field: reading it would put a layout-dependent number into the graph.
+        // The offset is not kept in a field: reading it would put a layout-dependent number into the trace.
         unsafe.putOrderedInt(this, unsafe.objectFieldOffset(valueField), 1)
         check(value == 1)
     }
@@ -30,7 +30,6 @@ class EventStructureUnsafePutOrderedTest : BaseTraceRepresentationTest("event_st
     override fun ModelCheckingOptions.customize() {
         useExperimentalModelChecking()
         memoryModel(MemoryModel.RelaxedJava)
-        printExecutionGraph(true)
     }
 
     companion object {

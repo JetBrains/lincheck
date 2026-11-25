@@ -29,7 +29,6 @@ import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
 import org.jetbrains.lincheck.LincheckSettings.MemoryModel
-import org.jetbrains.kotlinx.lincheck.trace.Trace
 import org.jetbrains.lincheck.descriptors.Types
 import org.jetbrains.lincheck.descriptors.getArrayElementType
 import org.jetbrains.lincheck.trace.TraceContext
@@ -174,7 +173,10 @@ internal class EventStructureStrategy(
             }
         }
 
-        stats.update(inconsistency, executionEvents, eventStructure.events.size)
+        // Trace collection replays an exploration already counted in the statistics.
+        if (!collectTrace) {
+            stats.update(inconsistency, executionEvents, eventStructure.events.size)
+        }
         return (result to inconsistency)
     }
 
@@ -183,11 +185,16 @@ internal class EventStructureStrategy(
         super.close()
     }
 
-    // (OLD) TODO: temporarily disable trace collection for event structure strategy
-    override fun tryCollectTrace(result: InvocationResult): Pair<Trace?, InvocationResult> {
-        // return super.tryCollectTrace(result)
-        return null to result
+    override fun initializeReplay() {
+        super.initializeReplay()
+        eventStructure.initializeReplay()
     }
+
+    internal fun lastExecutionEvent(iThread: Int): AtomicThreadEvent? =
+        eventStructure.lastPlayedEvent(iThread)
+
+    internal fun readsFromNonLatestWrite(read: AtomicThreadEvent): Boolean =
+        eventStructure.readsFromNonLatestReplayedWrite(read)
 
     internal fun collectExecutionGraph(): String = eventStructure.execution.toExecutionGraph(context) {
         eventStructure.eventStructureObjectTracker.getObject(it)?.unwrap()

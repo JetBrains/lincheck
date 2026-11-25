@@ -5,40 +5,23 @@
 | operation(): void |
 | ----------------- |
 
-Execution graph:
-Events in each thread are in program order; Tn:position identifies an event.
-rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).
-Thread -1:
-  T-1:0: Init
-Thread 0:
-  T0:0: ThreadStart^req T0
-  T0:1: ThreadStart^rsp T0
-    senders: T-1:0
-    hb: T-1:0
-  T0:2: Alloc EventStructureArraysFillTest#1
-    hb: T-1:0
-  T0:3: Actor Start operation()
-    hb: T-1:0
-  T0:4: Read^req Volatile EventStructureArraysFillTest#1.array final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:23)
-    hb: T-1:0
-  T0:5: Read^rsp Volatile EventStructureArraysFillTest#1.array final read=int[]#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:23)
-    rf: T0:2
-    hb: T-1:0
-  T0:6: Write Volatile int[]#2[0] write=1 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:23)
-    hb: T-1:0
-  T0:7: Read^req Volatile EventStructureArraysFillTest#1.array final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:24)
-    hb: T-1:0
-  T0:8: Read^rsp Volatile EventStructureArraysFillTest#1.array final read=int[]#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:24)
-    rf: T0:2
-    hb: T-1:0
-  T0:9: Write Volatile int[]#2[0] write=2 at java/util/Arrays.fill(Arrays.java:3182)
-    hb: T-1:0
-  T0:10: Write Volatile int[]#2[1] write=2 at java/util/Arrays.fill(Arrays.java:3182)
-    hb: T-1:0
-  T0:11: Actor End operation()
-    hb: T-1:0
-  T0:12: ThreadFinish [0]
-    hb: T-1:0
-Coherence (adjacent atomic writes, including initialization):
-  int[]#2[0]: T-1:0 -> T0:6 -> T0:9
-  int[]#2[1]: T-1:0 -> T0:10
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------- |
+|                                                  Thread 1                                                  |
+| ---------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                |
+|   array ➜ IntArray#1 at EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:23)         |
+|   IntArray#1[0] = 1 at EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:23)          |
+|   array ➜ IntArray#1 at EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:24)         |
+|   Arrays.fill(IntArray#1, 2) at EventStructureArraysFillTest.operation(EventStructureArraysFillTest.kt:24) |
+|     IntArray#1[0] = 2 at Arrays.fill(Arrays.java:3182)                                                     |
+|     IntArray#1[1] = 2 at Arrays.fill(Arrays.java:3182)                                                     |
+|   result: void                                                                                             |
+| ---------------------------------------------------------------------------------------------------------- |

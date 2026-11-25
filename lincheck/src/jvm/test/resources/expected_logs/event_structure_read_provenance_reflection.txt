@@ -1,0 +1,42 @@
+= Invalid execution results =
+| ------------------------------------------------- |
+|         Thread 1          |       Thread 2        |
+| ------------------------------------------------- |
+| writeReflectively(): void | readReflectively(): 1 |
+| ------------------------------------------------- |
+
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------- |
+|                  Thread 1                  |                    Thread 2                    |
+| ------------------------------------------------------------------------------------------- |
+| writeReflectively()                        |                                                |
+|   Wrapper.class.getField("value"): Field#1 |                                                |
+|   wrapper ➜ Wrapper#1                      |                                                |
+|   field.setInt(Wrapper#1, 1) [W5]          |                                                |
+|   wrapper ➜ Wrapper#1                      |                                                |
+|   field.setInt(Wrapper#1, 2)               |                                                |
+|   result: void                             |                                                |
+|                                            | readReflectively(): 1                          |
+|                                            |   Wrapper.class.getField("value"): Field#2     |
+|                                            |   wrapper ➜ Wrapper#1                          |
+|                                            |   Field#2.getInt(Wrapper#1): 1 [reads-from W5] |
+|                                            |   result: 1                                    |
+| ------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                           Thread 1                                                            |                                                             Thread 2                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| writeReflectively()                                                                                                           |                                                                                                                                  |
+|   Wrapper.class.getField("value"): Field#1 at ReadProvenanceFixture.writeReflectively(EventStructureReadProvenanceTest.kt:66) |                                                                                                                                  |
+|   wrapper ➜ Wrapper#1 at ReadProvenanceFixture.writeReflectively(EventStructureReadProvenanceTest.kt:67)                      |                                                                                                                                  |
+|   field.setInt(Wrapper#1, 1) [W5] at ReadProvenanceFixture.writeReflectively(EventStructureReadProvenanceTest.kt:67)          |                                                                                                                                  |
+|   wrapper ➜ Wrapper#1 at ReadProvenanceFixture.writeReflectively(EventStructureReadProvenanceTest.kt:68)                      |                                                                                                                                  |
+|   field.setInt(Wrapper#1, 2) at ReadProvenanceFixture.writeReflectively(EventStructureReadProvenanceTest.kt:68)               |                                                                                                                                  |
+|   result: void                                                                                                                |                                                                                                                                  |
+|                                                                                                                               | readReflectively(): 1                                                                                                            |
+|                                                                                                                               |   Wrapper.class.getField("value"): Field#2 at ReadProvenanceFixture.readReflectively(EventStructureReadProvenanceTest.kt:72)     |
+|                                                                                                                               |   wrapper ➜ Wrapper#1 at ReadProvenanceFixture.readReflectively(EventStructureReadProvenanceTest.kt:72)                          |
+|                                                                                                                               |   Field#2.getInt(Wrapper#1): 1 [reads-from W5] at ReadProvenanceFixture.readReflectively(EventStructureReadProvenanceTest.kt:72) |
+|                                                                                                                               |   result: 1                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

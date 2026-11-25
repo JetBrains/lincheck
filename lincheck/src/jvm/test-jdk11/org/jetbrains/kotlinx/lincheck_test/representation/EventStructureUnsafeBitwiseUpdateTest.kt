@@ -15,8 +15,7 @@ import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.concurrent.locks.ReentrantLock
 
 /**
- * Checks that a bitwise update of the internal `Unsafe` appears in the execution graph
- * as the read and the compare-and-set of its retry loop.
+ * Checks how cancelling a condition wait appears in an event-structure trace.
  *
  * A timed-out wait on a condition cancels its queue node with `Unsafe.getAndBitwiseAndInt`.
  */
@@ -36,6 +35,5 @@ class EventStructureUnsafeBitwiseUpdateTest : BaseTraceRepresentationTest("event
     override fun ModelCheckingOptions.customize() {
         useExperimentalModelChecking()
         memoryModel(MemoryModel.RelaxedJava)
-        printExecutionGraph(true)
     }
 }

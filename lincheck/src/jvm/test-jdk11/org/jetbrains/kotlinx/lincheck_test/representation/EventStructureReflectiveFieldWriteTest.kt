@@ -13,7 +13,7 @@ package org.jetbrains.kotlinx.lincheck_test.representation
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 
 /**
- * Checks that a `java.lang.reflect.Field.set` write appears in the execution graph of the experimental strategy.
+ * Checks how a `java.lang.reflect.Field.set` write appears in an event-structure trace.
  */
 class EventStructureReflectiveFieldWriteTest : BaseTraceRepresentationTest("event_structure_reflective_field_write") {
     private var value = 1
@@ -30,6 +30,5 @@ class EventStructureReflectiveFieldWriteTest : BaseTraceRepresentationTest("even
 
     override fun ModelCheckingOptions.customize() {
         useExperimentalModelChecking()
-        printExecutionGraph(true)
     }
 }

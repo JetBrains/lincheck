@@ -1,0 +1,38 @@
+= Invalid execution results =
+| ----------------------------------- |
+|      Thread 1      |    Thread 2    |
+| ----------------------------------- |
+| writeArray(): void | readArray(): 1 |
+| ----------------------------------- |
+
+The following interleaving leads to the error:
+| -------------------------------------------------------------- |
+|         Thread 1         |              Thread 2               |
+| -------------------------------------------------------------- |
+| writeArray()             |                                     |
+|   array ➜ IntArray#1     |                                     |
+|   IntArray#1[0] = 1 [W3] |                                     |
+|   array ➜ IntArray#1     |                                     |
+|   IntArray#1[0] = 2      |                                     |
+|   result: void           |                                     |
+|                          | readArray(): 1                      |
+|                          |   array ➜ IntArray#1                |
+|                          |   IntArray#1[0] ➜ 1 [reads-from W3] |
+|                          |   result: 1                         |
+| -------------------------------------------------------------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                               Thread 1                                               |                                                    Thread 2                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| writeArray()                                                                                         |                                                                                                                |
+|   array ➜ IntArray#1 at ReadProvenanceFixture.writeArray(EventStructureReadProvenanceTest.kt:48)     |                                                                                                                |
+|   IntArray#1[0] = 1 [W3] at ReadProvenanceFixture.writeArray(EventStructureReadProvenanceTest.kt:48) |                                                                                                                |
+|   array ➜ IntArray#1 at ReadProvenanceFixture.writeArray(EventStructureReadProvenanceTest.kt:49)     |                                                                                                                |
+|   IntArray#1[0] = 2 at ReadProvenanceFixture.writeArray(EventStructureReadProvenanceTest.kt:49)      |                                                                                                                |
+|   result: void                                                                                       |                                                                                                                |
+|                                                                                                      | readArray(): 1                                                                                                 |
+|                                                                                                      |   array ➜ IntArray#1 at ReadProvenanceFixture.readArray(EventStructureReadProvenanceTest.kt:53)                |
+|                                                                                                      |   IntArray#1[0] ➜ 1 [reads-from W3] at ReadProvenanceFixture.readArray(EventStructureReadProvenanceTest.kt:53) |
+|                                                                                                      |   result: 1                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

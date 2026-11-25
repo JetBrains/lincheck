@@ -39,6 +39,15 @@ sealed class TracePoint(
     val actorId: Int,
     codeLocation: Int = UNKNOWN_CODE_LOCATION_ID,
 ) {
+    // trace-point ID of a non-latest reads-from source, or -1 when no annotation is needed.
+    internal var dependency: Int = -1
+
+    // whether a read refers to this write and requires its provenance label.
+    internal var isDependency: Boolean = false
+
+    // whether this point carries provenance that trace shortening must preserve.
+    internal val hasProvenance: Boolean get() = dependency >= 0 || isDependency
+
     internal var stackTraceElement = context.stackTrace(codeLocation)
 
     internal var codeLocation = codeLocation
@@ -53,7 +62,11 @@ sealed class TracePoint(
     internal abstract fun toString(withValues: Boolean): String
 
     internal open fun toString(withLocation: Boolean, withValues: Boolean): String =
-        toString(withValues) + if (withLocation) locationSuffix() else ""
+        toString(withValues) + provenanceSuffix() + if (withLocation) locationSuffix() else ""
+
+    private fun provenanceSuffix(): String =
+        (if (isDependency) " [W$eventId]" else "") +
+        (if (dependency >= 0) " [reads-from W$dependency]" else "")
 
     override fun toString(): String = toString(withLocation = true, withValues = true)
 
@@ -115,7 +128,10 @@ internal class ReadTracePoint(
         ReadTracePoint(context, eventId, iThread, actorId,
             ownerRepresentation, fieldName, codeLocation, isLocal,
             valueRepresentation, valueType,
-        )
+        ).also {
+            it.dependency = dependency
+            it.isDependency = isDependency
+        }
 }
 
 internal class WriteTracePoint(
@@ -156,7 +172,11 @@ internal class WriteTracePoint(
         WriteTracePoint(
             context, eventId, iThread, actorId, ownerRepresentation, fieldName, codeLocation,
             isLocal, valueRepresentation, valueType,
-        ).also { it.stackTraceElement = stackTraceElement }
+        ).also {
+            it.stackTraceElement = stackTraceElement
+            it.dependency = dependency
+            it.isDependency = isDependency
+        }
 }
 
 internal class MethodCallTracePoint(
@@ -257,6 +277,8 @@ internal class MethodCallTracePoint(
             isStatic, callType, isSuspend, parameters, parameterTypes, ownerName,
         ).also {
             it.stackTraceElement = stackTraceElement
+            it.dependency = dependency
+            it.isDependency = isDependency
             if (resultSet) {
                 it.setResult(returnedValue, returnValueType)
             }

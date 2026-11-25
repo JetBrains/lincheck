@@ -16,8 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.function.IntUnaryOperator
 
 /**
- * Checks that a function-update method of a JDK atomic appears in the execution graph
- * as the read and the compare-and-set of its retry loop.
+ * Checks how function-update calls on a JDK atomic appear in an event-structure trace.
  */
 class EventStructureAtomicUpdateFunctionTest : BaseTraceRepresentationTest("event_structure_atomic_update_function") {
     private val counter = AtomicInteger(0)
@@ -30,10 +29,9 @@ class EventStructureAtomicUpdateFunctionTest : BaseTraceRepresentationTest("even
     override fun ModelCheckingOptions.customize() {
         useExperimentalModelChecking()
         memoryModel(MemoryModel.RelaxedJava)
-        printExecutionGraph(true)
     }
 
-    // Not a lambda: the name of a lambda class, which the graph would contain, changes from run to run.
+    // Use a named object to keep its representation stable between runs.
     private object Increment : IntUnaryOperator {
         override fun applyAsInt(operand: Int): Int = operand + 1
     }

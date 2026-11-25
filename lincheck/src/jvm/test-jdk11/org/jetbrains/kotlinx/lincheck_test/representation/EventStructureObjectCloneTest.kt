@@ -17,8 +17,7 @@ private class EventStructureObjectCloneTestBox(var value: Int) : Cloneable {
 }
 
 /**
- * Checks that a clone made with `Object.clone()` appears in the execution graph as an allocation,
- * and that a write into one of the clone's own fields right after cloning is tracked.
+ * Checks how `Object.clone()` and a subsequent write into the clone appear in the trace.
  */
 class EventStructureObjectCloneTest : BaseTraceRepresentationTest("event_structure_object_clone") {
     private val original = EventStructureObjectCloneTestBox(1)
@@ -30,6 +29,5 @@ class EventStructureObjectCloneTest : BaseTraceRepresentationTest("event_structu
 
     override fun ModelCheckingOptions.customize() {
         useExperimentalModelChecking()
-        printExecutionGraph(true)
     }
 }

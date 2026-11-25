@@ -37,7 +37,6 @@ class EventStructureStaticInitialValueTest {
         State.value = 7
         ModelCheckingOptions()
             .useExperimentalModelChecking()
-            .printExecutionGraph(true)
             .iterations(0)
             .addCustomScenario {
                 parallel {

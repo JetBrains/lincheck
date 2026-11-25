@@ -1,0 +1,32 @@
+= Invalid execution results =
+| ------------------------------------------ |
+|         Thread 1         |    Thread 2     |
+| ------------------------------------------ |
+| atomicUpdateAndRead(): 2 | readAtomic(): 2 |
+| ------------------------------------------ |
+
+The following interleaving leads to the error:
+| ------------------------------------------ |
+|         Thread 1         |    Thread 2     |
+| ------------------------------------------ |
+| atomicUpdateAndRead(): 2 |                 |
+|                          | readAtomic(): 2 |
+| ------------------------------------------ |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                          Thread 1                                                           |                                                  Thread 2                                                   |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| atomicUpdateAndRead(): 2                                                                                                    |                                                                                                             |
+|   atomic ➜ AtomicInteger#1 at ReadProvenanceFixture.atomicUpdateAndRead(EventStructureReadProvenanceTest.kt:89)             |                                                                                                             |
+|   AtomicInteger#1.set(1) at ReadProvenanceFixture.atomicUpdateAndRead(EventStructureReadProvenanceTest.kt:89)               |                                                                                                             |
+|   atomic ➜ AtomicInteger#1 at ReadProvenanceFixture.atomicUpdateAndRead(EventStructureReadProvenanceTest.kt:90)             |                                                                                                             |
+|   AtomicInteger#1.getAndIncrement(): 1 at ReadProvenanceFixture.atomicUpdateAndRead(EventStructureReadProvenanceTest.kt:90) |                                                                                                             |
+|   atomic ➜ AtomicInteger#1 at ReadProvenanceFixture.atomicUpdateAndRead(EventStructureReadProvenanceTest.kt:91)             |                                                                                                             |
+|   AtomicInteger#1.get(): 2 at ReadProvenanceFixture.atomicUpdateAndRead(EventStructureReadProvenanceTest.kt:91)             |                                                                                                             |
+|   result: 2                                                                                                                 |                                                                                                             |
+|                                                                                                                             | readAtomic(): 2                                                                                             |
+|                                                                                                                             |   atomic ➜ AtomicInteger#1 at ReadProvenanceFixture.readAtomic(EventStructureReadProvenanceTest.kt:62)      |
+|                                                                                                                             |   AtomicInteger#1.getPlain(): 2 at ReadProvenanceFixture.readAtomic(EventStructureReadProvenanceTest.kt:62) |
+|                                                                                                                             |   result: 2                                                                                                 |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

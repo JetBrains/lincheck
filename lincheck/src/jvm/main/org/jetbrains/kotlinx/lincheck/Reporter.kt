@@ -221,7 +221,7 @@ internal fun ExecutionLayout(
     val threadHeaders = threadNames ?: (0 until nThreads).map { "Thread ${it + 1}" }
     interleavingSections.forEach { section ->
         section.mapIndexed { columnIndex, actors ->
-            val maxColumnActorLength = actors.maxOf { it.length }
+            val maxColumnActorLength = actors.maxOfOrNull { it.length } ?: 0
             columnWidths[columnIndex] = max(columnWidths[columnIndex], maxColumnActorLength)
         }
     }

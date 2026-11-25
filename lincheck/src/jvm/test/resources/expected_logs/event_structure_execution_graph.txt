@@ -5,6 +5,39 @@
 | operation(): void |
 | ----------------- |
 
+The following interleaving leads to the error:
+| ----------- |
+|  Thread 1   |
+| ----------- |
+| operation() |
+| ----------- |
+
+Detailed trace:
+| --------------------------------------------------------------------------------------------------------------------------------- |
+|                                                             Thread 1                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------- |
+| operation()                                                                                                                       |
+|   value = 7 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:32)                                 |
+|   VarHandle.releaseFence() at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:33)                  |
+|   published = 1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:34)                             |
+|   VarHandle.acquireFence() at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:35)                  |
+|   published ➜ 1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:36)                             |
+|   value ➜ 7 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:37)                                 |
+|   counter ➜ AtomicInteger#1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38)                 |
+|   AtomicInteger#1.compareAndSet(0, 2): true at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:38) |
+|   charHandle ➜ Array#1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)                      |
+|   chars ➜ CharArray#1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)                       |
+|   chars[0].getAndBitwiseAnd('老'): '考' at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:39)       |
+|   chars ➜ CharArray#1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)                       |
+|   CharArray#1[0] ➜ '老' at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:40)                      |
+|   booleanHandle ➜ Array#1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)                   |
+|   booleans ➜ BooleanArray#1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)                 |
+|   booleans[0].getAndBitwiseXor(true): true at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:41)  |
+|   booleans ➜ BooleanArray#1 at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)                 |
+|   BooleanArray#1[0] ➜ false at EventStructureExecutionGraphTest.operation(EventStructureExecutionGraphTest.kt:42)                 |
+|   result: void                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------- |
+
 Execution graph:
 Events in each thread are in program order; Tn:position identifies an event.
 rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).

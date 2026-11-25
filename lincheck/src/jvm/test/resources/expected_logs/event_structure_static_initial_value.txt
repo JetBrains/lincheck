@@ -5,49 +5,36 @@
 | write(): void | read(): 7 |
 | ------------------------- |
 
-Execution graph:
-Events in each thread are in program order; Tn:position identifies an event.
-rf = reads-from; hb = latest observed event in each other thread (happens-before frontier).
-Thread -1:
-  T-1:0: Init
-Thread 0:
-  T0:0: ThreadStart^req T0
-  T0:1: ThreadStart^rsp T0
-    senders: T-1:0
-    hb: T-1:0
-  T0:2: Alloc EventStructureStaticInitialValueTest#1
-    hb: T-1:0
-  T0:3: ThreadFork [1]
-    hb: T-1:0
-  T0:4: Actor Start write()
-    hb: T-1:0
-  T0:5: Read^req Volatile EventStructureStaticInitialValueTest$State.INSTANCE final at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureStaticInitialValueTest.write(EventStructureStaticInitialValueTest.kt:30)
-    hb: T-1:0
-  T0:6: Read^rsp Volatile EventStructureStaticInitialValueTest$State.INSTANCE final read=State#2 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureStaticInitialValueTest.write(EventStructureStaticInitialValueTest.kt:30)
-    rf: T-1:0
-    hb: T-1:0
-  T0:7: Write Volatile EventStructureStaticInitialValueTest$State.value write=42 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureStaticInitialValueTest.write(EventStructureStaticInitialValueTest.kt:30)
-    hb: T-1:0
-  T0:8: Actor End write()
-    hb: T-1:0
-  T0:9: ThreadFinish [0]
-    hb: T-1:0
-Thread 1:
-  T1:0: ThreadStart^req T1
-  T1:1: ThreadStart^rsp T1
-    senders: T0:3
-    hb: T-1:0, T0:3
-  T1:2: Actor Start read()
-    hb: T-1:0, T0:3
-  T1:3: Read^req Volatile EventStructureStaticInitialValueTest$State.value at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureStaticInitialValueTest.read(EventStructureStaticInitialValueTest.kt:33)
-    hb: T-1:0, T0:3
-  T1:4: Read^rsp Volatile EventStructureStaticInitialValueTest$State.value read=7 at org/jetbrains/kotlinx/lincheck_test/representation/EventStructureStaticInitialValueTest.read(EventStructureStaticInitialValueTest.kt:33)
-    rf: T-1:0
-    hb: T-1:0, T0:3
-  T1:5: Actor End read()
-    hb: T-1:0, T0:3
-  T1:6: ThreadFinish [1]
-    hb: T-1:0, T0:3
-Coherence (adjacent atomic writes, including initialization):
-  EventStructureStaticInitialValueTest$State.INSTANCE: T-1:0
-  EventStructureStaticInitialValueTest$State.value: T-1:0 -> T0:7
+The following interleaving leads to the error:
+| ------------------------------------------------------------------------------------------------------------------------ |
+|                            Thread 1                             |                        Thread 2                        |
+| ------------------------------------------------------------------------------------------------------------------------ |
+| write()                                                         |                                                        |
+|   switch                                                        |                                                        |
+|                                                                 | read(): 7                                              |
+|                                                                 |   switch                                               |
+|   EventStructureStaticInitialValueTest$State.INSTANCE ➜ State#1 |                                                        |
+|   switch                                                        |                                                        |
+|                                                                 |   EventStructureStaticInitialValueTest$State.value ➜ 7 |
+|                                                                 |   switch                                               |
+|   EventStructureStaticInitialValueTest$State.value = 42         |                                                        |
+|   result: void                                                  |                                                        |
+|                                                                 |   result: 7                                            |
+| ------------------------------------------------------------------------------------------------------------------------ |
+
+Detailed trace:
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+|                                                                         Thread 1                                                                          |                                                                    Thread 2                                                                     |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| write()                                                                                                                                                   |                                                                                                                                                 |
+|   switch                                                                                                                                                  |                                                                                                                                                 |
+|                                                                                                                                                           | read(): 7                                                                                                                                       |
+|                                                                                                                                                           |   switch                                                                                                                                        |
+|   EventStructureStaticInitialValueTest$State.INSTANCE ➜ State#1 at EventStructureStaticInitialValueTest.write(EventStructureStaticInitialValueTest.kt:30) |                                                                                                                                                 |
+|   switch                                                                                                                                                  |                                                                                                                                                 |
+|                                                                                                                                                           |   EventStructureStaticInitialValueTest$State.value ➜ 7 at EventStructureStaticInitialValueTest.read(EventStructureStaticInitialValueTest.kt:33) |
+|                                                                                                                                                           |   switch                                                                                                                                        |
+|   EventStructureStaticInitialValueTest$State.value = 42 at EventStructureStaticInitialValueTest.write(EventStructureStaticInitialValueTest.kt:30)         |                                                                                                                                                 |
+|   result: void                                                                                                                                            |                                                                                                                                                 |
+|                                                                                                                                                           |   result: 7                                                                                                                                     |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

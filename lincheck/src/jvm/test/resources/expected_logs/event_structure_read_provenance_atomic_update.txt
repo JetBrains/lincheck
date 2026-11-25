@@ -1,0 +1,38 @@
+= Invalid execution results =
+| ------------------------------------------- |
+|         Thread 1          |    Thread 2     |
+| ------------------------------------------- |
+| writeAtomicUpdate(): void | readAtomic(): 1 |
+| ------------------------------------------- |
+
+The following interleaving leads to the error:
+| --------------------------------------------------------------------------------------------- |
+|                  Thread 1                   |                    Thread 2                     |
+| --------------------------------------------------------------------------------------------- |
+| writeAtomicUpdate()                         |                                                 |
+|   atomic ➜ AtomicInteger#1                  |                                                 |
+|   AtomicInteger#1.getAndIncrement(): 0 [W3] |                                                 |
+|   atomic ➜ AtomicInteger#1                  |                                                 |
+|   AtomicInteger#1.setPlain(2)               |                                                 |
+|   result: void                              |                                                 |
+|                                             | readAtomic(): 1                                 |
+|                                             |   atomic ➜ AtomicInteger#1                      |
+|                                             |   AtomicInteger#1.getPlain(): 1 [reads-from W3] |
+|                                             |   result: 1                                     |
+| --------------------------------------------------------------------------------------------- |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                                            Thread 1                                                            |                                                          Thread 2                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| writeAtomicUpdate()                                                                                                            |                                                                                                                             |
+|   atomic ➜ AtomicInteger#1 at ReadProvenanceFixture.writeAtomicUpdate(EventStructureReadProvenanceTest.kt:76)                  |                                                                                                                             |
+|   AtomicInteger#1.getAndIncrement(): 0 [W3] at ReadProvenanceFixture.writeAtomicUpdate(EventStructureReadProvenanceTest.kt:76) |                                                                                                                             |
+|   atomic ➜ AtomicInteger#1 at ReadProvenanceFixture.writeAtomicUpdate(EventStructureReadProvenanceTest.kt:77)                  |                                                                                                                             |
+|   AtomicInteger#1.setPlain(2) at ReadProvenanceFixture.writeAtomicUpdate(EventStructureReadProvenanceTest.kt:77)               |                                                                                                                             |
+|   result: void                                                                                                                 |                                                                                                                             |
+|                                                                                                                                | readAtomic(): 1                                                                                                             |
+|                                                                                                                                |   atomic ➜ AtomicInteger#1 at ReadProvenanceFixture.readAtomic(EventStructureReadProvenanceTest.kt:62)                      |
+|                                                                                                                                |   AtomicInteger#1.getPlain(): 1 [reads-from W3] at ReadProvenanceFixture.readAtomic(EventStructureReadProvenanceTest.kt:62) |
+|                                                                                                                                |   result: 1                                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

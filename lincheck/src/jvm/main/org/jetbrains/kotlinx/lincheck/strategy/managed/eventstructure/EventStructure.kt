@@ -138,8 +138,6 @@ internal class EventStructure(
 
     private val delayedConsistencyCheckBuffer = mutableListOf<AtomicThreadEvent>()
 
-    private val readCodeLocationsCounter = mutableMapOf<Pair<Int, Int>, Int>()
-
     init {
         //TODO: I do not like that we have to do this, but addRootEvent relies on
         // having the initThreadId and mainThreadId registered
@@ -176,6 +174,16 @@ internal class EventStructure(
         }
     }
 
+    fun initializeReplay() {
+        // Use the SC witness when an operational interleaving exists.
+        val ordering = if (memoryModel == MemoryModel.SequentialConsistency) {
+            _execution.executionOrder.ordering.toList()
+        } else {
+            execution.sortedBy { it.id }
+        }
+        replayer = Replayer(ordering)
+    }
+
     fun initializeExploration() {
         // reset re-played frontier
         playedFrontier = MutableExecutionFrontier()
@@ -190,7 +198,6 @@ internal class EventStructure(
         }
         // reset state of other auxiliary structures
         delayedConsistencyCheckBuffer.clear()
-        readCodeLocationsCounter.clear()
     }
 
     fun abortExploration() {
@@ -781,6 +788,26 @@ internal class EventStructure(
         return replayer.currentEvent
             ?.ensure { event -> event.dependencies.all { it in playedFrontier } }
             ?.also { replayer.setNextEvent() }
+    }
+
+    internal fun lastPlayedEvent(iThread: Int): AtomicThreadEvent? =
+        playedFrontier[iThread]
+
+    internal fun readsFromNonLatestReplayedWrite(read: AtomicThreadEvent): Boolean {
+        val label = read.label as? ReadAccessLabel ?: return false
+        if (!label.isResponse) return false
+        val replayClock = MutableVectorClock()
+        for ((thread, event) in playedFrontier.threadMap) {
+            replayClock[thread] = event?.threadPosition ?: -1
+        }
+        // Exclude the read's own RMW write, which is added before its call trace point.
+        replayClock[read.threadId] = read.threadPosition
+        val order = execution.fullCoherenceOrder ?: execution.coherenceOrder
+        val source = read.readsFrom
+        // Same-location writes in one thread are coherence-ordered; its latest write subsumes earlier ones.
+        return execution.memoryAccessEventIndex.getLatestWrites(label.location, replayClock).any { write ->
+            order(source, write)
+        }
     }
 
     /* ************************************************************************* */
@@ -1538,9 +1565,7 @@ internal class EventStructure(
 
     fun addActorStartEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
         val label = ActorLabel(SpanLabelKind.Start, iThread, actor)
-        return addEvent(iThread, label, dependencies = listOf()).also {
-            resetReadCodeLocationsCounter(iThread)
-        }
+        return addEvent(iThread, label, dependencies = listOf())
     }
 
     fun addActorEndEvent(iThread: Int, actor: Actor): AtomicThreadEvent {
@@ -1568,11 +1593,6 @@ internal class EventStructure(
     /* ************************************************************************* */
     /*      Miscellaneous                                                        */
     /* ************************************************************************* */
-
-    private fun resetReadCodeLocationsCounter(iThread: Int) {
-        // reset all code-locations counters of the given thread
-        readCodeLocationsCounter.keys.retainAll { (tid, _) -> tid != iThread }
-    }
 
     // NOTE: In the case of sequential consistency, to make sure that
     // happensBeforeOrder === causalityOrder, we change the memory ordering of

@@ -14,7 +14,7 @@ import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import java.util.Arrays
 
 /**
- * Checks that the array writes of [Arrays.fill] appear in the execution graph of the experimental strategy.
+ * Checks how array writes and [Arrays.fill] calls appear in an event-structure trace.
  */
 class EventStructureArraysFillTest : BaseTraceRepresentationTest("event_structure_arrays_fill") {
     private val array = IntArray(2)
@@ -26,6 +26,5 @@ class EventStructureArraysFillTest : BaseTraceRepresentationTest("event_structur
 
     override fun ModelCheckingOptions.customize() {
         useExperimentalModelChecking()
-        printExecutionGraph(true)
     }
 }

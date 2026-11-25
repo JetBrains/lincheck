@@ -123,6 +123,7 @@ private fun SingleThreadedTable<TraceNode>.compressAccessPairs() = compressNodes
  * For more details check [isDefaultPair] and [isAccessPair].
  */
 private fun combineNodes(parent: CallNode, child: CallNode): TraceNode {
+    if (child.tracePoint.hasProvenance) return parent
     // TODO investigate why in rare cases return values are not equal #682
     val sameResult = parent.tracePoint.thrownException == child.tracePoint.thrownException &&
         (parent.tracePoint.thrownException != null ||
@@ -429,8 +430,8 @@ internal fun Column<TraceNode>.collapseLibraries(analysisProfile: AnalysisProfil
     // if should not be hidden
     if (node !is CallNode || !analysisProfile.shouldBeHidden(node)) return@compressNodes node
 
-    // if cannot be hidden (due to switch point)
-    if (node.contains { it is EventNode && it.tracePoint is SwitchEventTracePoint })
+    // Keep provenance endpoints visible, just like switch points.
+    if (node.contains { it.tracePoint.hasProvenance || it is EventNode && it.tracePoint is SwitchEventTracePoint })
         return@compressNodes node
 
     val newNode = node.copy()

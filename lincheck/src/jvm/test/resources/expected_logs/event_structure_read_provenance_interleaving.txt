@@ -1,0 +1,32 @@
+= Invalid execution results =
+| ----------------------------------- |
+|      Thread 1      |    Thread 2    |
+| ----------------------------------- |
+| writeField(): void | readField(): 1 |
+| ----------------------------------- |
+
+The following interleaving leads to the error:
+| ------------------------------------ |
+|      Thread 1       |    Thread 2    |
+| ------------------------------------ |
+| writeField()        |                |
+|   wrapper.value = 1 |                |
+|   switch            |                |
+|                     | readField(): 1 |
+|   wrapper.value = 2 |                |
+|   result: void      |                |
+| ------------------------------------ |
+
+Detailed trace:
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|                                            Thread 1                                             |                                            Thread 2                                            |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| writeField()                                                                                    |                                                                                                |
+|   wrapper.value = 1 at ReadProvenanceFixture.writeField(EventStructureReadProvenanceTest.kt:39) |                                                                                                |
+|   switch                                                                                        |                                                                                                |
+|                                                                                                 | readField(): 1                                                                                 |
+|                                                                                                 |   wrapper.value ➜ 1 at ReadProvenanceFixture.readField(EventStructureReadProvenanceTest.kt:44) |
+|                                                                                                 |   result: 1                                                                                    |
+|   wrapper.value = 2 at ReadProvenanceFixture.writeField(EventStructureReadProvenanceTest.kt:40) |                                                                                                |
+|   result: void                                                                                  |                                                                                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
