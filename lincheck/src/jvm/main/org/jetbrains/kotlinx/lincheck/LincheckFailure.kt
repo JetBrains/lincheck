@@ -12,7 +12,10 @@ package org.jetbrains.kotlinx.lincheck
 import org.jetbrains.kotlinx.lincheck.execution.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.Inconsistency
 import org.jetbrains.kotlinx.lincheck.trace.Trace
+import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
 import org.jetbrains.lincheck.util.AnalysisProfile
+import java.util.Collections
+import java.util.IdentityHashMap
 
 sealed class LincheckFailure(
     val scenario: ExecutionScenario,
@@ -28,6 +31,37 @@ sealed class LincheckFailure(
 
     override fun toString() =
         StringBuilder().appendFailure(this).toString()
+}
+
+/**
+ * Materializes the stack traces of the exceptions captured in this failure.
+ *
+ * The JVM materializes [Throwable.getStackTrace] lazily and caches the result in the throwable.
+ * Detaching the Lincheck agent retransforms the instrumented classes,
+ * which makes the method versions captured in the backtrace obsolete
+ * and loses their file and line information.
+ * Materializing while the agent is still attached makes the failure report
+ * independent of when it is rendered.
+ */
+internal fun LincheckFailure.materializeExceptionStackTraces() {
+    val resultExceptions = with(results) { initResults + parallelResults.flatten() + postResults }
+        .filterIsInstance<ExceptionResult>()
+        .map { it.throwable }
+    val failureException = when (this) {
+        is UnexpectedExceptionFailure -> exception
+        is ValidationFailure -> exception
+        else -> null
+    }
+    val seen = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())
+    (resultExceptions + listOfNotNull(failureException)).forEach { it.materializeStackTrace(seen) }
+}
+
+private fun Throwable.materializeStackTrace(seen: MutableSet<Throwable>) {
+    if (!seen.add(this)) return
+    // `getStackTrace` materializes the stack trace elements and caches them in the throwable.
+    stackTrace.hashCode()
+    cause?.materializeStackTrace(seen)
+    suppressed.forEach { it.materializeStackTrace(seen) }
 }
 
 internal class IncorrectResultsFailure(

@@ -29,10 +29,6 @@ internal class Reporter(private val printExecutionScenarios: Boolean) {
         })
     }
 
-    fun reportFailedScenario(failure: LincheckFailure) {
-        report(failure.toString())
-    }
-
     fun reportScenarioMinimization() {
         if (printExecutionScenarios) {
             report("\nInvalid interleaving found, trying to minimize the scenario.")

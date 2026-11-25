@@ -47,6 +47,9 @@ abstract class AbstractDeterministicTest {
                 .verifier(FailingVerifier::class.java)
                 .customize()
                 .detectFailure(this::class.java) { lincheckFailure ->
+                    // The failure report is no longer printed by the framework;
+                    // print it here so the forbidden-string check below still sees it.
+                    lincheckFailure?.let(::println)
                     val results = lincheckFailure?.results?.parallelResults?.flatten()?.takeIf { it.isNotEmpty() }
                     require(results != null) { lincheckFailure.toString() }
                     if (shouldFail()) {

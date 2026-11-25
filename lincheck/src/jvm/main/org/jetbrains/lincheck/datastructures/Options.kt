@@ -151,7 +151,7 @@ sealed class Options<OPT : Options<OPT>> {
 
     /**
      * Retained for compatibility and has no effect.
-     * Use [LincheckSettings.printExecutionScenarios] to control scenario output.
+     * Use [LincheckSettings.ScenarioGeneration.printExecutionScenarios] to control scenario output.
      */
     @Suppress("UNUSED_PARAMETER")
     fun logLevel(logLevel: LoggingLevel): OPT = applyAndCast {}

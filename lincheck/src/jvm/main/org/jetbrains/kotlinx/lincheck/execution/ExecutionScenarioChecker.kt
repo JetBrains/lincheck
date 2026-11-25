@@ -26,7 +26,7 @@ internal class ExecutionScenarioChecker(
 ) {
     private val testStructure = CTestStructure.getFromTestClass(testClass)
 
-    private val reporter = Reporter(settings.printExecutionScenarios)
+    private val reporter = Reporter(settings.scenarioGeneration.printExecutionScenarios)
 
     init {
         // Currently, we extract validation functions from the `testClass` structure,
@@ -45,6 +45,9 @@ internal class ExecutionScenarioChecker(
         var failure: LincheckFailure? = null
         withLincheckTestContext(settings.instrumentationMode) {
             failure = settings.checkScenarios()
+            // Materialize while the agent is still attached, so the report does not depend
+            // on when the caller renders the failure.
+            failure?.materializeExceptionStackTraces()
             cont?.invoke(failure)
         }
         return failure
@@ -91,7 +94,6 @@ internal class ExecutionScenarioChecker(
                     candidate.run(this, createVerifier(testClass))
                 }
             }
-            reporter.reportFailedScenario(failure)
             runReplayForPlugin(failure, verifier)
             return failure
         }

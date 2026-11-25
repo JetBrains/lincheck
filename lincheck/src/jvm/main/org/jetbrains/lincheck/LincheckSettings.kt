@@ -97,17 +97,6 @@ class LincheckSettings() {
      */
     fun invocationTimeoutMs(value: Long) = apply { invocationTimeoutMs = value }
 
-    /**
-     * Prints each execution scenario and minimization progress in data-structure-based tests.
-     * Enabled by default. When disabled, only the failure report is printed.
-     */
-    var printExecutionScenarios: Boolean = true
-
-    /**
-     * Configures whether to print execution scenarios and minimization progress.
-     */
-    fun printExecutionScenarios(value: Boolean) = apply { printExecutionScenarios = value }
-
 
     // ========================================================
     //   Scenario generation
@@ -342,6 +331,21 @@ class LincheckSettings() {
         fun sequentialSpecification(value: Class<*>?) = apply { sequentialSpecification = value }
 
 
+        // ======== Reporting ========
+
+        /**
+         * Prints each execution scenario and minimization progress to the standard output.
+         * Enabled by default. The failure report is not printed;
+         * it is carried by the thrown [LincheckAssertionError].
+         */
+        var printExecutionScenarios: Boolean = true
+
+        /**
+         * Configures whether to print execution scenarios and minimization progress.
+         */
+        fun printExecutionScenarios(value: Boolean) = apply { printExecutionScenarios = value }
+
+
         // ======== Copying ========
 
         /**
@@ -352,6 +356,7 @@ class LincheckSettings() {
             it.verifier = verifier
             it.sequentialSpecification = sequentialSpecification
             it.minimizeFailedScenario = minimizeFailedScenario
+            it.printExecutionScenarios = printExecutionScenarios
             it._customScenarios.addAll(_customScenarios.map { scenario -> scenario.copy() })
             it.randomScenarios = randomScenarios
             it.threads = threads
@@ -377,6 +382,7 @@ class LincheckSettings() {
                 "executionGenerator".takeIf { executionGenerator != defaults.executionGenerator },
                 "customScenarios".takeIf { _customScenarios.isNotEmpty() },
                 "minimizeFailedScenario".takeIf { minimizeFailedScenario != defaults.minimizeFailedScenario },
+                "printExecutionScenarios".takeIf { printExecutionScenarios != defaults.printExecutionScenarios },
                 "verifier".takeIf { verifier != defaults.verifier },
                 "sequentialSpecification".takeIf { sequentialSpecification != defaults.sequentialSpecification },
             )
@@ -904,7 +910,6 @@ class LincheckSettings() {
      */
     fun copy(): LincheckSettings = LincheckSettings().also {
         it.invocationTimeoutMs = invocationTimeoutMs
-        it.printExecutionScenarios = printExecutionScenarios
         it.strategy = when (val strategy = strategy) {
             is TestingStrategy.Stress -> TestingStrategy.Stress()
             is TestingStrategy.ModelChecking -> strategy.copy()

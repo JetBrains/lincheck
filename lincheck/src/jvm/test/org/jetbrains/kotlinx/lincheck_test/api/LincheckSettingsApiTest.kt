@@ -105,7 +105,7 @@ class LincheckSettingsApiTest {
         val legacy = options.toSettings()
         val legacyStrategy = legacy.strategy as TestingStrategy.ModelChecking
         assertEquals(settings.invocationTimeoutMs, legacy.invocationTimeoutMs)
-        assertTrue(legacy.printExecutionScenarios)
+        assertTrue(legacy.scenarioGeneration.printExecutionScenarios)
         assertEquals(settings.scenarioGeneration.randomScenarios, legacy.scenarioGeneration.randomScenarios)
         assertEquals(settings.scenarioGeneration.invocationsPerScenario, legacy.scenarioGeneration.invocationsPerScenario)
         assertEquals(strategy.analyzeStdLib, legacyStrategy.analyzeStdLib)
@@ -125,6 +125,8 @@ class LincheckSettingsApiTest {
             }
         }
         assertTrue(output, "= Scenario 1 / 2 =" in output)
+        // The failure report is carried only by the thrown error, not duplicated to stdout.
+        assertFalse(output, "= Invalid execution results =" in output)
         val minimizationStart = output.indexOf("Invalid interleaving found, trying to minimize")
         assertTrue(output, minimizationStart > output.indexOf("= Scenario 1 / 2 ="))
         val candidateOutput = output.substring(minimizationStart)
@@ -132,9 +134,12 @@ class LincheckSettingsApiTest {
     }
 
     @Test
-    fun disablingScenarioReportingPrintsOnlyTheFailureReport() {
-        val settings = smallSettings().printExecutionScenarios(false).apply {
-            scenarioGeneration.sequentialSpecification = ZeroValue::class.java
+    fun disablingScenarioReportingPrintsNothing() {
+        val settings = smallSettings().apply {
+            scenarioGeneration {
+                printExecutionScenarios = false
+                sequentialSpecification = ZeroValue::class.java
+            }
         }
         lateinit var failure: LincheckAssertionError
         val output = captureStdout {
@@ -142,7 +147,8 @@ class LincheckSettingsApiTest {
                 Lincheck.runConcurrentTest(settings, IncorrectValue::class)
             }
         }
-        assertEquals(failure.message.orEmpty().trim(), output.trim())
+        assertTrue(failure.message.orEmpty(), "= Invalid execution results =" in failure.message.orEmpty())
+        assertEquals("", output.trim())
     }
 
     @Test
@@ -223,6 +229,7 @@ class LincheckSettingsApiTest {
             "executionGenerator" to { executionGenerator = SettingsGenerator::class.java },
             "customScenarios" to { addCustomScenario { parallel { thread { actor(AtomicCounter::increment) } } } },
             "minimizeFailedScenario" to { minimizeFailedScenario = !minimizeFailedScenario },
+            "printExecutionScenarios" to { printExecutionScenarios = false },
             "verifier" to { verifier = SerializabilityVerifier::class.java },
             "sequentialSpecification" to { sequentialSpecification = AtomicCounter::class.java },
         )
