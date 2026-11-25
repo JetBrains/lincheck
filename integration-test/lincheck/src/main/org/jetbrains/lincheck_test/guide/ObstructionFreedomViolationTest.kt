@@ -12,7 +12,6 @@ package org.jetbrains.lincheck_test.guide
 
 import org.jetbrains.lincheck.Lincheck
 import org.jetbrains.lincheck.LincheckSettings
-import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.kotlinx.lincheck_test.datastructures.*
 import org.jetbrains.lincheck.*
 import org.jetbrains.lincheck.datastructures.*
@@ -29,16 +28,14 @@ class ObstructionFreedomViolationTest {
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun runModelCheckingTest() = Lincheck.runLincheckTest(LincheckSettings {
-        strategy = TestingStrategy.ModelChecking().apply {
-            checkObstructionFreedom = true
-        }
+    fun runModelCheckingTest() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking { checkObstructionFreedom = true }
     }, this::class)
 
     @Ignore("Times out")
     @Test(expected = AssertionError::class)
-    fun runEventStructureModelCheckingTest() = Lincheck.runLincheckTest(LincheckSettings {
-        strategy = TestingStrategy.ModelChecking().apply {
+    fun runEventStructureModelCheckingTest() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking {
             checkObstructionFreedom = true
             enablePartialOrderReduction()
         }

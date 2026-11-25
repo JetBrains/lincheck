@@ -12,7 +12,6 @@ package org.jetbrains.lincheck_test.guide
 
 import org.jetbrains.lincheck.Lincheck
 import org.jetbrains.lincheck.LincheckSettings
-import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.Test
 import java.util.*
@@ -28,9 +27,9 @@ class ConcurrentLinkedQueueTest {
     fun poll(): Int? = s.poll()
 
     @Test
-    fun stressTest() = Lincheck.runLincheckTest(LincheckSettings {
-        scenarioGeneration.sequentialSpecification = SequentialQueue::class.java
-        strategy = TestingStrategy.Stress()
+    fun stressTest() = Lincheck.runConcurrentTest(LincheckSettings {
+        stress()
+        scenarioGeneration { sequentialSpecification = SequentialQueue::class.java }
     }, this::class)
 }
 

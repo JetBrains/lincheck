@@ -24,7 +24,7 @@ import kotlin.reflect.*
 /**
  * Abstract class for test options.
  */
-@Deprecated("Use LincheckSettings and Lincheck.runLincheckTest instead.", level = DeprecationLevel.WARNING)
+@Deprecated("Use LincheckSettings and Lincheck.runConcurrentTest instead.", level = DeprecationLevel.WARNING)
 sealed class Options<OPT : Options<OPT>> {
     internal var logLevel = DEFAULT_LOG_LEVEL
 

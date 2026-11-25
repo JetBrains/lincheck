@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionScenario
 import org.jetbrains.kotlinx.lincheck.execution.isValid
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.execution.tryMinimize
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.kotlinx.lincheck.util.LincheckResult
 import org.jetbrains.kotlinx.lincheck.util.ValueResult
 import org.jetbrains.lincheck.datastructures.actor

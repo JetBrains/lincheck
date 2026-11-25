@@ -34,10 +34,12 @@ class LockFreeTaskQueueTest : AbstractLincheckIntegrationTest() {
     fun close() = q.close()
 
     override fun LincheckSettings.customize() {
-        scenarioGeneration.actorsBefore(2)
-        scenarioGeneration.actorsAfter(2)
-        scenarioGeneration.threads(2)
-        scenarioGeneration.actorsPerThread(3)
-        scenarioGeneration.verifier(QuiescentConsistencyVerifier::class.java)
+        scenarioGeneration {
+            actorsBefore = 2
+            actorsAfter = 2
+            threads = 2
+            actorsPerThread = 3
+            verifier = QuiescentConsistencyVerifier::class.java
+        }
     }
 }

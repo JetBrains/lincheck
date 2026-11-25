@@ -23,6 +23,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.*
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.util.MemoryOrdering
 import org.jetbrains.lincheck.util.*

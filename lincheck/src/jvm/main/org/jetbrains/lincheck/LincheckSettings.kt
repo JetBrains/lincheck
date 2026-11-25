@@ -18,7 +18,6 @@ import org.jetbrains.kotlinx.lincheck.strategy.*
 import org.jetbrains.kotlinx.lincheck.strategy.stress.StressStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.modelchecking.ModelCheckingStrategy
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.lincheck.datastructures.*
 import org.jetbrains.lincheck.datastructures.verifier.*
 import org.jetbrains.lincheck.jvm.agent.InstrumentationMode
@@ -29,25 +28,25 @@ import org.jetbrains.lincheck.util.*
  * Configuration of Lincheck tests.
  * Allows configuring the testing strategy, scenario generation options, timeouts, and other parameters.
  *
- * Lambda-based and data-structure-based APIs re-use the same settings class;
- * configured parameters are unsupported by certain API can raise an [IllegalArgumentException].
+ * Lambda-based and data-structure-based APIs share the same settings class;
+ * each API rejects settings it does not support with an [IllegalArgumentException].
  *
- * Supports both Kotlin-style mutable properties and Java-style builder methods.
+ * Supports both Kotlin builders over mutable properties and Java-style builder methods.
  *
  * Kotlin:
  * ```kotlin
  * val settings = LincheckSettings {
  *     timeoutMs = 10_000
- *     strategy = TestingStrategy.ModelChecking().apply {
+ *     modelChecking {
  *         checkObstructionFreedom = true
- *         loopDetection.loopBound = 100
+ *         loopDetection { loopBound = 100 }
  *     }
- *     scenarioGeneration.apply {
+ *     scenarioGeneration {
  *         threads = 3
  *         actorsPerThread = 4
  *     }
  * }
- * Lincheck.runLincheckTest(settings, MyQueueTest::class)
+ * Lincheck.runConcurrentTest(settings, MyQueueTest::class)
  * ```
  *
  * Java:
@@ -57,12 +56,12 @@ import org.jetbrains.lincheck.util.*
  *     .strategy(new TestingStrategy.ModelChecking()
  *         .checkObstructionFreedom(true)
  *         .loopDetection(new LoopDetection().loopBound(100))
-*      )
+ *     )
  *     .scenarioGeneration(new ScenarioGeneration()
  *         .threads(3)
  *         .actorsPerThread(4)
  *     );
- * Lincheck.runLincheckTest(settings, MyQueueTest.class);
+ * Lincheck.runConcurrentTest(settings, MyQueueTest.class);
  * ```
  */
 class LincheckSettings() {
@@ -116,7 +115,7 @@ class LincheckSettings() {
     /**
      * Configures scenario generation and verification for data-structure-based tests.
      *
-     * Lambda-based API does not use these settings.
+     * Lambda-based API does not support these settings and rejects any non-default value.
      *
      * @see ScenarioGeneration
      */
@@ -128,6 +127,14 @@ class LincheckSettings() {
      * @see ScenarioGeneration
      */
     fun scenarioGeneration(value: ScenarioGeneration) = apply { scenarioGeneration = value }
+
+    /**
+     * Applies [configure] to the current [scenarioGeneration].
+     */
+    @JvmSynthetic
+    fun scenarioGeneration(configure: ScenarioGeneration.() -> Unit) {
+        scenarioGeneration.configure()
+    }
 
     /**
      * Configuration of the scenario generation and verification for data-structure-based tests.
@@ -354,6 +361,27 @@ class LincheckSettings() {
         }
 
 
+        // ======== Internal utils ========
+
+        // Names of the settings that differ from a new configuration; the lambda API rejects them.
+        internal fun nonDefaultSettings(): List<String> {
+            val defaults = ScenarioGeneration()
+            return listOfNotNull(
+                "iterations".takeIf { iterations != defaults.iterations },
+                "invocationsPerIteration".takeIf { invocationsPerIteration != defaults.invocationsPerIteration },
+                "threads".takeIf { threads != defaults.threads },
+                "actorsPerThread".takeIf { actorsPerThread != defaults.actorsPerThread },
+                "actorsBefore".takeIf { actorsBefore != defaults.actorsBefore },
+                "actorsAfter".takeIf { actorsAfter != defaults.actorsAfter },
+                "executionGenerator".takeIf { executionGenerator != defaults.executionGenerator },
+                "customScenarios".takeIf { _customScenarios.isNotEmpty() },
+                "minimizeFailedScenario".takeIf { minimizeFailedScenario != defaults.minimizeFailedScenario },
+                "verifier".takeIf { verifier != defaults.verifier },
+                "sequentialSpecification".takeIf { sequentialSpecification != defaults.sequentialSpecification },
+            )
+        }
+
+
         // ======== Defaults ========
 
         companion object {
@@ -427,6 +455,25 @@ class LincheckSettings() {
      * Configures the testing strategy.
      */
     fun strategy(value: TestingStrategy) = apply { strategy = value }
+
+    /**
+     * Selects [TestingStrategy.Stress].
+     */
+    @JvmSynthetic
+    fun stress() {
+        strategy = TestingStrategy.Stress()
+    }
+
+    /**
+     * Selects [TestingStrategy.ModelChecking] and applies [configure] to it.
+     * If model checking is already selected, its current configuration is kept and extended.
+     */
+    @JvmSynthetic
+    fun modelChecking(configure: TestingStrategy.ModelChecking.() -> Unit = {}) {
+        val modelChecking = strategy as? TestingStrategy.ModelChecking
+            ?: TestingStrategy.ModelChecking().also { strategy = it }
+        modelChecking.configure()
+    }
 
     /**
      * A sealed parent class for all testing strategies configuration classes.
@@ -507,6 +554,14 @@ class LincheckSettings() {
              * @see LoopDetection
              */
             fun loopDetection(value: LoopDetection) = apply { loopDetection = value }
+
+            /**
+             * Applies [configure] to the current [loopDetection].
+             */
+            @JvmSynthetic
+            fun loopDetection(configure: LoopDetection.() -> Unit) {
+                loopDetection.configure()
+            }
 
 
             // ======== Exploration algorithm ========
@@ -796,6 +851,33 @@ class LincheckSettings() {
 
 
     // ========================================================
+    //   Memory model
+    // ========================================================
+
+    /**
+     * Memory model defining which values shared-memory reads can observe.
+     *
+     * @see TestingStrategy.ModelChecking.memoryModel
+     */
+    enum class MemoryModel {
+        /**
+         * Every execution is an interleaving of thread operations.
+         */
+        SequentialConsistency,
+
+        /**
+         * Release-acquire memory model.
+         */
+        ReleaseAcquire,
+
+        /**
+         * Relaxed Java Memory Model semantics.
+         */
+        RelaxedJava,
+    }
+
+
+    // ========================================================
     //   Internal settings
     // ========================================================
 
@@ -833,7 +915,13 @@ class LincheckSettings() {
     internal fun copy(forLambda: Boolean): LincheckSettings {
         if (forLambda) {
             require(strategy is TestingStrategy.ModelChecking) {
-                "runConcurrentTest currently supports only model checking"
+                "Lambda-based runConcurrentTest currently supports only model checking; " +
+                "select it with modelChecking { } or strategy(TestingStrategy.ModelChecking())"
+            }
+            val nonDefaultScenarioSettings = scenarioGeneration.nonDefaultSettings()
+            require(nonDefaultScenarioSettings.isEmpty()) {
+                "Lambda-based runConcurrentTest does not support scenario generation settings; " +
+                "reset these to their defaults: ${nonDefaultScenarioSettings.joinToString()}"
             }
         }
         return copy().also {

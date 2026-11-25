@@ -21,6 +21,7 @@
 package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.kotlinx.lincheck.strategy.managed.*
 import org.jetbrains.lincheck.util.CachedRelation
 import org.jetbrains.lincheck.util.Relation

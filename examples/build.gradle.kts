@@ -41,6 +41,7 @@ tasks.register<Test>("verifyExamples") {
     systemProperty("junit.jupiter.extensions.autodetection.enabled", "true")
     systemProperty("lincheck.defaultIterations", "10")
     systemProperty("lincheck.defaultInvocationsPerIteration", "1000")
+    systemProperty("lincheck.defaultInvocations", "1000")
     maxParallelForks = 4
     forkEvery = 1
     maxHeapSize = "3g"

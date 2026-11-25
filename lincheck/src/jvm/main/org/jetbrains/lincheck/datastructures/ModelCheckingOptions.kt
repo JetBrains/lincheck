@@ -12,12 +12,12 @@
 
 package org.jetbrains.lincheck.datastructures
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 
 /**
  * Options for the model checking strategy.
  */
-@Deprecated("Use LincheckSettings and Lincheck.runLincheckTest instead.", level = DeprecationLevel.WARNING)
+@Deprecated("Use LincheckSettings and Lincheck.runConcurrentTest instead.", level = DeprecationLevel.WARNING)
 class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions>() {
 
     private var experimentalModelChecking = false

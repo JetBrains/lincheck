@@ -41,11 +41,11 @@ abstract class AbstractLincheckIntegrationTest(
     }
 
     @Test(timeout = TIMEOUT)
-    fun testWithStressStrategy(): Unit = LincheckSettings().strategy(TestingStrategy.Stress()).run {
-        scenarioGeneration.invocationsPerIteration(5_000)
+    fun testWithStressStrategy(): Unit = LincheckSettings {
+        stress()
+        scenarioGeneration { invocationsPerIteration = 5_000 }
         commonConfiguration()
-        runInternalTest()
-    }
+    }.runInternalTest()
 
     @Test(timeout = TIMEOUT)
     // NOTE: please do not rename - the name is used to filter tests on CI in the "single-CPU" configuration:
@@ -53,29 +53,28 @@ abstract class AbstractLincheckIntegrationTest(
     // We use this configuration to check the Lincheck's behavior on machines with a single CPU available.
     // We want to run only model checking tests in this configuration, because stress tests when run on
     // a single CPU might not detect any bugs.
-    fun testWithModelCheckingStrategy(): Unit = LincheckSettings().strategy(TestingStrategy.ModelChecking()).run {
-        scenarioGeneration.invocationsPerIteration(1_000)
+    fun testWithModelCheckingStrategy(): Unit = LincheckSettings {
+        modelChecking()
+        scenarioGeneration { invocationsPerIteration = 1_000 }
         commonConfiguration()
-        runInternalTest()
-    }
+    }.runInternalTest()
 
     @Test(timeout = TIMEOUT)
-    fun testWithEventStructureStrategy() : Unit = LincheckSettings().run {
-        scenarioGeneration.invocationsPerIteration(1_000)
-        strategy = TestingStrategy.ModelChecking().enablePartialOrderReduction()
+    fun testWithEventStructureStrategy(): Unit = LincheckSettings {
+        modelChecking { enablePartialOrderReduction() }
+        scenarioGeneration { invocationsPerIteration = 1_000 }
         commonConfiguration()
-        runInternalTest()
-    }
+    }.runInternalTest()
 
-    private fun LincheckSettings.commonConfiguration(): Unit = run {
-        scenarioGeneration.apply {
+    private fun LincheckSettings.commonConfiguration() {
+        scenarioGeneration {
             iterations = 30
             actorsBefore = 2
             threads = 3
             actorsPerThread = 2
             actorsAfter = 2
+            minimizeFailedScenario = false
         }
-        scenarioGeneration.minimizeFailedScenario(false)
         customize()
     }
 

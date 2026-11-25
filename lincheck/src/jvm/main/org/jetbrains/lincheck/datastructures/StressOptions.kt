@@ -17,7 +17,7 @@ import org.jetbrains.lincheck.LincheckSettings
 /**
  * Options for the stress strategy.
  */
-@Deprecated("Use LincheckSettings and Lincheck.runLincheckTest instead.", level = DeprecationLevel.WARNING)
+@Deprecated("Use LincheckSettings and Lincheck.runConcurrentTest instead.", level = DeprecationLevel.WARNING)
 open class StressOptions : Options<StressOptions>() {
     internal fun stressSettings() = LincheckSettings.TestingStrategy.Stress()
 }

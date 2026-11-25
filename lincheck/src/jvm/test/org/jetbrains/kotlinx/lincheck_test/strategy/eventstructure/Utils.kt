@@ -37,7 +37,7 @@ import org.jetbrains.lincheck.jvm.agent.LincheckInstrumentation.ensureObjectIsTr
 import org.junit.Assert
 import org.junit.Test
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionScenarioRunner
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import kotlin.reflect.KClass
 
 internal const val UNIQUE = -1

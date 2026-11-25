@@ -17,7 +17,7 @@ import org.jetbrains.lincheck.LincheckSettings
 /**
  * Options for the managed strategy.
  */
-@Deprecated("Use LincheckSettings and Lincheck.runLincheckTest instead.", level = DeprecationLevel.WARNING)
+@Deprecated("Use LincheckSettings and Lincheck.runConcurrentTest instead.", level = DeprecationLevel.WARNING)
 sealed class ManagedOptions<OPT : Options<OPT>> : Options<OPT>() {
 
     protected var checkObstructionFreedom =
@@ -96,10 +96,10 @@ sealed class ManagedOptions<OPT : Options<OPT>> : Options<OPT>() {
 
     /**
      * Controls whether the strategy should analyze standard library collections.
-     * When `false` (default), all library collections are hidden if no thread switch happened in it.
+     * When `false`, all library collections are hidden if no thread switch happened in it.
      * In concurrent collections the scheduler tries to avoid switching in it unless forced by a live or deadlock.
      *
-     * When `true` all standard library collections are treated as user code.
+     * When `true` (default) all standard library collections are treated as user code.
      *
      * @param analyzeStdLib true to analyze standard library methods, false to treat them as silent
      */

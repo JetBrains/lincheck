@@ -22,7 +22,7 @@ package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.parallelResults
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.EventStructureStrategy
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.kotlinx.lincheck.util.ValueResult
 import org.jetbrains.lincheck.datastructures.scenario
 import org.junit.Test

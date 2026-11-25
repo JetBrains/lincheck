@@ -27,11 +27,13 @@ class SerializableQueueTest : AbstractLincheckIntegrationTest() {
     fun poll(): Int? = q.poll()
 
     override fun LincheckSettings.customize() {
-        scenarioGeneration.actorsBefore(0)
-        scenarioGeneration.actorsAfter(0)
-        scenarioGeneration.actorsPerThread(2)
-        scenarioGeneration.verifier(SerializabilityVerifier::class.java)
-        scenarioGeneration.sequentialSpecification(SequentialIntQueue::class.java)
+        scenarioGeneration {
+            actorsBefore = 0
+            actorsAfter = 0
+            actorsPerThread = 2
+            verifier = SerializabilityVerifier::class.java
+            sequentialSpecification = SequentialIntQueue::class.java
+        }
     }
 }
 

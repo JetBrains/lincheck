@@ -12,6 +12,7 @@ package org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consisten
 
 import org.jetbrains.kotlinx.lincheck.strategy.managed.MemoryLocation
 import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.*
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.kotlinx.lincheck.util.mutableThreadMapOf
 import org.jetbrains.lincheck.util.CachedRelation
 import org.jetbrains.lincheck.util.MemoryOrdering

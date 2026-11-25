@@ -15,7 +15,7 @@ import org.jetbrains.kotlinx.lincheck.IncorrectResultsFailure
 import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.junit.Assert.assertTrue
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertSame
 import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.litmusTest
 import org.junit.Test

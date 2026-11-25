@@ -46,9 +46,7 @@ class CountDownLatchTest {
     fun testBarrierEventStructure() = runConcurrentTest(
         10000,
         LincheckSettings {
-            strategy = LincheckSettings.TestingStrategy
-                .ModelChecking()
-                .analyzeStdLib(true)
+            modelChecking { analyzeStdLib = true }
         },
         block
     )

@@ -12,7 +12,6 @@ package org.jetbrains.lincheck_test.guide
 
 import org.jetbrains.lincheck.Lincheck
 import org.jetbrains.lincheck.LincheckSettings
-import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.datastructures.*
 import org.junit.*
 
@@ -36,14 +35,9 @@ class BasicCounterTest {
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun stressTest() = Lincheck.runLincheckTest(LincheckSettings {
-        strategy = TestingStrategy.Stress()
-    }, this::class) // the magic button
+    fun stressTest() = Lincheck.runConcurrentTest(LincheckSettings { stress() }, this::class) // the magic button
 
     //@Test // TODO: Please, uncomment me and comment the line below to run the test and get the output
     @Test(expected = AssertionError::class)
-    fun modelCheckingTest() {
-        val settings = LincheckSettings().strategy(TestingStrategy.ModelChecking())
-        Lincheck.runLincheckTest(settings, this::class)
-    }
+    fun modelCheckingTest() = Lincheck.runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
 }

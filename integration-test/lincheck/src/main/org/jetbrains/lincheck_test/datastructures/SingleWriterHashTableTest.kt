@@ -42,7 +42,7 @@ class SingleWriterHashTableTest() {
         val settings = commonSettings(10_000).strategy(
             TestingStrategy.ModelChecking().checkObstructionFreedom(checkObstructionFreedom)
         )
-        Lincheck.runLincheckTest(settings, this::class.java)
+        Lincheck.runConcurrentTest(settings, this::class.java)
     }
 
     @Test(timeout = TIMEOUT, expected = AssertionError::class)
@@ -52,17 +52,17 @@ class SingleWriterHashTableTest() {
                 .checkObstructionFreedom(checkObstructionFreedom)
                 .enablePartialOrderReduction()
         )
-        Lincheck.runLincheckTest(settings, this::class.java)
+        Lincheck.runConcurrentTest(settings, this::class.java)
     }
 
     @Test(timeout = TIMEOUT, expected = AssertionError::class)
     fun stressTest() {
         val settings = commonSettings(25_000).strategy(TestingStrategy.Stress())
-        Lincheck.runLincheckTest(settings, this::class.java)
+        Lincheck.runConcurrentTest(settings, this::class.java)
     }
 
     private fun commonSettings(invocations: Int) = LincheckSettings {
-        scenarioGeneration.apply {
+        scenarioGeneration {
             invocationsPerIteration = invocations
             sequentialSpecification = this@SingleWriterHashTableTest.sequentialSpecification.java
             iterations = scenarios

@@ -10,7 +10,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.concurrent.thread

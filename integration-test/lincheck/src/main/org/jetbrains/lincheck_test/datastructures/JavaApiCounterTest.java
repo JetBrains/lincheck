@@ -36,20 +36,20 @@ public class JavaApiCounterTest {
     @Test(expected = AssertionError.class)
     public void stressTest() {
         LincheckSettings settings = new LincheckSettings().strategy(new TestingStrategy.Stress());
-        Lincheck.runLincheckTest(settings, getClass());
+        Lincheck.runConcurrentTest(settings, getClass());
     }
 
     @Test(expected = AssertionError.class)
     public void modelCheckingTest() {
         LincheckSettings settings = new LincheckSettings().strategy(new TestingStrategy.ModelChecking());
-        Lincheck.runLincheckTest(settings, getClass());
+        Lincheck.runConcurrentTest(settings, getClass());
     }
 
     @Test(expected = AssertionError.class)
     public void eventStructureModelCheckingTest() {
         LincheckSettings settings = new LincheckSettings()
             .strategy(new TestingStrategy.ModelChecking().enablePartialOrderReduction());
-        Lincheck.runLincheckTest(settings, getClass());
+        Lincheck.runConcurrentTest(settings, getClass());
     }
 
     @Test

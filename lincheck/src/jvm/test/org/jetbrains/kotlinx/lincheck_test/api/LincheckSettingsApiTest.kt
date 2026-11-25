@@ -13,15 +13,18 @@ import org.jetbrains.lincheck.datastructures.Validate
 import org.jetbrains.kotlinx.lincheck.CTestStructure
 import org.jetbrains.kotlinx.lincheck.execution.ExecutionGenerator
 import org.jetbrains.kotlinx.lincheck.execution.RandomExecutionGenerator
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
 import org.jetbrains.lincheck.Lincheck
 import org.jetbrains.lincheck.LincheckAssertionError
 import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.lincheck.LincheckSettings.TestingStrategy
 import org.jetbrains.lincheck.LincheckSettings.TestingStrategy.ModelChecking.Algorithm
+import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.forClasses
 import org.jetbrains.lincheck.datastructures.RandomProvider
+import org.jetbrains.lincheck.datastructures.toSettings
+import org.jetbrains.lincheck.datastructures.verifier.SerializabilityVerifier
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.concurrent.atomic.AtomicInteger
@@ -39,21 +42,20 @@ class LincheckSettingsApiTest {
         assertEquals(2, original.scenarioGeneration.threads)
         assertEquals(50, (original.strategy as TestingStrategy.ModelChecking).loopDetection.loopBound)
         assertNull(strategy.algorithm)
-        Lincheck.runLincheckTest(copy, AtomicCounter::class)
+        Lincheck.runConcurrentTest(copy, AtomicCounter::class)
     }
 
     @Test
     fun classAndKClassOverloadsSupportBothStrategies() {
         val settings = smallSettings()
-        Lincheck.runLincheckTest(settings, AtomicCounter::class.java)
+        Lincheck.runConcurrentTest(settings, AtomicCounter::class.java)
         settings.strategy = TestingStrategy.Stress()
-        Lincheck.runLincheckTest(settings, AtomicCounter::class)
+        Lincheck.runConcurrentTest(settings, AtomicCounter::class)
     }
 
     @Test
     fun settingsLambdaAndInvocationShorthand() {
         val settings = LincheckSettings {
-            scenarioGeneration.invocationsPerIteration = 20
             strategy = TestingStrategy.ModelChecking().analyzeStdLib(true)
         }
         val block = Runnable {
@@ -66,8 +68,44 @@ class LincheckSettingsApiTest {
         }
         Lincheck.runConcurrentTest(settings, block)
         Lincheck.runConcurrentTest(10, settings, block)
-        assertEquals(20, settings.scenarioGeneration.invocationsPerIteration)
+        assertNull((settings.strategy as TestingStrategy.ModelChecking).algorithm)
         Lincheck.runConcurrentTest(10, block)
+    }
+
+    @Test
+    fun kotlinBuildersConfigureNestedGroupsInPlace() {
+        val settings = LincheckSettings {
+            scenarioGeneration { threads = 3 }
+            modelChecking { checkObstructionFreedom = true }
+            modelChecking { loopDetection { loopBound = 100 } }
+        }
+        assertEquals(3, settings.scenarioGeneration.threads)
+        val strategy = settings.strategy as TestingStrategy.ModelChecking
+        assertTrue(strategy.checkObstructionFreedom)
+        assertEquals(100, strategy.loopDetection.loopBound)
+        settings.stress()
+        assertTrue(settings.strategy is TestingStrategy.Stress)
+
+        Lincheck.runConcurrentTest(LincheckSettings {
+            modelChecking()
+            smallScenarios()
+        }, AtomicCounter::class)
+        Lincheck.runConcurrentTest(LincheckSettings { modelChecking() }) { check(AtomicInteger(1).get() == 1) }
+    }
+
+    @Test
+    fun legacyOptionsAndSettingsShareDefaults() {
+        val settings = LincheckSettings()
+        val strategy = TestingStrategy.ModelChecking()
+        val legacy = ModelCheckingOptions().toSettings()
+        val legacyStrategy = legacy.strategy as TestingStrategy.ModelChecking
+        assertEquals(settings.timeoutMs, legacy.timeoutMs)
+        assertEquals(settings.scenarioGeneration.iterations, legacy.scenarioGeneration.iterations)
+        assertEquals(settings.scenarioGeneration.invocationsPerIteration, legacy.scenarioGeneration.invocationsPerIteration)
+        assertEquals(strategy.analyzeStdLib, legacyStrategy.analyzeStdLib)
+        assertEquals(strategy.checkObstructionFreedom, legacyStrategy.checkObstructionFreedom)
+        assertEquals(strategy.loopDetection.loopBound, legacyStrategy.loopDetection.loopBound)
+        assertEquals(strategy.loopDetection.recursionBound, legacyStrategy.loopDetection.recursionBound)
     }
 
     @Test
@@ -85,10 +123,10 @@ class LincheckSettingsApiTest {
     fun partialOrderReductionAndWeakMemorySelectEventStructure() {
         val settings = smallSettings()
         settings.strategy = TestingStrategy.ModelChecking().enablePartialOrderReduction()
-        Lincheck.runLincheckTest(settings, AtomicCounter::class)
+        Lincheck.runConcurrentTest(settings, AtomicCounter::class)
         settings.strategy = TestingStrategy.ModelChecking().memoryModel(MemoryModel.ReleaseAcquire)
-        Lincheck.runLincheckTest(settings, AtomicCounter::class)
-        Lincheck.runConcurrentTest(settings) { check(AtomicInteger(1).get() == 1) }
+        Lincheck.runConcurrentTest(settings, AtomicCounter::class)
+        Lincheck.runConcurrentTest(LincheckSettings().strategy(settings.strategy)) { check(AtomicInteger(1).get() == 1) }
     }
 
     @Test
@@ -107,19 +145,35 @@ class LincheckSettingsApiTest {
     }
 
     @Test
-    fun lambdaIgnoresScenarioSettingsAndValidatesItsOwnInvocationLimit() {
-        val settings = smallSettings().apply {
-            scenarioGeneration.invocationsPerIteration = 1
-            scenarioGeneration.sequentialSpecification = AtomicCounter::class.java
+    fun lambdaRejectsScenarioSettingsAndValidatesItsOwnInvocationLimit() {
+        val modifications: List<Pair<String, LincheckSettings.ScenarioGeneration.() -> Unit>> = listOf(
+            "iterations" to { iterations += 1 },
+            "invocationsPerIteration" to { invocationsPerIteration += 1 },
+            "threads" to { threads = 3 },
+            "actorsPerThread" to { actorsPerThread = 1 },
+            "actorsBefore" to { actorsBefore = 0 },
+            "actorsAfter" to { actorsAfter = 0 },
+            "executionGenerator" to { executionGenerator = SettingsGenerator::class.java },
+            "customScenarios" to { addCustomScenario { parallel { thread { actor(AtomicCounter::increment) } } } },
+            "minimizeFailedScenario" to { minimizeFailedScenario = !minimizeFailedScenario },
+            "verifier" to { verifier = SerializabilityVerifier::class.java },
+            "sequentialSpecification" to { sequentialSpecification = AtomicCounter::class.java },
+        )
+        for ((name, modify) in modifications) {
+            val settings = LincheckSettings().strategy(TestingStrategy.ModelChecking())
+            settings.scenarioGeneration.modify()
+            val failure = assertThrows(IllegalArgumentException::class.java) {
+                Lincheck.runConcurrentTest(10, settings) { fail("Must not execute") }
+            }
+            assertTrue(failure.message, failure.message.orEmpty().endsWith(": $name"))
         }
+
+        val settings = LincheckSettings().strategy(TestingStrategy.ModelChecking())
+        settings.scenarioGeneration.threads = 3
+        settings.scenarioGeneration = LincheckSettings.ScenarioGeneration()
         Lincheck.runConcurrentTest(10, settings) { check(AtomicInteger(1).get() == 1) }
-        Lincheck.runConcurrentTest(settings) { check(AtomicInteger(1).get() == 1) }
-        assertEquals(1, settings.scenarioGeneration.invocationsPerIteration)
         assertThrows(IllegalArgumentException::class.java) {
             Lincheck.runConcurrentTest(0, settings) { fail("Must not execute") }
-        }
-        assertThrows(IllegalArgumentException::class.java) {
-            Lincheck.runConcurrentTest(settings.strategy(TestingStrategy.Stress())) { fail("Must not execute") }
         }
     }
 
@@ -181,8 +235,8 @@ class LincheckSettingsApiTest {
                 }
             }
         }
-        Lincheck.runLincheckTest(settings, AtomicCounter::class)
-        Lincheck.runLincheckTest(settings, AtomicCounter::class)
+        Lincheck.runConcurrentTest(settings, AtomicCounter::class)
+        Lincheck.runConcurrentTest(settings, AtomicCounter::class)
         assertNull(settings.scenarioGeneration.customScenarios.single().validationFunction)
     }
 
@@ -191,7 +245,7 @@ class LincheckSettingsApiTest {
         val settings = smallSettings().apply {
             scenarioGeneration.executionGenerator = SettingsGenerator::class.java
         }
-        Lincheck.runLincheckTest(settings, AtomicCounter::class)
+        Lincheck.runConcurrentTest(settings, AtomicCounter::class)
     }
 
     class SettingsGenerator(settings: LincheckSettings, structure: CTestStructure, random: RandomProvider) :
@@ -209,12 +263,15 @@ class LincheckSettingsApiTest {
     }
 
     private fun smallSettings() = LincheckSettings {
-        scenarioGeneration.invocationsPerIteration = 20
-        scenarioGeneration.apply {
-            iterations = 2
-            actorsBefore = 0
-            actorsAfter = 0
-            actorsPerThread = 1
-        }
+        modelChecking()
+        smallScenarios()
+    }
+
+    private fun LincheckSettings.smallScenarios() = scenarioGeneration {
+        invocationsPerIteration = 20
+        iterations = 2
+        actorsBefore = 0
+        actorsAfter = 0
+        actorsPerThread = 1
     }
 }

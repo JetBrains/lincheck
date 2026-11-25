@@ -39,8 +39,10 @@ class RendezvousChannelTest : AbstractLincheckIntegrationTest() {
     override fun LincheckSettings.customize() {
         // TODO: We ingore for now since event structure strategy does not support coroutines.
         ignoreExperimentalModelChecking()
-        scenarioGeneration.sequentialSpecification(SequentialRendezvousIntChannel::class.java)
-        scenarioGeneration.iterations(10)
+        scenarioGeneration {
+            sequentialSpecification = SequentialRendezvousIntChannel::class.java
+            iterations = 10
+        }
     }
 }
 

@@ -23,7 +23,7 @@ import kotlin.reflect.KClass
 class LinChecker
 @Deprecated(
     level = DeprecationLevel.WARNING,
-    message = "Use Lincheck.runLincheckTest with LincheckSettings instead.",
+    message = "Use Lincheck.runConcurrentTest with LincheckSettings instead.",
 )
 constructor(private val testClass: Class<*>, private val options: Options<*>?) {
 
@@ -43,7 +43,7 @@ constructor(private val testClass: Class<*>, private val options: Options<*>?) {
          * @throws AssertionError if any of the tests fails.
          */
         @Deprecated(
-            "Use Lincheck.runLincheckTest with LincheckSettings instead.",
+            "Use Lincheck.runConcurrentTest with LincheckSettings instead.",
             level = DeprecationLevel.WARNING
         )
         @JvmOverloads
@@ -62,7 +62,7 @@ constructor(private val testClass: Class<*>, private val options: Options<*>?) {
  *  LinChecker.check(testClass, options)
  * ```
  */
-@Deprecated("Use Lincheck.runLincheckTest with LincheckSettings instead.", level = DeprecationLevel.ERROR)
+@Deprecated("Use Lincheck.runConcurrentTest with LincheckSettings instead.", level = DeprecationLevel.ERROR)
 fun <O : Options<O>> O.check(testClass: Class<*>) = check(testClass)
 
 /**
@@ -72,7 +72,7 @@ fun <O : Options<O>> O.check(testClass: Class<*>) = check(testClass)
  *  LinChecker.check(testClass.java, options)
  * ```
  */
-@Deprecated("Use Lincheck.runLincheckTest with LincheckSettings instead.", level = DeprecationLevel.ERROR)
+@Deprecated("Use Lincheck.runConcurrentTest with LincheckSettings instead.", level = DeprecationLevel.ERROR)
 fun <O : Options<O>> O.check(testClass: KClass<*>) = check(testClass)
 
 /**

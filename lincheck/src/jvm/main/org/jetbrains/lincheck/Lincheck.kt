@@ -36,13 +36,10 @@ object Lincheck {
     @JvmStatic
     @JvmOverloads
     fun runConcurrentTest(invocations: Int = DEFAULT_INVOCATIONS, block: Runnable) =
-        runConcurrentTest(invocations, LincheckSettings {
-            strategy = LincheckSettings.TestingStrategy.ModelChecking().analyzeStdLib(true)
-        }, block)
+        runConcurrentTest(invocations, LincheckSettings { modelChecking() }, block)
 
     /**
-     * Runs [block] with the default invocation limit and a copy of [settings].
-     * The [LincheckSettings.scenarioGeneration] group is ignored; stress testing is unsupported.
+     * Runs [block] with the default invocation limit with given [settings].
      *
      * @throws IllegalArgumentException if the settings are incompatible with lambda testing.
      * @throws LincheckAssertionError if an invocation fails.
@@ -52,8 +49,7 @@ object Lincheck {
         runConcurrentTest(DEFAULT_INVOCATIONS, settings, block)
 
     /**
-     * Explores [block] up to [invocations] times using a copy of [settings].
-     * The [LincheckSettings.scenarioGeneration] group is ignored.
+     * Explores [block] up to [invocations] times with given [settings].
      *
      * @throws IllegalArgumentException if [invocations] is not positive or the settings are incompatible.
      * @throws LincheckAssertionError if an invocation fails.
@@ -87,37 +83,40 @@ object Lincheck {
     }
 
     /**
-     * Checks an annotated class using default settings.
+     * Checks the annotated operations of [testClass] using default settings.
+     *
+     * Data-structure-based counterpart of the lambda-based `runConcurrentTest(block)`:
+     * the overloads taking a test class check generated and custom scenarios against a sequential specification.
      */
     @JvmStatic
-    fun runLincheckTest(testClass: Class<*>) = runLincheckTest(LincheckSettings(), testClass)
+    fun runConcurrentTest(testClass: Class<*>) = runConcurrentTest(LincheckSettings(), testClass)
 
     /**
-     * Checks an annotated Kotlin class using default settings.
+     * Checks the annotated operations of the Kotlin [testClass] using default settings.
      */
     @JvmStatic
-    fun runLincheckTest(testClass: KClass<*>) = runLincheckTest(LincheckSettings(), testClass)
+    fun runConcurrentTest(testClass: KClass<*>) = runConcurrentTest(LincheckSettings(), testClass)
 
     /**
-     * Checks annotated operations on [testClass] using generated and custom scenarios.
+     * Checks the annotated operations of [testClass] on generated and custom scenarios using a copy of [settings].
      *
      * @throws LincheckAssertionError if a scenario fails verification.
      */
     @JvmStatic
-    fun runLincheckTest(settings: LincheckSettings, testClass: Class<*>) {
+    fun runConcurrentTest(settings: LincheckSettings, testClass: Class<*>) {
         ExecutionScenarioChecker(testClass, settings.copy(forLambda = false)).detectFailure { failure ->
             if (failure != null) throw LincheckAssertionError(failure)
         }
     }
 
     /**
-     * Checks annotated operations on a Kotlin test class.
+     * Checks the annotated operations of the Kotlin [testClass] using a copy of [settings].
      */
     @JvmStatic
-    fun runLincheckTest(settings: LincheckSettings, testClass: KClass<*>) =
-        runLincheckTest(settings, testClass.java)
+    fun runConcurrentTest(settings: LincheckSettings, testClass: KClass<*>) =
+        runConcurrentTest(settings, testClass.java)
 
-    internal val DEFAULT_INVOCATIONS: Int = Integer.getInteger("lincheck.defaultInvocationsPerIteration", 10_000)
+    internal val DEFAULT_INVOCATIONS: Int = Integer.getInteger("lincheck.defaultInvocations", 10_000)
 }
 
 /**

@@ -21,7 +21,7 @@
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure
 
 import org.jetbrains.kotlinx.lincheck.execution.*
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import java.util.concurrent.atomic.*
 import java.lang.invoke.MethodHandles
 import org.jetbrains.lincheck.datastructures.scenario

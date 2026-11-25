@@ -11,7 +11,7 @@
 
 package org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.litmus
 
-import org.jetbrains.kotlinx.lincheck.strategy.managed.eventstructure.consistency.MemoryModel
+import org.jetbrains.lincheck.LincheckSettings.MemoryModel
 import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.OutcomeVerifier
 import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertNever
 import org.jetbrains.kotlinx.lincheck_test.strategy.eventstructure.assertSometimes

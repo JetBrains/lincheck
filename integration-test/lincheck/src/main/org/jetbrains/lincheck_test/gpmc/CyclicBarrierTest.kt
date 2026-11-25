@@ -41,10 +41,10 @@ class CyclicBarrierTest {
     fun testBarrierEventStructure() = runConcurrentTest(
         10000,
         LincheckSettings {
-            strategy = LincheckSettings.TestingStrategy
-                .ModelChecking()
-                .analyzeStdLib(true)
-                .enablePartialOrderReduction()
+            modelChecking {
+                analyzeStdLib = true
+                enablePartialOrderReduction()
+            }
         },
         block
     )
