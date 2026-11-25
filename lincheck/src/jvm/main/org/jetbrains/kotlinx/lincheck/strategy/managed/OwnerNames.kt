@@ -14,6 +14,7 @@ import org.jetbrains.lincheck.descriptors.*
 import org.jetbrains.lincheck.trace.isThisName
 import org.jetbrains.lincheck.jvm.agent.toSimpleClassName
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 import org.jetbrains.lincheck.util.*
 
 /**
@@ -114,7 +115,7 @@ internal fun findAtomicOwnerName(
     var params: List<Any?>? = null
 
     fun getOwnerName(owner: Any?, className: String?, location: AccessLocation): String {
-        val owner = findOwnerName(context, owner, className, UNKNOWN_CODE_LOCATION, shadowStackFrame, objectTracker) {
+        val owner = findOwnerName(context, owner, className, UNKNOWN_CODE_LOCATION_ID, shadowStackFrame, objectTracker) {
             val codeLocation = context.codeLocationsPool.getOrNull(codeLocationId)
             val ownerIndex = atomicMethodDescriptor.getAccessedObjectIndex(atomic, arguments)
             if (ownerIndex == -1) codeLocation?.accessPath else codeLocation?.argumentNames?.getOrNull(ownerIndex)

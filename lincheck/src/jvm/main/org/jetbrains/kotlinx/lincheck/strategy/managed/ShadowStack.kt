@@ -32,11 +32,11 @@ internal class ShadowStack {
     val callerAnalysisSection: AnalysisSectionType?
         get() = frames.getOrNull(frames.lastIndex - 1)?.analysisSection
 
-    /**
-     * A snapshot of traced calls, from outermost to innermost.
-     */
-    val callStackTrace: List<MethodCallTracePoint>
-        get() = frames.mapNotNull { it.tracePoint }
+    val firstTracePoint: MethodCallTracePoint?
+        get() = frames.firstNotNullOfOrNull { it.tracePoint }
+
+    val lastTracePoint: MethodCallTracePoint?
+        get() = frames.lastOrNull { it.tracePoint != null }?.tracePoint
 
     fun push(instance: Any?, tracePoint: MethodCallTracePoint?, analysisSection: AnalysisSectionType) {
         val currentSection = this.analysisSection

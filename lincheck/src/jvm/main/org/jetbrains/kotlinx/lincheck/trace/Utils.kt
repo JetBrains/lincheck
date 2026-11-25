@@ -11,6 +11,8 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
+import org.jetbrains.kotlinx.lincheck.util.ExceptionResult
+import org.jetbrains.kotlinx.lincheck.util.isNoResult
 
 internal fun Trace.removeRedundantSectionDelimiters(): Trace {
     val firstTracePoint = trace.firstOrNull() ?: return this
@@ -33,20 +35,13 @@ internal fun Trace.removeValidationSection(): Trace {
 }
 
 /**
- * Assigns an exception number for each `ActorExceptionResult` in the trace.
- * To be consistent with the reported exceptions.
- * The numbering is based on the actor order, sorted by `actorId` and `iThread`.
- *
- * @return A new `Trace` instance with updated exception numbers for `ActorExceptionResult` instances.
+ * Numbers actor exceptions in the same order as the reported exception stack traces.
  */
-internal fun Trace.numberExceptionResults(): Trace = this.deepCopy().also { copy ->
-    copy.trace
-        .filterIsInstance<MethodCallTracePoint>()
-        .filter { it.isActor }
-        .sortedWith (compareBy({ it.actorId }, { it.iThread }))
-        .map { it.returnedValue }
-        .filterIsInstance<ReturnedValueResult.ExceptionResult>()
-        .forEachIndexed { index, exceptionResult -> exceptionResult.exceptionNumber = index + 1 }
+internal fun Trace.numberExceptionResults() {
+    trace.filterIsInstance<MethodCallTracePoint>()
+        .filter { it.isActor && it.returnedValue is ExceptionResult }
+        .sortedWith(compareBy({ it.actorId }, { it.iThread }))
+        .forEachIndexed { index, tracePoint -> tracePoint.exceptionNumber = index + 1 }
 }
 
 /**
@@ -75,7 +70,7 @@ internal fun Trace.removeGPMCLambda(): Trace {
 
     val gpmcCallIndex = 0
     val gpmcResultIndex = newTrace.indexOfFirst {
-        it is MethodReturnTracePoint && it.methodTracePoint.isGPMCRunMethodCall() && it.methodTracePoint.eventId == 0
+        it is MethodReturnTracePoint && it.callEventId == 0
     }
     if (gpmcResultIndex >= 0) {
         newTrace.removeAt(gpmcResultIndex)
@@ -97,7 +92,7 @@ internal fun List<TraceNode>.removeEmptyHungActors(): List<TraceNode> {
         node.isActor &&
         node.children.isEmpty() &&
         // TODO: use special result object to denote hung result
-        node.tracePoint.returnedValue is ReturnedValueResult.NoValue
+        node.tracePoint.returnedValue.isNoResult()
     }
 }
 
@@ -114,7 +109,7 @@ internal fun List<TraceNode>.appendResultNodes() {
         // Do not add an empty hung actor
         if (node.isActor &&
             node.children.size == 1 &&
-            returnedValue is ReturnedValueResult.NoValue
+            returnedValue.isNoResult()
         ) continue
 
         // Do not add a result node for an actor with no children
@@ -122,13 +117,9 @@ internal fun List<TraceNode>.appendResultNodes() {
             node.children.isEmpty()
         ) continue
 
-        if (!returnedValue.showAtMethodCallEnd) continue
+        if (!returnedValue.showAtMethodCallEnd()) continue
 
-        val resultNode = ResultNode(
-            returnedValue,
-            node.returnEventNumber,
-            node.tracePoint,
-        )
+        val resultNode = ResultNode(node.returnEventNumber, node.tracePoint)
         node.addChild(resultNode)
     }
 }

@@ -11,71 +11,54 @@ package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.kotlinx.lincheck.*
 import org.jetbrains.kotlinx.lincheck.CancellationResult.*
-import org.jetbrains.kotlinx.lincheck.util.VoidResult
 import org.jetbrains.kotlinx.lincheck.runner.ExecutionPart
-import org.jetbrains.lincheck.util.isLincheckInternalException
 import org.jetbrains.lincheck.util.LincheckAnalysisAbortedError
 import org.jetbrains.kotlinx.lincheck.strategy.BlockingReason
 import org.jetbrains.kotlinx.lincheck.util.*
 import org.jetbrains.lincheck.jvm.agent.toSimpleClassName
 import org.jetbrains.lincheck.trace.TraceContext
+import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 
 data class Trace(
     val trace: List<TracePoint>,
     val threadNames: List<String>,
 ) {
-    fun deepCopy(): Trace {
-        val copiedObjects = HashMap<Any, Any>()
-        return Trace(trace.map { it.deepCopy(copiedObjects) }, threadNames.toList())
-    }
+    fun copy(): Trace = Trace(trace.map { it.copy() }, threadNames.toList())
 }
-
-private object PlaceHolder
-private inline fun <reified T: Any> HashMap<Any, Any>.mapAndCast(obj: T, compute: () -> T): T {
-    if (!this.containsKey(obj)) {
-        this[obj] = PlaceHolder
-        this[obj] = compute()
-    }
-    return this[obj] as T
-}
-
-private data class FunctionInfo(
-    val className: String,
-    val functionName: String,
-    val parameterNames: List<String>,
-    val defaultParameterValues: List<String>,
-) {
-    init { check(parameterNames.size == defaultParameterValues.size) }
-}
-
-private val threadFunctionInfo = FunctionInfo(
-    className = "kotlin.concurrent.ThreadsKt",
-    functionName = "thread",
-    parameterNames = listOf("start", "isDaemon", "contextClassLoader", "name", "priority", "block"),
-    defaultParameterValues = listOf("true", "false", "null", "null", "-1", "")
-)
-
 
 /**
  * Essentially, a trace is a list of trace points, which represent
  * interleaving events, such as code location passing or thread switches,
  * and store additional information that makes the trace more readable,
  * such as the current state representations.
- *
- * @property eventId id of the trace point.
- *
- * It is set only in case the plugin is enabled.
  */
-sealed class TracePoint(val context: TraceContext, val eventId: Int, val iThread: Int, val actorId: Int) {
+sealed class TracePoint(
+    val context: TraceContext,
+    val eventId: Int,
+    val iThread: Int,
+    val actorId: Int,
+    codeLocation: Int = UNKNOWN_CODE_LOCATION_ID,
+) {
+    internal var stackTraceElement = context.stackTrace(codeLocation)
 
-    internal abstract fun toString(withLocation: Boolean, withValues: Boolean): String
+    internal var codeLocation = codeLocation
+        set(value) {
+            field = value
+            stackTraceElement = context.stackTrace(value)
+        }
+
+    internal fun locationSuffix(): String =
+        if (codeLocation == UNKNOWN_CODE_LOCATION_ID) "" else " at ${stackTraceElement.compress()}"
+
+    internal abstract fun toString(withValues: Boolean): String
+
+    internal open fun toString(withLocation: Boolean, withValues: Boolean): String =
+        toString(withValues) + if (withLocation) locationSuffix() else ""
+
     override fun toString(): String = toString(withLocation = true, withValues = true)
-    internal abstract fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint
-}
 
-internal typealias CallStackTrace = List<MethodCallTracePoint>
-internal fun CallStackTrace.deepCopy(copiedObjects: HashMap<Any, Any>): CallStackTrace =
-    map { it.deepCopy(copiedObjects) }
+    internal abstract fun copy(): TracePoint
+}
 
 internal class SwitchEventTracePoint(
     context: TraceContext,
@@ -83,71 +66,15 @@ internal class SwitchEventTracePoint(
     iThread: Int,
     actorId: Int,
     val reason: SwitchReason,
-    callStackTrace: CallStackTrace
 ) : TracePoint(context, eventId, iThread, actorId) {
-    // This field assignment creates a copy of current callStackTrace using .toList()
-    // as CallStackTrace is a mutable list and can be changed after this trace point is created.
-    internal var callStackTrace = callStackTrace.toList()
 
-    override fun toString(withLocation: Boolean, withValues: Boolean): String {
+    override fun toString(withValues: Boolean): String {
         val reason = reason.toString()
         return "switch" + if (reason.isEmpty()) "" else " (reason: $reason)"
     }
     
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        SwitchEventTracePoint(context, eventId, iThread, actorId, reason, callStackTrace.deepCopy(copiedObjects))
-    }
-}
-
-/**
- * While code locations just define certain bytecode instructions,
- * code location trace points correspond to visits of these bytecode instructions.
- * [stackTraceElement] provides information about the class, the file, and the position in file
- * the code location has.
- */
-internal abstract class CodeLocationTracePoint(
-    context: TraceContext,
-    eventId: Int,
-    iThread: Int,
-    actorId: Int,
-    codeLocation: Int
-) : TracePoint(context, eventId, iThread, actorId) {
-    var stackTraceElement = context.stackTrace(codeLocation)
-
-    var codeLocation = 0
-        set(value) {
-            field = value
-            stackTraceElement = context.stackTrace(value)
-        }
-
-    init {
-        this.codeLocation = codeLocation
-    }
-
-    protected abstract fun toStringCompact(withValues: Boolean): String
-    override fun toString(withLocation: Boolean, withValues: Boolean): String {
-        return toStringCompact(withValues) + if (withLocation) " at ${stackTraceElement.compress()}" else ""
-    }
-}
-
-/**
- * This TracePoint is added only at the end of an execution when obstruction freedom is violated
- */
-internal class ObstructionFreedomViolationExecutionAbortTracePoint(
-    context: TraceContext,
-    eventId: Int,
-    iThread: Int,
-    actorId: Int,
-    callStackTrace: CallStackTrace
-): TracePoint(context, eventId, iThread, actorId) {
-    // This field assignment creates a copy of current callStackTrace using .toList()
-    // as CallStackTrace is a mutable list and can be changed after this trace point is created.
-    internal var callStackTrace = callStackTrace.toList()
-
-    override fun toString(withLocation: Boolean, withValues: Boolean): String = "/* An active lock was detected */"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ObstructionFreedomViolationExecutionAbortTracePoint(context, eventId, iThread, actorId, callStackTrace.deepCopy(copiedObjects))
-    }
+    override fun copy(): TracePoint =
+        SwitchEventTracePoint(context, eventId, iThread, actorId, reason)
 }
 
 internal class ReadTracePoint(
@@ -161,17 +88,19 @@ internal class ReadTracePoint(
     val isLocal: Boolean,
     private val valueRepresentation: String,
     val valueType: String,
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
 
     var fieldName = fieldName
         private set
+
     fun updateFieldName(name: String) { fieldName = name }
 
     var ownerRepresentation = ownerRepresentation
         private set
+
     fun updateOwnerRepresentation(owner: String?) { ownerRepresentation = owner }
 
-    override fun toStringCompact(withValues: Boolean): String = StringBuilder().apply {
+    override fun toString(withValues: Boolean): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
             append("$ownerRepresentation.$fieldName")
         } else {
@@ -182,9 +111,11 @@ internal class ReadTracePoint(
         }
     }.toString()
 
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        ReadTracePoint(context, eventId, iThread, actorId, ownerRepresentation, fieldName, codeLocation, isLocal, valueRepresentation, valueType)
-    }
+    override fun copy(): TracePoint =
+        ReadTracePoint(context, eventId, iThread, actorId,
+            ownerRepresentation, fieldName, codeLocation, isLocal,
+            valueRepresentation, valueType,
+        )
 }
 
 internal class WriteTracePoint(
@@ -196,19 +127,21 @@ internal class WriteTracePoint(
     fieldName: String,
     codeLocation: Int,
     val isLocal: Boolean,
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    private lateinit var valueRepresentation: String
-    lateinit var valueType: String
+    private val valueRepresentation: String,
+    val valueType: String,
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
 
     var fieldName = fieldName
         private set
+
     fun updateFieldName(name: String) { fieldName = name }
 
     var ownerRepresentation = ownerRepresentation
         private set
+
     fun updateOwnerRepresentation(owner: String?) { ownerRepresentation = owner }
 
-    override fun toStringCompact(withValues: Boolean): String = StringBuilder().apply {
+    override fun toString(withValues: Boolean): String = StringBuilder().apply {
         if (ownerRepresentation != null) {
             append("$ownerRepresentation.$fieldName")
         } else {
@@ -219,18 +152,11 @@ internal class WriteTracePoint(
         }
     }.toString()
 
-    fun initializeWrittenValue(value: String, type: String) {
-        this.valueRepresentation = value
-        this.valueType = type
-    }
-    
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        WriteTracePoint(context, eventId, iThread, actorId, ownerRepresentation, fieldName, codeLocation, isLocal)
-            .also {
-                it.valueType = valueType
-                if (::valueRepresentation.isInitialized) it.valueRepresentation = valueRepresentation
-            }
-    }
+    override fun copy(): TracePoint =
+        WriteTracePoint(
+            context, eventId, iThread, actorId, ownerRepresentation, fieldName, codeLocation,
+            isLocal, valueRepresentation, valueType,
+        ).also { it.stackTraceElement = stackTraceElement }
 }
 
 internal class MethodCallTracePoint(
@@ -242,25 +168,37 @@ internal class MethodCallTracePoint(
     var methodName: String,
     codeLocation: Int,
     val isStatic: Boolean,
-    var callType: CallType = CallType.NORMAL,
-    val isSuspend: Boolean
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    var returnedValue: ReturnedValueResult = ReturnedValueResult.NoValue
-    var thrownException: Throwable? = null
-    var parameters: List<String>? = null
-    var parameterTypes: List<String>? = null
+    val callType: CallType = CallType.NORMAL,
+    val isSuspend: Boolean,
+    var parameters: List<String>,
+    val parameterTypes: List<String>,
+    ownerName: String? = null,
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
 
-    var ownerName: String? = null
+    private var resultSet = false
+
+    var returnedValue: LincheckResult? = NoResult
         private set
+
+    var returnValueType: String = ""
+        private set
+
+    var exceptionNumber: Int = -1
+
+    var ownerName = ownerName
+        private set
+
     fun updateOwnerName(name: String?) { ownerName = name }
+
+    val thrownException: Throwable? get() = (returnedValue as? ExceptionResult)?.throwable
 
     val isRootCall get() = callType != CallType.NORMAL
     val isActor get() = callType == CallType.ACTOR
     val isThreadStart get() = callType == CallType.THREAD_RUN
 
-    val wasSuspended get() = (returnedValue == ReturnedValueResult.CoroutineSuspended)
+    val wasSuspended get() = (returnedValue == SuspendedResult)
 
-    override fun toStringCompact(withValues: Boolean): String = StringBuilder().apply {
+    override fun toString(withValues: Boolean): String = StringBuilder().apply {
         when {
             isThreadCreation() -> appendThreadCreation()
             isRootCall -> appendActor()
@@ -275,26 +213,19 @@ internal class MethodCallTracePoint(
     
     private fun StringBuilder.appendThreadCreation() {
         append("thread")
-        val params = parameters?.let { getNonDefaultParametersWithName(threadFunctionInfo, it) }
-            ?: emptyList()
-        if (!params.isEmpty()) {
+        val params = getNonDefaultParametersWithName(threadFunctionInfo, parameters)
+        if (params.isNotEmpty()) {
             append("(${params.joinToString(", ")})")
         }
     }
     
     private fun StringBuilder.appendActor() {
-        append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
-        if (returnedValue != ReturnedValueResult.NoValue && returnedValue.showAtMethodCallBeginning) {
-            append(": ${returnedValue.resultRepresentation}")
-        }
-        
-        // We only show hung for actors (not for thread starts)
-        if (returnedValue == ReturnedValueResult.NoValue && isActor) {
-            append(": ${returnedValue.resultRepresentation}")
+        append("$methodName(${parameters.joinToString(", ")})")
+        if (returnedValue.showAtMethodCallBeginning() || (returnedValue.isNoResult() && isActor)) {
+            append(": ${returnedValue.resultRepresentation(exceptionNumber)}")
         }
     }
-        
-    
+
     private fun StringBuilder.appendDefaultMethodCall() {
         // For constructor calls (`<init>`) `ownerName` resolves to `null` whenever the
         // receiver is the current `this` — i.e. for `super()` / `this()` delegation calls
@@ -304,74 +235,68 @@ internal class MethodCallTracePoint(
         val displayOwner = ownerName ?: className.takeIf { methodName == "<init>" }?.toSimpleClassName()
         if (displayOwner != null) append("$displayOwner.")
         if (isSuspend) {
-            append("$methodName(${ parameters?.dropLast(1)?.joinToString(", ") ?: "" })")
-            append(" [suspendable: ${parameters?.last()}]")
+            append("$methodName(${parameters.dropLast(1).joinToString(", ")})")
+            append(" [suspendable: ${parameters.last()}]")
         } else {
-            append("$methodName(${ parameters?.joinToString(", ") ?: "" })")
+            append("$methodName(${parameters.joinToString(", ")})")
         }
     }
     
     private fun StringBuilder.appendReturnedValue() {
-        val returnedValue = returnedValue
-        if (returnedValue is ReturnedValueResult.ValueResult) {
-            append(": ${returnedValue.valueRepresentation}")
-        } else if (returnedValue is ReturnedValueResult.CoroutineSuspended) {
-            append(": COROUTINE_SUSPENDED")
-        } else if (thrownException != null && thrownException !is LincheckAnalysisAbortedError) {
-            append(": threw ${thrownException!!.javaClass.simpleName}")
+        when (val result = returnedValue) {
+            is ValueResult -> append(": ${result.value}")
+            SuspendedResult -> append(": COROUTINE_SUSPENDED")
+            is ExceptionResult -> append(": threw $result")
+            else -> Unit
         }
     }
 
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): MethodCallTracePoint = copiedObjects.mapAndCast(this) {
-        MethodCallTracePoint(context, eventId, iThread, actorId, className, methodName, codeLocation, isStatic, callType, isSuspend)
-            .also {
-                it.returnedValue = returnedValue
-                it.thrownException = thrownException
-                it.parameters = parameters
-                it.ownerName = ownerName
-                it.parameterTypes = parameterTypes
+    override fun copy(): MethodCallTracePoint =
+        MethodCallTracePoint(
+            context, eventId, iThread, actorId, className, methodName, codeLocation,
+            isStatic, callType, isSuspend, parameters, parameterTypes, ownerName,
+        ).also {
+            it.stackTraceElement = stackTraceElement
+            if (resultSet) {
+                it.setResult(returnedValue, returnValueType)
             }
-    }
-
-    fun initializeVoidReturnedValue() {
-        returnedValue = ReturnedValueResult.VoidResult
-    }
-
-    fun initializeCoroutineSuspendedResult() {
-        returnedValue = ReturnedValueResult.CoroutineSuspended
-    }
-
-    fun initializeReturnedValue(valueRepresentation: String, valueType: String) {
-        returnedValue = ReturnedValueResult.ValueResult(valueRepresentation, valueType)
-    }
-
-    fun initializeThrownException(exception: Throwable) {
-        this.thrownException = exception
-        if (!isLincheckInternalException(exception)) {
-            this.returnedValue = ReturnedValueResult.ExceptionResult(exception::class.java.simpleName)
+            it.exceptionNumber = exceptionNumber
         }
+
+    /**
+     * Updates the reporting copy of a suspended call with the outcome of its resumption.
+     */
+    fun updateResultAfterResumption(invocation: MethodCallTracePoint) {
+        check(wasSuspended)
+        returnedValue = invocation.returnedValue
+        returnValueType = invocation.returnValueType
+        exceptionNumber = invocation.exceptionNumber
     }
 
-    fun initializeParameters(parameters: List<String>, parameterTypes: List<String>) {
-        this.parameters = parameters
-        this.parameterTypes = parameterTypes
+    private fun setResult(result: LincheckResult?, valueType: String = "") {
+        check(!resultSet) { "Method call result was already set" }
+        resultSet = true
+        returnedValue = result
+        returnValueType = valueType
     }
 
-    fun initializeOwnerName(ownerName: String) {
-        this.ownerName = ownerName
-    }
-    
-    fun initializeActorResult(result: LincheckResult?) {
+    fun setVoidReturnedValue() = setResult(VoidResult)
+
+    fun setCoroutineSuspendedResult() = setResult(SuspendedResult)
+
+    fun setReturnedValue(valueRepresentation: String, valueType: String) =
+        setResult(ValueResult(valueRepresentation), valueType)
+
+    fun setThrownException(exception: Throwable) = setResult(ExceptionResult(exception))
+
+    fun setActorResult(result: LincheckResult?) {
         check(isActor)
-        this.returnedValue = when (result) {
-            null -> ReturnedValueResult.NoValue
-            is VoidResult -> ReturnedValueResult.VoidResult
-            is ExceptionResult -> when (result.throwable) {
-                is LincheckAnalysisAbortedError -> ReturnedValueResult.NoValue
-                else -> ReturnedValueResult.ExceptionResult(result.toString())
-            }
-            else -> ReturnedValueResult.ValueResult(result.toString(), "")
-        }
+        setResult(when (result) {
+            is ExceptionResult -> result.takeUnless { it.throwable is LincheckAnalysisAbortedError }
+            // A terminal actor suspension is reported as an actor outcome.
+            SuspendedResult, is ValueResult -> ValueResult(result.toString())
+            else -> result
+        })
     }
 
     fun isThreadCreation() = 
@@ -389,7 +314,9 @@ internal class MethodCallTracePoint(
         check(actualValues.size == functionInfo.parameterNames.size)
         val result = mutableListOf<String>()
         actualValues.forEachIndexed { index, currentValue ->
-            if (currentValue != functionInfo.defaultParameterValues[index]) result.add("${functionInfo.parameterNames[index]} = $currentValue")
+            if (currentValue != functionInfo.defaultParameterValues[index]) {
+                result.add("${functionInfo.parameterNames[index]} = $currentValue")
+            }
         }
         return result
     }
@@ -401,41 +328,21 @@ internal class MethodCallTracePoint(
     }
 }
 
+internal fun LincheckResult?.resultRepresentation(exceptionNumber: Int = -1): String = when (this) {
+    null -> "<hung>"
+    SuspendedResult -> "<suspended>"
+    is ExceptionResult -> "$this #$exceptionNumber"
+    VoidResult, is ValueResult, CancelledResult, is ResumedResult -> toString()
+}
 
-internal sealed class ReturnedValueResult() {
-    abstract val resultRepresentation: String
+internal fun LincheckResult?.showAtMethodCallBeginning(): Boolean = when (this) {
+    null, VoidResult, SuspendedResult -> false
+    is ValueResult, is ExceptionResult, CancelledResult, is ResumedResult -> true
+}
 
-    open val showAtMethodCallBeginning: Boolean = true
-    open val showAtMethodCallEnd: Boolean = true
-
-    data object NoValue : ReturnedValueResult() {
-        override val resultRepresentation = "<hung>" // TODO: this is a hack, add special `HungResult` in the future
-        override val showAtMethodCallBeginning = false
-        override val showAtMethodCallEnd = false
-    }
-
-    data object VoidResult : ReturnedValueResult() {
-        override val resultRepresentation = "void"
-        override val showAtMethodCallBeginning = false
-        override val showAtMethodCallEnd = true
-    }
-    
-    // Should not be possible for actor
-    data object CoroutineSuspended : ReturnedValueResult() {
-        override val resultRepresentation = "<suspended>"
-        override val showAtMethodCallBeginning = false
-        override val showAtMethodCallEnd = true
-    }
-
-
-    data class ValueResult(val valueRepresentation: String, val valueType: String) : ReturnedValueResult() {
-        override val resultRepresentation = valueRepresentation
-    }
-    
-    // Only for actors
-    data class ExceptionResult(val exceptionRepresentation: String, var exceptionNumber: Int = -1) : ReturnedValueResult() {
-        override val resultRepresentation get() = "$exceptionRepresentation #$exceptionNumber"
-    }
+internal fun LincheckResult?.showAtMethodCallEnd(): Boolean = when (this) {
+    null -> false
+    VoidResult, SuspendedResult, is ValueResult, is ExceptionResult, CancelledResult, is ResumedResult -> true
 }
 
 internal class MonitorEnterTracePoint(
@@ -444,11 +351,12 @@ internal class MonitorEnterTracePoint(
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "MONITORENTER"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "MONITORENTER"
+
+    override fun copy(): TracePoint =
         MonitorEnterTracePoint(context, eventId, iThread, actorId, codeLocation)
-    }
 }
 
 internal class MonitorExitTracePoint(
@@ -457,11 +365,12 @@ internal class MonitorExitTracePoint(
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "MONITOREXIT"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "MONITOREXIT"
+
+    override fun copy(): TracePoint =
         MonitorExitTracePoint(context, eventId, iThread, actorId, codeLocation)
-    }
 }
 
 internal class WaitTracePoint(
@@ -470,11 +379,12 @@ internal class WaitTracePoint(
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "WAIT"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "WAIT"
+
+    override fun copy(): TracePoint =
         WaitTracePoint(context, eventId, iThread, actorId, codeLocation)
-    }
 }
 
 internal class NotifyTracePoint(
@@ -483,11 +393,12 @@ internal class NotifyTracePoint(
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "NOTIFY"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "NOTIFY"
+
+    override fun copy(): TracePoint =
         NotifyTracePoint(context, eventId, iThread, actorId, codeLocation)
-    }
 }
 
 internal class ParkTracePoint(
@@ -496,11 +407,12 @@ internal class ParkTracePoint(
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "PARK"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "PARK"
+
+    override fun copy(): TracePoint =
         ParkTracePoint(context, eventId, iThread, actorId, codeLocation)
-    }
 }
 
 internal class UnparkTracePoint(
@@ -509,11 +421,12 @@ internal class UnparkTracePoint(
     iThread: Int,
     actorId: Int,
     codeLocation: Int
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "UNPARK"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "UNPARK"
+
+    override fun copy(): TracePoint =
         UnparkTracePoint(context, eventId, iThread, actorId, codeLocation)
-    }
 }
 
 internal fun TracePoint.isThreadStart(): Boolean {
@@ -541,7 +454,7 @@ internal class CoroutineCancellationTracePoint(
         this.exception = e
     }
 
-    override fun toString(withLocation: Boolean, withValues: Boolean): String {
+    override fun toString(withValues: Boolean): String {
         if (exception != null) return "EXCEPTION WHILE CANCELLATION"
         // Do not throw exception when lateinit field is not initialized.
         if (!::cancellationResult.isInitialized) return "<cancellation result not available>"
@@ -552,13 +465,12 @@ internal class CoroutineCancellationTracePoint(
         }
     }
 
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+    override fun copy(): TracePoint =
         CoroutineCancellationTracePoint(context, eventId, iThread, actorId)
             .also {
                 if (::cancellationResult.isInitialized) it.cancellationResult = cancellationResult
                 it.exception = exception
             }
-    }
 }
 
 /**
@@ -574,38 +486,26 @@ internal class SectionDelimiterTracePoint(
         iThread = 0,
         actorId = -1,
 ) {
-    override fun toString(withLocation: Boolean, withValues: Boolean): String = ""
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+    override fun toString(withValues: Boolean): String = ""
+    override fun copy(): TracePoint =
         SectionDelimiterTracePoint(context, eventId, executionPart)
-    }
-}
-
-internal class SpinCycleStartTracePoint(
-    context: TraceContext,
-    eventId: Int,
-    iThread: Int,
-    actorId: Int,
-    callStackTrace: CallStackTrace
-): TracePoint(context, eventId, iThread, actorId) {
-    // This field assignment creates a copy of current callStackTrace using .toList()
-    // as CallStackTrace is a mutable list and can be changed after this trace point is created.
-    internal var callStackTrace = callStackTrace.toList()
-
-    override fun toString(withLocation: Boolean, withValues: Boolean) =  "/* The following events repeat infinitely: */"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) { 
-        SpinCycleStartTracePoint(context, eventId, iThread, actorId, callStackTrace.deepCopy(copiedObjects))
-    }
 }
 
 internal class MethodReturnTracePoint(
     context: TraceContext,
     eventId: Int,
-    internal val methodTracePoint: MethodCallTracePoint
-): TracePoint(context, eventId, methodTracePoint.iThread, methodTracePoint.actorId) {
-    override fun toString(withLocation: Boolean, withValues: Boolean) =  "This trace point is temporary, it should not appear in the logs; method: ${methodTracePoint.methodName}"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
-        MethodReturnTracePoint(context, eventId, methodTracePoint.deepCopy(copiedObjects))
-    }
+    iThread: Int,
+    actorId: Int,
+    val callEventId: Int,
+) : TracePoint(context, eventId, iThread, actorId) {
+    constructor(context: TraceContext, eventId: Int, call: MethodCallTracePoint) :
+        this(context, eventId, call.iThread, call.actorId, call.eventId)
+
+    override fun toString(withValues: Boolean) =
+        "Method return for call event $callEventId"
+
+    override fun copy(): TracePoint =
+        MethodReturnTracePoint(context, eventId, iThread, actorId, callEventId)
 }
 
 internal class LoopStartTracePoint(
@@ -615,11 +515,12 @@ internal class LoopStartTracePoint(
     actorId: Int,
     codeLocation: Int,
     val loopId: Int,
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "loop"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "loop"
+
+    override fun copy(): TracePoint =
         LoopStartTracePoint(context, eventId, iThread, actorId, codeLocation, loopId)
-    }
 }
 
 internal class LoopIterationTracePoint(
@@ -630,11 +531,12 @@ internal class LoopIterationTracePoint(
     codeLocation: Int,
     val loopId: Int,
     val iteration: Int,
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "<iteration $iteration>"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "<iteration $iteration>"
+
+    override fun copy(): TracePoint =
         LoopIterationTracePoint(context, eventId, iThread, actorId, codeLocation, loopId, iteration)
-    }
 }
 
 internal class LoopEndTracePoint(
@@ -644,12 +546,30 @@ internal class LoopEndTracePoint(
     actorId: Int,
     codeLocation: Int,
     val loopId: Int,
-) : CodeLocationTracePoint(context, eventId, iThread, actorId, codeLocation) {
-    override fun toStringCompact(withValues: Boolean): String = "loop end"
-    override fun deepCopy(copiedObjects: HashMap<Any, Any>): TracePoint = copiedObjects.mapAndCast(this) {
+) : TracePoint(context, eventId, iThread, actorId, codeLocation) {
+
+    override fun toString(withValues: Boolean): String = "loop end"
+
+    override fun copy(): TracePoint =
         LoopEndTracePoint(context, eventId, iThread, actorId, codeLocation, loopId)
-    }
 }
+
+private data class FunctionInfo(
+    val className: String,
+    val functionName: String,
+    val parameterNames: List<String>,
+    val defaultParameterValues: List<String>,
+) {
+    init { check(parameterNames.size == defaultParameterValues.size) }
+}
+
+private val threadFunctionInfo = FunctionInfo(
+    className = "kotlin.concurrent.ThreadsKt",
+    functionName = "thread",
+    parameterNames = listOf("start", "isDaemon", "contextClassLoader", "name", "priority", "block"),
+    defaultParameterValues = listOf("true", "false", "null", "null", "-1", "")
+)
+
 
 internal sealed class SwitchReason(private val reason: String) {
     // strategy switch decision

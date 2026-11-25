@@ -33,6 +33,8 @@ class GPMCLambdaTraceTest {
             isStatic = false,
             callType = MethodCallTracePoint.CallType.THREAD_RUN,
             isSuspend = false,
+            parameters = emptyList(),
+            parameterTypes = emptyList(),
         )
         val nestedCall = MethodCallTracePoint(
             context = context,
@@ -44,6 +46,8 @@ class GPMCLambdaTraceTest {
             codeLocation = UNKNOWN_CODE_LOCATION_ID,
             isStatic = false,
             isSuspend = false,
+            parameters = emptyList(),
+            parameterTypes = emptyList(),
         )
 
         val processed = Trace(listOf(gpmcCall, nestedCall), listOf("Main Thread")).removeGPMCLambda()

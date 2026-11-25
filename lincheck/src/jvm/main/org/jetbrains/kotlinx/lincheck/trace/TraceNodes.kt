@@ -127,13 +127,17 @@ internal class CallNode(
 }
 
 // Is not part of an initial tree, is only added during flattening or for empty GPMC result
-internal class ResultNode(val actorResult: ReturnedValueResult, eventNumber: Int, tracePoint: TracePoint)
+internal class ResultNode(eventNumber: Int, tracePoint: MethodCallTracePoint)
     : TraceNode(eventNumber, tracePoint) {
 
-    override fun toString(withLocation: Boolean): String =
-        "result: ${actorResult.resultRepresentation}"
+    override val tracePoint: MethodCallTracePoint get() = super.tracePoint as MethodCallTracePoint
 
-    override fun copy(): TraceNode = ResultNode(actorResult, eventNumber, tracePoint)
+    val representation: String get() =
+        tracePoint.returnedValue.resultRepresentation(tracePoint.exceptionNumber)
+
+    override fun toString(withLocation: Boolean): String = "result: $representation"
+
+    override fun copy(): TraceNode = ResultNode(eventNumber, tracePoint)
 }
 
 internal class EllipsisNode(
@@ -162,7 +166,7 @@ internal class LoopNode(
     override fun toString(withLocation: Boolean): String {
         val iters = totalIterations()
         val base = "loop($iters iterations)"
-        return "$base at ${tracePoint.toString(withLocation = true, withValues = true).substringAfter(" at ")}"
+        return base + tracePoint.locationSuffix()
     }
 
     override fun copy(): TraceNode = LoopNode(tracePoint, eventNumber).also {
@@ -183,7 +187,7 @@ internal class LoopIterationNode(
 
     override fun toString(withLocation: Boolean): String {
         if (isIterationRange) {
-            val loc = if (withLocation) " at ${tracePoint.toString(withLocation = true, withValues = true).substringAfter(" at ")}" else ""
+            val loc = if (withLocation) tracePoint.locationSuffix() else ""
             return "<iterations $from-$to>$loc"
         }
         return tracePoint.toString(withLocation, true)
@@ -212,7 +216,7 @@ internal fun Column<TraceNode>.reorder(): Column<TraceNode> =
 internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<TraceNode> {
     val nodes = MutableList<MutableList<TraceNode>>(threadCount) { mutableListOf() }
     val currentNodePerThread = MutableList<TraceNode?>(threadCount) { null }
-    val calls = mutableMapOf<MethodCallTracePoint, CallNode>()
+    val calls = mutableMapOf<Int, Pair<MethodCallTracePoint, CallNode>>()
     val suspendedCalls = List(threadCount) { mutableSetOf<CallNode>() }
 
     fun currentCall(threadId: Int): CallNode? =
@@ -254,32 +258,35 @@ internal fun traceToTree(threadCount: Int, trace: Trace): MultiThreadedTable<Tra
                     // Tail calls may have no resumption frame, so close them before resuming their caller.
                     while (currentCall(currentThreadId) !== resumedCall) closeCall(currentThreadId, eventNumber)
                     suspended.remove(resumedCall)
-                    calls[event] = resumedCall
+                    calls[event.eventId] = event to resumedCall
                     return@forEachIndexed
                 }
                 // Resumptions update the displayed result without changing the collected invocation's result.
-                val newNode = CallNode(event.deepCopy(HashMap()), eventNumber)
-                calls[event] = newNode
+                val newNode = CallNode(event.copy(), eventNumber)
+                calls[event.eventId] = event to newNode
                 addToCurrentContainer(currentThreadId, newNode)
                 currentNodePerThread[currentThreadId] = newNode
             }
 
             is MethodReturnTracePoint -> {
-                val invocation = event.methodTracePoint
-                val call = calls[invocation]
-                if (call != null && invocation.wasSuspended) {
+                val invocationAndCall = calls[event.callEventId]
+                if (invocationAndCall == null) {
+                    closeCall(currentThreadId, eventNumber)
+                    return@forEachIndexed
+                }
+                val (invocation, call) = invocationAndCall
+                if (invocation.wasSuspended) {
                     // Keep the logical call chain open across the JVM stack unwinding.
                     suspendedCalls[currentThreadId].add(call)
                     generateSequence(call.parent) { it.parent }.filterIsInstance<CallNode>()
                         .firstOrNull { it.isActor }?.let { suspendedCalls[currentThreadId].add(it) }
                     return@forEachIndexed
                 }
-                if (call != null && !call.isActor) {
-                    call.tracePoint.returnedValue = invocation.returnedValue
-                    call.tracePoint.thrownException = invocation.thrownException
+                if (!call.isActor && call.tracePoint.eventId != invocation.eventId) {
+                    call.tracePoint.updateResultAfterResumption(invocation)
                 }
                 // The runner records the actor's final result after its last resumed invocation returns.
-                if (call?.isActor == true && !invocation.isActor) return@forEachIndexed
+                if (call.isActor && !invocation.isActor) return@forEachIndexed
                 closeCall(currentThreadId, eventNumber)
             }
 

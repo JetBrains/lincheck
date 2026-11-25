@@ -799,8 +799,8 @@ internal fun TraceReporter.appendResultNodes(isGeneralPurposeModelCheckingMode: 
         val callNode = tree[0].firstOrNull() as? CallNode
         if (nSiblings == 1) {
             callNode?.treatAsActor()
-            callNode?.tracePoint?.returnedValue?.let {
-                if (it is ReturnedValueResult.ExceptionResult) it.exceptionNumber = 1
+            callNode?.tracePoint?.let {
+                if (it.returnedValue is ExceptionResult) it.exceptionNumber = 1
             }
         }
     }
@@ -816,11 +816,11 @@ internal fun TraceReporter.appendResultNodes(isGeneralPurposeModelCheckingMode: 
  */
 private fun LincheckFailure.preprocessTrace(): Trace {
     val failure = this
-    return this.trace!!.deepCopy()
+    return this.trace!!.copy()
         .run { if (isGeneralPurposeModelCheckingScenario(failure.scenario)) removeGPMCLambda() else this }
         .run { if (failure !is ValidationFailure) removeValidationSection() else this }
         .removeRedundantSectionDelimiters()
-        .numberExceptionResults()
+        .also { it.numberExceptionResults() }
 }
 
 private const val GENERAL_PURPOSE_MODEL_CHECKING_FAILURE_TITLE  = "= Concurrent test failed ="

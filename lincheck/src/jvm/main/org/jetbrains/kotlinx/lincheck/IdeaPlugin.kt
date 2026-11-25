@@ -20,6 +20,7 @@ import org.jetbrains.kotlinx.lincheck.execution.ExecutionResult
 import org.jetbrains.kotlinx.lincheck.trace.*
 import org.jetbrains.kotlinx.lincheck.util.ThreadMap
 import org.jetbrains.lincheck.datastructures.verifier.Verifier
+import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 
 const val MINIMAL_PLUGIN_VERSION = "0.19"
 
@@ -238,11 +239,11 @@ internal fun flattenedTraceGraphToCSV(nodes: SingleThreadedTable<TraceNode>, fil
                 val event = node.tracePoint
                 val eventId = event.eventId
                 val representation = event.toString(withLocation = false, withValues = true)
-                val (location, locationId) = if (event is CodeLocationTracePoint) {
+                val (location, locationId) = if (event.codeLocation != UNKNOWN_CODE_LOCATION_ID) {
                     val ste = event.stackTraceElement
                     "${ste.className}:${ste.methodName}:${ste.fileName}:${ste.lineNumber}" to event.codeLocation
                 } else {
-                    "null" to -1
+                    "null" to UNKNOWN_CODE_LOCATION_ID
                 }
                 val type = when {
                     event is ReadTracePoint && event.isLocal ->
@@ -253,12 +254,8 @@ internal fun flattenedTraceGraphToCSV(nodes: SingleThreadedTable<TraceNode>, fil
                         TracePointType.FIELD_READ
                     event is WriteTracePoint && !event.isLocal ->
                         TracePointType.FIELD_WRITE
-                    event is SpinCycleStartTracePoint ->
-                        TracePointType.SPIN_CYCLE_START
                     event is SwitchEventTracePoint && event.reason is SwitchReason.ActiveLock ->
                         TracePointType.SPIN_CYCLE_SWITCH
-                    event is ObstructionFreedomViolationExecutionAbortTracePoint ->
-                        TracePointType.OBSTRUCTION_FREEDOM_VIOLATION
                     event is SwitchEventTracePoint ->
                         TracePointType.SWITCH
                     else ->
@@ -286,8 +283,8 @@ internal fun flattenedTraceGraphToCSV(nodes: SingleThreadedTable<TraceNode>, fil
             is ResultNode -> {
                 val beforeEventId = -1
                 val type = TracePointType.RESULT
-                val representation = node.actorResult.resultRepresentation
-                val exceptionNumber = (node.actorResult as? ReturnedValueResult.ExceptionResult)?.exceptionNumber ?: -1
+                val representation = node.representation
+                val exceptionNumber = node.tracePoint.exceptionNumber
                 "${type.ordinal};${node.iThread};${node.callDepth()};${preExpandedNodeSet.contains(node)};${beforeEventId};${representation};${exceptionNumber};null;-1;[];false"
             }
             else -> null
@@ -301,9 +298,9 @@ private enum class TracePointType {
     ACTOR,
     RESULT,
     SWITCH,
-    SPIN_CYCLE_START,
+    SPIN_CYCLE_START, // Reserved for compatibility with the IDE plugin.
     SPIN_CYCLE_SWITCH,
-    OBSTRUCTION_FREEDOM_VIOLATION,
+    OBSTRUCTION_FREEDOM_VIOLATION, // Reserved for compatibility with the IDE plugin.
     LOCAL_READ,
     LOCAL_WRITE,
     FIELD_READ,
@@ -313,11 +310,7 @@ private enum class TracePointType {
 private fun getRelatedTypeList(tracePoint: TracePoint): List<String> = when (tracePoint) {
     is ReadTracePoint -> listOf(tracePoint.valueType)
     is WriteTracePoint -> listOf(tracePoint.valueType)
-    is MethodCallTracePoint -> {
-        val returnType = if (tracePoint.returnedValue !is ReturnedValueResult.ValueResult) ""
-        else (tracePoint.returnedValue as ReturnedValueResult.ValueResult).valueType
-        listOf(returnType) + (tracePoint.parameterTypes ?: emptyList())
-    }
+    is MethodCallTracePoint -> listOf(tracePoint.returnValueType) + tracePoint.parameterTypes
     else -> emptyList<String>()
 }
 

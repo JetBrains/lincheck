@@ -11,6 +11,7 @@
 package org.jetbrains.kotlinx.lincheck.trace
 
 import org.jetbrains.lincheck.jvm.agent.toCanonicalClassName
+import org.jetbrains.lincheck.trace.UNKNOWN_CODE_LOCATION_ID
 
 internal interface TraceFilter {
     fun shouldUnfold(node: TraceNode): Boolean
@@ -33,8 +34,7 @@ internal class ShortenTraceFilter : TraceFilter {
                 is EventNode -> with(child) {
                     !tracePoint.isVirtual && (
                         tracePoint.isBlocking && isLast ||
-                        tracePoint is SwitchEventTracePoint ||
-                        tracePoint is ObstructionFreedomViolationExecutionAbortTracePoint
+                        tracePoint is SwitchEventTracePoint
                     )
                 }
                 is CallNode, is LoopNode, is LoopIterationNode, is RecursionNode -> {
@@ -73,7 +73,7 @@ internal val TracePoint.isVirtual: Boolean get() =
 
 // trace points from `Throwable` methods are filter-out from the trace
 internal val TracePoint.isThrowableTracePoint: Boolean get() {
-    val codeLocation = (this as? CodeLocationTracePoint)?.codeLocation ?: return false
+    if (codeLocation == UNKNOWN_CODE_LOCATION_ID) return false
     val stackTraceElement = context.stackTrace(codeLocation)
     return stackTraceElement.className.toCanonicalClassName() == "java.lang.Throwable"
 }

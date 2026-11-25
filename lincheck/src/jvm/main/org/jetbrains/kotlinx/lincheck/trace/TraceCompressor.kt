@@ -51,8 +51,8 @@ private fun SingleThreadedTable<TraceNode>.compressSuspendImpl() = compressNodes
     val newNode = node.copy()
     // trace grandchildren to children, inherit correct stackTraceElement, decrement depth
     singleChild.children.forEach {
-        if (it.tracePoint is CodeLocationTracePoint) {
-            (it.tracePoint as CodeLocationTracePoint).codeLocation = singleChild.tracePoint.codeLocation
+        if (it.tracePoint.codeLocation != UNKNOWN_CODE_LOCATION_ID) {
+            it.tracePoint.codeLocation = singleChild.tracePoint.codeLocation
         }
         newNode.addChild(it)
     }
@@ -124,12 +124,14 @@ private fun SingleThreadedTable<TraceNode>.compressAccessPairs() = compressNodes
  */
 private fun combineNodes(parent: CallNode, child: CallNode): TraceNode {
     // TODO investigate why in rare cases return values are not equal #682
-    if (parent.tracePoint.returnedValue == child.tracePoint.returnedValue
-        && parent.tracePoint.thrownException == child.tracePoint.thrownException) {
+    val sameResult = parent.tracePoint.thrownException == child.tracePoint.thrownException &&
+        (parent.tracePoint.thrownException != null ||
+            parent.tracePoint.returnedValue == child.tracePoint.returnedValue &&
+            parent.tracePoint.returnValueType == child.tracePoint.returnValueType)
+    if (sameResult) {
 
         parent.tracePoint.methodName = child.tracePoint.methodName
         parent.tracePoint.parameters = child.tracePoint.parameters
-
 
         val newNode = parent.copy()
         child.children.forEach { newNode.addChild(it) }
@@ -197,15 +199,14 @@ private fun SingleThreadedTable<TraceNode>.removeCoroutinesCoreSuffix() = compre
         node.tracePoint.methodName = node.tracePoint.methodName.removeCoroutinesCoreSuffix()
     }
 
-    if (node.tracePoint is CodeLocationTracePoint && (node.tracePoint as CodeLocationTracePoint).stackTraceElement.methodName.hasCoroutinesCoreSuffix()) {
-        val oldStackTraceElement = (node.tracePoint as CodeLocationTracePoint).stackTraceElement
-        val newStackTraceElement = StackTraceElement(
+    val oldStackTraceElement = node.tracePoint.stackTraceElement
+    if (oldStackTraceElement.methodName.hasCoroutinesCoreSuffix()) {
+        node.tracePoint.stackTraceElement = StackTraceElement(
             oldStackTraceElement.className,
             oldStackTraceElement.methodName.removeCoroutinesCoreSuffix(),
             oldStackTraceElement.fileName,
             oldStackTraceElement.lineNumber,
         )
-        (node.tracePoint as CodeLocationTracePoint).stackTraceElement = newStackTraceElement
     }
 
     node

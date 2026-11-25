@@ -35,6 +35,8 @@ sealed interface LincheckResult
  */
 val NoResult : LincheckResult? = null
 
+internal fun LincheckResult?.isNoResult(): Boolean = this === NoResult
+
 /**
  * Represents a successful invocation of a function that does not return a value.
  */
