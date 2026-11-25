@@ -7,7 +7,7 @@ such as wait-freedom, lock-freedom, or obstruction-freedom.
 Lincheck only supports verification of obstruction-freedom. However, because lock-free and wait-free algorithms 
 are also obstruction-free, any violation of obstruction-freedom also indicates a violation of those stronger guarantees.
 
-Use the `checkObstructionFreedom` option to verify the obstruction-freedom guarantee of the program:
+Set `checkObstructionFreedom = true` in `modelChecking` to verify the obstruction-freedom guarantee of the program:
 
 ```kotlin
 ```
@@ -31,13 +31,14 @@ In this example, you will test the `put()` function of a `ConcurrentHashMap` str
 
 1. Create a `ConcurrentHashMapTest.kt` file.
 2. Create a test class for `ConcurrentHashMap`, declare the `put()` function and a test 
-   function with the `checkObstructionFreedom()` option enabled:
+   function with the `checkObstructionFreedom` option enabled:
 
    ```kotlin
    ```
    { src="kotlinx-lincheck/NonBlockingGuaranteesTests.kt" include-symbol="ConcurrentHashMapTest" }
    
-   The [`threads`](lincheck-testing-strategies-options.md#scenario-generation) and [`actorsPerThread`](lincheck-testing-strategies-options.md#scenario-generation) 
+   The [`threads`](lincheck-testing-strategies-options.md#scenario-generation) and
+   [`operationsPerThread`](lincheck-testing-strategies-options.md#scenario-generation)
    options are used to reduce the number of potential execution scenarios. These options do not change the pass/fail 
    state of the test, but they significantly reduce the testing time. 
 
@@ -84,7 +85,7 @@ In this example, you will test the `put()` function of a non-blocking `Concurren
 
 1. Create a `ConcurrentSkipListMapTest.kt` file.
 2. Create a test class for `ConcurrentSkipListMap`, declare the `put()` function and a test function with 
-   the `checkObstructionFreedom()` option enabled:
+   the `checkObstructionFreedom` option enabled:
 
    ```kotlin
    ```

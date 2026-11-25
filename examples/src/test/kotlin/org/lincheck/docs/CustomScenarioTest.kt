@@ -1,7 +1,8 @@
 package org.lincheck.docs
 
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
-import org.jetbrains.lincheck.datastructures.StressOptions
 import kotlin.test.Test
 
 class Structure {
@@ -12,23 +13,26 @@ class Structure {
     fun argsOp(value: Int) {}
 
     @Test
-    fun test() = StressOptions()
-        .addCustomScenario {
-            initial {
-                actor(Structure::noArgsOp)
-            }
-            parallel {
-                thread {
-                    actor(Structure::argsOp, 1)
-                    actor(Structure::argsOp, 2)
+    fun test() = Lincheck.runConcurrentTest(LincheckSettings {
+        stress()
+        scenarioGeneration {
+            addCustomScenario {
+                initial {
+                    actor(Structure::noArgsOp)
                 }
-                thread {
-                    actor(Structure::argsOp, 3)
+                parallel {
+                    thread {
+                        actor(Structure::argsOp, 1)
+                        actor(Structure::argsOp, 2)
+                    }
+                    thread {
+                        actor(Structure::argsOp, 3)
+                    }
                 }
-            }
-            post {
-                actor(Structure::noArgsOp)
+                post {
+                    actor(Structure::noArgsOp)
+                }
             }
         }
-        .check(this::class)
+    }, this::class)
 }

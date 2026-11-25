@@ -1,7 +1,9 @@
 package org.lincheck.docs
 
-import org.jetbrains.lincheck.datastructures.*
-import kotlin.test.*
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.datastructures.Operation
+import kotlin.test.Test
 
 class Counter {
     var value = 0
@@ -20,13 +22,16 @@ class CounterStructureTest {
     fun dec() = c.dec()
 
     @Test
-    fun test() = ModelCheckingOptions().check(this::class)
+    fun test() = Lincheck.runConcurrentTest(this::class)
 
     @Test
-    fun testWithIterations() = ModelCheckingOptions()
-        .iterations(100) // Specify the number of generated scenarios
-        .check(this::class)
+    fun testWithRandomScenarios() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 100 // Specify the number of generated scenarios
+        }
+    }, this::class)
 
     @Test
-    fun stressTest() = StressOptions().check(this::class)
+    fun stressTest() = Lincheck.runConcurrentTest(LincheckSettings { stress() }, this::class)
 }

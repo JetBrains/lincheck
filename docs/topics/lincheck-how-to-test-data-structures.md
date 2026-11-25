@@ -36,8 +36,7 @@ Let's test this `Counter` data structure with Lincheck:
    This annotation tells Lincheck which methods to include when generating
    execution scenarios.    
 
-4. Declare a test function as a member function using `ModelCheckingOptions()` or
-   `StressOptions()`. Annotate it with `@Test`:
+4. Declare a test function using `Lincheck.runConcurrentTest()` and annotate it with `@Test`.
 
    ```kotlin
    ```
@@ -49,7 +48,7 @@ Let's test this `Counter` data structure with Lincheck:
    {style="tip"}
 
 5. Run the test. If it fails, Lincheck generates an error report with the scenario
-   and execution trace that led to incorrect behavior:
+   that led to incorrect behavior:
 
     ```text
     = Invalid execution results =

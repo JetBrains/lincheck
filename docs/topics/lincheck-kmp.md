@@ -140,7 +140,7 @@ Create classes implementing counter data structures that are shared between all 
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="5,6,9,10-17" }
+   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="6-7,10-18" }
 
 ## Write shared tests
 
@@ -150,13 +150,13 @@ Write tests that are [run for all targets](https://kotlinlang.org/docs/multiplat
    
    ```kotlin
    ```
-   { src="kotlinx-lincheck/UnsafeCounterTests.kt" include-lines="5,6,7,16-24" }
+   { src="kotlinx-lincheck/UnsafeCounterTests.kt" include-lines="6-8,17-25" }
 
 2. Create a `SafeCounterTest.kt` file in the same directory:
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="7,8,9,19-27" }
+   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="8-10,20-28" }
    
 ## Write JVM-specific tests
 
@@ -170,13 +170,13 @@ Write tests that are [only run for platforms targeting the JVM](https://kotlinla
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/UnsafeCounterTests.kt" include-lines="3,4,5,7,26-39" }
+   { src="kotlinx-lincheck/UnsafeCounterTests.kt" include-lines="3-6,26-40" }
 
 2. Create a `SafeCounterConcurrentTest.kt` file in the same directory:
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="3,4,7,9,29-42" }
+   { src="kotlinx-lincheck/SafeCounterTests.kt" include-lines="3-5,8,29-43" }
 
 ## Run the tests
 

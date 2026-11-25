@@ -1,6 +1,7 @@
 package org.lincheck.docs
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Validate
 import kotlin.test.Test
@@ -25,16 +26,19 @@ class ValidationTest {
     }
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .addCustomScenario {
-            parallel {
-                thread {
-                    actor(ValidationTest::add)
-                }
-                thread {
-                    actor(ValidationTest::add)
+    fun test() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            addCustomScenario {
+                parallel {
+                    thread {
+                        actor(ValidationTest::add)
+                    }
+                    thread {
+                        actor(ValidationTest::add)
+                    }
                 }
             }
         }
-        .check(this::class)
+    }, this::class)
 }

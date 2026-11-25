@@ -6,11 +6,11 @@ detection of stalled execution, verification, and others.
 
 ## How to enable options
 
-To enable an option for a testing strategy, set it in the strategy class:
+Configure options in `LincheckSettings` and pass the settings to `Lincheck.runConcurrentTest()`.
 
 ```kotlin
 ```
-{ src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.testWithIterations" }
+{ src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.testWithRandomScenarios" }
 
 ## Scenario output
 
@@ -22,7 +22,7 @@ Set `LincheckSettings { scenarioGeneration { printExecutionScenarios = false } }
 By default, Lincheck tries to minimize the failed scenario by removing the operations that 
 do not change the behavior of the test.
 
-Set the `minimizeFailedScenario` option to `false` to see the full failed scenario.
+Set `minimizeFailedScenario = false` in `scenarioGeneration` to see the full failed scenario.
 
 <compare first-title="Full" second-title="Minimized">
 <code-block lang="text">
@@ -53,15 +53,15 @@ Set the `minimizeFailedScenario` option to `false` to see the full failed scenar
 
 ## Scenario generation
 
-| Option                    | Default value | Description                                                                                                                                 |
-|---------------------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------|
-| `iterations`              | `100`         | The number of generated concurrent scenarios.                                                                                               |
-| `invocationsPerIteration` | `10_000`      | The number of invocations for each concurrent scenario.                                                                                     |
-| `threads`                 | `2`           | The number of threads in each scenario.                                                                                                     |
-| `actorsBefore`            | `5`           | The number of operations called before the parallel section of a scenario.                                                                  |
-| `actorsPerThread`         | `5`           | The number of operations in each thread in the parallel section of a scenario.                                                              |
-| `actorsAfter`             | `5`           | The number of operations called after the parallel section of a scenario.                                                                   |
-| `customScenarios`         | –             | A list of [custom concurrent scenarios](#defining-a-custom-scenario). The custom scenarios are executed before the randomly generated ones. |
+| Option                   | Default value | Description                                                                                                                                 |
+|--------------------------|---------------|---------------------------------------------------------------------------------------------------------------------------------------------|
+| `randomScenarios`        | `100`         | The number of generated concurrent scenarios.                                                                                               |
+| `invocationsPerScenario` | `10_000`      | The number of invocations for each concurrent scenario.                                                                                     |
+| `threads`                | `2`           | The number of threads in each scenario.                                                                                                     |
+| `operationsBefore`       | `5`           | The number of operations called before the parallel section of a scenario.                                                                  |
+| `operationsPerThread`    | `5`           | The number of operations in each thread in the parallel section of a scenario.                                                              |
+| `operationsAfter`        | `5`           | The number of operations called after the parallel section of a scenario.                                                                   |
+| `customScenarios`        | –             | A list of [custom concurrent scenarios](#defining-a-custom-scenario). The custom scenarios are executed before the randomly generated ones. |
 
 ### Defining a custom scenario
 
@@ -83,11 +83,13 @@ executed sequentially.
 
 ## Stalled execution detection
 
+Set `invocationTimeoutMs` on `LincheckSettings`. Set the loop bounds in the `loopDetection` block inside `modelChecking`.
+
 <table>
 <tr><td>Option</td><td>Default value</td><td>Description</td></tr>
 <tr>
-    <td><code>timeoutMs</code></td>
-    <td><code>3000</code></td>
+    <td><code>invocationTimeoutMs</code></td>
+    <td><code>30_000</code></td>
     <td>Invocation timeout in milliseconds after which Lincheck reports a stalled execution.</td></tr>
 <tr>
     <td><code>loopBound</code></td>
@@ -117,10 +119,12 @@ executed sequentially.
 
 ## Verification
 
+Set these options in `scenarioGeneration`.
+
 <table>
 <tr><td>Option</td><td>Default value</td><td>Description</td></tr>
 <tr>
-    <td><code>verifierClass</code></td>
+    <td><code>verifier</code></td>
     <td><code>LinearizabilityVerifier</code></td>
     <td>The verifier class used during the <a href="lincheck-results-validation.md#verification-models">verification process</a>:
         <list>
@@ -149,14 +153,15 @@ executed sequentially.
 
 ## Library analysis
 
+Set these options in `modelChecking`.
+
 <table>
 <tr><td>Option</td><td>Default value</td><td>Description</td></tr>
 <tr>
-    <td><code>stdLibAnalysisEnabled</code></td>
-    <td><code>false</code></td>
-    <td>By default, Lincheck does not verify the behavior of the operations from the standard library, 
-        treating them as thread-safe. Set this option to <code>true</code> to enable analysis of standard
-        library functions/classes.<br/><br/>
+    <td><code>analyzeStdLib</code></td>
+    <td><code>true</code></td>
+    <td>Controls whether Lincheck analyzes the internals of standard-library concurrent collections.
+        Set this option to <code>false</code> to reduce thread switching inside these collections.<br/><br/>
         This option can only be applied to <a href="lincheck-testing-strategies.md#model-checking">model checking</a>.</td></tr>
 <tr>
     <td><code>addGuarantee</code></td>

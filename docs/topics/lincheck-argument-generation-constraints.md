@@ -14,7 +14,7 @@ To limit the range of the generated argument values in Lincheck:
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/ArgumentGenerationTest.kt" include-lines="27,28,42" }
+   { src="kotlinx-lincheck/ArgumentGenerationTest.kt" include-lines="27-28,39" }
 
    * `name` – the name of the argument generator.
    * `gen` – the [type](#generator-types) of the generator.

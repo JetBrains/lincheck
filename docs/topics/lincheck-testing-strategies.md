@@ -11,11 +11,11 @@ a testing strategy.
 With model checking, Lincheck simulates possible thread interleavings and reports those that cause incorrect 
 behavior.
 
-To use model checking for testing a data structure, declare a test function using `ModelCheckingOptions()`:
+To use model checking for testing a data structure, select `modelChecking()` in `LincheckSettings`:
 
 ```kotlin
 ```
-{ src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.test" }
+{ src="kotlinx-lincheck/TreiberStackTest.kt" include-symbol="TreiberStackTest.modelCheckingTest" }
 
 When using the model checking strategy, Lincheck inserts explicit thread-switch instructions at points of 
 shared-memory access (`read` and `write`) or at synchronization points, such as lock acquisition and release, 
@@ -40,7 +40,8 @@ cache behavior, and other similar effects under the relaxed
 
 With stress testing, Lincheck executes each scenario multiple times to increase the chances of finding an error.
 
-To use stress testing, declare a test function using `StressOptions()`:
+Lincheck uses stress testing by default for data-structure tests.
+To select it explicitly, use `stress()` in `LincheckSettings`.
 
 ```kotlin
 ```

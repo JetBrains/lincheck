@@ -1,6 +1,8 @@
 package org.lincheck.docs
 
-import org.jetbrains.lincheck.datastructures.*
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
+import org.jetbrains.lincheck.datastructures.Operation
 import kotlin.test.Test
 import java.util.concurrent.atomic.AtomicReference
 
@@ -54,6 +56,5 @@ class NonParallelGroupTest {
     fun isEmpty(): Boolean = queue.isEmpty()
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .check(this::class)
+    fun modelCheckingTest() = Lincheck.runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
 }

@@ -41,7 +41,7 @@ sequential version of the structure.](verification-process-seq.svg){width=700}
 To specify a sequential version of a data structure:
 
 1. Implement a data structure with sequential versions of all concurrent functions tested by Lincheck.
-2. Specify the data structure using the `sequentialSpecification()` option:
+2. Set the `sequentialSpecification` option in `scenarioGeneration`:
 
    ```kotlin
    ```
@@ -109,7 +109,7 @@ To understand the difference between the two models, see how a data structure ca
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-lines="34-42,74" }
+   { src="kotlinx-lincheck/LinearizabilitySerializabilityTest.kt" include-lines="35-43,84" }
 
 4. Declare and run a serializability test:
 

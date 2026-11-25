@@ -1,6 +1,7 @@
 package org.lincheck.docs
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -34,6 +35,6 @@ class UnsafeCounterConcurrentTest {
 
     @Test
     fun modelCheckingTest() {
-        ModelCheckingOptions().check(this::class)
+        Lincheck.runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
     }
 }

@@ -46,7 +46,7 @@ class ExpectedFailures : InvocationInterceptor {
             CounterTest::test.javaMethod!! to lostIncrement,
             CounterTestWithInvocations::test.javaMethod!! to lostIncrement,
             CounterStructureTest::test.javaMethod!! to invalidResults,
-            CounterStructureTest::testWithIterations.javaMethod!! to invalidResults,
+            CounterStructureTest::testWithRandomScenarios.javaMethod!! to invalidResults,
             CounterStructureTest::stressTest.javaMethod!! to invalidResults,
             UnsafeCounterConcurrentTest::modelCheckingTest.javaMethod!! to invalidResults,
             MultiMapTest::modelCheckingTest.javaMethod!! to invalidResults,

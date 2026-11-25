@@ -1,6 +1,7 @@
 package org.lincheck.docs
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -37,6 +38,6 @@ class SafeCounterConcurrentTest {
 
     @Test
     fun modelCheckingTest() {
-        ModelCheckingOptions().check(this::class)
+        Lincheck.runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
     }
 }

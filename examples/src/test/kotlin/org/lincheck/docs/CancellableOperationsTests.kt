@@ -1,8 +1,9 @@
 package org.lincheck.docs
 
 import kotlinx.coroutines.channels.Channel
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Param
 import kotlin.test.Test
@@ -18,10 +19,13 @@ class CancellableOnSuspensionTest {
     suspend fun receive() = ch.receive()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .iterations(50)
-        .invocationsPerIteration(1000)
-        .check(this::class)
+    fun test() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 50
+            invocationsPerScenario = 1000
+        }
+    }, this::class)
 }
 
 @Param(name = "value", gen = IntGen::class, conf = "1:3")
@@ -35,8 +39,11 @@ class PromptCancellationTest {
     suspend fun receive() = ch.receive()
 
     @Test
-    fun test() = ModelCheckingOptions()
-        .iterations(50)
-        .invocationsPerIteration(1000)
-        .check(this::class)
+    fun test() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 50
+            invocationsPerScenario = 1000
+        }
+    }, this::class)
 }

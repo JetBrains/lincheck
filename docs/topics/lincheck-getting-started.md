@@ -144,9 +144,8 @@ incorrect behavior.
 In addition to basic concurrent tests, Lincheck supports a [declarative approach](lincheck-how-to-test-data-structures.md) 
 to testing concurrent data structures.
 
-To test a data structure in Lincheck, you only need to declare the concurrent methods of the structure and a test 
-function. Lincheck generates random concurrent scenarios, executes them using the specified testing strategy, and 
-provides error reports.
+To test a data structure in Lincheck, you only need to declare the concurrent methods of the structure and a test
+function. Lincheck generates and runs random concurrent scenarios and provides error reports.
 
 In this section, you will test a simple counter:
 
@@ -155,7 +154,7 @@ In this section, you will test a simple counter:
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="3-4" }
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="3,5-6" }
 
 3. Create a `Counter` structure:
 
@@ -168,43 +167,22 @@ In this section, you will test a simple counter:
 
    ```kotlin
    ```
-   { src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="13-20,27" }
+   { src="kotlinx-lincheck/CounterStructureTest.kt" include-lines="15-22,37" }
 
-5. In the `CounterStructureTest` class, declare a test function using `ModelCheckingOptions()`:
-    
+5. In the `CounterStructureTest` class, declare a test function that calls `Lincheck.runConcurrentTest()`.
+
    ```kotlin
    ```
    { src="kotlinx-lincheck/CounterStructureTest.kt" include-symbol="CounterStructureTest.test" }
-   
-    > Learn how model checking works in the [Testing Strategies](lincheck-testing-strategies.md#model-checking) 
-    > article.
-    > 
-    {style="tip"}
 
-6. Run the test. Lincheck generates an error report with the concurrent scenario and the specific thread interleaving 
-   that led to incorrect behavior:
-    
+6. Run the test. If Lincheck detects incorrect behavior, it reports the concurrent scenario that exposed the bug.
+
     ```text
     | ------------------- |
     | Thread 1 | Thread 2 |
     | ------------------- |
     | inc(): 1 | inc(): 1 |
     | ------------------- |
-    ```
-
-    ```text
-    | ------------------------ |
-    | Thread 1 |   Thread 2    |
-    | ------------------------ |
-    |          | inc(): 1      |
-    |          |   c.inc(): 1  |
-    |          |     value ➜ 0 |
-    |          |     switch    |
-    | inc(): 1 |               |
-    |          |     value = 1 |
-    |          |     value ➜ 1 |
-    |          |   result: 1   |
-    | ------------------------ |
     ```
 
 ## What's next

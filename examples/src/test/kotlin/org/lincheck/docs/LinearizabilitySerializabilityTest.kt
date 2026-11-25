@@ -1,7 +1,8 @@
 package org.lincheck.docs
 
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.IntGen
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
 import org.jetbrains.lincheck.datastructures.Operation
 import org.jetbrains.lincheck.datastructures.Param
 import org.jetbrains.lincheck.datastructures.verifier.SerializabilityVerifier
@@ -42,33 +43,42 @@ class ConcurrentQueueTest {
     fun poll(): Int? = q.poll()
 
     @Test
-    fun customVerifierTest() = ModelCheckingOptions()
-        .verifier(SerializabilityVerifier::class.java)
-        .check(this::class.java)
+    fun customVerifierTest() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            verifier = SerializabilityVerifier::class.java
+        }
+    }, this::class)
 
     @Test
-    fun serializabilityTest() = ModelCheckingOptions()
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .actorsPerThread(2)
-        .threads(2)
-        // Use the `SerializabilityVerifier`
-        .verifier(SerializabilityVerifier::class.java)
-        // Specify the sequential version of the structure
-        .sequentialSpecification(CorrectSequentialQueue::class.java)
-        .check(this::class.java)
+    fun serializabilityTest() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            operationsBefore = 0
+            operationsAfter = 0
+            operationsPerThread = 2
+            threads = 2
+            // Use the `SerializabilityVerifier`
+            verifier = SerializabilityVerifier::class.java
+            // Specify the sequential version of the structure
+            sequentialSpecification = CorrectSequentialQueue::class.java
+        }
+    }, this::class)
 
     @Test
-    fun linearizabilityTest() = ModelCheckingOptions()
-        .iterations(100)
-        .invocationsPerIteration(10_000)
-        .actorsBefore(0)
-        .actorsAfter(0)
-        .actorsPerThread(2)
-        .threads(2)
-        // Show the full failed scenario
-        .minimizeFailedScenario(false)
-        // Specify the sequential version of the structure
-        .sequentialSpecification(CorrectSequentialQueue::class.java)
-        .check(this::class.java)
+    fun linearizabilityTest() = Lincheck.runConcurrentTest(LincheckSettings {
+        modelChecking()
+        scenarioGeneration {
+            randomScenarios = 100
+            invocationsPerScenario = 10_000
+            operationsBefore = 0
+            operationsAfter = 0
+            operationsPerThread = 2
+            threads = 2
+            // Show the full failed scenario
+            minimizeFailedScenario = false
+            // Specify the sequential version of the structure
+            sequentialSpecification = CorrectSequentialQueue::class.java
+        }
+    }, this::class)
 }

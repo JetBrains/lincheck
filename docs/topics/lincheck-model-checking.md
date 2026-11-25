@@ -13,7 +13,7 @@ schedules is:
 * [Bounded](#bounded-exploration). Each test explores only a limited number of execution schedules. The number of possible execution 
   schedules grows exponentially with the size of the program, and always exploring all of them would significantly 
   increase testing times. You can adjust the limit by changing the value of 
-  [`invocationsPerIteration`](lincheck-testing-strategies-options.md#scenario-generation).
+  [`invocationsPerScenario`](lincheck-testing-strategies-options.md#scenario-generation).
 
 Compared to stress testing, model checking enables Lincheck to collect execution traces and guarantees bug reproduction 
 for failed tests. For a more detailed comparison, see the table in the [Testing strategies](lincheck-testing-strategies.md)

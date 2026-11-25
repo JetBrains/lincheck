@@ -1,6 +1,7 @@
 package org.lincheck.docs
 
-import org.jetbrains.lincheck.datastructures.ModelCheckingOptions
+import org.jetbrains.lincheck.Lincheck
+import org.jetbrains.lincheck.LincheckSettings
 import org.jetbrains.lincheck.datastructures.Operation
 import kotlin.test.Test
 
@@ -19,6 +20,5 @@ class RunOnceTest {
     fun regularOp() = struct.regularOp()
 
     @Test
-    fun modelCheckingTest() = ModelCheckingOptions()
-        .check(this::class)
+    fun modelCheckingTest() = Lincheck.runConcurrentTest(LincheckSettings { modelChecking() }, this::class)
 }
