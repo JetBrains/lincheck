@@ -31,8 +31,8 @@ class FaaQueueTest : AbstractLincheckIntegrationTest(IncorrectResultsFailure::cl
 
     override fun LincheckSettings.customize() {
         if (strategy is TestingStrategy.Stress) scenarioGeneration {
-            invocationsPerIteration = 10_000_000
-            iterations = 0
+            invocationsPerScenario = 10_000_000
+            randomScenarios = 0
         }
         scenarioGeneration.addCustomScenario {
             initial { actor(FaaQueueTest::dequeue) }

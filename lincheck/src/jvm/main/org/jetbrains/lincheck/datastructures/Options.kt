@@ -29,12 +29,12 @@ sealed class Options<OPT : Options<OPT>> {
     internal var logLevel = DEFAULT_LOG_LEVEL
 
     /**
-     * Number of scenarios, defaulting to `lincheck.defaultIterations` when set.
+     * Number of scenarios, defaulting to `lincheck.defaultRandomScenarios` when set.
      */
     var iterations = DEFAULT_ITERATIONS
         protected set
     /**
-     * Invocations per scenario, defaulting to `lincheck.defaultInvocationsPerIteration` when set.
+     * Invocations per scenario, defaulting to `lincheck.defaultInvocationsPerScenario` when set.
      */
     var invocationsPerIteration = DEFAULT_INVOCATIONS
         protected set
@@ -206,17 +206,17 @@ sealed class Options<OPT : Options<OPT>> {
 
     companion object {
         @JvmField
-        val DEFAULT_ITERATIONS: Int = LincheckSettings.ScenarioGeneration.DEFAULT_ITERATIONS
+        val DEFAULT_ITERATIONS: Int = LincheckSettings.ScenarioGeneration.DEFAULT_RANDOM_SCENARIOS
         @JvmField
-        val DEFAULT_INVOCATIONS: Int = LincheckSettings.ScenarioGeneration.DEFAULT_INVOCATIONS_PER_ITERATION
+        val DEFAULT_INVOCATIONS: Int = LincheckSettings.ScenarioGeneration.DEFAULT_INVOCATIONS_PER_SCENARIO
 
         const val DEFAULT_THREADS = LincheckSettings.ScenarioGeneration.DEFAULT_THREADS
-        const val DEFAULT_ACTORS_PER_THREAD = LincheckSettings.ScenarioGeneration.DEFAULT_ACTORS_PER_THREAD
-        const val DEFAULT_ACTORS_BEFORE = LincheckSettings.ScenarioGeneration.DEFAULT_ACTORS_BEFORE
-        const val DEFAULT_ACTORS_AFTER = LincheckSettings.ScenarioGeneration.DEFAULT_ACTORS_AFTER
+        const val DEFAULT_ACTORS_PER_THREAD = LincheckSettings.ScenarioGeneration.DEFAULT_OPERATIONS_PER_THREAD
+        const val DEFAULT_ACTORS_BEFORE = LincheckSettings.ScenarioGeneration.DEFAULT_OPERATIONS_BEFORE
+        const val DEFAULT_ACTORS_AFTER = LincheckSettings.ScenarioGeneration.DEFAULT_OPERATIONS_AFTER
 
         const val DEFAULT_MINIMIZE_ERROR = LincheckSettings.ScenarioGeneration.DEFAULT_MINIMIZE_ERROR
-        const val DEFAULT_TIMEOUT_MS: Long = LincheckSettings.DEFAULT_TIMEOUT_MS
+        const val DEFAULT_TIMEOUT_MS: Long = LincheckSettings.DEFAULT_INVOCATION_TIMEOUT_MS
 
         val DEFAULT_EXECUTION_GENERATOR: Class<out ExecutionGenerator?> = LincheckSettings.ScenarioGeneration.DEFAULT_EXECUTION_GENERATOR
         val DEFAULT_VERIFIER: Class<out Verifier> = LincheckSettings.ScenarioGeneration.DEFAULT_VERIFIER
@@ -241,15 +241,15 @@ internal fun Options<*>.createStrategy(
 @JvmName("toSettings")
 internal fun Options<*>.toSettings(): LincheckSettings = LincheckSettings().also { settings ->
 
-    settings.timeoutMs = timeoutMs
+    settings.invocationTimeoutMs = timeoutMs
     settings.logLevel = logLevel
     settings.scenarioGeneration.also {
-        it.invocationsPerIteration = invocationsPerIteration
-        it.iterations = iterations
+        it.invocationsPerScenario = invocationsPerIteration
+        it.randomScenarios = iterations
         it.threads = threads
-        it.actorsPerThread = actorsPerThread
-        it.actorsBefore = actorsBefore
-        it.actorsAfter = actorsAfter
+        it.operationsPerThread = actorsPerThread
+        it.operationsBefore = actorsBefore
+        it.operationsAfter = actorsAfter
         it.executionGenerator = executionGenerator
     }
 

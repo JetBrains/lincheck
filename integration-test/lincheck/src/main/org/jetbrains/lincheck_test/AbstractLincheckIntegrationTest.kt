@@ -43,7 +43,7 @@ abstract class AbstractLincheckIntegrationTest(
     @Test(timeout = TIMEOUT)
     fun testWithStressStrategy(): Unit = LincheckSettings {
         stress()
-        scenarioGeneration { invocationsPerIteration = 5_000 }
+        scenarioGeneration { invocationsPerScenario = 5_000 }
         commonConfiguration()
     }.runInternalTest()
 
@@ -55,24 +55,24 @@ abstract class AbstractLincheckIntegrationTest(
     // a single CPU might not detect any bugs.
     fun testWithModelCheckingStrategy(): Unit = LincheckSettings {
         modelChecking()
-        scenarioGeneration { invocationsPerIteration = 1_000 }
+        scenarioGeneration { invocationsPerScenario = 1_000 }
         commonConfiguration()
     }.runInternalTest()
 
     @Test(timeout = TIMEOUT)
     fun testWithEventStructureStrategy(): Unit = LincheckSettings {
         modelChecking { enablePartialOrderReduction() }
-        scenarioGeneration { invocationsPerIteration = 1_000 }
+        scenarioGeneration { invocationsPerScenario = 1_000 }
         commonConfiguration()
     }.runInternalTest()
 
     private fun LincheckSettings.commonConfiguration() {
         scenarioGeneration {
-            iterations = 30
-            actorsBefore = 2
+            randomScenarios = 30
+            operationsBefore = 2
             threads = 3
-            actorsPerThread = 2
-            actorsAfter = 2
+            operationsPerThread = 2
+            operationsAfter = 2
             minimizeFailedScenario = false
         }
         customize()

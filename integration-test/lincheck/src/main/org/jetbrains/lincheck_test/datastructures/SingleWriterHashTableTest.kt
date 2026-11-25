@@ -21,7 +21,7 @@ import org.junit.Test
 class SingleWriterHashTableTest() {
     val scenarios: Int = 300
     val threads: Int = 3
-    val actorsBefore: Int = 1
+    val operationsBefore: Int = 1
 
     val checkObstructionFreedom: Boolean = true
     val sequentialSpecification: KClass<*> = SequentialHashTableIntInt::class
@@ -63,13 +63,13 @@ class SingleWriterHashTableTest() {
 
     private fun commonSettings(invocations: Int) = LincheckSettings {
         scenarioGeneration {
-            invocationsPerIteration = invocations
+            invocationsPerScenario = invocations
             sequentialSpecification = this@SingleWriterHashTableTest.sequentialSpecification.java
-            iterations = scenarios
-            actorsBefore = this@SingleWriterHashTableTest.actorsBefore
+            randomScenarios = scenarios
+            operationsBefore = this@SingleWriterHashTableTest.operationsBefore
             threads = this@SingleWriterHashTableTest.threads
-            actorsPerThread = 2
-            actorsAfter = 0
+            operationsPerThread = 2
+            operationsAfter = 0
         }
     }
 

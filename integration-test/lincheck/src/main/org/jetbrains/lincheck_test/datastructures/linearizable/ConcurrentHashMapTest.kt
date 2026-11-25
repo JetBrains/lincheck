@@ -36,7 +36,7 @@ class ConcurrentHashMapTest : AbstractLincheckIntegrationTest() {
         ignoreExperimentalModelChecking()
         // To obtain rare interleaving with `fullAddCount` method
         if (strategy is TestingStrategy.ModelChecking) {
-            scenarioGeneration.invocationsPerIteration(10000)
+            scenarioGeneration.invocationsPerScenario(10000)
             (strategy as TestingStrategy.ModelChecking).analyzeStdLib(true)
         }
     }

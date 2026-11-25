@@ -39,8 +39,8 @@ tasks.register<Test>("verifyExamples") {
     classpath = sourceSets.test.get().runtimeClasspath
     useJUnitPlatform()
     systemProperty("junit.jupiter.extensions.autodetection.enabled", "true")
-    systemProperty("lincheck.defaultIterations", "10")
-    systemProperty("lincheck.defaultInvocationsPerIteration", "1000")
+    systemProperty("lincheck.defaultRandomScenarios", "10")
+    systemProperty("lincheck.defaultInvocationsPerScenario", "1000")
     systemProperty("lincheck.defaultInvocations", "1000")
     maxParallelForks = 4
     forkEvery = 1

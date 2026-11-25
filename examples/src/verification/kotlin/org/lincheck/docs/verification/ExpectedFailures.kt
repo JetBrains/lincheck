@@ -22,7 +22,11 @@ class ExpectedFailures : InvocationInterceptor {
             invocation.proceed()
         } else {
             // Bug demonstrations need the full search budget to reliably find their intentional failures.
-            val defaults = listOf("lincheck.defaultIterations", "lincheck.defaultInvocationsPerIteration")
+            val defaults = listOf(
+                "lincheck.defaultRandomScenarios",
+                "lincheck.defaultInvocationsPerScenario",
+                "lincheck.defaultInvocations",
+            )
                 .associateWith { System.clearProperty(it) }
             try {
                 expected.verify { invocation.proceed() }

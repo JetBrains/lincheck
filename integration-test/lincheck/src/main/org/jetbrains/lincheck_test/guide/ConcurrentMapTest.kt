@@ -29,9 +29,9 @@ class ConcurrentHashMapTest {
     fun modelCheckingTest() = Lincheck.runConcurrentTest(LincheckSettings {
         modelChecking { checkObstructionFreedom = true }
         scenarioGeneration {
-            actorsBefore = 1
-            actorsPerThread = 1
-            actorsAfter = 0
+            operationsBefore = 1
+            operationsPerThread = 1
+            operationsAfter = 0
             minimizeFailedScenario = false
         }
     }, this::class)

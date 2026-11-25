@@ -52,7 +52,7 @@ internal class ExecutionScenarioChecker(
 
     private fun LincheckSettings.checkScenarios(): LincheckFailure? {
         val generation = scenarioGeneration
-        val iterations = generation.iterations
+        val randomScenarioCount = generation.randomScenarios
         var verifier = createVerifier(testClass)
         val generator = createExecutionGenerator(testStructure.randomProvider)
         // create a sequence that generates scenarios lazily on demand
@@ -67,8 +67,8 @@ internal class ExecutionScenarioChecker(
         // random scenarios generator into a single sequence;
         // this way the random scenarios are still generated lazily on demand
         // only after all custom scenarios are checked
-        val scenarios = generation.customScenarios.asSequence() + randomScenarios.take(iterations)
-        val scenariosSize = generation.customScenarios.size + iterations
+        val scenarios = generation.customScenarios.asSequence() + randomScenarios.take(randomScenarioCount)
+        val scenariosSize = generation.customScenarios.size + randomScenarioCount
         scenarios.forEachIndexed { i, scenario ->
             val isCustomScenario = (i < generation.customScenarios.size)
             // For performance reasons, verifier re-uses LTS from previous iterations.
@@ -107,7 +107,7 @@ internal class ExecutionScenarioChecker(
                 runPluginReplay(
                     failure = failure,
                     replayStrategy = createStrategy(failure.scenario) as ManagedStrategy,
-                    invocations = scenarioGeneration.invocationsPerIteration,
+                    invocations = scenarioGeneration.invocationsPerScenario,
                     verifier = verifier,
                 )
             }
@@ -120,7 +120,7 @@ internal class ExecutionScenarioChecker(
     ): LincheckFailure? {
         val strategy = settings.createStrategy(this)
         return strategy.use {
-            it.runIteration(settings.scenarioGeneration.invocationsPerIteration, verifier)
+            it.runIteration(settings.scenarioGeneration.invocationsPerScenario, verifier)
         }
     }
 
@@ -132,7 +132,7 @@ internal class ExecutionScenarioChecker(
         )
 
     private fun LincheckSettings.createExecutionGenerator(randomProvider: RandomProvider): ExecutionGenerator {
-        if (scenarioGeneration.iterations > 0) {
+        if (scenarioGeneration.randomScenarios > 0) {
             checkAtLeastOneMethodIsMarkedAsOperation()
         }
         legacyExecutionGeneratorFactory?.let { return it(testStructure, randomProvider) }

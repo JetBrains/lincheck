@@ -44,7 +44,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
         List<ActorGenerator> validActorGeneratorsForInit = testStructure.actorGenerators.stream()
             .filter(ag -> !ag.getUseOnce() && !ag.isSuspendable()).collect(Collectors.toList());
         List<Actor> initExecution = new ArrayList<>();
-        for (int i = 0; i < settings.getScenarioGeneration().getActorsBefore() && !validActorGeneratorsForInit.isEmpty(); i++) {
+        for (int i = 0; i < settings.getScenarioGeneration().getOperationsBefore() && !validActorGeneratorsForInit.isEmpty(); i++) {
             ActorGenerator ag = validActorGeneratorsForInit.get(random.nextInt(validActorGeneratorsForInit.size()));
             initExecution.add(ag.generate(0, random));
         }
@@ -61,7 +61,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
         List<ThreadGen> threadGens = new ArrayList<>();
         for (int t = 0; t < settings.getScenarioGeneration().getThreads(); t++) {
             parallelExecution.add(new ArrayList<>());
-            threadGens.add(new ThreadGen(t, settings.getScenarioGeneration().getActorsPerThread()));
+            threadGens.add(new ThreadGen(t, settings.getScenarioGeneration().getOperationsPerThread()));
         }
         for (int i = 0; i < nonParallelGroups.size(); i++) {
             threadGens.get(i % threadGens.size()).nonParallelActorGenerators
@@ -97,7 +97,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
             List<ActorGenerator> leftActorGenerators = new ArrayList<>(parallelGroup);
             for (ThreadGen threadGen : tgs2)
                 leftActorGenerators.addAll(threadGen.nonParallelActorGenerators);
-            for (int i = 0; i < settings.getScenarioGeneration().getActorsAfter() && !leftActorGenerators.isEmpty(); i++) {
+            for (int i = 0; i < settings.getScenarioGeneration().getOperationsAfter() && !leftActorGenerators.isEmpty(); i++) {
                 ActorGenerator agen = getActorGenFromGroup(leftActorGenerators, random.nextInt(leftActorGenerators.size()));
                 postExecution.add(agen.generate(settings.getScenarioGeneration().getThreads() + 1, random));
             }

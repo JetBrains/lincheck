@@ -99,9 +99,9 @@ class LincheckSettingsApiTest {
         val strategy = TestingStrategy.ModelChecking()
         val legacy = ModelCheckingOptions().toSettings()
         val legacyStrategy = legacy.strategy as TestingStrategy.ModelChecking
-        assertEquals(settings.timeoutMs, legacy.timeoutMs)
-        assertEquals(settings.scenarioGeneration.iterations, legacy.scenarioGeneration.iterations)
-        assertEquals(settings.scenarioGeneration.invocationsPerIteration, legacy.scenarioGeneration.invocationsPerIteration)
+        assertEquals(settings.invocationTimeoutMs, legacy.invocationTimeoutMs)
+        assertEquals(settings.scenarioGeneration.randomScenarios, legacy.scenarioGeneration.randomScenarios)
+        assertEquals(settings.scenarioGeneration.invocationsPerScenario, legacy.scenarioGeneration.invocationsPerScenario)
         assertEquals(strategy.analyzeStdLib, legacyStrategy.analyzeStdLib)
         assertEquals(strategy.checkObstructionFreedom, legacyStrategy.checkObstructionFreedom)
         assertEquals(strategy.loopDetection.loopBound, legacyStrategy.loopDetection.loopBound)
@@ -177,12 +177,12 @@ class LincheckSettingsApiTest {
     @Test
     fun lambdaRejectsScenarioSettingsAndValidatesItsOwnInvocationLimit() {
         val modifications: List<Pair<String, LincheckSettings.ScenarioGeneration.() -> Unit>> = listOf(
-            "iterations" to { iterations += 1 },
-            "invocationsPerIteration" to { invocationsPerIteration += 1 },
+            "randomScenarios" to { randomScenarios += 1 },
+            "invocationsPerScenario" to { invocationsPerScenario += 1 },
             "threads" to { threads = 3 },
-            "actorsPerThread" to { actorsPerThread = 1 },
-            "actorsBefore" to { actorsBefore = 0 },
-            "actorsAfter" to { actorsAfter = 0 },
+            "operationsPerThread" to { operationsPerThread = 1 },
+            "operationsBefore" to { operationsBefore = 0 },
+            "operationsAfter" to { operationsAfter = 0 },
             "executionGenerator" to { executionGenerator = SettingsGenerator::class.java },
             "customScenarios" to { addCustomScenario { parallel { thread { actor(AtomicCounter::increment) } } } },
             "minimizeFailedScenario" to { minimizeFailedScenario = !minimizeFailedScenario },
@@ -214,13 +214,13 @@ class LincheckSettingsApiTest {
         val generation = settings.scenarioGeneration
         val loopDetection = LincheckSettings.LoopDetection()
         val invalidAssignments: List<Pair<() -> Unit, () -> Unit>> = listOf(
-            { settings.timeoutMs = 0 } to { settings.timeoutMs(0) },
-            { generation.iterations = -1 } to { generation.iterations(-1) },
-            { generation.invocationsPerIteration = 0 } to { generation.invocationsPerIteration(0) },
+            { settings.invocationTimeoutMs = 0 } to { settings.invocationTimeoutMs(0) },
+            { generation.randomScenarios = -1 } to { generation.randomScenarios(-1) },
+            { generation.invocationsPerScenario = 0 } to { generation.invocationsPerScenario(0) },
             { generation.threads = 0 } to { generation.threads(0) },
-            { generation.actorsPerThread = 0 } to { generation.actorsPerThread(0) },
-            { generation.actorsBefore = -1 } to { generation.actorsBefore(-1) },
-            { generation.actorsAfter = -1 } to { generation.actorsAfter(-1) },
+            { generation.operationsPerThread = 0 } to { generation.operationsPerThread(0) },
+            { generation.operationsBefore = -1 } to { generation.operationsBefore(-1) },
+            { generation.operationsAfter = -1 } to { generation.operationsAfter(-1) },
             { loopDetection.loopIterationsBeforeThreadSwitch = 0 } to { loopDetection.loopIterationsBeforeThreadSwitch(0) },
             { loopDetection.loopBound = 0 } to { loopDetection.loopBound(0) },
             { loopDetection.recursionBound = 0 } to { loopDetection.recursionBound(0) },
@@ -230,13 +230,13 @@ class LincheckSettingsApiTest {
             assertThrows(IllegalArgumentException::class.java) { callBuilder() }
         }
         val defaults = LincheckSettings()
-        assertEquals(defaults.timeoutMs, settings.timeoutMs)
-        assertEquals(defaults.scenarioGeneration.iterations, generation.iterations)
+        assertEquals(defaults.invocationTimeoutMs, settings.invocationTimeoutMs)
+        assertEquals(defaults.scenarioGeneration.randomScenarios, generation.randomScenarios)
         assertEquals(LincheckSettings.LoopDetection().loopBound, loopDetection.loopBound)
-        generation.iterations = 0
-        generation.actorsBefore = 0
-        generation.actorsAfter = 0
-        assertEquals(0, generation.iterations)
+        generation.randomScenarios = 0
+        generation.operationsBefore = 0
+        generation.operationsAfter = 0
+        assertEquals(0, generation.randomScenarios)
     }
 
     @Test
@@ -258,7 +258,7 @@ class LincheckSettingsApiTest {
     @Test
     fun customScenarioIsReusableWithoutMutatingItsValidationFunction() {
         val settings = smallSettings().apply {
-            scenarioGeneration.iterations = 0
+            scenarioGeneration.randomScenarios = 0
             scenarioGeneration.addCustomScenario {
                 parallel {
                     thread { actor(AtomicCounter::increment) }
@@ -299,10 +299,10 @@ class LincheckSettingsApiTest {
     }
 
     private fun LincheckSettings.smallScenarios() = scenarioGeneration {
-        invocationsPerIteration = 20
-        iterations = 2
-        actorsBefore = 0
-        actorsAfter = 0
-        actorsPerThread = 1
+        invocationsPerScenario = 20
+        randomScenarios = 2
+        operationsBefore = 0
+        operationsAfter = 0
+        operationsPerThread = 1
     }
 }

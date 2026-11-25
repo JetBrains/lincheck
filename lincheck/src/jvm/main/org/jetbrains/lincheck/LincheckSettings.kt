@@ -36,14 +36,14 @@ import org.jetbrains.lincheck.util.*
  * Kotlin:
  * ```kotlin
  * val settings = LincheckSettings {
- *     timeoutMs = 10_000
+ *     invocationTimeoutMs = 10_000
  *     modelChecking {
  *         checkObstructionFreedom = true
  *         loopDetection { loopBound = 100 }
  *     }
  *     scenarioGeneration {
  *         threads = 3
- *         actorsPerThread = 4
+ *         operationsPerThread = 4
  *     }
  * }
  * Lincheck.runConcurrentTest(settings, MyQueueTest::class)
@@ -52,14 +52,14 @@ import org.jetbrains.lincheck.util.*
  * Java:
  * ```java
  * LincheckSettings settings = new LincheckSettings()
- *     .timeoutMs(10_000)
+ *     .invocationTimeoutMs(10_000)
  *     .strategy(new TestingStrategy.ModelChecking()
  *         .checkObstructionFreedom(true)
  *         .loopDetection(new LoopDetection().loopBound(100))
  *     )
  *     .scenarioGeneration(new ScenarioGeneration()
  *         .threads(3)
- *         .actorsPerThread(4)
+ *         .operationsPerThread(4)
  *     );
  * Lincheck.runConcurrentTest(settings, MyQueueTest.class);
  * ```
@@ -83,9 +83,9 @@ class LincheckSettings() {
      *
      * Must be positive.
      */
-    var timeoutMs: Long = DEFAULT_TIMEOUT_MS
+    var invocationTimeoutMs: Long = DEFAULT_INVOCATION_TIMEOUT_MS
         set(value) {
-            require(value > 0) { "timeoutMs must be positive, but was $value" }
+            require(value > 0) { "invocationTimeoutMs must be positive, but was $value" }
             field = value
         }
 
@@ -95,7 +95,7 @@ class LincheckSettings() {
      * @param value timeout in milliseconds.
      * @throws IllegalArgumentException if [value] is not positive.
      */
-    fun timeoutMs(value: Long) = apply { timeoutMs = value }
+    fun invocationTimeoutMs(value: Long) = apply { invocationTimeoutMs = value }
 
     /**
      * Controls additional diagnostic output.
@@ -144,23 +144,23 @@ class LincheckSettings() {
         // ======== Generated scenarios ========
 
         /**
-         * Number of generated scenarios.
+         * Number of randomly generated scenarios, checked after [customScenarios].
          * Zero value runs only [customScenarios].
          *
          * Must be non-negative.
          */
-        var iterations: Int = DEFAULT_ITERATIONS
+        var randomScenarios: Int = DEFAULT_RANDOM_SCENARIOS
             set(value) {
-                require(value >= 0) { "iterations must be non-negative, but was $value" }
+                require(value >= 0) { "randomScenarios must be non-negative, but was $value" }
                 field = value
             }
 
         /**
-         * Configures the number of generated scenarios.
+         * Configures the number of randomly generated scenarios.
          *
          * @throws IllegalArgumentException if [value] is negative.
          */
-        fun iterations(value: Int) = apply { iterations = value }
+        fun randomScenarios(value: Int) = apply { randomScenarios = value }
 
         /**
          * Maximum number of invocations for each scenario.
@@ -168,9 +168,9 @@ class LincheckSettings() {
          *
          * Must be positive.
          */
-        var invocationsPerIteration: Int = DEFAULT_INVOCATIONS_PER_ITERATION
+        var invocationsPerScenario: Int = DEFAULT_INVOCATIONS_PER_SCENARIO
             set(value) {
-                require(value > 0) { "invocationsPerIteration must be positive, but was $value" }
+                require(value > 0) { "invocationsPerScenario must be positive, but was $value" }
                 field = value
             }
 
@@ -179,7 +179,7 @@ class LincheckSettings() {
          *
          * @throws IllegalArgumentException if [value] is not positive.
          */
-        fun invocationsPerIteration(value: Int) = apply { invocationsPerIteration = value }
+        fun invocationsPerScenario(value: Int) = apply { invocationsPerScenario = value }
 
         /**
          * Number of parallel threads in each generated scenario.
@@ -204,9 +204,9 @@ class LincheckSettings() {
          *
          * Must be positive.
          */
-        var actorsPerThread: Int = DEFAULT_ACTORS_PER_THREAD
+        var operationsPerThread: Int = DEFAULT_OPERATIONS_PER_THREAD
             set(value) {
-                require(value > 0) { "actorsPerThread must be positive, but was $value" }
+                require(value > 0) { "operationsPerThread must be positive, but was $value" }
                 field = value
             }
 
@@ -215,16 +215,16 @@ class LincheckSettings() {
          *
          * @throws IllegalArgumentException if [value] is not positive.
          */
-        fun actorsPerThread(value: Int) = apply { actorsPerThread = value }
+        fun operationsPerThread(value: Int) = apply { operationsPerThread = value }
 
         /**
          * Number of sequential operations generated before the parallel part.
          *
          * Must be non-negative.
          */
-        var actorsBefore: Int = DEFAULT_ACTORS_BEFORE
+        var operationsBefore: Int = DEFAULT_OPERATIONS_BEFORE
             set(value) {
-                require(value >= 0) { "actorsBefore must be non-negative, but was $value" }
+                require(value >= 0) { "operationsBefore must be non-negative, but was $value" }
                 field = value
             }
 
@@ -232,18 +232,18 @@ class LincheckSettings() {
          * Configures the number of sequential operations before the parallel part.
          *
          * @throws IllegalArgumentException if [value] is negative.
-         * @see actorsBefore
+         * @see operationsBefore
          */
-        fun actorsBefore(value: Int) = apply { actorsBefore = value }
+        fun operationsBefore(value: Int) = apply { operationsBefore = value }
 
         /**
          * Number of sequential operations generated after the parallel part.
          *
          * Must be non-negative.
          */
-        var actorsAfter: Int = DEFAULT_ACTORS_AFTER
+        var operationsAfter: Int = DEFAULT_OPERATIONS_AFTER
             set(value) {
-                require(value >= 0) { "actorsAfter must be non-negative, but was $value" }
+                require(value >= 0) { "operationsAfter must be non-negative, but was $value" }
                 field = value
             }
 
@@ -252,7 +252,7 @@ class LincheckSettings() {
          *
          * @throws IllegalArgumentException if [value] is negative.
          */
-        fun actorsAfter(value: Int) = apply { actorsAfter = value }
+        fun operationsAfter(value: Int) = apply { operationsAfter = value }
 
         /**
          * Scenario generator class.
@@ -347,16 +347,16 @@ class LincheckSettings() {
          * Copies scenario generation settings.
          */
         fun copy() = ScenarioGeneration().also {
-            it.invocationsPerIteration = invocationsPerIteration
+            it.invocationsPerScenario = invocationsPerScenario
             it.verifier = verifier
             it.sequentialSpecification = sequentialSpecification
             it.minimizeFailedScenario = minimizeFailedScenario
             it._customScenarios.addAll(_customScenarios.map { scenario -> scenario.copy() })
-            it.iterations = iterations
+            it.randomScenarios = randomScenarios
             it.threads = threads
-            it.actorsPerThread = actorsPerThread
-            it.actorsBefore = actorsBefore
-            it.actorsAfter = actorsAfter
+            it.operationsPerThread = operationsPerThread
+            it.operationsBefore = operationsBefore
+            it.operationsAfter = operationsAfter
             it.executionGenerator = executionGenerator
         }
 
@@ -367,12 +367,12 @@ class LincheckSettings() {
         internal fun nonDefaultSettings(): List<String> {
             val defaults = ScenarioGeneration()
             return listOfNotNull(
-                "iterations".takeIf { iterations != defaults.iterations },
-                "invocationsPerIteration".takeIf { invocationsPerIteration != defaults.invocationsPerIteration },
+                "randomScenarios".takeIf { randomScenarios != defaults.randomScenarios },
+                "invocationsPerScenario".takeIf { invocationsPerScenario != defaults.invocationsPerScenario },
                 "threads".takeIf { threads != defaults.threads },
-                "actorsPerThread".takeIf { actorsPerThread != defaults.actorsPerThread },
-                "actorsBefore".takeIf { actorsBefore != defaults.actorsBefore },
-                "actorsAfter".takeIf { actorsAfter != defaults.actorsAfter },
+                "operationsPerThread".takeIf { operationsPerThread != defaults.operationsPerThread },
+                "operationsBefore".takeIf { operationsBefore != defaults.operationsBefore },
+                "operationsAfter".takeIf { operationsAfter != defaults.operationsAfter },
                 "executionGenerator".takeIf { executionGenerator != defaults.executionGenerator },
                 "customScenarios".takeIf { _customScenarios.isNotEmpty() },
                 "minimizeFailedScenario".takeIf { minimizeFailedScenario != defaults.minimizeFailedScenario },
@@ -387,17 +387,18 @@ class LincheckSettings() {
         companion object {
 
             /**
-             * Default value of [iterations], configurable via the `lincheck.defaultIterations` system property.
+             * Default value of [randomScenarios], configurable via the
+             * `lincheck.defaultRandomScenarios` system property.
              */
             @JvmField
-            val DEFAULT_ITERATIONS: Int = Integer.getInteger("lincheck.defaultIterations", 100)
+            val DEFAULT_RANDOM_SCENARIOS: Int = Integer.getInteger("lincheck.defaultRandomScenarios", 100)
 
             /**
-             * Default value of [invocationsPerIteration], configurable via the
-             * `lincheck.defaultInvocationsPerIteration` system property.
+             * Default value of [invocationsPerScenario], configurable via the
+             * `lincheck.defaultInvocationsPerScenario` system property.
              */
             @JvmField
-            val DEFAULT_INVOCATIONS_PER_ITERATION: Int = Integer.getInteger("lincheck.defaultInvocationsPerIteration", 10_000)
+            val DEFAULT_INVOCATIONS_PER_SCENARIO: Int = Integer.getInteger("lincheck.defaultInvocationsPerScenario", 10_000)
 
             /**
              * Default value of [threads] for a new configuration.
@@ -405,19 +406,19 @@ class LincheckSettings() {
             const val DEFAULT_THREADS = 2
 
             /**
-             * Default value of [actorsPerThread] for a new configuration.
+             * Default value of [operationsPerThread] for a new configuration.
              */
-            const val DEFAULT_ACTORS_PER_THREAD = 5
+            const val DEFAULT_OPERATIONS_PER_THREAD = 5
 
             /**
-             * Default value of [actorsBefore] for a new configuration.
+             * Default value of [operationsBefore] for a new configuration.
              */
-            const val DEFAULT_ACTORS_BEFORE = 5
+            const val DEFAULT_OPERATIONS_BEFORE = 5
 
             /**
-             * Default value of [actorsAfter] for a new configuration.
+             * Default value of [operationsAfter] for a new configuration.
              */
-            const val DEFAULT_ACTORS_AFTER = 5
+            const val DEFAULT_OPERATIONS_AFTER = 5
 
             /**
              * Default value of [executionGenerator] for a new configuration.
@@ -901,7 +902,7 @@ class LincheckSettings() {
      * Copies the settings.
      */
     fun copy(): LincheckSettings = LincheckSettings().also {
-        it.timeoutMs = timeoutMs
+        it.invocationTimeoutMs = invocationTimeoutMs
         it.logLevel = logLevel
         it.strategy = when (val strategy = strategy) {
             is TestingStrategy.Stress -> TestingStrategy.Stress()
@@ -934,9 +935,9 @@ class LincheckSettings() {
 
     companion object {
         /**
-         * Default value of [timeoutMs] for a new configuration.
+         * Default value of [invocationTimeoutMs] for a new configuration.
          */
-        const val DEFAULT_TIMEOUT_MS: Long = 30_000
+        const val DEFAULT_INVOCATION_TIMEOUT_MS: Long = 30_000
     }
 }
 
@@ -954,9 +955,9 @@ internal val LincheckSettings.instrumentationMode: InstrumentationMode
         }
     }
 
-internal val LincheckSettings.effectiveTimeoutMs: Long
+internal val LincheckSettings.effectiveInvocationTimeoutMs: Long
     // Interactive debugging may pause an invocation indefinitely; keep the runner alive during plugin replay.
-    get() = if (ideaPluginReplayModeEnabled) 1000L * 60 * 60 * 24 * 365 else timeoutMs
+    get() = if (ideaPluginReplayModeEnabled) 1000L * 60 * 60 * 24 * 365 else invocationTimeoutMs
 
 
 internal fun LincheckSettings.createStrategy(
@@ -967,7 +968,7 @@ internal fun LincheckSettings.createStrategy(
     scenario = scenario,
     testClass = testClass,
     validationFunction = validationFunction,
-    timeoutMs = effectiveTimeoutMs,
+    timeoutMs = effectiveInvocationTimeoutMs,
     useClocks = if (strategy is TestingStrategy.Stress) UseClocks.RANDOM else UseClocks.ALWAYS,
 ))
 

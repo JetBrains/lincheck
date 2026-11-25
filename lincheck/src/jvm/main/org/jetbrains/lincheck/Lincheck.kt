@@ -72,7 +72,7 @@ object Lincheck {
         withLincheckTestContext(configuration.instrumentationMode) {
             ensureObjectIsTransformed(block)
             val verifier = NoExceptionVerifier()
-            configuration.createStrategy(LambdaRunner(configuration.effectiveTimeoutMs, block)).use { strategy ->
+            configuration.createStrategy(LambdaRunner(configuration.effectiveInvocationTimeoutMs, block)).use { strategy ->
                 val failure = strategy.runIteration(invocations, verifier)
                 if (failure != null) {
                     // Only managed strategies can replay a failing interleaving in the IDE.
@@ -81,7 +81,7 @@ object Lincheck {
                             runPluginReplay(
                                 failure = failure,
                                 replayStrategy = configuration.createStrategy(
-                                    LambdaRunner(configuration.effectiveTimeoutMs, block)
+                                    LambdaRunner(configuration.effectiveInvocationTimeoutMs, block)
                                 ) as ManagedStrategy,
                                 invocations = invocations,
                                 verifier = verifier,

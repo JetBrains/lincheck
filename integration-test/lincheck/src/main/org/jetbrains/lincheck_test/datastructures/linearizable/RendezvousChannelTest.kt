@@ -41,7 +41,7 @@ class RendezvousChannelTest : AbstractLincheckIntegrationTest() {
         ignoreExperimentalModelChecking()
         scenarioGeneration {
             sequentialSpecification = SequentialRendezvousIntChannel::class.java
-            iterations = 10
+            randomScenarios = 10
         }
     }
 }

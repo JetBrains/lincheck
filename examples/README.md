@@ -32,7 +32,8 @@ New examples are discovered automatically and must pass unless an expected failu
 Expectations use method references, so renaming or deleting an expected-failure example also requires updating its entry.
 Each example class runs in a separate JVM, with up to four JVMs running concurrently.
 Method ordering within a class is preserved.
-The verification task sets `lincheck.defaultIterations=10` and
-`lincheck.defaultInvocationsPerIteration=1000` to bound exploration without editing the examples.
+The verification task sets `lincheck.defaultRandomScenarios=10`,
+`lincheck.defaultInvocationsPerScenario=1000`, and `lincheck.defaultInvocations=1000` (for lambda-based tests)
+to bound exploration without editing the examples.
 The queue linearizability example uses an explicit, larger budget to expose its intentional ordering bug.
 Explicit options in individual examples take precedence over these defaults.
