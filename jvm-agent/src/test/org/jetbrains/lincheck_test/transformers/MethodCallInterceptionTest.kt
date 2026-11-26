@@ -258,8 +258,11 @@ class MethodCallInterceptionTest {
         events += "caller: ${call("callInt")}"
         events += "caller: ${render(failure("callVoid"))}"
         events += "caller: ${render(failure("callThrowing"))}"
-        val expected = javaClass.getResource("/representation/method-call-interception.txt")!!.readText().trimEnd()
-        assertEquals(expected, events.joinToString("\n"))
+        // Compared line by line: a Windows checkout brings the baseline in with CRLF endings,
+        // which a whole-text comparison against the recorded events would report as a diff.
+        val expected = javaClass.getResource("/representation/method-call-interception.txt")!!
+            .readText().trimEnd().lines()
+        assertEquals(expected, events.toList())
     }
 
     private fun assertRecycled() {
