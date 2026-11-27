@@ -31,7 +31,7 @@ import org.junit.Test
 class LegacyOptionsApiTest {
     @Test
     fun stressOptionsChecksCustomScenarioAgainstSequentialSpecification() {
-        val options: Options<*> = StressOptions()
+        val options: Options<*, *> = StressOptions()
             .iterations(0)
             .invocationsPerIteration(1)
             .sequentialSpecification(SequentialValue::class.java)
@@ -101,7 +101,7 @@ class LegacyOptionsApiTest {
 
     // Mirror generators compiled against the old API; only their constructor signatures matter.
     @Suppress("UNUSED_PARAMETER")
-    internal class LegacyOptionsGenerator(options: Options<*>, structure: CTestStructure, random: RandomProvider) :
+    internal class LegacyOptionsGenerator(options: Options<*, *>, structure: CTestStructure, random: RandomProvider) :
         ExecutionGenerator(LincheckSettings(), null) {
         override fun nextExecution() = throw UnsupportedOperationException()
     }

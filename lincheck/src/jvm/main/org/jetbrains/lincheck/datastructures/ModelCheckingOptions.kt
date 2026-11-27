@@ -18,7 +18,7 @@ import org.jetbrains.lincheck.LincheckSettings.MemoryModel
  * Options for the model checking strategy.
  */
 @Deprecated("Use LincheckSettings and Lincheck.runConcurrentTest instead.", level = DeprecationLevel.WARNING)
-class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions>() {
+class ModelCheckingOptions : ManagedOptions<ModelCheckingOptions, ModelCheckingCTestConfiguration>() {
 
     private var experimentalModelChecking = false
     internal var memoryModel: MemoryModel = MemoryModel.SequentialConsistency

@@ -31,7 +31,7 @@ public class RandomExecutionGenerator extends ExecutionGenerator {
 
     /** @deprecated Use the constructor accepting {@link LincheckSettings}. */
     @Deprecated
-    public RandomExecutionGenerator(Options<?> options, ConcurrentTestStructure testStructure, RandomProvider randomProvider) {
+    public RandomExecutionGenerator(Options<?, ?> options, ConcurrentTestStructure testStructure, RandomProvider randomProvider) {
         super(options, testStructure);
         random = randomProvider.createRandom();
     }

@@ -26,7 +26,7 @@ class LinChecker
     level = DeprecationLevel.WARNING,
     message = "Use Lincheck.runConcurrentTest with LincheckSettings instead.",
 )
-constructor(private val testClass: Class<*>, private val options: Options<*>?) {
+constructor(private val testClass: Class<*>, private val options: Options<*, *>?) {
 
     /**
      * @throws LincheckAssertionError if the testing data structure is incorrect.
@@ -49,7 +49,7 @@ constructor(private val testClass: Class<*>, private val options: Options<*>?) {
         )
         @JvmOverloads
         @JvmStatic
-        fun check(testClass: Class<*>, options: Options<*>? = null) {
+        fun check(testClass: Class<*>, options: Options<*, *>? = null) {
             @Suppress("DEPRECATION")
             LinChecker(testClass, options).check()
         }
@@ -64,7 +64,7 @@ constructor(private val testClass: Class<*>, private val options: Options<*>?) {
  * ```
  */
 @Deprecated("Use Lincheck.runConcurrentTest with LincheckSettings instead.", level = DeprecationLevel.ERROR)
-fun <O : Options<O>> O.check(testClass: Class<*>) = check(testClass)
+fun <O : Options<O, *>> O.check(testClass: Class<*>) = check(testClass)
 
 /**
  * This is a short-cut for the following code:
@@ -74,12 +74,12 @@ fun <O : Options<O>> O.check(testClass: Class<*>) = check(testClass)
  * ```
  */
 @Deprecated("Use Lincheck.runConcurrentTest with LincheckSettings instead.", level = DeprecationLevel.ERROR)
-fun <O : Options<O>> O.check(testClass: KClass<*>) = check(testClass)
+fun <O : Options<O, *>> O.check(testClass: KClass<*>) = check(testClass)
 
 /**
  * Runs the configured scenarios and returns the first failure, or null if none is found.
  */
-internal fun Options<*>.detectFailure(testClass: Class<*>): LincheckFailure? =
+internal fun Options<*, *>.detectFailure(testClass: Class<*>): LincheckFailure? =
     ExecutionScenarioChecker(testClass, toSettings().copy(forLambda = false)).detectFailure()
 
 /**
@@ -98,6 +98,6 @@ internal fun Options<*>.detectFailure(testClass: Class<*>): LincheckFailure? =
  * @param cont Continuation taking [LincheckFailure] as an argument.
  *   The continuation is run in the context when Lincheck java-agent is still attached.
  */
-internal fun Options<*>.detectFailure(testClass: Class<*>, cont: (LincheckFailure?) -> Unit) {
+internal fun Options<*, *>.detectFailure(testClass: Class<*>, cont: (LincheckFailure?) -> Unit) {
     ExecutionScenarioChecker(testClass, toSettings().copy(forLambda = false)).detectFailure(cont)
 }

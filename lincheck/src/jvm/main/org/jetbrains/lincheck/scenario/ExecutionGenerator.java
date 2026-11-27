@@ -28,7 +28,7 @@ public abstract class ExecutionGenerator {
 
     /** @deprecated Use {@link #settings}; available only with the legacy constructor. */
     @Deprecated
-    protected final Options<?> options;
+    protected final Options<?, ?> options;
     protected final ConcurrentTestStructure testStructure;
 
     protected ExecutionGenerator(LincheckSettings settings, ConcurrentTestStructure testStructure) {
@@ -39,7 +39,7 @@ public abstract class ExecutionGenerator {
 
     /** @deprecated Use the constructor accepting {@link LincheckSettings}. */
     @Deprecated
-    protected ExecutionGenerator(Options<?> options, ConcurrentTestStructure testStructure) {
+    protected ExecutionGenerator(Options<?, ?> options, ConcurrentTestStructure testStructure) {
         this.settings = OptionsKt.toSettings(options);
         this.options = options;
         this.testStructure = testStructure;

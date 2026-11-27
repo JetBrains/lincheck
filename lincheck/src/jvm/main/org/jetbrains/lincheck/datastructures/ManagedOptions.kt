@@ -18,7 +18,7 @@ import org.jetbrains.lincheck.LincheckSettings
  * Options for the managed strategy.
  */
 @Deprecated("Use LincheckSettings and Lincheck.runConcurrentTest instead.", level = DeprecationLevel.WARNING)
-sealed class ManagedOptions<OPT : Options<OPT>> : Options<OPT>() {
+sealed class ManagedOptions<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> : Options<OPT, CTEST>() {
 
     protected var checkObstructionFreedom =
         DEFAULT_CHECK_OBSTRUCTION_FREEDOM
@@ -139,8 +139,8 @@ sealed class ManagedOptions<OPT : Options<OPT>> : Options<OPT>() {
 }
 
 @Suppress("UNCHECKED_CAST")
-private inline fun <OPT : Options<OPT>> ManagedOptions<OPT>.applyAndCast(
-        block: ManagedOptions<OPT>.() -> Unit
+private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> ManagedOptions<OPT, CTEST>.applyAndCast(
+        block: ManagedOptions<OPT, CTEST>.() -> Unit
 ) = this.apply {
     block()
 } as OPT

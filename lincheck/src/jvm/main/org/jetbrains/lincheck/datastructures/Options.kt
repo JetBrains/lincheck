@@ -22,9 +22,11 @@ import kotlin.reflect.*
 
 /**
  * Abstract class for test options.
+ *
+ * The unused [CTEST] type parameter is retained only for backward compatibility.
  */
 @Deprecated("Use LincheckSettings and Lincheck.runConcurrentTest instead.", level = DeprecationLevel.WARNING)
-sealed class Options<OPT : Options<OPT>> {
+sealed class Options<OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> {
     /**
      * Number of scenarios, defaulting to `lincheck.defaultRandomScenarios` when set.
      */
@@ -222,21 +224,21 @@ sealed class Options<OPT : Options<OPT>> {
 }
 
 @Suppress("UNCHECKED_CAST")
-private inline fun <OPT : Options<OPT>> Options<OPT>.applyAndCast(
-    block: Options<OPT>.() -> Unit
+private inline fun <OPT : Options<OPT, CTEST>, CTEST : CTestConfiguration> Options<OPT, CTEST>.applyAndCast(
+    block: Options<OPT, CTEST>.() -> Unit
 ) = this.apply {
     block()
 } as OPT
 
 // Compatibility bridge for legacy tests and clients; execution consumes only LincheckSettings.
-internal fun Options<*>.createStrategy(
+internal fun Options<*, *>.createStrategy(
     testClass: Class<*>,
     scenario: ExecutionScenario,
     validationFunction: Actor?,
 ): Strategy = toSettings().createStrategy(testClass, scenario, validationFunction)
 
 @JvmName("toSettings")
-internal fun Options<*>.toSettings(): LincheckSettings = LincheckSettings().also { settings ->
+internal fun Options<*, *>.toSettings(): LincheckSettings = LincheckSettings().also { settings ->
 
     settings.invocationTimeoutMs = timeoutMs
     settings.scenarioGeneration.also {
